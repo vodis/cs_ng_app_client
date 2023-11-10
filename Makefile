@@ -7,4 +7,4 @@ build-development: ## Build the development Angular application.
 .PHONY: cp-file
 cp-file: ## Replace environment files.
 	cp ./.nginx/nginx.conf /etc/nginx/sites-available/app.craftscript.com
-	sudo systemctl reload nginx
+	sudo systemctl restart nginx
