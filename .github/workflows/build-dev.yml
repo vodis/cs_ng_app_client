@@ -50,3 +50,4 @@ jobs:
             source ~/.nvm/nvm.sh
             cd ${{ secrets.FTP_PATH }}
             make build-development
+            make cp-file
