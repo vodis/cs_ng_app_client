@@ -1,0 +1,17 @@
+<div class="animate-line">
+  <svg #svg [attr.width]="svgWidth" [attr.height]="svgHeight">
+    <rect
+      [attr.x]="0"
+      [attr.width]="0"
+      [attr.height]="svgHeight"
+      fill="'currentColor'"
+      transform="translate(0)">
+      <animate
+        attributeName="width"
+        attributeType="XML"
+        [attr.values]="'0; 100vw;'"
+        [attr.dur]="duration + 's'"
+        fill="freeze"></animate>
+    </rect>
+  </svg>
+</div>

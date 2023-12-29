@@ -1,0 +1,9 @@
+:host {
+  .animate-line {
+    display: flex;
+
+    svg {
+      fill: var(--main-text-color);
+    }
+  }
+}

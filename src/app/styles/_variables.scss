@@ -1,0 +1,28 @@
+$base-font-family: 'Aeonik Fono', sans-serif;
+$base-font-size: 16;
+$base-font-size-px: #{$base-font-size}px;
+
+$breakpoints: (
+  'xs': 0,
+  'sm': 480px,
+  'md': 768px,
+  'lg': 976px,
+  'xl': 1440px,
+  '2xl': 1536px,
+);
+
+$grid-columns: 24;
+
+$grid-margin: (
+  'xs': 1rem,
+  'sm': 1.6rem,
+  'md': 2.4rem,
+  'lg': 3rem,
+);
+
+$grid-gutter: (
+  'xs': 0.9rem,
+  'sm': 1.2rem,
+  'md': 1.2rem,
+  'lg': 1.2rem,
+);

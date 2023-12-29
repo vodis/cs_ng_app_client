@@ -1,9 +1,10 @@
 import { NgModule } from '@angular/core';
+import { AnimateLineComponent } from './components/animate-line/animate-line.component';
 
 @NgModule({
   imports: [],
-  declarations: [],
+  declarations: [AnimateLineComponent],
   providers: [],
-  exports: [],
+  exports: [AnimateLineComponent],
 })
 export class SharedModule {}

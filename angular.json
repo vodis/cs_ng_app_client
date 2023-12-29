@@ -24,7 +24,10 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": ["src/favicon.ico", "src/assets"],
-            "styles": ["src/styles.scss"],
+            "styles": [
+              "src/assets/styles/default-theme-colors.css",
+              "src/styles.scss"
+            ],
             "scripts": []
           },
           "configurations": {
@@ -91,7 +94,10 @@
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": ["src/favicon.ico", "src/assets"],
-            "styles": ["src/styles.scss"],
+            "styles": [
+              "src/assets/styles/default-theme-colors.css",
+              "src/styles.scss"
+            ],
             "scripts": []
           }
         },
@@ -101,6 +107,11 @@
             "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
           }
         }
+      },
+      "stylePreprocessorOptions": {
+        "includePaths":[
+          "../node_modules/src/app/styles"
+        ]
       }
     }
   }
