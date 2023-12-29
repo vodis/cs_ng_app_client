@@ -1,0 +1,65 @@
+@import './functions';
+@import './variables';
+
+@mixin media-breakpoint-up($from) {
+  $keys: map-keys($breakpoints);
+  $fromIndex: index($keys, $from);
+
+  @if $fromIndex == null {
+    @error "Wrong breakpoint #{$from}";
+  }
+
+  @media screen and (min-width: map-get($breakpoints, $from)) {
+    @content;
+  }
+}
+
+@mixin media-breakpoint($from, $to: null) {
+  @if $to == null {
+    $to: map-next-key($breakpoints, $from);
+  }
+
+  $keys: map-keys($breakpoints);
+  $fromIndex: index($keys, $from);
+  $toIndex: index($keys, $to);
+
+  @if $fromIndex == null {
+    @error "Wrong breakpoint #{$from}";
+  }
+
+  @if $fromIndex < length($breakpoints) and $toIndex == null {
+    @error "Wrong breakpoint #{$to}";
+  }
+
+  @if $to != null and map-get($breakpoints, $from) >= map-get($breakpoints, $to)
+  {
+    @error "Breakpoint #{$from} must be greater than #{$to}";
+  }
+
+  @if map-get($breakpoints, $from) <= 0 {
+    @media screen and (max-width: (map-get($breakpoints, $to) - 0.02px)) {
+      @content;
+    }
+  } @else if $fromIndex < length($breakpoints) {
+    @media screen and (min-width: map-get($breakpoints, $from)) and (max-width: map-get($breakpoints, $to) - 0.02px) {
+      @content;
+    }
+  } @else if $fromIndex == length($breakpoints) {
+    @media screen and (min-width: map-get($breakpoints, $from)) {
+      @content;
+    }
+  }
+}
+
+@mixin media-breakpoint-down($to) {
+  $keys: map-keys($breakpoints);
+  $toIndex: index($keys, $to);
+
+  @if $toIndex == null {
+    @error "Wrong breakpoint #{$to}";
+  }
+
+  @media screen and (max-width: (map-get($breakpoints, $to) - 0.02px)) {
+    @content;
+  }
+}

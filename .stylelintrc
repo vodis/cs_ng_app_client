@@ -1,0 +1,36 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-idiomatic-order",
+    "stylelint-config-recommended-scss"
+  ],
+  "ignoreFiles": [
+    "**/*.svg",
+    "./src/app/styles/*"
+  ],
+  "rules": {
+    "declaration-property-value-disallowed-list": null,
+    "max-nesting-depth": 4,
+    "selector-class-pattern": null,
+    "scss/dollar-variable-pattern": null,
+    "order/properties-alphabetical-order": null,
+    "selector-pseudo-element-no-unknown": [
+      true,
+      {
+        "ignorePseudoElements": [
+          "ng-deep"
+        ]
+      }
+    ],
+    "selector-no-qualifying-type": [
+      true,
+      {
+        "ignore": [
+          "attribute"
+        ]
+      }
+    ],
+    "no-invalid-position-at-import-rule": null,
+    "import-notation": null
+  }
+}

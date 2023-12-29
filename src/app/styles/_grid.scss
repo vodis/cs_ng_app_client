@@ -1,0 +1,94 @@
+@use 'sass:math';
+
+@import './variables';
+@import './breakpoints';
+
+.container {
+  width: 100%;
+  margin: 0 auto;
+
+  @each $modifier, $breakpoint in $breakpoints {
+    @include media-breakpoint($modifier) {
+      padding-right: map-get($grid-margin, $modifier);
+      padding-left: map-get($grid-margin, $modifier);
+    }
+  }
+}
+
+.row {
+  display: flex;
+  flex-flow: row wrap;
+
+  @each $modifier, $breakpoint in $breakpoints {
+    @include media-breakpoint($modifier) {
+      margin-right: math.div(map-get($grid-gutter, $modifier), -2);
+      margin-left: math.div(map-get($grid-gutter, $modifier), -2);
+
+      [class*='col '],
+      [class*='col-'] {
+        padding-right: math.div(map-get($grid-gutter, $modifier), 2);
+        padding-left: math.div(map-get($grid-gutter, $modifier), 2);
+      }
+    }
+  }
+
+  &:not([class*='justify-']) {
+    justify-content: space-between;
+  }
+}
+
+@for $i from 1 through $grid-columns {
+  .col-#{$i} {
+    width: math.div($i * 100%, $grid-columns);
+    box-sizing: border-box;
+    flex: 0 0 auto;
+  }
+
+  .offset-#{$i} {
+    margin-left: math.div($i * 100%, $grid-columns);
+  }
+}
+
+@each $modifier, $breakpoint in $breakpoints {
+  @include media-breakpoint-up($modifier) {
+    @for $i from 1 through $grid-columns {
+      .col-#{$modifier}-up-#{$i} {
+        width: math.div($i * 100%, $grid-columns);
+        box-sizing: border-box;
+        flex: 0 0 auto;
+      }
+
+      .offset-#{$modifier}-up-#{$i} {
+        margin-left: math.div($i * 100%, $grid-columns);
+      }
+    }
+  }
+
+  @include media-breakpoint($modifier) {
+    @for $i from 1 through $grid-columns {
+      .col-#{$modifier}-#{$i} {
+        width: math.div($i * 100%, $grid-columns);
+        box-sizing: border-box;
+        flex: 0 0 auto;
+      }
+
+      .offset-#{$modifier}-#{$i} {
+        margin-left: math.div($i * 100%, $grid-columns);
+      }
+    }
+  }
+
+  @include media-breakpoint-down($modifier) {
+    @for $i from 1 through $grid-columns {
+      .col-#{$modifier}-down-#{$i} {
+        width: math.div($i * 100%, $grid-columns);
+        box-sizing: border-box;
+        flex: 0 0 auto;
+      }
+
+      .offset-#{$modifier}-down-#{$i} {
+        margin-left: math.div($i * 100%, $grid-columns);
+      }
+    }
+  }
+}
