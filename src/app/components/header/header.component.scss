@@ -1,7 +1,12 @@
 :host {
   .header {
     display: flex;
-    min-height: 4rem;
+    height: 4rem;
     flex-direction: column;
+
+    &__content {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
   }
 }

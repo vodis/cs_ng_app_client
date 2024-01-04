@@ -1,0 +1,52 @@
+@import '../../styles/breakpoints';
+
+:host {
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+
+    & .menu {
+      display: flex;
+      flex-direction: column;
+      margin: 4rem 0 2rem;
+      gap: 1rem;
+    }
+
+    &.mobile {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+
+      & .menu {
+        display: flex;
+        flex-direction: row;
+        margin: 0;
+        gap: 1rem;
+      }
+    }
+
+    &__nav {
+      &_menu {
+        color: var(--primary-text-color);
+        text-transform: uppercase;
+
+        @include media-breakpoint-down(sm) {
+          font-size: 0.75rem;
+          line-height: 1rem;
+        }
+
+        @include media-breakpoint(sm) {
+          font-size: 0.75rem;
+          line-height: 1rem;
+        }
+
+        @include media-breakpoint(md) {
+          font-size: 1.5rem;
+          line-height: 2rem;
+        }
+      }
+    }
+  }
+}
