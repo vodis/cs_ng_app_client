@@ -1,0 +1,21 @@
+@import '../../styles/breakpoints';
+
+:host {
+  .main-layout {
+    height: 100vh;
+
+    &__content {
+      display: grid;
+      height: calc(100vh - 4rem);
+      grid-auto-flow: column;
+      grid-template-columns: 16rem 1px 0 1fr;
+
+      &_mobile {
+        display: grid;
+        height: calc(100vh - 4rem);
+        grid-auto-flow: row;
+        grid-template-rows: 1fr 4rem;
+      }
+    }
+  }
+}

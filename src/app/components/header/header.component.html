@@ -1,7 +1,10 @@
 <header class="header">
-  <div class="container d-flex align-items-center h-100">
-    <div class="header__content">
-      <a class="header__logo" routerLink="/" routerLinkActive="_active">
+  <div class="d-flex align-items-center h-100">
+    <div class="header__content w-100 h-100">
+      <a
+        class="header__logo d-flex align-items-center justify-content-center"
+        routerLink="/"
+        routerLinkActive="_active">
         <img
           alt="CraftScript Logo"
           height="50"
@@ -11,7 +14,5 @@
     </div>
   </div>
   <div class="header__animate-bottom"></div>
-  <div>
-    <app-animate-line />
-  </div>
+  <app-animate-line />
 </header>

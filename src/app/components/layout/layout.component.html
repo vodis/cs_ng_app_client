@@ -1,7 +1,26 @@
 <div class="main-layout">
   <app-header></app-header>
-  <div class="main-content">
-    <app-sidebar></app-sidebar>
-    <ng-content></ng-content>
+  <ng-template #content><ng-content></ng-content></ng-template>
+
+  <div
+    class="main-layout__content"
+    (window:resize)="onResize($event)"
+    *ngIf="!isMobileView">
+    <app-sidebar [isMobileView]="isMobileView"></app-sidebar>
+    <app-animate-line
+      [direction]="DirectionType.Row"
+      [customSize]="'calc(100vh - 4rem)'" />
+    <ng-container *ngTemplateOutlet="content"></ng-container>
+  </div>
+
+  <!--  Mobile View  -->
+  <div
+    class="main-layout__content_mobile"
+    (window:resize)="onResize($event)"
+    *ngIf="isMobileView">
+    <section>
+      <ng-container *ngTemplateOutlet="content"></ng-container>
+    </section>
+    <app-sidebar [isMobileView]="isMobileView"></app-sidebar>
   </div>
 </div>
