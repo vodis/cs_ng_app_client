@@ -90,15 +90,8 @@
   )
 );
 @include utilityClasses(
-  width,
-  w-100,
-  (
-    100: 100%,
-  )
-);
-@include utilityClasses(
   height,
-  h-100,
+  h,
   (
     100: 100%,
   )
