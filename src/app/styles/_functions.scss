@@ -1,9 +1,0 @@
-@function map-next-key($mapped-list, $key) {
-  $keys: map-keys($mapped-list);
-
-  @if index($keys, $key) == length($mapped-list) {
-    @return null;
-  }
-
-  @return nth($keys, (index($keys, $key)) + 1);
-}
