@@ -20,6 +20,11 @@ export class SidebarComponent {
       url: '/earn',
       isActive: false,
     },
+    {
+      name: 'Rewards',
+      url: '/rewards',
+      isActive: false,
+    },
   ];
 
   constructor(@Inject(DOCUMENT) private document: Document) {}

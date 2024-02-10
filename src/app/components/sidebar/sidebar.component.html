@@ -1,18 +1,16 @@
 <div class="sidebar h-100" [ngClass]="{ mobile: isMobileView }">
-  <div class="container">
-    <nav class="sidebar__nav">
-      <ul class="sidebar__nav_menu menu">
-        <li
-          *ngFor="let item of sidebarLinks; trackBy: trackById"
-          class="menu__item">
-          <a
-            class="menu__link"
-            [routerLinkActive]="'_is-active'"
-            (click)="handleRouteChanging()"
-            >{{ item.name }}</a
-          >
-        </li>
-      </ul>
-    </nav>
-  </div>
+  <nav class="sidebar__nav">
+    <ul class="sidebar__nav_menu menu">
+      <li
+        *ngFor="let item of sidebarLinks; trackBy: trackById"
+        class="menu__item">
+        <a
+          class="menu__link"
+          [routerLinkActive]="'_is-active'"
+          (click)="handleRouteChanging()"
+          >{{ item.name }}</a
+        >
+      </li>
+    </ul>
+  </nav>
 </div>
