@@ -1,18 +1,60 @@
-<div class="sidebar h-100" [ngClass]="{ mobile: isMobileView }">
-  <div class="container">
-    <nav class="sidebar__nav">
-      <ul class="sidebar__nav_menu menu">
+<div class="sidebar h-100">
+  <nav class="sidebar__nav" [ngClass]="{ mobile: isMobileView }">
+    <ng-container *ngIf="!isMobileView">
+      <ul class="sidebar__nav_menu">
+        <mat-accordion>
+          <mat-expansion-panel [expanded]="true">
+            <mat-expansion-panel-header>
+              <mat-panel-title class="menu-title"> Finance </mat-panel-title>
+            </mat-expansion-panel-header>
+            <li
+              *ngFor="let item of sidebarFinansialLinks; trackBy: trackById"
+              class="menu-item">
+              <a
+                class="menu-link"
+                [routerLinkActive]="'_is-active'"
+                (click)="handleRouteChanging(item.url)"
+                >{{ item.name }}</a
+              >
+            </li>
+          </mat-expansion-panel>
+        </mat-accordion>
+
+        <mat-accordion>
+          <mat-expansion-panel [expanded]="true">
+            <mat-expansion-panel-header>
+              <mat-panel-title class="menu-title">
+                Dev Activity
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+            <li
+              *ngFor="let item of sidebarWorkProposalLinks; trackBy: trackById"
+              class="menu-item">
+              <a
+                class="menu-link"
+                [routerLinkActive]="'_is-active'"
+                (click)="handleRouteChanging(item.url)"
+                >{{ item.name }}</a
+              >
+            </li>
+          </mat-expansion-panel>
+        </mat-accordion>
+      </ul>
+    </ng-container>
+
+    <ng-container *ngIf="isMobileView">
+      <ul class="sidebar__nav_menu">
         <li
-          *ngFor="let item of sidebarLinks; trackBy: trackById"
-          class="menu__item">
+          *ngFor="let item of sidebarMobile; trackBy: trackById"
+          class="menu-item">
           <a
-            class="menu__link"
+            class="menu-link"
             [routerLinkActive]="'_is-active'"
-            (click)="handleRouteChanging()"
+            (click)="handleRouteChanging(item.url)"
             >{{ item.name }}</a
           >
         </li>
       </ul>
-    </nav>
-  </div>
+    </ng-container>
+  </nav>
 </div>

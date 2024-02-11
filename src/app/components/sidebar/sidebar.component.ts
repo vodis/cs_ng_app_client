@@ -1,5 +1,6 @@
-import { Component, Input, Inject } from '@angular/core';
+import { Component, Inject, Input } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-sidebar',
@@ -9,26 +10,38 @@ import { DOCUMENT } from '@angular/common';
 export class SidebarComponent {
   @Input() isMobileView = false;
 
-  public sidebarLinks = [
+  public sidebarFinansialLinks = [
     {
-      name: 'Farming',
+      name: 'Farm',
       url: '/farm',
       isActive: true,
     },
+  ];
+
+  public sidebarWorkProposalLinks = [
     {
-      name: 'Earning',
-      url: '/earn',
-      isActive: false,
+      name: 'Proposals',
+      url: '/proposals',
+      isActive: true,
     },
   ];
 
-  constructor(@Inject(DOCUMENT) private document: Document) {}
+  public sidebarMobile = [
+    ...this.sidebarFinansialLinks,
+    ...this.sidebarWorkProposalLinks,
+  ];
+
+  constructor(
+    @Inject(DOCUMENT) private document: Document,
+    private router: Router
+  ) {}
 
   public trackById(index: number): number {
     return index;
   }
 
-  public handleRouteChanging(): void {
+  public handleRouteChanging(url: string): void {
+    this.router.navigateByUrl(url);
     this.document.body.classList.toggle('_is-locked');
   }
 }
