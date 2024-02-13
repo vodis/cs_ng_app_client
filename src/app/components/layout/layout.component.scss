@@ -8,13 +8,18 @@
       display: grid;
       height: calc(100vh - 4rem);
       grid-auto-flow: column;
-      grid-template-columns: 1fr 1px 0 repeat(6, 1fr);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
 
-      &_mobile {
+      &.mobile {
         display: grid;
         height: calc(100vh - 4rem);
         grid-auto-flow: row;
+        grid-template-columns: none;
         grid-template-rows: 1fr 4rem;
+
+        &_mobile {
+          height: calc(100vh - 4rem);
+        }
       }
     }
   }
