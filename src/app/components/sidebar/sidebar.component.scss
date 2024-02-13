@@ -8,6 +8,34 @@
       0 1px 5px 0 rgb(0 0 0 / 12%);
   }
 
+  .menu-link {
+    @include media-breakpoint-down(sm) {
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+
+    @include media-breakpoint(sm) {
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+
+    @include media-breakpoint(md) {
+      font-size: 1rem;
+      line-height: 1rem;
+    }
+
+    @include media-breakpoint(lg) {
+      font-size: 1.6rem;
+      line-height: 2rem;
+    }
+  }
+
+  .menu-title {
+    @include media-breakpoint-down(lg) {
+      font-size: 0.6rem;
+    }
+  }
+
   .sidebar {
     display: flex;
     flex-direction: column;
@@ -24,26 +52,6 @@
         color: var(--main-text-color);
         gap: 2rem;
         text-transform: uppercase;
-
-        @include media-breakpoint-down(sm) {
-          font-size: 0.75rem;
-          line-height: 1rem;
-        }
-
-        @include media-breakpoint(sm) {
-          font-size: 0.75rem;
-          line-height: 1rem;
-        }
-
-        @include media-breakpoint(md) {
-          font-size: 1.2rem;
-          line-height: 1rem;
-        }
-
-        @include media-breakpoint(lg) {
-          font-size: 1.6rem;
-          line-height: 2rem;
-        }
       }
 
       .menu-title {
