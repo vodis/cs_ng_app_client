@@ -1,3 +1,5 @@
+@import '@vodis/ui-kit/styles/breakpoints';
+
 :host {
   .header {
     display: flex;
@@ -7,6 +9,25 @@
     &__content {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
+
+      &_connect {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        grid-column: 7 / 8;
+      }
+
+      @include media-breakpoint-down(md) {
+        &_connect {
+          grid-column: 3 / 5;
+        }
+      }
+
+      @include media-breakpoint-down(xl) {
+        &_connect {
+          grid-column: 6 / 8;
+        }
+      }
     }
   }
 
