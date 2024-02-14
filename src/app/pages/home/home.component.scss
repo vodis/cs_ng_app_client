@@ -1,3 +1,5 @@
+@import '@vodis/ui-kit/styles/breakpoints';
+
 .governance {
   padding: 2rem 0;
   box-shadow:
@@ -9,5 +11,35 @@
     color: #fe6c00;
     font-size: 0.875rem;
     line-height: 1.25rem;
+  }
+}
+
+:host {
+  .home {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    &__block {
+      position: relative;
+      padding: 2rem 0;
+      border: 1px solid rgb(54 56 58 / 50%);
+      box-shadow:
+        0 3px 1px -2px rgb(199 196 196 / 20%),
+        0 2px 2px 0 rgb(0 0 0 / 14%),
+        0 1px 5px 0 rgb(0 0 0 / 12%);
+    }
+
+    @include media-breakpoint-down(md) {
+      grid-template-columns: none;
+      grid-template-rows: 1fr 1fr;
+
+      &__block {
+        margin-top: 1rem;
+      }
+    }
+
+    h5 {
+      font-size: 1.2rem;
+    }
   }
 }

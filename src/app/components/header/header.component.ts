@@ -1,4 +1,5 @@
 import { Component, HostListener } from '@angular/core';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-header',
@@ -8,6 +9,7 @@ import { Component, HostListener } from '@angular/core';
 export class HeaderComponent {
   public currentWidth = window.innerWidth;
   public isMobileView = false;
+  public originUrl: string = environment.origin;
 
   ngOnInit() {
     this.isMobileView = this.currentWidth <= 768;
