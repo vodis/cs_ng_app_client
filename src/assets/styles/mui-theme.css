@@ -1,0 +1,7 @@
+.btn-sm.mdc-button, .mat-mdc-raised-button, .mdc-button--raised {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  height: 1rem;
+  line-height: 1rem;
+  padding: 0.5rem;
+}
