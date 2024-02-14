@@ -10,8 +10,17 @@ import { Router } from '@angular/router';
 export class SidebarComponent {
   @Input() isMobileView = false;
 
+  public isBoardPanelOpen = true;
   public isFarmPanelOpen = true;
   public isDevActivityPanelOpen = true;
+
+  public sidebarBoardLinks = [
+    {
+      name: 'Board',
+      url: '/',
+      isActive: true,
+    },
+  ];
 
   public sidebarFinansialLinks = [
     {
@@ -30,6 +39,7 @@ export class SidebarComponent {
   ];
 
   public sidebarMobile = [
+    ...this.sidebarBoardLinks,
     ...this.sidebarFinansialLinks,
     ...this.sidebarWorkProposalLinks,
   ];
@@ -49,7 +59,7 @@ export class SidebarComponent {
   }
 
   public handleToggleAccordion(
-    key: 'isFarmPanelOpen' | 'isDevActivityPanelOpen',
+    key: 'isFarmPanelOpen' | 'isDevActivityPanelOpen' | 'isBoardPanelOpen',
     value: boolean
   ): void {
     this[key] = value;

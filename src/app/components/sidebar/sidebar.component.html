@@ -5,6 +5,33 @@
         <mat-accordion>
           <mat-expansion-panel
             hideToggle
+            [expanded]="isBoardPanelOpen"
+            (opened)="handleToggleAccordion('isBoardPanelOpen', true)"
+            (closed)="handleToggleAccordion('isBoardPanelOpen', false)">
+            <mat-expansion-panel-header>
+              <mat-panel-title class="menu-title">
+                Informations
+              </mat-panel-title>
+              <mat-icon>{{
+                isBoardPanelOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'
+              }}</mat-icon>
+            </mat-expansion-panel-header>
+            <li
+              *ngFor="let item of sidebarBoardLinks; trackBy: trackById"
+              class="menu-item">
+              <a
+                class="menu-link"
+                [routerLinkActive]="'_is-active'"
+                (click)="handleRouteChanging(item.url)"
+                >{{ item.name }}</a
+              >
+            </li>
+          </mat-expansion-panel>
+        </mat-accordion>
+
+        <mat-accordion>
+          <mat-expansion-panel
+            hideToggle
             [expanded]="isFarmPanelOpen"
             (opened)="handleToggleAccordion('isFarmPanelOpen', true)"
             (closed)="handleToggleAccordion('isFarmPanelOpen', false)">
