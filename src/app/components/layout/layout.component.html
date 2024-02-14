@@ -6,11 +6,11 @@
     class="main-layout__content"
     (window:resize)="onResize($event)"
     *ngIf="!isMobileView">
-    <div class="d-flex">
-      <app-sidebar [isMobileView]="isMobileView"></app-sidebar>
-      <app-animate-line
-        [direction]="DirectionType.Row"
-        [customSize]="'calc(100vh - 4rem)'" />
+    <app-sidebar [isMobileView]="isMobileView"></app-sidebar>
+    <app-animate-line
+      [direction]="DirectionType.Row"
+      [customSize]="'calc(100vh - 4rem)'" />
+    <div class="main-layout__content_router">
       <ng-container *ngTemplateOutlet="content"></ng-container>
     </div>
   </div>

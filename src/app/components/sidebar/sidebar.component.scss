@@ -2,10 +2,51 @@
 
 :host {
   .mat-expansion-panel:not([class*='mat-elevation-z']) {
+    background: none;
     box-shadow:
       0 3px 1px -2px rgb(199 196 196 / 20%),
       0 2px 2px 0 rgb(0 0 0 / 14%),
       0 1px 5px 0 rgb(0 0 0 / 12%);
+    color: white;
+  }
+
+  .mat-expansion-panel-header,
+  .mat-expansion-panel-header-title {
+    color: white;
+  }
+
+  .mat-expansion-panel-header {
+    height: inherit;
+  }
+
+  .menu-link {
+    @include media-breakpoint-down(sm) {
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+
+    @include media-breakpoint(sm) {
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+
+    @include media-breakpoint(md) {
+      font-size: 1rem;
+      line-height: 1rem;
+    }
+
+    @include media-breakpoint(lg) {
+      font-size: 1.6rem;
+      line-height: 2rem;
+    }
+  }
+
+  .menu-title {
+    font-size: 0.8rem;
+
+    @include media-breakpoint-down(lg) {
+      font-size: 0.6rem;
+    }
   }
 
   .sidebar {
@@ -24,31 +65,11 @@
         color: var(--main-text-color);
         gap: 2rem;
         text-transform: uppercase;
-
-        @include media-breakpoint-down(sm) {
-          font-size: 0.75rem;
-          line-height: 1rem;
-        }
-
-        @include media-breakpoint(sm) {
-          font-size: 0.75rem;
-          line-height: 1rem;
-        }
-
-        @include media-breakpoint(md) {
-          font-size: 1.2rem;
-          line-height: 1rem;
-        }
-
-        @include media-breakpoint(lg) {
-          font-size: 1.6rem;
-          line-height: 2rem;
-        }
       }
 
       .menu-title {
         flex-basis: 0;
-        font-size: 0.8rem;
+        white-space: nowrap;
       }
 
       .menu-link {
