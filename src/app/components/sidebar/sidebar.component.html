@@ -3,9 +3,16 @@
     <ng-container *ngIf="!isMobileView">
       <ul class="sidebar__nav_menu">
         <mat-accordion>
-          <mat-expansion-panel [expanded]="true">
+          <mat-expansion-panel
+            hideToggle
+            [expanded]="isFarmPanelOpen"
+            (opened)="handleToggleAccordion('isFarmPanelOpen', true)"
+            (closed)="handleToggleAccordion('isFarmPanelOpen', false)">
             <mat-expansion-panel-header>
               <mat-panel-title class="menu-title"> Finance </mat-panel-title>
+              <mat-icon>{{
+                isFarmPanelOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'
+              }}</mat-icon>
             </mat-expansion-panel-header>
             <li
               *ngFor="let item of sidebarFinansialLinks; trackBy: trackById"
@@ -21,11 +28,20 @@
         </mat-accordion>
 
         <mat-accordion>
-          <mat-expansion-panel [expanded]="true">
+          <mat-expansion-panel
+            hideToggle
+            [expanded]="isDevActivityPanelOpen"
+            (opened)="handleToggleAccordion('isDevActivityPanelOpen', true)"
+            (closed)="handleToggleAccordion('isDevActivityPanelOpen', false)">
             <mat-expansion-panel-header>
               <mat-panel-title class="menu-title">
                 Dev Activity
               </mat-panel-title>
+              <mat-icon>{{
+                isDevActivityPanelOpen
+                  ? 'keyboard_arrow_up'
+                  : 'keyboard_arrow_down'
+              }}</mat-icon>
             </mat-expansion-panel-header>
             <li
               *ngFor="let item of sidebarWorkProposalLinks; trackBy: trackById"

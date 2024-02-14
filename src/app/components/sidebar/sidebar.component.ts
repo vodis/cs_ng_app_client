@@ -10,6 +10,9 @@ import { Router } from '@angular/router';
 export class SidebarComponent {
   @Input() isMobileView = false;
 
+  public isFarmPanelOpen = true;
+  public isDevActivityPanelOpen = true;
+
   public sidebarFinansialLinks = [
     {
       name: 'Farm',
@@ -43,5 +46,12 @@ export class SidebarComponent {
   public handleRouteChanging(url: string): void {
     this.router.navigateByUrl(url);
     this.document.body.classList.toggle('_is-locked');
+  }
+
+  public handleToggleAccordion(
+    key: 'isFarmPanelOpen' | 'isDevActivityPanelOpen',
+    value: boolean
+  ): void {
+    this[key] = value;
   }
 }

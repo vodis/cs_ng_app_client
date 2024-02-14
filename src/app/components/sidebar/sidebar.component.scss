@@ -2,10 +2,21 @@
 
 :host {
   .mat-expansion-panel:not([class*='mat-elevation-z']) {
+    background: none;
     box-shadow:
       0 3px 1px -2px rgb(199 196 196 / 20%),
       0 2px 2px 0 rgb(0 0 0 / 14%),
       0 1px 5px 0 rgb(0 0 0 / 12%);
+    color: white;
+  }
+
+  .mat-expansion-panel-header,
+  .mat-expansion-panel-header-title {
+    color: white;
+  }
+
+  .mat-expansion-panel-header {
+    height: inherit;
   }
 
   .menu-link {
@@ -31,6 +42,8 @@
   }
 
   .menu-title {
+    font-size: 0.8rem;
+
     @include media-breakpoint-down(lg) {
       font-size: 0.6rem;
     }
@@ -56,7 +69,7 @@
 
       .menu-title {
         flex-basis: 0;
-        font-size: 0.8rem;
+        white-space: nowrap;
       }
 
       .menu-link {

@@ -6,7 +6,8 @@ import { HeaderComponent } from '@components/header/header.component';
 import { LayoutComponent } from '@components/layout/layout.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
 import { SharedModule } from '@shared/shared.module';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations'; // Import BrowserAnimationsModule here
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
 @NgModule({
   declarations: [
@@ -21,7 +22,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations'; 
     AppRoutingModule,
     SharedModule,
   ],
-  providers: [],
+  providers: [provideAnimationsAsync()],
   bootstrap: [AppComponent],
 })
 export class AppModule {}
