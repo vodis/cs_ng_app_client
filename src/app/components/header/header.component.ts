@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss'],
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   public currentWidth = window.innerWidth;
   public isMobileView = false;
   public originUrl: string = environment.origin;
