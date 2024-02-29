@@ -1,10 +1,9 @@
 import {
   Component,
-  OnInit,
-  OnDestroy,
   ViewChild,
   ViewContainerRef,
   ComponentFactoryResolver,
+  ComponentRef,
 } from '@angular/core';
 import { loadRemoteModule } from '@angular-architects/module-federation';
 
@@ -16,7 +15,7 @@ import { loadRemoteModule } from '@angular-architects/module-federation';
     <div #container></div>
   `,
 })
-export class WalletsComponent implements OnInit, OnDestroy {
+export class WalletsComponent {
   @ViewChild('container', { read: ViewContainerRef })
   containerRef!: ViewContainerRef;
 
@@ -39,17 +38,15 @@ export class WalletsComponent implements OnInit, OnDestroy {
       // Create and attach the MFE component to the container
       const componentFactory =
         this.resolver.resolveComponentFactory(componentType);
-      this.containerRef.createComponent(componentFactory);
+
+      const componentRef: ComponentRef<any> = this.containerRef.createComponent(
+        componentFactory,
+        undefined,
+        this.containerRef.injector
+      );
+      componentRef.instance.toggleWalletsModal();
     } catch (error) {
       console.error('Error loading MFE component:', error);
     }
-  }
-
-  ngOnInit() {
-    console.log('ngOnInit');
-  }
-
-  ngOnDestroy() {
-    console.log('ngOnDestroy');
   }
 }
