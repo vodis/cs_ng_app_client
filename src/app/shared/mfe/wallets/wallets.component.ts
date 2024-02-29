@@ -27,14 +27,14 @@ export class WalletsComponent implements OnInit, OnDestroy {
       const m = await loadRemoteModule({
         type: 'manifest',
         remoteName: 'mfe-wallets',
-        exposedModule: './FlightsSearchComponent', // Exposed component
+        exposedModule: './WalletsComponent',
       });
 
       // Clear existing components in the container
       this.containerRef.clear();
 
       // Access the component type from the loaded module
-      const componentType = m.FlightsSearchComponent;
+      const componentType = m.WalletsComponent;
 
       // Create and attach the MFE component to the container
       const componentFactory =
