@@ -5,7 +5,7 @@ const {
 
 module.exports = withModuleFederationPlugin({
   remotes: {
-    'mfe-wallets': 'http://localhost:3000/remoteEntry.js',
+    'mfe-wallets': 'https://wallets-mfe.craftscript.com/remoteEntry.js',
   },
 
   shared: {

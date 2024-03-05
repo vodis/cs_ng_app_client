@@ -1,0 +1,36 @@
+@import '@vodis/ui-kit/styles/breakpoints';
+
+:host {
+  .side-modal {
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    will-change: transform;
+
+    &.open {
+      transform: translateX(0);
+      transition:
+        transform 0.3s ease-in-out,
+        -webkit-transform 0.3s ease-in-out;
+      will-change: transform;
+    }
+
+    @include media-breakpoint-up(md) {
+      width: 66.67%;
+    }
+
+    @include media-breakpoint-up(lg) {
+      width: 50%;
+    }
+
+    @include media-breakpoint-up(xl) {
+      width: 33.3%;
+    }
+  }
+}
