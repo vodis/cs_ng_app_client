@@ -4,24 +4,25 @@ import {
   ViewContainerRef,
   ComponentFactoryResolver,
   ComponentRef,
+  OnInit,
 } from '@angular/core';
 import { loadRemoteModule } from '@angular-architects/module-federation';
 
 @Component({
   selector: 'app-wallets',
-  template: `
-    <h3>mfe wallets</h3>
-    <button (click)="loadMFEComponent()">Load MFE Component</button>
-    <div #container></div>
-  `,
+  template: ` <div #container></div> `,
 })
-export class WalletsComponent {
+export class WalletsComponent implements OnInit {
   @ViewChild('container', { read: ViewContainerRef })
   containerRef!: ViewContainerRef;
 
   constructor(private resolver: ComponentFactoryResolver) {}
 
-  async loadMFEComponent() {
+  ngOnInit() {
+    this.initializeMfe();
+  }
+
+  async initializeMfe() {
     try {
       const m = await loadRemoteModule({
         type: 'manifest',
