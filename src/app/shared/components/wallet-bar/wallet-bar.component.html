@@ -1,0 +1,13 @@
+<div class="wallet-bar">
+  <button
+    (click)="handleOpenWalletMenu()"
+    mat-stroked-button
+    color="primary"
+    class="btn-lg">
+    Connect wallet
+  </button>
+
+  <app-side-modal [isOpen]="isOpenWalletConnectMenu">
+    <app-wallets />
+  </app-side-modal>
+</div>

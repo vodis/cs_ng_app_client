@@ -1,0 +1,21 @@
+<header class="header" [ngClass]="{ mobile: isMobileView }">
+  <div class="d-flex align-items-center h-100">
+    <div class="header__content w-100 h-100">
+      <a
+        class="header__logo d-flex align-items-center justify-content-center"
+        href="{{ originUrl }}"
+        routerLinkActive="_active">
+        <img
+          alt="CraftScript Logo"
+          height="50"
+          loading="lazy"
+          src="../../../assets/img/logo/logo.svg" />
+      </a>
+      <div class="header__content_connect">
+        <app-wallet-bar />
+      </div>
+    </div>
+  </div>
+  <div class="header__animate-bottom"></div>
+  <app-animate-line />
+</header>

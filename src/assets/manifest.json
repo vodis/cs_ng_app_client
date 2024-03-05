@@ -1,0 +1,16 @@
+{
+  "short_name": "CS",
+  "name": "CraftScript",
+  "lange": "en",
+  "description": "Yield more assets and earn profits in switching between strategies",
+  "start_url": "https://app.craftscript.com",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "",
+      "size": "",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

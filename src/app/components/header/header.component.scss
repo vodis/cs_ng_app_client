@@ -1,0 +1,41 @@
+@import '@vodis/ui-kit/styles/breakpoints';
+
+:host {
+  .header {
+    display: flex;
+    height: 4rem;
+    flex-direction: column;
+
+    &__content {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+
+      &_connect {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        grid-column: 7 / 8;
+      }
+
+      @include media-breakpoint-down(md) {
+        &_connect {
+          grid-column: 3 / 5;
+        }
+      }
+
+      @include media-breakpoint-down(xl) {
+        &_connect {
+          grid-column: 6 / 8;
+        }
+      }
+    }
+  }
+
+  .mobile .header {
+    &__content {
+      display: grid;
+      grid-auto-flow: column;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+}
