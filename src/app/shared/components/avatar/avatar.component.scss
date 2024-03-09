@@ -1,0 +1,15 @@
+:host {
+  .card-wallet-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    & img,
+    .no-avatar {
+      width: 24px;
+      height: 24px;
+      border: 1px solid white;
+      border-radius: 12px;
+    }
+  }
+}

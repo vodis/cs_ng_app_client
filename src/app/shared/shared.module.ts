@@ -5,8 +5,11 @@ import { AnimateLineComponent } from './components/animate-line/animate-line.com
 import { MatIconModule } from '@angular/material/icon';
 import { WalletsComponent } from '@shared/mfe/wallets/wallets.component';
 import { WalletBarComponent } from '@shared/components/wallet-bar/wallet-bar.component';
+import { WalletMenuComponent } from '@shared/components/wallet-menu/wallet-menu.component';
+import { WalletAccountComponent } from '@shared/components/wallet-account/wallet-account.component';
 import { SideModalComponent } from '@shared/components/side-modal/side-modal.component';
 import { CommonModule } from '@angular/common';
+import { AvatarComponent } from '@shared/components/avatar/avatar.component';
 
 const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
 
@@ -16,14 +19,20 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     AnimateLineComponent,
     WalletsComponent,
     WalletBarComponent,
+    WalletMenuComponent,
+    WalletAccountComponent,
     SideModalComponent,
+    AvatarComponent,
   ],
   providers: [],
   exports: [
     AnimateLineComponent,
     WalletsComponent,
     WalletBarComponent,
+    WalletMenuComponent,
+    WalletAccountComponent,
     SideModalComponent,
+    AvatarComponent,
     ...AngularMaterial,
   ],
 })
