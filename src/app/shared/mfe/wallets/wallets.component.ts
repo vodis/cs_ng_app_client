@@ -2,7 +2,6 @@ import {
   Component,
   ViewChild,
   ViewContainerRef,
-  ComponentFactoryResolver,
   ComponentRef,
   OnInit,
 } from '@angular/core';
@@ -11,16 +10,14 @@ import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 
 @Component({
   selector: 'app-wallets',
+  standalone: false,
   template: ` <div #container></div> `,
 })
 export class WalletsComponent implements OnInit {
   @ViewChild('container', { read: ViewContainerRef })
   public containerRef!: ViewContainerRef;
 
-  constructor(
-    private resolver: ComponentFactoryResolver,
-    private walletsService: WalletsService
-  ) {}
+  constructor(private walletsService: WalletsService) {}
 
   ngOnInit() {
     this.initializeMfe();
@@ -34,22 +31,18 @@ export class WalletsComponent implements OnInit {
         exposedModule: './WalletsComponent',
       });
 
-      // Clear existing components in the container
       this.containerRef.clear();
 
-      // Access the component type from the loaded module
       const componentType = m.WalletsComponent;
 
-      // Create and attach the MFE component to the container
-      const componentFactory =
-        this.resolver.resolveComponentFactory(componentType);
-
       const componentRef: ComponentRef<any> = this.containerRef.createComponent(
-        componentFactory,
-        undefined,
-        this.containerRef.injector
+        componentType,
+        {
+          injector: this.containerRef.injector,
+        }
       );
-      componentRef.instance.account.subscribe(
+
+      componentRef.instance.account?.subscribe(
         (account: { account: string }) => {
           this.walletsService.account.next(account);
         }

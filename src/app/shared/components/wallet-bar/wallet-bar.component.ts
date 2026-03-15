@@ -3,6 +3,7 @@ import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 
 @Component({
   selector: 'app-wallet-bar',
+  standalone: false,
   templateUrl: 'wallet-bar.component.html',
   styleUrls: [],
 })

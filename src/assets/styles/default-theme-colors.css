@@ -1,8 +1,63 @@
 :root {
   --main-bg-color: #171c1f;
-
   --main-border-color: #d4d4d3;
 
   --main-text-color: #ffffff;
   --primary-text-color: #fe6c00;
+  --secondary-text-color: #767676;
+
+  /* System font stack (override Material’s Roboto) */
+  --app-font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/*
+ * Override Angular Material 19 prebuilt theme to match original brand colors.
+ * (Migration replaced custom orange primary / blue-grey secondary with cyan-orange prebuilt.)
+ */
+:root {
+  /* Primary = orange (was cyan #00dddd in cyan-orange theme) */
+  --mat-sys-primary: #fe6c00;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: #4a2200;
+  --mat-sys-on-primary-container: #ffdcc7;
+  --mat-sys-surface-tint: #fe6c00;
+  --mat-sys-primary-fixed: #ffdcc7;
+  --mat-sys-primary-fixed-dim: #fe6c00;
+  --mat-sys-on-primary-fixed: #4a2200;
+  --mat-sys-on-primary-fixed-variant: #723600;
+  --mat-sys-inverse-primary: #fe6c00;
+
+  /* Secondary = grey (was teal in cyan-orange theme) */
+  --mat-sys-secondary: #767676;
+  --mat-sys-on-secondary: #ffffff;
+  --mat-sys-secondary-container: #363636;
+  --mat-sys-on-secondary-container: #e0e0e0;
+  --mat-sys-secondary-fixed: #e0e0e0;
+  --mat-sys-secondary-fixed-dim: #767676;
+  --mat-sys-on-secondary-fixed: #363636;
+  --mat-sys-on-secondary-fixed-variant: #4d4d4d;
+}
+
+/*
+ * Use system font stack instead of Roboto for Material typography.
+ */
+:root {
+  --mat-sys-body-large-font: var(--app-font-sans);
+  --mat-sys-body-medium-font: var(--app-font-sans);
+  --mat-sys-body-small-font: var(--app-font-sans);
+  --mat-sys-display-large-font: var(--app-font-sans);
+  --mat-sys-display-medium-font: var(--app-font-sans);
+  --mat-sys-display-small-font: var(--app-font-sans);
+  --mat-sys-headline-large-font: var(--app-font-sans);
+  --mat-sys-headline-medium-font: var(--app-font-sans);
+  --mat-sys-headline-small-font: var(--app-font-sans);
+  --mat-sys-label-large-font: var(--app-font-sans);
+  --mat-sys-label-medium-font: var(--app-font-sans);
+  --mat-sys-label-small-font: var(--app-font-sans);
+  --mat-sys-title-large-font: var(--app-font-sans);
+  --mat-sys-title-medium-font: var(--app-font-sans);
+  --mat-sys-title-small-font: var(--app-font-sans);
 }

@@ -7,7 +7,15 @@
       fill="'currentColor'"
       transform="translate(0)">
       <animate
-        [attr.attributeName]="animateAttributeName"
+        *ngIf="direction === Direction.Column"
+        attributeName="width"
+        attributeType="XML"
+        [attr.values]="rectValue"
+        [attr.dur]="duration + 's'"
+        fill="freeze"></animate>
+      <animate
+        *ngIf="direction === Direction.Row"
+        attributeName="height"
         attributeType="XML"
         [attr.values]="rectValue"
         [attr.dur]="duration + 's'"

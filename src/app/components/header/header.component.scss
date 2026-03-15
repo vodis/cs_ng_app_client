@@ -18,12 +18,20 @@
       }
 
       @include media-breakpoint-up(md) {
+        &_notifications {
+          grid-column: 5 / 6;
+        }
+
         &_connect {
           grid-column: 6 / 8;
         }
       }
 
       @include media-breakpoint-up(lg) {
+        &_notifications {
+          grid-column: 6 / 7;
+        }
+
         &_connect {
           grid-column: 7 / 8;
         }

@@ -3,6 +3,7 @@ import { Direction } from '@shared/components/animate-line/animate-line.componen
 
 @Component({
   selector: 'app-layout',
+  standalone: false,
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss'],
 })
