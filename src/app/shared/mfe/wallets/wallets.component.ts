@@ -10,7 +10,7 @@ import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 
 @Component({
   selector: 'app-wallets',
-
+  standalone: false,
   template: ` <div #container></div> `,
 })
 export class WalletsComponent implements OnInit {

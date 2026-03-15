@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-wallet-bar',
-
+  standalone: false,
   templateUrl: 'wallet-bar.component.html',
   styleUrls: [],
 })

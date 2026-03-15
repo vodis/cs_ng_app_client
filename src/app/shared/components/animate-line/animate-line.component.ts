@@ -7,7 +7,7 @@ export enum Direction {
 
 @Component({
   selector: 'app-animate-line',
-
+  standalone: false,
   templateUrl: './animate-line.component.html',
   styleUrls: ['./animate-line.component.scss'],
 })
