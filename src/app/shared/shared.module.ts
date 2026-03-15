@@ -14,15 +14,18 @@ import { AvatarComponent } from '@shared/components/avatar/avatar.component';
 const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
 
 @NgModule({
-  imports: [...AngularMaterial, CommonModule],
+  imports: [
+    ...AngularMaterial,
+    CommonModule,
+    WalletMenuComponent,
+    WalletAccountComponent,
+    AvatarComponent,
+  ],
   declarations: [
     AnimateLineComponent,
     WalletsComponent,
     WalletBarComponent,
-    WalletMenuComponent,
-    WalletAccountComponent,
     SideModalComponent,
-    AvatarComponent,
   ],
   providers: [],
   exports: [
