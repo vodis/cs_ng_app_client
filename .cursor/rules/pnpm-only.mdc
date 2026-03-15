@@ -1,0 +1,29 @@
+---
+description: This project uses pnpm only; npm and yarn are not allowed
+alwaysApply: true
+---
+
+# Package manager: pnpm only (restricted)
+
+This project **must** use **pnpm** as the sole package manager.
+
+## Rules
+
+- **Do not** use `npm` or `yarn` in this repo (no `npm install`, `npm run`, `yarn add`, etc.).
+- Use **pnpm** for all package operations:
+  - Install: `pnpm install` (or `pnpm i`)
+  - Add dependency: `pnpm add <pkg>` / `pnpm add -D <pkg>`
+  - Run scripts: `pnpm run <script>` or `pnpm <script>`
+  - CI: `pnpm install --frozen-lockfile` (or `pnpm ci` where supported)
+- Lockfile is `pnpm-lock.yaml`; do not commit `package-lock.json` or `yarn.lock`.
+- When editing configs (e.g. GitHub Actions, Makefile, docs), use pnpm commands only.
+
+## Quick reference
+
+| Action        | Command                    |
+|---------------|----------------------------|
+| Install deps  | `pnpm install`             |
+| Add dep       | `pnpm add <pkg>`          |
+| Add dev dep   | `pnpm add -D <pkg>`       |
+| Run script    | `pnpm run build` / `pnpm build` |
+| CI install    | `pnpm install --frozen-lockfile` |
