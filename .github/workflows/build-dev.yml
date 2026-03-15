@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   ci:
@@ -37,6 +38,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
+
+      - name: Configure registry for @vodis (GitHub Packages)
+        run: |
+          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
