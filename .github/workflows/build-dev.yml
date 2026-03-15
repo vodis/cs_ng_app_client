@@ -1,53 +1,64 @@
-name: Build DEV - Frontend
+name: CI - Develop (test & validate)
 
 on:
   push:
     branches:
-      - 'develop'
-      - 'releases/**'
+      - develop
     paths-ignore:
       - 'README.md'
-
+  pull_request:
+    branches:
+      - develop
+    paths-ignore:
+      - 'README.md'
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
+  packages: read
 
 jobs:
-  build-frontend-ci:
+  ci:
     runs-on: ubuntu-latest
-    name: build&deploy
+    name: test & build validation
 
     strategy:
       matrix:
         node-version: [18.x]
 
     steps:
-      - name: 🕵️‍♂️ Get latest code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: 🚀 Deploy file to server
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
-        with:
-          username: ${{ secrets.REMOTE_USER }}
-          server: ${{ secrets.REMOTE_HOST }}
-          ssh_private_key: ${{ secrets.REMOTE_KEY }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local_path: './'
-          remote_path: ${{ secrets.FTP_PATH }}
-          sftpArgs: '-o ConnectTimeout=5'
-          sftp_only: true
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - name: 🛠 Execute npm commands on remote server
-        uses: appleboy/ssh-action@master
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          script: |
-            export NVM_DIR=~/.nvm
-            source ~/.nvm/nvm.sh
-            cd ${{ secrets.FTP_PATH }}
-            make build-development
-            make cp-file
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Configure registry for @vodis (GitHub Packages)
+        run: |
+          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for headless tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium
+
+      - name: TypeScript / ESLint
+        run: pnpm run lint
+
+      - name: Angular tests
+        run: pnpm exec ng test --no-watch --no-progress --browsers=ChromeHeadlessNoSandbox
+        env:
+          CHROME_BIN: /usr/bin/chromium
+
+      - name: Production build (verify only, no deploy)
+        run: pnpm run build-prod

@@ -1,7 +1,13 @@
 .PHONY: build-development
 build-development: ## Build the development Angular application.
-	npm ci
-	CI=false npm run build-dev
+	pnpm install --frozen-lockfile
+	CI=false pnpm run build-dev
+	ls -al ./dist/cs_ng_app_client
+
+.PHONY: build-production
+build-production: ## Build the production Angular application.
+	pnpm install --frozen-lockfile
+	CI=false pnpm run build-prod
 	ls -al ./dist/cs_ng_app_client
 
 .PHONY: cp-file

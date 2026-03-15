@@ -38,7 +38,7 @@ jobs:
           sftpArgs: '-o ConnectTimeout=5'
           sftp_only: true
 
-      - name: 🛠 Execute npm commands on remote server
+      - name: 🛠 Execute pnpm commands on remote server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.REMOTE_HOST }}
@@ -48,5 +48,5 @@ jobs:
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
             cd ${{ secrets.FTP_PATH }}
-            make build-development
+            make build-production
             make cp-file
