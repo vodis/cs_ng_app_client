@@ -1,3 +1,4 @@
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { AppComponent } from './app.component';
@@ -7,6 +8,7 @@ describe('AppComponent', () => {
     TestBed.configureTestingModule({
       imports: [RouterTestingModule],
       declarations: [AppComponent],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
     })
   );
 
@@ -22,12 +24,10 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('cs_ng_app_client');
   });
 
-  it('should render title', () => {
+  it('should render app-layout', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.content span')?.textContent).toContain(
-      'cs_ng_app_client app is running!'
-    );
+    expect(compiled.querySelector('app-layout')).toBeTruthy();
   });
 });

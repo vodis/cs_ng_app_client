@@ -2,6 +2,7 @@ import { Component, Input, OnChanges } from '@angular/core';
 
 @Component({
   selector: 'app-wallet-account',
+  standalone: true,
   templateUrl: 'wallet-account.component.html',
 })
 export class WalletAccountComponent implements OnChanges {
