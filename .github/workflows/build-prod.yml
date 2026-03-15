@@ -48,5 +48,5 @@ jobs:
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
             cd ${{ secrets.FTP_PATH }}
-            make build-development
+            make build-production
             make cp-file
