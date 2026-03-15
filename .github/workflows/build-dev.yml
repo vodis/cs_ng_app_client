@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  packages: read   # required to install @vodis/ui-kit from GitHub Package Registry
 
 jobs:
   ci:
@@ -34,6 +35,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+
+      - name: Auth npm for GitHub Packages
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
+          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
 
       - name: Install dependencies
         run: npm ci
