@@ -1,0 +1,7 @@
+<div class="card-wallet-avatar">
+  @if (img) {
+    <img [src]="img" [alt]="alt" />
+  } @else {
+    <div class="no-avatar" [style.background]="randomBackground"></div>
+  }
+</div>

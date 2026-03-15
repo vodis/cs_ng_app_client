@@ -15,7 +15,7 @@ import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 })
 export class WalletsComponent implements OnInit {
   @ViewChild('container', { read: ViewContainerRef })
-  containerRef!: ViewContainerRef;
+  public containerRef!: ViewContainerRef;
 
   constructor(private walletsService: WalletsService) {}
 

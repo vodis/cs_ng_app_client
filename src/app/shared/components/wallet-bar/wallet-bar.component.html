@@ -1,11 +1,15 @@
 <div class="wallet-bar">
-  <button
-    (click)="handleOpenWalletMenu()"
-    mat-stroked-button
-    color="primary"
-    class="btn-lg">
-    Connect wallet
-  </button>
+  @if (!account) {
+    <button
+      (click)="handleOpenWalletMenu()"
+      mat-stroked-button
+      color="primary"
+      class="btn-lg">
+      Connect wallet
+    </button>
+  } @else {
+    <app-wallet-menu [account]="account" />
+  }
 
   <app-side-modal [isOpen]="isOpenWalletConnectMenu">
     <app-wallets />
