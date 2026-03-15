@@ -27,12 +27,16 @@
             "tsConfig": "tsconfig.app.json",
             "assets": ["src/favicon.ico", "src/assets"],
             "styles": [
+              "node_modules/@angular/material/prebuilt-themes/cyan-orange.css",
               "src/assets/styles/default-theme-colors.css",
               "src/styles.scss"
             ],
             "scripts": [],
             "extraWebpackConfig": "config/webpack.config.js",
-            "commonChunk": false
+            "commonChunk": false,
+            "stylePreprocessorOptions": {
+              "includePaths": ["../node_modules/src/app/styles"]
+            }
           },
           "configurations": {
             "production": {
@@ -70,21 +74,22 @@
         },
         "serve": {
           "builder": "ngx-build-plus:dev-server",
-          "configurations": {
-            "production": {
-              "browserTarget": "cs_ng_app_client:build:production",
-              "extraWebpackConfig": "config/webpack.prod.config.js"
-            },
-            "development": {
-              "browserTarget": "cs_ng_app_client:build:development"
-            }
-          },
-          "defaultConfiguration": "development",
           "options": {
+            "buildTarget": "cs_ng_app_client:build:development",
             "publicHost": "http://localhost:5000",
             "port": 5000,
             "extraWebpackConfig": "config/webpack.config.js"
-          }
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "cs_ng_app_client:build:production",
+              "extraWebpackConfig": "config/webpack.prod.config.js"
+            },
+            "development": {
+              "buildTarget": "cs_ng_app_client:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
         },
         "extract-i18n": {
           "builder": "ngx-build-plus:extract-i18n",
@@ -115,9 +120,6 @@
             "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
           }
         }
-      },
-      "stylePreprocessorOptions": {
-        "includePaths": ["../node_modules/src/app/styles"]
       }
     }
   }
