@@ -25,7 +25,15 @@
             "main": "src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
-            "assets": ["src/favicon.ico", "src/assets"],
+            "assets": [
+              "src/favicon.ico",
+              "src/assets",
+              {
+                "glob": "mf.manifest.json",
+                "input": "src/config",
+                "output": "assets"
+              }
+            ],
             "styles": [
               "node_modules/@angular/material/prebuilt-themes/cyan-orange.css",
               "src/assets/styles/default-theme-colors.css",
@@ -105,7 +113,15 @@
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
-            "assets": ["src/favicon.ico", "src/assets"],
+            "assets": [
+              "src/favicon.ico",
+              "src/assets",
+              {
+                "glob": "mf.manifest.json",
+                "input": "src/config",
+                "output": "assets"
+              }
+            ],
             "styles": [
               "src/assets/styles/default-theme-colors.css",
               "src/styles.scss"
