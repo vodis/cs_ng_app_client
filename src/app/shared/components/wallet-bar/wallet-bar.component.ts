@@ -18,6 +18,13 @@ export class WalletBarComponent {
         this.isOpenWalletConnectMenu = false;
       }
     });
+
+    this.walletsService.closeRequested.subscribe(closeRequested => {
+      if (closeRequested) {
+        this.isOpenWalletConnectMenu = false;
+        this.walletsService.closeRequested.next(false);
+      }
+    });
   }
 
   public handleOpenWalletMenu(): void {
