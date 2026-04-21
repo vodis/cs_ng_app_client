@@ -9,4 +9,5 @@ export class WalletsService {
   public account = new BehaviorSubject<{ account: string } | undefined>(
     undefined
   );
+  public closeRequested = new BehaviorSubject<boolean>(false);
 }
