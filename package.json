@@ -83,7 +83,7 @@
   "lint-staged": {
     "*.{ts,html}": [
       "pnpm run lint",
-      "pnpm run format"
+      "prettier --write"
     ],
     "*.{scss}": [
       "pnpm run stylelint-fix"
