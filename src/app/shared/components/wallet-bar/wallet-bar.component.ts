@@ -14,8 +14,11 @@ export class WalletBarComponent {
   constructor(private walletsService: WalletsService) {
     this.walletsService.account.subscribe(account => {
       if (account) {
+        const hadAccount = Boolean(this.account?.account);
         this.account = account;
-        this.isOpenWalletConnectMenu = false;
+        if (!hadAccount) {
+          this.isOpenWalletConnectMenu = false;
+        }
       }
     });
 
@@ -29,5 +32,9 @@ export class WalletBarComponent {
 
   public handleOpenWalletMenu(): void {
     this.isOpenWalletConnectMenu = true;
+  }
+
+  public handleCloseWalletMenu(): void {
+    this.isOpenWalletConnectMenu = false;
   }
 }
