@@ -86,6 +86,44 @@ Use these levels to keep host/MFE communication explicit.
 
 Do not skip levels when introducing a change. A Level 3 event change usually implies Level 2 documentation updates and test updates at Level 0/1.
 
+## dApp Communication Layer (Host <-> MFE <-> Backend)
+
+Use three explicit channels:
+
+- Channel A: Host <-> MFE runtime contract
+  - Mount/unmount lifecycle
+  - typed input props and output callbacks
+  - versioned domain events
+- Channel B: Host <-> NestJS BFF API contract
+  - typed DTO requests/responses
+  - stable error envelope and correlation IDs
+- Channel C: Host local domain state contract
+  - host-owned normalized models and mappers
+  - no direct MFE model leakage into global host state
+
+Canonical event naming:
+
+- `wallet.connected`
+- `wallet.disconnected`
+- `wallet.accountChanged`
+- `wallet.chainChanged`
+- `wallet.txSigned`
+- `wallet.error`
+
+Event payload envelope minimum:
+
+- `eventVersion`
+- `traceId`
+- `timestamp`
+- `source`
+- `payload`
+
+Compatibility policy:
+
+- Additive first, then deprecate, then remove.
+- If event payload changes, bump `eventVersion`.
+- Breaking event/API changes require host and MFE coordinated release notes.
+
 ## Architecture Best Practices
 
 - Boundary first: keep wallet business logic in wallets MFE, shell concerns in host.
@@ -101,10 +139,12 @@ Do not skip levels when introducing a change. A Level 3 event change usually imp
 1. Identify touched communication level(s).
 2. Verify host wiring in `src/config/mf.manifest.json`.
 3. Cross-check wallet side in `../mfe-wallets` (or remote repository when needed).
-4. Update docs/contracts in this repo when behavior changes.
-5. Validate locally (host + wallet MFE running together).
-6. Validate key dApp flow (wallet mount + at least one happy-path interaction).
-7. Run quality gates (`pnpm` scripts) before finalizing.
+4. Sync with latest wallets commit contract changes before editing host docs.
+5. Update docs/contracts in this repo when behavior changes.
+6. Update dApp communication layer docs (channels/events/payload versions) when Level 2+ changes occur.
+7. Validate locally (host + wallet MFE running together).
+8. Validate key dApp flow (wallet mount + at least one happy-path interaction).
+9. Run quality gates (`pnpm` scripts) before finalizing.
 
 ## Validation Minimum
 

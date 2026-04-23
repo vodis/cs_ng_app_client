@@ -96,6 +96,47 @@ This host is the Angular shell for a dApp-style product (DEX-like interaction pa
 - Align on error semantics, telemetry fields, feature flags, and auth/session expectations.
 - If one side changes behavior, update both docs and tests.
 
+## dApp Communication Layer (implementation baseline)
+
+Define and maintain these communication channels:
+
+- Host <-> MFE:
+  - mount contract, inputs/outputs, versioned events
+- Host <-> NestJS BFF:
+  - typed request/response DTOs and stable error envelope
+- Host internal normalization:
+  - map MFE/backend payloads to host-owned domain models before UI rendering
+
+### Standard event contract (Host <-> MFE)
+
+- Event names:
+  - `wallet.connected`
+  - `wallet.disconnected`
+  - `wallet.accountChanged`
+  - `wallet.chainChanged`
+  - `wallet.txSigned`
+  - `wallet.error`
+- Event payload envelope:
+  - `eventVersion`
+  - `traceId`
+  - `timestamp`
+  - `source`
+  - `payload`
+
+### Standard API contract (Host <-> BFF)
+
+- Route versioning required (`/v1/...`).
+- Error envelope required (`code`, `message`, `retryable`, `details`).
+- Correlation ID propagation required for all critical dApp flows.
+- Host must map DTOs to domain models through dedicated mappers.
+
+### Change management
+
+- Any Level 2+ contract change requires:
+  - docs update in host and MFE
+  - payload/schema version note
+  - integration smoke validation on both sides
+
 ## Testing Strategy
 
 - Minimum before merge:

@@ -177,6 +177,42 @@ Contract change policy:
 - Mark deprecations before removal.
 - Update host and MFE docs together for Level 2+ changes.
 
+## 11.1 dApp Communication Layer
+
+The communication layer is a protocol, not an implementation detail.
+
+Channels:
+
+- Runtime channel (Host <-> MFE)
+  - mount lifecycle, typed inputs/outputs, versioned events
+- API channel (Host <-> NestJS BFF)
+  - request/response DTOs, standardized errors, correlation IDs
+- State normalization channel (Host internal)
+  - adapters map external payloads to host-owned domain models
+
+Required runtime events (wallet baseline):
+
+- `wallet.connected`
+- `wallet.disconnected`
+- `wallet.accountChanged`
+- `wallet.chainChanged`
+- `wallet.txSigned`
+- `wallet.error`
+
+Required event payload envelope:
+
+- `eventVersion`
+- `traceId`
+- `timestamp`
+- `source`
+- `payload`
+
+Protocol governance:
+
+- Event and API changes are additive by default.
+- Breaking payload changes require version bump and migration note.
+- Host and MFE release notes must reference matching contract updates.
+
 ## 12. Suggested Frontend Structure
 
 Baseline structure for this repository:
@@ -221,6 +257,7 @@ For every new feature, answer:
 4. Where is state stored and why?
 5. What failure modes exist and how are they recovered?
 6. What logs/telemetry are required for supportability?
+7. Which communication channel(s) are touched and what version changes are needed?
 
 If these answers are not explicit, implementation should not start.
 
