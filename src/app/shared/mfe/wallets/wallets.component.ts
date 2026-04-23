@@ -7,25 +7,9 @@ import {
 } from '@angular/core';
 import { loadRemoteModule } from '@angular-architects/module-federation';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
-
-type WalletsMfeModule = {
-  mount: (
-    container: HTMLElement,
-    props?: {
-      context?: {
-        contractVersion?: '2.0.0';
-        sessionId?: string;
-        locale?: string;
-        theme?: 'light' | 'dark';
-        environment?: 'dev' | 'staging' | 'prod';
-      };
-      callbacks?: {
-        onAccountChanged?: (payload: { account: string }) => void;
-        onCloseRequested?: () => void;
-      };
-    }
-  ) => (() => void) | void;
-};
+import { WalletsMfeModule } from '@mfe-contracts/wallet-mfe.types';
+import { WalletAccountChangedPayload } from '@mfe-contracts/payloads';
+import { AppLoggerService } from '@core/logging/app-logger.service';
 
 @Component({
   selector: 'app-wallets',
@@ -39,7 +23,10 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   private unmountMfe: (() => void) | undefined;
   private isDestroyed = false;
 
-  constructor(private walletsService: WalletsService) {}
+  constructor(
+    private walletsService: WalletsService,
+    private logger: AppLoggerService
+  ) {}
 
   ngAfterViewInit() {
     void this.initializeMfe();
@@ -48,7 +35,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   async initializeMfe() {
     const container = this.containerRef?.nativeElement;
     if (!container) {
-      console.error('Wallets MFE: host container is not available');
+      this.logger.log('error', 'Wallets MFE: host container is not available');
       return;
     }
 
@@ -58,10 +45,9 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         remoteName: 'mfe-wallets',
         exposedModule: './mount',
       })) as WalletsMfeModule;
-      console.info(
-        'Wallets MFE: remote module loaded',
-        Object.keys(mfeModule || {})
-      );
+      this.logger.log('info', 'Wallets MFE: remote module loaded', {
+        moduleKeys: Object.keys(mfeModule || {}),
+      });
 
       // Prevent mounting if component was destroyed while remote loaded.
       if (this.isDestroyed) {
@@ -79,20 +65,22 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
           environment: 'dev',
         },
         callbacks: {
-          onAccountChanged: (account: { account: string }) => {
-            this.walletsService.account.next(account);
+          onAccountChanged: (account: WalletAccountChangedPayload) => {
+            this.walletsService.setAccount(account);
           },
           onCloseRequested: () => {
-            this.walletsService.closeRequested.next(true);
+            this.walletsService.requestClose();
           },
         },
       });
       this.unmountMfe = typeof unmount === 'function' ? unmount : undefined;
-      console.info('Wallets MFE: mounted successfully');
+      this.logger.log('info', 'Wallets MFE: mounted successfully');
     } catch (error) {
       container.innerHTML =
         '<div style="padding:12px;color:#ef4444;font-size:12px;">Wallets MFE failed to mount. Check browser console.</div>';
-      console.error('Error loading MFE component:', error);
+      this.logger.log('error', 'Wallets MFE: failed to mount', {
+        error,
+      });
     }
   }
 
