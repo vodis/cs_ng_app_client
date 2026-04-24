@@ -4,6 +4,14 @@ This document describes daily development standards for `cs_ng_app_client` and i
 
 This host is the Angular shell for a dApp-style product (DEX-like interaction patterns), and should evolve with explicit boundaries to `mfe-wallets` and backend APIs.
 
+## Repositories and Sources
+
+- Host app (this repo): `cs_ng_app_client`
+- Wallet MFE local source: `../mfe-wallets`
+- Wallet MFE remote git: `git@github.com:vodis/cs_mfe-wallets.git`
+- Backend local source: `../cs_nestjs_backend`
+- Backend remote repository: `https://github.com/vodis/cs_nestjs_backend`
+
 ## Target Architecture (from scratch)
 
 - Frontend shape: Angular host shell with domain-oriented features and optional MFEs.
