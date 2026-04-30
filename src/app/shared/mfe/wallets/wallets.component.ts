@@ -4,10 +4,15 @@ import {
   ElementRef,
   AfterViewInit,
   OnDestroy,
+  NgZone,
 } from '@angular/core';
 import { loadRemoteModule } from '@angular-architects/module-federation';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
-import { WalletsMfeModule } from '@mfe-contracts/wallet-mfe.types';
+import {
+  WalletConnectionSnapshot,
+  WalletsMfeModule,
+  WalletsMfeMountApi,
+} from '@mfe-contracts/wallet-mfe.types';
 import { WalletAccountChangedPayload } from '@mfe-contracts/payloads';
 import { AppLoggerService } from '@core/logging/app-logger.service';
 
@@ -21,11 +26,13 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   public containerRef!: ElementRef<HTMLElement>;
 
   private unmountMfe: (() => void) | undefined;
+  private unsubscribeEvents: (() => void) | undefined;
   private isDestroyed = false;
 
   constructor(
     private walletsService: WalletsService,
-    private logger: AppLoggerService
+    private logger: AppLoggerService,
+    private ngZone: NgZone
   ) {}
 
   ngAfterViewInit() {
@@ -59,21 +66,44 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         throw new Error('MFE mount function is not available');
       }
 
-      const unmount = mfeModule.mount(container, {
+      const mountResult = mfeModule.mount(container, {
         context: {
           contractVersion: '2.0.0',
           environment: 'dev',
         },
         callbacks: {
           onAccountChanged: (account: WalletAccountChangedPayload) => {
-            this.walletsService.setAccount(account);
+            this.ngZone.run(() => {
+              this.walletsService.setAccount(account);
+            });
           },
           onCloseRequested: () => {
-            this.walletsService.requestClose();
+            this.ngZone.run(() => {
+              this.walletsService.requestClose();
+            });
           },
         },
       });
-      this.unmountMfe = typeof unmount === 'function' ? unmount : undefined;
+      this.unsubscribeEvents?.();
+      this.unsubscribeEvents = undefined;
+
+      if (this.isMountApi(mountResult)) {
+        this.unmountMfe = mountResult.unmount;
+        this.ngZone.run(() => {
+          this.applyConnectionSnapshot(mountResult.getSnapshot());
+        });
+        this.unsubscribeEvents = mountResult.subscribe(event => {
+          if (event.type === 'connection.snapshot.updated') {
+            this.ngZone.run(() => {
+              this.applyConnectionSnapshot(event.payload);
+            });
+          }
+        });
+      } else {
+        this.unmountMfe =
+          typeof mountResult === 'function' ? mountResult : undefined;
+      }
+
       this.logger.log('info', 'Wallets MFE: mounted successfully');
     } catch (error) {
       container.innerHTML =
@@ -84,8 +114,29 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  private applyConnectionSnapshot(snapshot: WalletConnectionSnapshot): void {
+    if (snapshot.account) {
+      this.walletsService.setAccount({ account: snapshot.account });
+      return;
+    }
+
+    this.walletsService.setAccount(undefined);
+  }
+
+  private isMountApi(value: unknown): value is WalletsMfeMountApi {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'unmount' in value &&
+      'subscribe' in value &&
+      'getSnapshot' in value
+    );
+  }
+
   ngOnDestroy(): void {
     this.isDestroyed = true;
+    this.unsubscribeEvents?.();
+    this.unsubscribeEvents = undefined;
     this.unmountMfe?.();
     this.unmountMfe = undefined;
   }
