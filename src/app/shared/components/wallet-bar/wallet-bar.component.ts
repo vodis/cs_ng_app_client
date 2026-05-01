@@ -19,12 +19,10 @@ export class WalletBarComponent {
     this.walletsService.account
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(account => {
-        if (account) {
-          const hadAccount = Boolean(this.account?.account);
-          this.account = account;
-          if (!hadAccount) {
-            this.isOpenWalletConnectMenu = false;
-          }
+        const hadAccount = Boolean(this.account?.account);
+        this.account = account;
+        if (account && !hadAccount) {
+          this.isOpenWalletConnectMenu = false;
         }
       });
 
