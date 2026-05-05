@@ -10,7 +10,7 @@ export class WalletsService {
   public account = new BehaviorSubject<WalletAccount | undefined>(undefined);
   public closeRequested = new BehaviorSubject<boolean>(false);
 
-  setAccount(account: WalletAccount): void {
+  setAccount(account: WalletAccount | undefined): void {
     this.account.next(account);
   }
 

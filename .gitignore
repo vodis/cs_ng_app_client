@@ -46,3 +46,7 @@ Thumbs.db
 
 # packages
 .npmrc
+
+# Documents & Agents
+docs/
+.claude/
