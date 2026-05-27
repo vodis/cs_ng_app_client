@@ -21,8 +21,12 @@ This guide is for AI/code agents and contributors working in `cs_ng_app_client`.
 - Host app (this repo): `cs_ng_app_client`
 - Wallet MFE local source: `../mfe-wallets`
 - Wallet MFE remote git: `git@github.com:vodis/cs_mfe-wallets.git`
+- Backend local source: `../cs_nestjs_backend`
+- Backend remote repository: `https://github.com/vodis/cs_nestjs_backend`
 
 When validating or documenting behavior for wallets, treat `../mfe-wallets` as the primary local reference and `git@github.com:vodis/cs_mfe-wallets.git` as the canonical remote source.
+
+When validating or documenting backend-dependent host behavior, treat `../cs_nestjs_backend` as the primary local reference and `https://github.com/vodis/cs_nestjs_backend` as the canonical remote source.
 
 ## Current Runtime Integration
 
