@@ -1,52 +1,160 @@
-name: Build PROD - Frontend
+name: Build PROD - Orchestrator
 
 on:
+  pull_request:
+    branches:
+      - master
   push:
     branches:
-      - 'master'
-    paths-ignore:
-      - 'README.md'
-
+      - master
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  group: prod-orchestrator-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GHCR_IMAGE: ghcr.io/vodis/cs_ng_app_client
+  METADATA_MEDIA_TYPE: application/vnd.craftscript.deploy-metadata.v1+json
+  ORAS_VERSION: 1.2.2
 
 jobs:
-  build-frontend-ci:
+  pr-checks:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    name: build&deploy
-
-    strategy:
-      matrix:
-        node-version: [18.x]
-
     steps:
-      - name: 🕵️‍♂️ Get latest code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: 🚀 Deploy file to server
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          username: ${{ secrets.REMOTE_USER }}
-          server: ${{ secrets.REMOTE_HOST }}
-          ssh_private_key: ${{ secrets.REMOTE_KEY }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local_path: './'
-          remote_path: ${{ secrets.FTP_PATH }}
-          sftpArgs: '-o ConnectTimeout=5'
-          sftp_only: true
+          version: 9.15.0
 
-      - name: 🛠 Execute pnpm commands on remote server
-        uses: appleboy/ssh-action@master
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          script: |
-            export NVM_DIR=~/.nvm
-            source ~/.nvm/nvm.sh
-            cd ${{ secrets.FTP_PATH }}
-            make build-production
-            make cp-file
+          node-version: '22'
+          cache: pnpm
+
+      - name: npm auth (@vodis packages)
+        run: |
+          if [ -z "${{ secrets.GH_PACKAGES_TOKEN }}" ]; then
+            echo "::error::Add repository secret GH_PACKAGES_TOKEN with read:packages access."
+            exit 1
+          fi
+          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
+          printf '//npm.pkg.github.com/:_authToken=%s\n' "${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build production bundle
+        run: pnpm run build-prod
+
+  bundle:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push app image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.GHCR_IMAGE }}:production
+            ${{ env.GHCR_IMAGE }}:${{ github.sha }}
+          secrets: |
+            npm_token=${{ secrets.GH_PACKAGES_TOKEN }}
+          provenance: true
+          sbom: true
+
+      - name: Verify build digest output
+        run: |
+          test -n "${{ steps.build.outputs.digest }}"
+          echo "build.digest=${{ steps.build.outputs.digest }}"
+
+      - name: Write deploy-metadata.json
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          mkdir -p artifacts
+          python3 <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+
+          server = "https://github.com"
+          gh_repo = "vodis/cs_ng_app_client"
+          run_id = os.environ["RUN_ID"]
+          digest = os.environ["DIGEST"]
+
+          meta = {
+              "schemaVersion": "1",
+              "service": "cs_ng_app_client",
+              "environment": "production",
+              "git": {
+                  "repository": "https://github.com/vodis/cs_ng_app_client.git",
+                  "commitSha": os.environ["SHA"],
+                  "branch": "master",
+                  "actor": os.environ["ACTOR"],
+              },
+              "image": {
+                  "registry": "ghcr.io",
+                  "repository": "vodis/cs_ng_app_client",
+                  "digest": digest,
+              },
+              "security": {
+                  "sbomUri": f"{server}/{gh_repo}/actions/runs/{run_id}#docker-build-sbom",
+                  "scanSummaryUri": f"{server}/{gh_repo}/actions/runs/{run_id}#docker-build-provenance",
+                  "signatureRef": f"ghcr.io/vodis/cs_ng_app_client@{digest}",
+              },
+              "build": {
+                  "pipelineId": run_id,
+                  "pipelineUrl": f"{server}/{gh_repo}/actions/runs/{run_id}",
+                  "builtAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              },
+          }
+          with open("artifacts/deploy-metadata.json", "w", encoding="utf-8") as f:
+              json.dump(meta, f, indent=2)
+              f.write("\n")
+          PY
+
+      - name: Install ORAS
+        run: |
+          curl -sSfL "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin oras
+
+      - name: Push deploy-metadata to GHCR
+        run: |
+          oras push "${GHCR_IMAGE}:production-metadata" \
+            "artifacts/deploy-metadata.json:${METADATA_MEDIA_TYPE}"
+
+      - name: Upload deploy metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-deploy-metadata-${{ github.sha }}
+          path: artifacts/deploy-metadata.json
