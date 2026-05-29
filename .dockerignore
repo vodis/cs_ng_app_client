@@ -1,0 +1,10 @@
+.git
+.github
+node_modules
+dist
+coverage
+.angular
+.env
+.env.*
+npm-debug.log*
+pnpm-debug.log*
