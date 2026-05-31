@@ -8,10 +8,14 @@
       Connect wallet
     </button>
   } @else {
-    <app-wallet-menu [account]="account" />
+    <app-wallet-menu
+      [account]="account"
+      (accountClick)="handleOpenWalletMenu()" />
   }
 
-  <app-side-modal [isOpen]="isOpenWalletConnectMenu">
+  <app-side-modal
+    [isOpen]="isOpenWalletConnectMenu"
+    (closeRequested)="handleCloseWalletMenu()">
     <app-wallets />
   </app-side-modal>
 </div>

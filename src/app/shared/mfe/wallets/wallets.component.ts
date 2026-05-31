@@ -1,54 +1,143 @@
 import {
   Component,
   ViewChild,
-  ViewContainerRef,
-  ComponentRef,
-  OnInit,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy,
+  NgZone,
 } from '@angular/core';
 import { loadRemoteModule } from '@angular-architects/module-federation';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import {
+  WalletConnectionSnapshot,
+  WalletsMfeModule,
+  WalletsMfeMountApi,
+} from '@mfe-contracts/wallet-mfe.types';
+import { WalletAccountChangedPayload } from '@mfe-contracts/payloads';
+import { AppLoggerService } from '@core/logging/app-logger.service';
 
 @Component({
   selector: 'app-wallets',
   standalone: false,
   template: ` <div #container></div> `,
 })
-export class WalletsComponent implements OnInit {
-  @ViewChild('container', { read: ViewContainerRef })
-  public containerRef!: ViewContainerRef;
+export class WalletsComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('container', { read: ElementRef })
+  public containerRef!: ElementRef<HTMLElement>;
 
-  constructor(private walletsService: WalletsService) {}
+  private unmountMfe: (() => void) | undefined;
+  private unsubscribeEvents: (() => void) | undefined;
+  private isDestroyed = false;
 
-  ngOnInit() {
-    this.initializeMfe();
+  constructor(
+    private walletsService: WalletsService,
+    private logger: AppLoggerService,
+    private ngZone: NgZone
+  ) {}
+
+  ngAfterViewInit() {
+    void this.initializeMfe();
   }
 
   async initializeMfe() {
+    const container = this.containerRef?.nativeElement;
+    if (!container) {
+      this.logger.log('error', 'Wallets MFE: host container is not available');
+      return;
+    }
+
     try {
-      const m = await loadRemoteModule({
+      const mfeModule = (await loadRemoteModule({
         type: 'manifest',
         remoteName: 'mfe-wallets',
-        exposedModule: './WalletsComponent',
+        exposedModule: './mount',
+      })) as WalletsMfeModule;
+      this.logger.log('info', 'Wallets MFE: remote module loaded', {
+        moduleKeys: Object.keys(mfeModule || {}),
       });
 
-      this.containerRef.clear();
+      // Prevent mounting if component was destroyed while remote loaded.
+      if (this.isDestroyed) {
+        return;
+      }
 
-      const componentType = m.WalletsComponent;
+      this.unmountMfe?.();
+      if (!container || typeof mfeModule.mount !== 'function') {
+        throw new Error('MFE mount function is not available');
+      }
 
-      const componentRef: ComponentRef<any> = this.containerRef.createComponent(
-        componentType,
-        {
-          injector: this.containerRef.injector,
-        }
-      );
+      const mountResult = mfeModule.mount(container, {
+        context: {
+          contractVersion: '2.0.0',
+          environment: 'dev',
+        },
+        callbacks: {
+          onAccountChanged: (account: WalletAccountChangedPayload) => {
+            this.ngZone.run(() => {
+              this.walletsService.setAccount(account);
+            });
+          },
+          onCloseRequested: () => {
+            this.ngZone.run(() => {
+              this.walletsService.requestClose();
+            });
+          },
+        },
+      });
+      this.unsubscribeEvents?.();
+      this.unsubscribeEvents = undefined;
 
-      componentRef.instance.account?.subscribe(
-        (account: { account: string }) => {
-          this.walletsService.account.next(account);
-        }
-      );
+      if (this.isMountApi(mountResult)) {
+        this.unmountMfe = mountResult.unmount;
+        this.ngZone.run(() => {
+          this.applyConnectionSnapshot(mountResult.getSnapshot());
+        });
+        this.unsubscribeEvents = mountResult.subscribe(event => {
+          if (event.type === 'connection.snapshot.updated') {
+            this.ngZone.run(() => {
+              this.applyConnectionSnapshot(event.payload);
+            });
+          }
+        });
+      } else {
+        this.unmountMfe =
+          typeof mountResult === 'function' ? mountResult : undefined;
+      }
+
+      this.logger.log('info', 'Wallets MFE: mounted successfully');
     } catch (error) {
-      console.error('Error loading MFE component:', error);
+      container.innerHTML =
+        '<div style="padding:12px;color:#ef4444;font-size:12px;">Wallets MFE failed to mount. Check browser console.</div>';
+      this.logger.log('error', 'Wallets MFE: failed to mount', {
+        error,
+      });
     }
+  }
+
+  private applyConnectionSnapshot(snapshot: WalletConnectionSnapshot): void {
+    if (snapshot.account) {
+      this.walletsService.setAccount({ account: snapshot.account });
+      return;
+    }
+
+    this.walletsService.setAccount(undefined);
+  }
+
+  private isMountApi(value: unknown): value is WalletsMfeMountApi {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'unmount' in value &&
+      'subscribe' in value &&
+      'getSnapshot' in value
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.isDestroyed = true;
+    this.unsubscribeEvents?.();
+    this.unsubscribeEvents = undefined;
+    this.unmountMfe?.();
+    this.unmountMfe = undefined;
   }
 }
