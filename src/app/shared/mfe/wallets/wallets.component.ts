@@ -55,6 +55,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       this.logger.log('info', 'Wallets MFE: remote module loaded', {
         moduleKeys: Object.keys(mfeModule || {}),
       });
+      this.attachRemoteStyles('mfe-wallets', './mount');
 
       // Prevent mounting if component was destroyed while remote loaded.
       if (this.isDestroyed) {
@@ -111,6 +112,37 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       this.logger.log('error', 'Wallets MFE: failed to mount', {
         error,
       });
+    }
+  }
+
+  private attachRemoteStyles(remoteName: string, exposedModule: string): void {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const key = `css__${remoteName}__${exposedModule}`;
+    const styles = (window as unknown as Record<string, unknown>)[key];
+    if (!Array.isArray(styles)) {
+      return;
+    }
+
+    for (const href of styles) {
+      if (typeof href !== 'string' || href.trim() === '') {
+        continue;
+      }
+      const absoluteHref = new URL(href, document.baseURI).href;
+      const alreadyLoaded = Array.from(
+        document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')
+      ).some(link => link.href === absoluteHref);
+      if (alreadyLoaded) {
+        continue;
+      }
+
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = absoluteHref;
+      link.dataset['mfeStyle'] = `${remoteName}:${exposedModule}`;
+      document.head.appendChild(link);
     }
   }
 
