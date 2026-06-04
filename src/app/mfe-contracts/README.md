@@ -38,16 +38,16 @@ No direct imports from MFE internals into host domain logic.
 ```ts
 export interface MfeEventEnvelope<TPayload = unknown> {
   eventName:
-    | "wallet.connected"
-    | "wallet.disconnected"
-    | "wallet.accountChanged"
-    | "wallet.chainChanged"
-    | "wallet.txSigned"
-    | "wallet.error";
+    | 'wallet.connected'
+    | 'wallet.disconnected'
+    | 'wallet.accountChanged'
+    | 'wallet.chainChanged'
+    | 'wallet.txSigned'
+    | 'wallet.error';
   eventVersion: number;
   traceId: string;
   timestamp: string; // ISO-8601
-  source: "mfe-wallets" | "host";
+  source: 'mfe-wallets' | 'host';
   payload: TPayload;
 }
 ```
@@ -133,4 +133,3 @@ If/when extracting typed contracts into code, place them under:
 - `src/app/mfe-contracts/api-envelope.ts`
 
 Keep this README updated alongside those files.
-
