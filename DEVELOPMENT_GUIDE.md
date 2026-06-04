@@ -181,4 +181,3 @@ Update this guide and `AGENT_GUIDE.md` whenever one of the following changes:
 - Host/MFE communication contract.
 - Wallet integration lifecycle or routing behavior.
 - Required local run/test commands.
-
