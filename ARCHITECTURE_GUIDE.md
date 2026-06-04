@@ -260,4 +260,3 @@ For every new feature, answer:
 7. Which communication channel(s) are touched and what version changes are needed?
 
 If these answers are not explicit, implementation should not start.
-

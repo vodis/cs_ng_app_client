@@ -60,6 +60,14 @@ Enforce flow direction: `component -> facade/use-case -> domain service -> gatew
 - Require consistent error shape and traceable request IDs.
 - Never couple frontend behavior to backend private implementation details.
 
+### Exchange/Spot Trading Asset Ownership
+
+- The canonical supported asset/token registry belongs in the NestJS BFF, not in this Angular host and not in `mfe-wallets`.
+- Backend owns token identifiers, decimals, chain/network mappings, tradable/depositable/withdrawable flags, private RPC balance reads, quote/execution validation, and final rejection of unsupported assets.
+- This host consumes versioned backend APIs such as `/v1/assets`, `/v1/balances`, `/v1/markets`, `/v1/quote`, and `/v1/execute`, then maps DTOs into host-owned UI/domain models.
+- Client-side token maps may be used only for non-authoritative display fallbacks, skeleton UI, search hints, or cached rendering. They must not decide whether a balance, quote, or trade is valid.
+- When community/public token lists are introduced later, treat them as backend-ingested inputs that require server-side validation and allowlisting before they affect product behavior.
+
 ### Backend Contract Minimum
 
 - Response envelope: deterministic shape for `data`, `error`, and `meta`.
@@ -162,4 +170,3 @@ Compatibility policy:
 
 - Do not tightly couple host to wallet private implementation details.
 - Do not embed undocumented implicit behavior between repositories.
-
