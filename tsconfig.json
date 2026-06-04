@@ -22,7 +22,10 @@
     "lib": ["ES2022", "dom"],
     "paths": {
       "@components/*": ["src/app/components/*"],
-      "@shared/*": ["src/app/shared/*"]
+      "@shared/*": ["src/app/shared/*"],
+      "@core/*": ["src/app/core/*"],
+      "@domains/*": ["src/app/domains/*"],
+      "@mfe-contracts/*": ["src/app/mfe-contracts/*"]
     }
   },
   "angularCompilerOptions": {

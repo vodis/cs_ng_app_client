@@ -1,3 +1,11 @@
-<div class="side-modal" [ngClass]="{ open: isOpen }">
+<div
+  class="side-modal-backdrop"
+  [ngClass]="{ open: isOpen }"
+  (click)="handleBackdropClick()"></div>
+
+<div
+  class="side-modal"
+  [ngClass]="{ open: isOpen }"
+  (click)="$event.stopPropagation()">
   <ng-content></ng-content>
 </div>

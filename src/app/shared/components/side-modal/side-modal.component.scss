@@ -1,9 +1,27 @@
 @import '@vodis/ui-kit/styles/breakpoints';
 
 :host {
-  .side-modal {
+  .side-modal-backdrop {
     position: fixed;
     z-index: 2;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgb(0 0 0 / 35%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+
+    &.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  .side-modal {
+    position: fixed;
+    z-index: 3;
     top: 0;
     right: 0;
     width: 100%;
