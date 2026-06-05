@@ -19,6 +19,54 @@
   <div class="home__block">
     <div class="container">
       <h5 class="mb-1">Exchange</h5>
+      <form class="exchange-form" (ngSubmit)="submitQuote()">
+        <div class="exchange-form__row">
+          <label class="exchange-form__field">
+            <span>From</span>
+            <input type="text" [value]="fromAssetLabel" disabled />
+          </label>
+          <label class="exchange-form__field">
+            <span>To</span>
+            <input type="text" [value]="toAssetLabel" disabled />
+          </label>
+        </div>
+
+        <label class="exchange-form__field">
+          <span>Amount</span>
+          <input
+            name="amount"
+            type="text"
+            inputmode="decimal"
+            [(ngModel)]="amount"
+            placeholder="1.00" />
+        </label>
+
+        <label class="exchange-form__field">
+          <span>Wallet address</span>
+          <input
+            name="walletAddress"
+            type="text"
+            [(ngModel)]="walletAddress"
+            placeholder="Connect wallet or paste address" />
+        </label>
+
+        <button
+          mat-raised-button
+          color="primary"
+          class="btn-sm"
+          type="submit"
+          [disabled]="isQuoteLoading">
+          {{ isQuoteLoading ? 'Quoting...' : 'Get quote' }}
+        </button>
+
+        @if (quoteError) {
+          <p class="exchange-form__error">{{ quoteError }}</p>
+        }
+
+        @if (quoteResult) {
+          <pre class="exchange-form__result">{{ quoteResult | json }}</pre>
+        }
+      </form>
     </div>
   </div>
   <div class="home__block">
