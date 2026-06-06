@@ -120,6 +120,37 @@
       margin-bottom: 0.75rem;
     }
 
+    &__intervals {
+      display: inline-flex;
+      flex: 0 0 auto;
+      overflow: hidden;
+      border: 1px solid rgb(255 255 255 / 14%);
+      background: rgb(0 0 0 / 20%);
+    }
+
+    &__interval {
+      min-width: 2.5rem;
+      height: 2rem;
+      padding: 0 0.65rem;
+      border: 0;
+      border-right: 1px solid rgb(255 255 255 / 10%);
+      background: transparent;
+      color: rgb(255 255 255 / 62%);
+      font-family: 'Aeonik Fono', monospace;
+      font-size: 0.75rem;
+      line-height: 2rem;
+
+      &:last-child {
+        border-right: 0;
+      }
+
+      &:hover,
+      &--active {
+        background: rgb(255 255 255 / 10%);
+        color: #fff;
+      }
+    }
+
     &__meta,
     &__axis,
     &__error {
@@ -198,6 +229,15 @@
       &__header {
         align-items: stretch;
         flex-direction: column;
+      }
+
+      &__intervals {
+        width: 100%;
+      }
+
+      &__interval {
+        flex: 1 1 0;
+        min-width: 0;
       }
 
       &__quote {
