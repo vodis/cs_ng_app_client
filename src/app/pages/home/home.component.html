@@ -74,7 +74,20 @@
       <div class="market-chart__header">
         <div>
           <h5 class="mb-1">NEAR Market</h5>
-          <p class="market-chart__meta">1h candles &middot; Hyperliquid market data</p>
+          <p class="market-chart__meta">
+            {{ selectedChartInterval }} candles &middot; live Hyperliquid market data
+          </p>
+        </div>
+        <div class="market-chart__intervals" aria-label="Chart interval">
+          @for (interval of chartIntervals; track interval) {
+            <button
+              type="button"
+              class="market-chart__interval"
+              [class.market-chart__interval--active]="selectedChartInterval === interval"
+              (click)="changeChartInterval(interval)">
+              {{ interval }}
+            </button>
+          }
         </div>
         <div class="market-chart__quote">
           <span>{{ chartPrice || 'Loading' }}</span>
