@@ -71,7 +71,67 @@
   </div>
   <div class="home__block">
     <div class="container">
-      <h5 class="mb-1">Average Activity</h5>
+      <div class="market-chart__header">
+        <div>
+          <h5 class="mb-1">NEAR Market</h5>
+          <p class="market-chart__meta">1h candles &middot; Hyperliquid market data</p>
+        </div>
+        <div class="market-chart__quote">
+          <span>{{ chartPrice || 'Loading' }}</span>
+          <strong [class]="chartChangeClass">{{ chartChange }}</strong>
+        </div>
+      </div>
+
+      <div class="market-chart">
+        @if (chartError) {
+          <p class="market-chart__error">{{ chartError }}</p>
+        }
+        <svg
+          class="market-chart__svg"
+          [attr.viewBox]="chartViewBox"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label="NEAR candlestick price chart">
+          @for (line of priceGridLines; track line.y) {
+            <line
+              class="market-chart__grid"
+              x1="0"
+              [attr.y1]="line.y"
+              x2="720"
+              [attr.y2]="line.y" />
+          }
+
+          @for (candle of chartCandles; track candle.time) {
+            <line
+              class="market-chart__wick"
+              [attr.x1]="candle.x"
+              [attr.y1]="candle.highY"
+              [attr.x2]="candle.x"
+              [attr.y2]="candle.lowY"
+              [attr.stroke]="candle.color" />
+            <rect
+              class="market-chart__candle"
+              [attr.x]="candle.x - candleWidth / 2"
+              [attr.y]="Math.min(candle.openY, candle.closeY)"
+              [attr.width]="candleWidth"
+              [attr.height]="Math.max(Math.abs(candle.closeY - candle.openY), 1)"
+              [attr.fill]="candle.color" />
+            <rect
+              class="market-chart__volume"
+              [attr.x]="candle.x - candleWidth / 2"
+              [attr.y]="candle.volumeY"
+              [attr.width]="candleWidth"
+              [attr.height]="candle.volumeHeight"
+              [attr.fill]="candle.color" />
+          }
+        </svg>
+        @if (chartCandles.length > 1) {
+          <div class="market-chart__axis">
+            <span>{{ formatChartTime(chartCandles[0].time) }}</span>
+            <span>{{ formatChartTime(chartCandles[chartCandles.length - 1].time) }}</span>
+          </div>
+        }
+      </div>
     </div>
   </div>
 </main>
