@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, NgZone, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { environment } from '../../../environments/environment';
@@ -36,6 +36,17 @@ interface MarketCandlesResponse {
   candles: MarketCandle[];
 }
 
+type ChartInterval = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
+
+const chartIntervalSeconds: Record<ChartInterval, number> = {
+  '1m': 60,
+  '5m': 5 * 60,
+  '15m': 15 * 60,
+  '1h': 60 * 60,
+  '4h': 4 * 60 * 60,
+  '1d': 24 * 60 * 60,
+};
+
 interface ChartCandle extends MarketCandle {
   x: number;
   openY: number;
@@ -53,14 +64,17 @@ interface ChartCandle extends MarketCandle {
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
 })
-export class HomeComponent {
+export class HomeComponent implements OnDestroy {
   private readonly chartWidth = 720;
   private readonly chartHeight = 260;
   private readonly chartPadding = { top: 18, right: 48, bottom: 42, left: 8 };
   private readonly volumeHeight = 48;
+  private readonly chartLimit = 180;
   private readonly usdcAsset =
     'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near';
   private readonly nearAsset = 'nep141:wrap.near';
+  private marketCandles: MarketCandle[] = [];
+  private chartEvents?: EventSource;
 
   public amount = '1';
   public walletAddress = '';
@@ -76,6 +90,8 @@ export class HomeComponent {
   public chartPrice = '';
   public chartChange = '';
   public chartChangeClass = 'neutral';
+  public selectedChartInterval: ChartInterval = '1m';
+  public readonly chartIntervals: ChartInterval[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
   public readonly Math = Math;
   public readonly chartViewBox = `0 0 ${this.chartWidth} ${this.chartHeight}`;
   public readonly candleWidth = 5;
@@ -85,7 +101,8 @@ export class HomeComponent {
 
   constructor(
     private readonly httpClient: HttpClient,
-    private readonly walletsService: WalletsService
+    private readonly walletsService: WalletsService,
+    private readonly ngZone: NgZone
   ) {
     this.walletsService.account.subscribe(account => {
       if (account?.account) {
@@ -93,6 +110,10 @@ export class HomeComponent {
       }
     });
     this.loadMarketChart();
+  }
+
+  public ngOnDestroy(): void {
+    this.closeChartStream();
   }
 
   public submitQuote(): void {
@@ -141,33 +162,127 @@ export class HomeComponent {
   }
 
   public formatChartTime(time: number): string {
+    if (this.selectedChartInterval === '1d') {
+      return new Date(time * 1000).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+
     return new Date(time * 1000).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
   }
 
+  public changeChartInterval(interval: ChartInterval): void {
+    if (this.selectedChartInterval === interval) {
+      return;
+    }
+
+    this.selectedChartInterval = interval;
+    this.chartError = '';
+    this.closeChartStream();
+    this.loadMarketChart();
+  }
+
   private loadMarketChart(): void {
+    const interval = this.selectedChartInterval;
+
     this.httpClient
       .get<MarketCandlesResponse>(
-        `${environment.apiUrl}/api/v1/markets/NEAR/candles?interval=1h&limit=120`
+        `${environment.apiUrl}/api/v1/markets/NEAR/candles?interval=${interval}&limit=${this.chartLimit}`
       )
       .subscribe({
         next: response => {
+          if (this.selectedChartInterval !== interval) {
+            return;
+          }
+
           const candles = response.candles.length
             ? response.candles
             : this.fallbackCandles();
-          this.chartCandles = this.toChartCandles(candles);
-          this.setChartSummary(candles);
+          this.setMarketCandles(candles);
           this.chartError = '';
+          this.openChartStream();
         },
         error: () => {
+          if (this.selectedChartInterval !== interval) {
+            return;
+          }
+
           const fallback = this.fallbackCandles();
           this.chartError = 'Market chart unavailable.';
-          this.chartCandles = this.toChartCandles(fallback);
-          this.setChartSummary(fallback);
+          this.setMarketCandles(fallback);
         },
       });
+  }
+
+  private openChartStream(): void {
+    if (typeof EventSource === 'undefined') {
+      return;
+    }
+
+    this.closeChartStream();
+    this.chartEvents = new EventSource(
+      `${environment.apiUrl}/api/v1/markets/NEAR/candles/stream?interval=${this.selectedChartInterval}`
+    );
+
+    this.chartEvents.onmessage = event => {
+      this.ngZone.run(() => {
+        const response = this.parseMarketCandleEvent(event.data);
+
+        if (!response || response.interval !== this.selectedChartInterval) {
+          return;
+        }
+
+        const candle = response.candles[0];
+        if (!candle) {
+          return;
+        }
+
+        this.upsertMarketCandle(candle);
+        this.chartError = '';
+      });
+    };
+
+    this.chartEvents.onerror = () => {
+      this.ngZone.run(() => {
+        this.chartError = 'Live chart stream reconnecting.';
+      });
+    };
+  }
+
+  private closeChartStream(): void {
+    this.chartEvents?.close();
+    this.chartEvents = undefined;
+  }
+
+  private parseMarketCandleEvent(data: string): MarketCandlesResponse | undefined {
+    try {
+      return JSON.parse(data) as MarketCandlesResponse;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private setMarketCandles(candles: MarketCandle[]): void {
+    this.marketCandles = candles.slice(-this.chartLimit);
+    this.chartCandles = this.toChartCandles(this.marketCandles);
+    this.setChartSummary(this.marketCandles);
+  }
+
+  private upsertMarketCandle(candle: MarketCandle): void {
+    const index = this.marketCandles.findIndex(item => item.time === candle.time);
+
+    if (index >= 0) {
+      this.marketCandles[index] = candle;
+    } else {
+      this.marketCandles = [...this.marketCandles, candle].slice(-this.chartLimit);
+    }
+
+    this.chartCandles = this.toChartCandles(this.marketCandles);
+    this.setChartSummary(this.marketCandles);
   }
 
   private setChartSummary(candles: MarketCandle[]): void {
@@ -246,7 +361,8 @@ export class HomeComponent {
   }
 
   private fallbackCandles(): MarketCandle[] {
-    const now = Math.floor(Date.now() / 1000 / 3600) * 3600;
+    const intervalSeconds = chartIntervalSeconds[this.selectedChartInterval];
+    const now = Math.floor(Date.now() / 1000 / intervalSeconds) * intervalSeconds;
     const candles: MarketCandle[] = [];
     let price = 1.95;
 
@@ -258,7 +374,7 @@ export class HomeComponent {
       const low = Math.min(open, close) - 0.025 + Math.cos(index) * 0.004;
       price = close;
       candles.push({
-        time: now - (72 - index) * 3600,
+        time: now - (72 - index) * intervalSeconds,
         open,
         high,
         low,
