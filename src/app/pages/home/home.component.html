@@ -71,80 +71,197 @@
   </div>
   <div class="home__block">
     <div class="container">
-      <div class="market-chart__header">
-        <div>
-          <h5 class="mb-1">NEAR Market</h5>
-          <p class="market-chart__meta">
-            {{ selectedChartInterval }} candles &middot; live Hyperliquid market data
-          </p>
-        </div>
-        <div class="market-chart__intervals" aria-label="Chart interval">
-          @for (interval of chartIntervals; track interval) {
-            <button
-              type="button"
-              class="market-chart__interval"
-              [class.market-chart__interval--active]="selectedChartInterval === interval"
-              (click)="changeChartInterval(interval)">
-              {{ interval }}
-            </button>
-          }
-        </div>
-        <div class="market-chart__quote">
-          <span>{{ chartPrice || 'Loading' }}</span>
-          <strong [class]="chartChangeClass">{{ chartChange }}</strong>
-        </div>
-      </div>
+      <section class="comparison-card" aria-labelledby="comparison-title">
+        <div class="comparison-card__header">
+          <div class="comparison-card__pair">
+            <div class="comparison-card__logos">
+              @if (comparison?.baseToken?.icon) {
+                <img [src]="comparison?.baseToken?.icon" [alt]="comparison?.baseToken?.symbol" />
+              } @else {
+                <span>{{ fromAssetLabel[0] }}</span>
+              }
+              @if (comparison?.quoteToken?.icon) {
+                <img [src]="comparison?.quoteToken?.icon" [alt]="comparison?.quoteToken?.symbol" />
+              } @else {
+                <span>{{ toAssetLabel[0] }}</span>
+              }
+            </div>
+            <div>
+              <h5 id="comparison-title" class="mb-1">
+                {{ comparison?.base || fromAssetLabel }} &harr; {{ comparison?.quote || toAssetLabel }}
+              </h5>
+              <p class="comparison-card__meta">Normalized performance comparison</p>
+            </div>
+          </div>
 
-      <div class="market-chart">
-        @if (chartError) {
-          <p class="market-chart__error">{{ chartError }}</p>
-        }
-        <svg
-          class="market-chart__svg"
-          [attr.viewBox]="chartViewBox"
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="NEAR candlestick price chart">
-          @for (line of priceGridLines; track line.y) {
-            <line
-              class="market-chart__grid"
-              x1="0"
-              [attr.y1]="line.y"
-              x2="720"
-              [attr.y2]="line.y" />
-          }
+          <div class="comparison-card__timeframes" aria-label="Comparison timeframe">
+            @for (timeframe of comparisonTimeframes; track timeframe) {
+              <button
+                type="button"
+                class="comparison-card__timeframe"
+                [class.comparison-card__timeframe--active]="selectedComparisonTimeframe === timeframe"
+                (click)="changeComparisonTimeframe(timeframe)">
+                {{ timeframe }}
+              </button>
+            }
+          </div>
+        </div>
 
-          @for (candle of chartCandles; track candle.time) {
-            <line
-              class="market-chart__wick"
-              [attr.x1]="candle.x"
-              [attr.y1]="candle.highY"
-              [attr.x2]="candle.x"
-              [attr.y2]="candle.lowY"
-              [attr.stroke]="candle.color" />
-            <rect
-              class="market-chart__candle"
-              [attr.x]="candle.x - candleWidth / 2"
-              [attr.y]="Math.min(candle.openY, candle.closeY)"
-              [attr.width]="candleWidth"
-              [attr.height]="Math.max(Math.abs(candle.closeY - candle.openY), 1)"
-              [attr.fill]="candle.color" />
-            <rect
-              class="market-chart__volume"
-              [attr.x]="candle.x - candleWidth / 2"
-              [attr.y]="candle.volumeY"
-              [attr.width]="candleWidth"
-              [attr.height]="candle.volumeHeight"
-              [attr.fill]="candle.color" />
-          }
-        </svg>
-        @if (chartCandles.length > 1) {
-          <div class="market-chart__axis">
-            <span>{{ formatChartTime(chartCandles[0].time) }}</span>
-            <span>{{ formatChartTime(chartCandles[chartCandles.length - 1].time) }}</span>
+        @if (comparisonLoading) {
+          <div class="comparison-card__skeleton" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        } @else {
+          <div class="comparison-card__metrics">
+            <div class="comparison-card__metric">
+              <span>{{ comparison?.baseToken?.symbol || fromAssetLabel }}</span>
+              <strong>{{ formatPrice(comparison?.baseToken?.currentPrice) }}</strong>
+              <em [class]="changeClass(comparison?.baseToken?.changePercent)">
+                {{ formatPercent(comparison?.baseToken?.changePercent) }}
+              </em>
+            </div>
+            <div class="comparison-card__metric">
+              <span>{{ comparison?.quoteToken?.symbol || toAssetLabel }}</span>
+              <strong>{{ formatPrice(comparison?.quoteToken?.currentPrice) }}</strong>
+              <em [class]="changeClass(comparison?.quoteToken?.changePercent)">
+                {{ formatPercent(comparison?.quoteToken?.changePercent) }}
+              </em>
+            </div>
+          </div>
+
+          <p class="comparison-card__strength">{{ relativeStrengthText() }}</p>
+
+          <div class="comparison-card__legend">
+            @for (line of comparisonLines; track line.symbol) {
+              <span>
+                <i [style.background]="line.color"></i>
+                {{ line.symbol }}
+              </span>
+            }
+          </div>
+
+          <div class="comparison-chart">
+            @if (comparisonError) {
+              <p class="comparison-chart__empty">{{ comparisonError }}</p>
+            }
+            <svg
+              class="comparison-chart__svg"
+              [attr.viewBox]="comparisonViewBox"
+              preserveAspectRatio="none"
+              role="img"
+              [attr.aria-label]="
+                (comparison?.base || fromAssetLabel) + ' and ' + (comparison?.quote || toAssetLabel) + ' performance comparison'
+              ">
+              @for (line of comparisonGridLines; track line.y) {
+                <line
+                  class="comparison-chart__grid"
+                  x1="0"
+                  [attr.y1]="line.y"
+                  x2="720"
+                  [attr.y2]="line.y" />
+              }
+              @for (line of comparisonLines; track line.symbol) {
+                <path
+                  class="comparison-chart__line"
+                  [attr.d]="line.path"
+                  [attr.stroke]="line.color" />
+              }
+            </svg>
+            @if (comparisonAxisStart && comparisonAxisEnd) {
+              <div class="comparison-chart__axis">
+                <span>{{ comparisonAxisStart }}</span>
+                <span>{{ comparisonAxisEnd }}</span>
+              </div>
+            }
           </div>
         }
-      </div>
+      </section>
+
+      <button
+        type="button"
+        class="advanced-market-toggle"
+        (click)="toggleAdvancedMarketView()">
+        {{ showAdvancedMarketView ? 'Hide Advanced Market View' : 'Advanced Market View' }}
+      </button>
+
+      @if (showAdvancedMarketView) {
+        <section class="market-chart" aria-label="Advanced market candlestick chart">
+          <div class="market-chart__header">
+            <div>
+              <h5 class="mb-1">{{ toAssetLabel }} Market</h5>
+              <p class="market-chart__meta">
+                {{ selectedChartInterval }} candles &middot; advanced OHLC data
+              </p>
+            </div>
+            <div class="market-chart__intervals" aria-label="Chart interval">
+              @for (interval of chartIntervals; track interval) {
+                <button
+                  type="button"
+                  class="market-chart__interval"
+                  [class.market-chart__interval--active]="selectedChartInterval === interval"
+                  (click)="changeChartInterval(interval)">
+                  {{ interval }}
+                </button>
+              }
+            </div>
+            <div class="market-chart__quote">
+              <span>{{ chartPrice || 'Loading' }}</span>
+              <strong [class]="chartChangeClass">{{ chartChange }}</strong>
+            </div>
+          </div>
+
+          @if (chartError) {
+            <p class="market-chart__error">{{ chartError }}</p>
+          }
+          <svg
+            class="market-chart__svg"
+            [attr.viewBox]="chartViewBox"
+            preserveAspectRatio="none"
+            role="img"
+            [attr.aria-label]="toAssetLabel + ' candlestick price chart'">
+            @for (line of priceGridLines; track line.y) {
+              <line
+                class="market-chart__grid"
+                x1="0"
+                [attr.y1]="line.y"
+                x2="720"
+                [attr.y2]="line.y" />
+            }
+
+            @for (candle of chartCandles; track candle.time) {
+              <line
+                class="market-chart__wick"
+                [attr.x1]="candle.x"
+                [attr.y1]="candle.highY"
+                [attr.x2]="candle.x"
+                [attr.y2]="candle.lowY"
+                [attr.stroke]="candle.color" />
+              <rect
+                class="market-chart__candle"
+                [attr.x]="candle.x - candleWidth / 2"
+                [attr.y]="Math.min(candle.openY, candle.closeY)"
+                [attr.width]="candleWidth"
+                [attr.height]="Math.max(Math.abs(candle.closeY - candle.openY), 1)"
+                [attr.fill]="candle.color" />
+              <rect
+                class="market-chart__volume"
+                [attr.x]="candle.x - candleWidth / 2"
+                [attr.y]="candle.volumeY"
+                [attr.width]="candleWidth"
+                [attr.height]="candle.volumeHeight"
+                [attr.fill]="candle.color" />
+            }
+          </svg>
+          @if (chartCandles.length > 1) {
+            <div class="market-chart__axis">
+              <span>{{ formatChartTime(chartCandles[0].time) }}</span>
+              <span>{{ formatChartTime(chartCandles[chartCandles.length - 1].time) }}</span>
+            </div>
+          }
+        </section>
+      }
     </div>
   </div>
 </main>
