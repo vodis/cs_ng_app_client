@@ -59,6 +59,15 @@ interface ComparisonChartLine {
   color: string;
 }
 
+interface ComparisonYLabel {
+  y: number;
+  label: string;
+}
+
+interface ComparisonGridLine {
+  y: number;
+}
+
 @Component({
   selector: 'app-home',
   standalone: false,
@@ -69,10 +78,10 @@ export class HomeComponent {
   private readonly comparisonWidth = 720;
   private readonly comparisonHeight = 220;
   private readonly comparisonPadding = {
-    top: 18,
-    right: 18,
-    bottom: 32,
-    left: 18,
+    top: 16,
+    right: 16,
+    bottom: 28,
+    left: 48,
   };
   private readonly usdcAsset =
     'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near';
@@ -93,6 +102,9 @@ export class HomeComponent {
   public quoteResult: unknown;
   public comparison?: MarketComparisonResponse;
   public comparisonLines: ComparisonChartLine[] = [];
+  public comparisonYLabels: ComparisonYLabel[] = [];
+  public comparisonBaselineY = 0;
+  public comparisonGridLines: ComparisonGridLine[] = [];
   public comparisonLoading = true;
   public comparisonError = '';
   public selectedComparisonTimeframe: ComparisonTimeframe = '1D';
@@ -102,10 +114,11 @@ export class HomeComponent {
     '1W',
   ];
   public readonly comparisonViewBox = `0 0 ${this.comparisonWidth} ${this.comparisonHeight}`;
-  public readonly comparisonGridLines = [0, 1, 2, 3].map(index => ({
-    y: this.comparisonPadding.top + index * 43,
-  }));
+  public readonly comparisonPlotLeft = this.comparisonPadding.left;
+  public readonly comparisonPlotRight =
+    this.comparisonWidth - this.comparisonPadding.right;
   public comparisonAxisStart = '';
+  public comparisonAxisMid = '';
   public comparisonAxisEnd = '';
   public showAdvancedMarketView = false;
 
@@ -224,12 +237,54 @@ export class HomeComponent {
     }
 
     if (relative === 0) {
-      return `${comparison.base} and ${comparison.quote} are even over ${comparison.timeframe}`;
+      return `${comparison.base} and ${comparison.quote} moved about the same over ${this.timeframeLabel(comparison.timeframe)}`;
     }
 
     const stronger = relative > 0 ? comparison.base : comparison.quote;
     const weaker = relative > 0 ? comparison.quote : comparison.base;
-    return `${stronger} outperforming ${weaker} by ${Math.abs(relative).toFixed(2)}%`;
+    return `${stronger} moved more than ${weaker} by ${Math.abs(relative).toFixed(2)}% over ${this.timeframeLabel(comparison.timeframe)}`;
+  }
+
+  public swapInsightText(): string {
+    const comparison = this.comparison;
+    if (!comparison) {
+      return '';
+    }
+
+    const from = comparison.baseToken;
+    const to = comparison.quoteToken;
+    const window = this.timeframeLabel(comparison.timeframe);
+    const fromChange = from.changePercent;
+    const toChange = to.changePercent;
+
+    if (fromChange === undefined || toChange === undefined) {
+      return `Compare ${from.symbol} and ${to.symbol} price moves over ${window} before swapping.`;
+    }
+
+    const fromLabel = `${from.symbol} ${this.formatPercent(fromChange)}`;
+    const toLabel = `${to.symbol} ${this.formatPercent(toChange)}`;
+
+    if (Math.abs(fromChange) < 0.05 && Math.abs(toChange) < 0.05) {
+      return `Both assets were flat over ${window}.`;
+    }
+
+    if (Math.abs(fromChange) < 0.05) {
+      return `${from.symbol} held steady while ${to.symbol} moved ${this.formatPercent(toChange)} over ${window}.`;
+    }
+
+    if (Math.abs(toChange) < 0.05) {
+      return `${to.symbol} held steady while ${from.symbol} moved ${this.formatPercent(fromChange)} over ${window}.`;
+    }
+
+    if (toChange > fromChange) {
+      return `Swapping ${from.symbol} → ${to.symbol}: ${toLabel} vs ${fromLabel} over ${window}.`;
+    }
+
+    if (fromChange > toChange) {
+      return `Swapping ${from.symbol} → ${to.symbol}: ${fromLabel} vs ${toLabel} over ${window}.`;
+    }
+
+    return `${fromLabel} and ${toLabel} over ${window}.`;
   }
 
   private loadMarketComparison(): void {
@@ -255,8 +310,7 @@ export class HomeComponent {
           }
 
           this.comparison = response;
-          this.comparisonLines = this.toComparisonLines(response);
-          this.setComparisonAxis(response);
+          this.buildComparisonChart(response);
           this.comparisonError =
             response.status === 'unavailable'
               ? 'Comparison data unavailable'
@@ -270,7 +324,11 @@ export class HomeComponent {
 
           this.comparison = undefined;
           this.comparisonLines = [];
+          this.comparisonYLabels = [];
+          this.comparisonGridLines = [];
+          this.comparisonBaselineY = 0;
           this.comparisonAxisStart = '';
+          this.comparisonAxisMid = '';
           this.comparisonAxisEnd = '';
           this.comparisonError = 'Comparison data unavailable';
           this.comparisonLoading = false;
@@ -278,17 +336,33 @@ export class HomeComponent {
       });
   }
 
-  private toComparisonLines(
-    response: MarketComparisonResponse
-  ): ComparisonChartLine[] {
-    const allPoints = response.series.flatMap(series => series.points);
+  private buildComparisonChart(response: MarketComparisonResponse): void {
+    const seriesWithPoints = response.series.filter(
+      series => series.points.length > 0
+    );
+    const allPoints = seriesWithPoints.flatMap(series => series.points);
+
     if (allPoints.length === 0) {
-      return [];
+      this.comparisonLines = [];
+      this.comparisonYLabels = [];
+      this.comparisonGridLines = [];
+      this.comparisonBaselineY = 0;
+      this.comparisonAxisStart = '';
+      this.comparisonAxisMid = '';
+      this.comparisonAxisEnd = '';
+      return;
     }
 
+    const timeMin = Math.min(...allPoints.map(point => point.time));
+    const timeMax = Math.max(...allPoints.map(point => point.time));
+    const timeRange = Math.max(timeMax - timeMin, 1);
     const minValue = Math.min(...allPoints.map(point => point.value));
     const maxValue = Math.max(...allPoints.map(point => point.value));
-    const valueRange = Math.max(maxValue - minValue, 0.0001);
+    const spread = Math.max(maxValue - minValue, 0.5);
+    const yPad = Math.max(spread * 0.15, 0.25);
+    const yMin = Math.min(minValue, 100) - yPad;
+    const yMax = Math.max(maxValue, 100) + yPad;
+    const yRange = Math.max(yMax - yMin, 0.0001);
     const innerWidth =
       this.comparisonWidth -
       this.comparisonPadding.left -
@@ -298,47 +372,73 @@ export class HomeComponent {
       this.comparisonPadding.top -
       this.comparisonPadding.bottom;
 
-    return response.series
-      .filter(series => series.points.length > 0)
-      .map(series => {
-        const step = innerWidth / Math.max(series.points.length - 1, 1);
-        const path = series.points
-          .map((point, index) => {
-            const x = this.comparisonPadding.left + index * step;
-            const y =
-              this.comparisonPadding.top +
-              ((maxValue - point.value) / valueRange) * innerHeight;
-            return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-          })
-          .join(' ');
+    const toX = (time: number): number =>
+      this.comparisonPadding.left + ((time - timeMin) / timeRange) * innerWidth;
 
-        return {
-          symbol: series.symbol,
-          path,
-          color: this.tokenColor(series.symbol),
-        };
-      });
-  }
+    const toY = (value: number): number =>
+      this.comparisonPadding.top + ((yMax - value) / yRange) * innerHeight;
 
-  private setComparisonAxis(response: MarketComparisonResponse): void {
-    const points = response.series.flatMap(series => series.points);
+    this.comparisonBaselineY = toY(100);
+    this.comparisonGridLines = [0, 1, 2, 3].map(index => ({
+      y: this.comparisonPadding.top + (index / 3) * innerHeight,
+    }));
 
-    if (points.length === 0) {
-      this.comparisonAxisStart = '';
-      this.comparisonAxisEnd = '';
-      return;
-    }
+    const labelValues = [yMax, 100, yMin];
+    this.comparisonYLabels = labelValues.map(value => ({
+      y: toY(value),
+      label: this.formatIndexLabel(value),
+    }));
 
-    const first = Math.min(...points.map(point => point.time));
-    const last = Math.max(...points.map(point => point.time));
+    this.comparisonLines = seriesWithPoints.map(series => {
+      const path = series.points
+        .map((point, index) => {
+          const x = toX(point.time);
+          const y = toY(point.value);
+          return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+        })
+        .join(' ');
+
+      return {
+        symbol: series.symbol,
+        path,
+        color: this.tokenColor(series.symbol),
+      };
+    });
+
     this.comparisonAxisStart = this.formatComparisonTime(
-      first,
+      timeMin,
       response.timeframe
     );
     this.comparisonAxisEnd = this.formatComparisonTime(
-      last,
+      timeMax,
       response.timeframe
     );
+    this.comparisonAxisMid = this.formatComparisonTime(
+      timeMin + Math.floor(timeRange / 2),
+      response.timeframe
+    );
+  }
+
+  private formatIndexLabel(value: number): string {
+    const change = value - 100;
+
+    if (Math.abs(change) < 0.05) {
+      return '0%';
+    }
+
+    return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+  }
+
+  private timeframeLabel(timeframe: ComparisonTimeframe): string {
+    if (timeframe === '1H') {
+      return 'the last hour';
+    }
+
+    if (timeframe === '1D') {
+      return 'the last 24 hours';
+    }
+
+    return 'the last 7 days';
   }
 
   private formatComparisonTime(
