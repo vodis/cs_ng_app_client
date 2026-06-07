@@ -1,0 +1,37 @@
+<div class="live-chart">
+  <div class="live-chart__header">
+    <div>
+      <h5 class="mb-1">{{ coin }} Market</h5>
+      <p class="live-chart__meta">Hyperliquid perps &middot; live mids</p>
+    </div>
+    <div class="live-chart__quote">
+      <span>{{ headerPrice }}</span>
+      <strong [class]="headerChangeClass">{{ headerChange }}</strong>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <p class="live-chart__error">{{ errorMessage }}</p>
+  }
+
+  <div class="live-chart__panel">
+    <div class="live-chart__toolbar" aria-label="Chart time window">
+      @for (option of windowOptions; track option.windowSecs) {
+        <button
+          type="button"
+          class="live-chart__window-btn"
+          [class.live-chart__window-btn--active]="
+            selectedWindowSecs() === option.windowSecs
+          "
+          (click)="selectWindow(option.windowSecs)">
+          {{ option.label }}
+        </button>
+      }
+    </div>
+
+    <div
+      #chartHost
+      class="live-chart__canvas"
+      aria-label="Live market chart"></div>
+  </div>
+</div>

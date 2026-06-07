@@ -16,6 +16,12 @@
       </div>
     </div>
   </div>
-  <div class="header__animate-bottom"></div>
-  <app-animate-line />
+  <app-animate-line
+    *ngIf="horizontalLineAnimating"
+    [resetKey]="lineResetKey"
+    (animationComplete)="onHorizontalLineAnimationComplete()" />
+  <div
+    *ngIf="!horizontalLineAnimating"
+    class="header__line"
+    aria-hidden="true"></div>
 </header>

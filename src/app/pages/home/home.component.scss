@@ -20,20 +20,20 @@
 
   .exchange-form {
     display: grid;
-    gap: 0.75rem;
     max-width: 30rem;
+    gap: 0.75rem;
 
     &__row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
       gap: 0.75rem;
+      grid-template-columns: 1fr 1fr;
     }
 
     &__field {
       display: grid;
-      gap: 0.35rem;
       color: rgb(255 255 255 / 72%);
       font-size: 0.75rem;
+      gap: 0.35rem;
       line-height: 1rem;
       text-transform: uppercase;
     }
@@ -41,6 +41,7 @@
     input {
       width: 100%;
       min-height: 2.5rem;
+      box-sizing: border-box;
       padding: 0 0.75rem;
       border: 1px solid rgb(255 255 255 / 20%);
       border-radius: 0;
@@ -48,7 +49,6 @@
       color: #fff;
       font-size: 0.875rem;
       line-height: 1.25rem;
-      box-sizing: border-box;
     }
 
     input:disabled {
@@ -63,11 +63,11 @@
     }
 
     &__result {
-      max-height: 18rem;
-      margin: 0;
-      padding: 0.75rem;
       overflow: auto;
+      max-height: 18rem;
+      padding: 0.75rem;
       border: 1px solid rgb(255 255 255 / 16%);
+      margin: 0;
       background: rgb(0 0 0 / 24%);
       color: rgb(255 255 255 / 80%);
       font-size: 0.75rem;
@@ -76,7 +76,7 @@
     }
   }
 
-  @media (max-width: 991.98px) {
+  @media (width <= 991.98px) {
     .home {
       grid-template-columns: none;
       grid-template-rows: 1fr 1fr;

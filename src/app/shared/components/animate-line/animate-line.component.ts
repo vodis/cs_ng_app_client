@@ -1,4 +1,11 @@
-import { Component, Input, OnInit } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  SimpleChanges,
+} from '@angular/core';
 
 export enum Direction {
   Column = 'column',
@@ -11,34 +18,30 @@ export enum Direction {
   templateUrl: './animate-line.component.html',
   styleUrls: ['./animate-line.component.scss'],
 })
-export class AnimateLineComponent implements OnInit {
+export class AnimateLineComponent implements OnChanges {
   readonly Direction = Direction;
 
   @Input() public direction: Direction = Direction.Column;
   @Input() public duration = 0.5;
-  @Input() public customSize?: string;
+  @Input() public size?: string;
+  @Input() public resetKey = 0;
 
-  public svgWidth: number | string = 0;
-  public svgHeight: number | string = 0;
-  public rectValue: string = '100vw';
+  @Output() public animationComplete = new EventEmitter<void>();
 
-  public ngOnInit(): void {
-    if (this.direction === Direction.Column) {
-      this.columAnimation();
-    } else {
-      this.rowAnimation();
+  public isAnimating = true;
+
+  public ngOnChanges(changes: SimpleChanges): void {
+    if (changes['resetKey'] && !changes['resetKey'].firstChange) {
+      this.isAnimating = true;
     }
   }
 
-  private columAnimation(): void {
-    this.svgWidth = this.customSize || '100vw';
-    this.svgHeight = 1;
-    this.rectValue = `0; ${this.svgWidth};`;
-  }
+  public onAnimationEnd(): void {
+    if (!this.isAnimating) {
+      return;
+    }
 
-  private rowAnimation(): void {
-    this.svgHeight = this.customSize || '100vh';
-    this.svgWidth = 1;
-    this.rectValue = `0; ${this.svgHeight};`;
+    this.isAnimating = false;
+    this.animationComplete.emit();
   }
 }

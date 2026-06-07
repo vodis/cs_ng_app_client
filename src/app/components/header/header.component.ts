@@ -1,5 +1,7 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { filter, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header',
@@ -7,20 +9,41 @@ import { environment } from '../../../environments/environment';
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss'],
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnDestroy {
   public currentWidth = window.innerWidth;
   public isMobileView = false;
   public originUrl: string = environment.origin;
+  public horizontalLineAnimating = true;
+  public lineResetKey = 0;
 
-  ngOnInit() {
+  private routerSubscription?: Subscription;
+
+  constructor(private readonly router: Router) {}
+
+  public ngOnInit(): void {
     this.isMobileView = this.currentWidth <= 768;
+
+    this.routerSubscription = this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.horizontalLineAnimating = true;
+        this.lineResetKey += 1;
+      });
+  }
+
+  public ngOnDestroy(): void {
+    this.routerSubscription?.unsubscribe();
   }
 
   @HostListener('window:resize', ['$event'])
-  public onResize(event: Event) {
+  public onResize(event: Event): void {
     this.currentWidth = (
       event as unknown as { target: Window }
     ).target.innerWidth;
     this.isMobileView = this.currentWidth <= 768;
+  }
+
+  public onHorizontalLineAnimationComplete(): void {
+    this.horizontalLineAnimating = false;
   }
 }
