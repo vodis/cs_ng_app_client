@@ -1,9 +1,52 @@
 :host {
-  .animate-line {
-    display: flex;
+  display: block;
 
-    svg {
-      fill: var(--main-text-color);
+  .animate-line {
+    &--row {
+      width: 1px;
+      height: var(--line-size, calc(100vh - 4rem));
     }
+
+    &--column {
+      width: var(--line-size, 100%);
+      height: 1px;
+    }
+  }
+
+  .animate-line__stroke {
+    display: block;
+    background: var(--main-text-color);
+
+    &--row {
+      width: 1px;
+      height: 100%;
+      animation-fill-mode: forwards;
+      animation-name: animate-line-grow-row;
+      animation-timing-function: ease;
+      transform: scaleY(0);
+      transform-origin: top;
+    }
+
+    &--column {
+      width: 100%;
+      height: 1px;
+      animation-fill-mode: forwards;
+      animation-name: animate-line-grow-column;
+      animation-timing-function: ease;
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+  }
+}
+
+@keyframes animate-line-grow-row {
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes animate-line-grow-column {
+  to {
+    transform: scaleX(1);
   }
 }

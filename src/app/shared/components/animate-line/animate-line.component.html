@@ -1,25 +1,12 @@
-<div class="animate-line">
-  <svg #svg [attr.width]="svgWidth" [attr.height]="svgHeight">
-    <rect
-      [attr.x]="0"
-      [attr.width]="svgWidth"
-      [attr.height]="svgHeight"
-      fill="'currentColor'"
-      transform="translate(0)">
-      <animate
-        *ngIf="direction === Direction.Column"
-        attributeName="width"
-        attributeType="XML"
-        [attr.values]="rectValue"
-        [attr.dur]="duration + 's'"
-        fill="freeze"></animate>
-      <animate
-        *ngIf="direction === Direction.Row"
-        attributeName="height"
-        attributeType="XML"
-        [attr.values]="rectValue"
-        [attr.dur]="duration + 's'"
-        fill="freeze"></animate>
-    </rect>
-  </svg>
+<div
+  class="animate-line"
+  [class.animate-line--row]="direction === Direction.Row"
+  [class.animate-line--column]="direction === Direction.Column"
+  [style.--line-size]="size">
+  <span
+    class="animate-line__stroke"
+    [class.animate-line__stroke--row]="direction === Direction.Row"
+    [class.animate-line__stroke--column]="direction === Direction.Column"
+    [style.animation-duration.s]="duration"
+    (animationend)="onAnimationEnd()"></span>
 </div>

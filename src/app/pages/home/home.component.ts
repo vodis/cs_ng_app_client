@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy } from '@angular/core';
+import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { environment } from '../../../environments/environment';
@@ -21,43 +21,7 @@ interface QuoteApiResponse {
   data: unknown;
 }
 
-interface MarketCandle {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-
-interface MarketCandlesResponse {
-  symbol: string;
-  interval: string;
-  candles: MarketCandle[];
-}
-
-type ChartInterval = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 type ComparisonTimeframe = '1H' | '1D' | '1W';
-
-const chartIntervalSeconds: Record<ChartInterval, number> = {
-  '1m': 60,
-  '5m': 5 * 60,
-  '15m': 15 * 60,
-  '1h': 60 * 60,
-  '4h': 4 * 60 * 60,
-  '1d': 24 * 60 * 60,
-};
-
-interface ChartCandle extends MarketCandle {
-  x: number;
-  openY: number;
-  highY: number;
-  lowY: number;
-  closeY: number;
-  volumeY: number;
-  volumeHeight: number;
-  color: string;
-}
 
 interface MarketComparisonToken {
   symbol: string;
@@ -95,26 +59,33 @@ interface ComparisonChartLine {
   color: string;
 }
 
+interface ComparisonYLabel {
+  y: number;
+  label: string;
+}
+
+interface ComparisonGridLine {
+  y: number;
+}
+
 @Component({
   selector: 'app-home',
   standalone: false,
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
 })
-export class HomeComponent implements OnDestroy {
-  private readonly chartWidth = 720;
-  private readonly chartHeight = 260;
-  private readonly chartPadding = { top: 18, right: 48, bottom: 42, left: 8 };
-  private readonly volumeHeight = 48;
-  private readonly chartLimit = 180;
+export class HomeComponent {
   private readonly comparisonWidth = 720;
   private readonly comparisonHeight = 220;
-  private readonly comparisonPadding = { top: 18, right: 18, bottom: 32, left: 18 };
+  private readonly comparisonPadding = {
+    top: 16,
+    right: 16,
+    bottom: 28,
+    left: 48,
+  };
   private readonly usdcAsset =
     'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near';
   private readonly nearAsset = 'nep141:wrap.near';
-  private marketCandles: MarketCandle[] = [];
-  private chartEvents?: EventSource;
 
   public amount = '1';
   public walletAddress = '';
@@ -131,35 +102,29 @@ export class HomeComponent implements OnDestroy {
   public quoteResult: unknown;
   public comparison?: MarketComparisonResponse;
   public comparisonLines: ComparisonChartLine[] = [];
+  public comparisonYLabels: ComparisonYLabel[] = [];
+  public comparisonBaselineY = 0;
+  public comparisonGridLines: ComparisonGridLine[] = [];
   public comparisonLoading = true;
   public comparisonError = '';
   public selectedComparisonTimeframe: ComparisonTimeframe = '1D';
-  public readonly comparisonTimeframes: ComparisonTimeframe[] = ['1H', '1D', '1W'];
+  public readonly comparisonTimeframes: ComparisonTimeframe[] = [
+    '1H',
+    '1D',
+    '1W',
+  ];
   public readonly comparisonViewBox = `0 0 ${this.comparisonWidth} ${this.comparisonHeight}`;
-  public readonly comparisonGridLines = [0, 1, 2, 3].map(index => ({
-    y: this.comparisonPadding.top + index * 43,
-  }));
+  public readonly comparisonPlotLeft = this.comparisonPadding.left;
+  public readonly comparisonPlotRight =
+    this.comparisonWidth - this.comparisonPadding.right;
   public comparisonAxisStart = '';
+  public comparisonAxisMid = '';
   public comparisonAxisEnd = '';
   public showAdvancedMarketView = false;
-  public chartCandles: ChartCandle[] = [];
-  public chartError = '';
-  public chartPrice = '';
-  public chartChange = '';
-  public chartChangeClass = 'neutral';
-  public selectedChartInterval: ChartInterval = '1h';
-  public readonly chartIntervals: ChartInterval[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
-  public readonly Math = Math;
-  public readonly chartViewBox = `0 0 ${this.chartWidth} ${this.chartHeight}`;
-  public readonly candleWidth = 5;
-  public readonly priceGridLines = [0, 1, 2, 3].map(index => ({
-    y: this.chartPadding.top + index * 44,
-  }));
 
   constructor(
     private readonly httpClient: HttpClient,
-    private readonly walletsService: WalletsService,
-    private readonly ngZone: NgZone
+    private readonly walletsService: WalletsService
   ) {
     this.walletsService.account.subscribe(account => {
       if (account?.account) {
@@ -167,10 +132,6 @@ export class HomeComponent implements OnDestroy {
       }
     });
     this.loadMarketComparison();
-  }
-
-  public ngOnDestroy(): void {
-    this.closeChartStream();
   }
 
   public submitQuote(): void {
@@ -218,20 +179,6 @@ export class HomeComponent implements OnDestroy {
       });
   }
 
-  public formatChartTime(time: number): string {
-    if (this.selectedChartInterval === '1d') {
-      return new Date(time * 1000).toLocaleDateString([], {
-        month: 'short',
-        day: 'numeric',
-      });
-    }
-
-    return new Date(time * 1000).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-
   public changeComparisonTimeframe(timeframe: ComparisonTimeframe): void {
     if (this.selectedComparisonTimeframe === timeframe) {
       return;
@@ -243,14 +190,6 @@ export class HomeComponent implements OnDestroy {
 
   public toggleAdvancedMarketView(): void {
     this.showAdvancedMarketView = !this.showAdvancedMarketView;
-
-    if (this.showAdvancedMarketView && this.chartCandles.length === 0) {
-      this.loadMarketChart();
-    }
-
-    if (!this.showAdvancedMarketView) {
-      this.closeChartStream();
-    }
   }
 
   public tokenColor(symbol: string): string {
@@ -298,23 +237,54 @@ export class HomeComponent implements OnDestroy {
     }
 
     if (relative === 0) {
-      return `${comparison.base} and ${comparison.quote} are even over ${comparison.timeframe}`;
+      return `${comparison.base} and ${comparison.quote} moved about the same over ${this.timeframeLabel(comparison.timeframe)}`;
     }
 
     const stronger = relative > 0 ? comparison.base : comparison.quote;
     const weaker = relative > 0 ? comparison.quote : comparison.base;
-    return `${stronger} outperforming ${weaker} by ${Math.abs(relative).toFixed(2)}%`;
+    return `${stronger} moved more than ${weaker} by ${Math.abs(relative).toFixed(2)}% over ${this.timeframeLabel(comparison.timeframe)}`;
   }
 
-  public changeChartInterval(interval: ChartInterval): void {
-    if (this.selectedChartInterval === interval) {
-      return;
+  public swapInsightText(): string {
+    const comparison = this.comparison;
+    if (!comparison) {
+      return '';
     }
 
-    this.selectedChartInterval = interval;
-    this.chartError = '';
-    this.closeChartStream();
-    this.loadMarketChart();
+    const from = comparison.baseToken;
+    const to = comparison.quoteToken;
+    const window = this.timeframeLabel(comparison.timeframe);
+    const fromChange = from.changePercent;
+    const toChange = to.changePercent;
+
+    if (fromChange === undefined || toChange === undefined) {
+      return `Compare ${from.symbol} and ${to.symbol} price moves over ${window} before swapping.`;
+    }
+
+    const fromLabel = `${from.symbol} ${this.formatPercent(fromChange)}`;
+    const toLabel = `${to.symbol} ${this.formatPercent(toChange)}`;
+
+    if (Math.abs(fromChange) < 0.05 && Math.abs(toChange) < 0.05) {
+      return `Both assets were flat over ${window}.`;
+    }
+
+    if (Math.abs(fromChange) < 0.05) {
+      return `${from.symbol} held steady while ${to.symbol} moved ${this.formatPercent(toChange)} over ${window}.`;
+    }
+
+    if (Math.abs(toChange) < 0.05) {
+      return `${to.symbol} held steady while ${from.symbol} moved ${this.formatPercent(fromChange)} over ${window}.`;
+    }
+
+    if (toChange > fromChange) {
+      return `Swapping ${from.symbol} → ${to.symbol}: ${toLabel} vs ${fromLabel} over ${window}.`;
+    }
+
+    if (fromChange > toChange) {
+      return `Swapping ${from.symbol} → ${to.symbol}: ${fromLabel} vs ${toLabel} over ${window}.`;
+    }
+
+    return `${fromLabel} and ${toLabel} over ${window}.`;
   }
 
   private loadMarketComparison(): void {
@@ -323,13 +293,16 @@ export class HomeComponent implements OnDestroy {
     this.comparisonError = '';
 
     this.httpClient
-      .get<MarketComparisonResponse>(`${environment.apiUrl}/api/v1/markets/comparison`, {
-        params: {
-          base: this.fromAssetLabel,
-          quote: this.toAssetLabel,
-          timeframe,
-        },
-      })
+      .get<MarketComparisonResponse>(
+        `${environment.apiUrl}/api/v1/markets/comparison`,
+        {
+          params: {
+            base: this.fromAssetLabel,
+            quote: this.toAssetLabel,
+            timeframe,
+          },
+        }
+      )
       .subscribe({
         next: response => {
           if (this.selectedComparisonTimeframe !== timeframe) {
@@ -337,10 +310,11 @@ export class HomeComponent implements OnDestroy {
           }
 
           this.comparison = response;
-          this.comparisonLines = this.toComparisonLines(response);
-          this.setComparisonAxis(response);
+          this.buildComparisonChart(response);
           this.comparisonError =
-            response.status === 'unavailable' ? 'Comparison data unavailable' : '';
+            response.status === 'unavailable'
+              ? 'Comparison data unavailable'
+              : '';
           this.comparisonLoading = false;
         },
         error: () => {
@@ -350,7 +324,11 @@ export class HomeComponent implements OnDestroy {
 
           this.comparison = undefined;
           this.comparisonLines = [];
+          this.comparisonYLabels = [];
+          this.comparisonGridLines = [];
+          this.comparisonBaselineY = 0;
           this.comparisonAxisStart = '';
+          this.comparisonAxisMid = '';
           this.comparisonAxisEnd = '';
           this.comparisonError = 'Comparison data unavailable';
           this.comparisonLoading = false;
@@ -358,221 +336,115 @@ export class HomeComponent implements OnDestroy {
       });
   }
 
-  private loadMarketChart(): void {
-    const interval = this.selectedChartInterval;
-
-    this.httpClient
-      .get<MarketCandlesResponse>(
-        `${environment.apiUrl}/api/v1/markets/NEAR/candles?interval=${interval}&limit=${this.chartLimit}`
-      )
-      .subscribe({
-        next: response => {
-          if (this.selectedChartInterval !== interval) {
-            return;
-          }
-
-          const candles = response.candles.length
-            ? response.candles
-            : this.fallbackCandles();
-          this.setMarketCandles(candles);
-          this.chartError = '';
-          this.openChartStream();
-        },
-        error: () => {
-          if (this.selectedChartInterval !== interval) {
-            return;
-          }
-
-          const fallback = this.fallbackCandles();
-          this.chartError = 'Market chart unavailable.';
-          this.setMarketCandles(fallback);
-        },
-      });
-  }
-
-  private openChartStream(): void {
-    if (typeof EventSource === 'undefined') {
-      return;
-    }
-
-    this.closeChartStream();
-    this.chartEvents = new EventSource(
-      `${environment.apiUrl}/api/v1/markets/NEAR/candles/stream?interval=${this.selectedChartInterval}`
+  private buildComparisonChart(response: MarketComparisonResponse): void {
+    const seriesWithPoints = response.series.filter(
+      series => series.points.length > 0
     );
+    const allPoints = seriesWithPoints.flatMap(series => series.points);
 
-    this.chartEvents.onmessage = event => {
-      this.ngZone.run(() => {
-        const response = this.parseMarketCandleEvent(event.data);
-
-        if (!response || response.interval !== this.selectedChartInterval) {
-          return;
-        }
-
-        const candle = response.candles[0];
-        if (!candle) {
-          return;
-        }
-
-        this.upsertMarketCandle(candle);
-        this.chartError = '';
-      });
-    };
-
-    this.chartEvents.onerror = () => {
-      this.ngZone.run(() => {
-        this.closeChartStream();
-      });
-    };
-  }
-
-  private closeChartStream(): void {
-    this.chartEvents?.close();
-    this.chartEvents = undefined;
-  }
-
-  private parseMarketCandleEvent(data: string): MarketCandlesResponse | undefined {
-    try {
-      return JSON.parse(data) as MarketCandlesResponse;
-    } catch {
-      return undefined;
-    }
-  }
-
-  private setMarketCandles(candles: MarketCandle[]): void {
-    this.marketCandles = candles.slice(-this.chartLimit);
-    this.chartCandles = this.toChartCandles(this.marketCandles);
-    this.setChartSummary(this.marketCandles);
-  }
-
-  private upsertMarketCandle(candle: MarketCandle): void {
-    const index = this.marketCandles.findIndex(item => item.time === candle.time);
-
-    if (index >= 0) {
-      this.marketCandles[index] = candle;
-    } else {
-      this.marketCandles = [...this.marketCandles, candle].slice(-this.chartLimit);
-    }
-
-    this.chartCandles = this.toChartCandles(this.marketCandles);
-    this.setChartSummary(this.marketCandles);
-  }
-
-  private setChartSummary(candles: MarketCandle[]): void {
-    const first = candles[0];
-    const last = candles[candles.length - 1];
-
-    if (!first || !last) {
-      this.chartPrice = '';
-      this.chartChange = '';
-      this.chartChangeClass = 'neutral';
-      return;
-    }
-
-    const change = last.close - first.open;
-    const changePercent = first.open > 0 ? (change / first.open) * 100 : 0;
-    this.chartPrice = `$${last.close.toFixed(3)}`;
-    this.chartChange = `${change >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`;
-    this.chartChangeClass =
-      change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral';
-  }
-
-  private toChartCandles(candles: MarketCandle[]): ChartCandle[] {
-    const visible = candles.slice(-90);
-    if (visible.length === 0) {
-      return [];
-    }
-
-    const values = visible.flatMap(candle => [
-      candle.open,
-      candle.high,
-      candle.low,
-      candle.close,
-    ]);
-    const minPrice = Math.min(...values);
-    const maxPrice = Math.max(...values);
-    const maxVolume = Math.max(...visible.map(candle => candle.volume), 1);
-    const priceHeight =
-      this.chartHeight -
-      this.chartPadding.top -
-      this.chartPadding.bottom -
-      this.volumeHeight;
-    const priceRange = Math.max(maxPrice - minPrice, 0.0001);
-    const step =
-      (this.chartWidth - this.chartPadding.left - this.chartPadding.right) /
-      Math.max(visible.length - 1, 1);
-
-    return visible.map((candle, index) => {
-      const toY = (price: number): number =>
-        this.chartPadding.top + ((maxPrice - price) / priceRange) * priceHeight;
-      const volumeHeight = (candle.volume / maxVolume) * (this.volumeHeight - 8);
-      const volumeBase = this.chartHeight - this.chartPadding.bottom + 24;
-
-      return {
-        ...candle,
-        x: this.chartPadding.left + index * step,
-        openY: toY(candle.open),
-        highY: toY(candle.high),
-        lowY: toY(candle.low),
-        closeY: toY(candle.close),
-        volumeY: volumeBase - volumeHeight,
-        volumeHeight,
-        color: candle.close >= candle.open ? '#2fd17c' : '#ff5d5d',
-      };
-    });
-  }
-
-  private toComparisonLines(response: MarketComparisonResponse): ComparisonChartLine[] {
-    const allPoints = response.series.flatMap(series => series.points);
     if (allPoints.length === 0) {
-      return [];
-    }
-
-    const minValue = Math.min(...allPoints.map(point => point.value));
-    const maxValue = Math.max(...allPoints.map(point => point.value));
-    const valueRange = Math.max(maxValue - minValue, 0.0001);
-    const innerWidth =
-      this.comparisonWidth - this.comparisonPadding.left - this.comparisonPadding.right;
-    const innerHeight =
-      this.comparisonHeight - this.comparisonPadding.top - this.comparisonPadding.bottom;
-
-    return response.series
-      .filter(series => series.points.length > 0)
-      .map(series => {
-        const step = innerWidth / Math.max(series.points.length - 1, 1);
-        const path = series.points
-          .map((point, index) => {
-            const x = this.comparisonPadding.left + index * step;
-            const y =
-              this.comparisonPadding.top +
-              ((maxValue - point.value) / valueRange) * innerHeight;
-            return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-          })
-          .join(' ');
-
-        return {
-          symbol: series.symbol,
-          path,
-          color: this.tokenColor(series.symbol),
-        };
-      });
-  }
-
-  private setComparisonAxis(response: MarketComparisonResponse): void {
-    const points = response.series.flatMap(series => series.points);
-
-    if (points.length === 0) {
+      this.comparisonLines = [];
+      this.comparisonYLabels = [];
+      this.comparisonGridLines = [];
+      this.comparisonBaselineY = 0;
       this.comparisonAxisStart = '';
+      this.comparisonAxisMid = '';
       this.comparisonAxisEnd = '';
       return;
     }
 
-    const first = Math.min(...points.map(point => point.time));
-    const last = Math.max(...points.map(point => point.time));
-    this.comparisonAxisStart = this.formatComparisonTime(first, response.timeframe);
-    this.comparisonAxisEnd = this.formatComparisonTime(last, response.timeframe);
+    const timeMin = Math.min(...allPoints.map(point => point.time));
+    const timeMax = Math.max(...allPoints.map(point => point.time));
+    const timeRange = Math.max(timeMax - timeMin, 1);
+    const minValue = Math.min(...allPoints.map(point => point.value));
+    const maxValue = Math.max(...allPoints.map(point => point.value));
+    const spread = Math.max(maxValue - minValue, 0.5);
+    const yPad = Math.max(spread * 0.15, 0.25);
+    const yMin = Math.min(minValue, 100) - yPad;
+    const yMax = Math.max(maxValue, 100) + yPad;
+    const yRange = Math.max(yMax - yMin, 0.0001);
+    const innerWidth =
+      this.comparisonWidth -
+      this.comparisonPadding.left -
+      this.comparisonPadding.right;
+    const innerHeight =
+      this.comparisonHeight -
+      this.comparisonPadding.top -
+      this.comparisonPadding.bottom;
+
+    const toX = (time: number): number =>
+      this.comparisonPadding.left + ((time - timeMin) / timeRange) * innerWidth;
+
+    const toY = (value: number): number =>
+      this.comparisonPadding.top + ((yMax - value) / yRange) * innerHeight;
+
+    this.comparisonBaselineY = toY(100);
+    this.comparisonGridLines = [0, 1, 2, 3].map(index => ({
+      y: this.comparisonPadding.top + (index / 3) * innerHeight,
+    }));
+
+    const labelValues = [yMax, 100, yMin];
+    this.comparisonYLabels = labelValues.map(value => ({
+      y: toY(value),
+      label: this.formatIndexLabel(value),
+    }));
+
+    this.comparisonLines = seriesWithPoints.map(series => {
+      const path = series.points
+        .map((point, index) => {
+          const x = toX(point.time);
+          const y = toY(point.value);
+          return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+        })
+        .join(' ');
+
+      return {
+        symbol: series.symbol,
+        path,
+        color: this.tokenColor(series.symbol),
+      };
+    });
+
+    this.comparisonAxisStart = this.formatComparisonTime(
+      timeMin,
+      response.timeframe
+    );
+    this.comparisonAxisEnd = this.formatComparisonTime(
+      timeMax,
+      response.timeframe
+    );
+    this.comparisonAxisMid = this.formatComparisonTime(
+      timeMin + Math.floor(timeRange / 2),
+      response.timeframe
+    );
   }
 
-  private formatComparisonTime(time: number, timeframe: ComparisonTimeframe): string {
+  private formatIndexLabel(value: number): string {
+    const change = value - 100;
+
+    if (Math.abs(change) < 0.05) {
+      return '0%';
+    }
+
+    return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+  }
+
+  private timeframeLabel(timeframe: ComparisonTimeframe): string {
+    if (timeframe === '1H') {
+      return 'the last hour';
+    }
+
+    if (timeframe === '1D') {
+      return 'the last 24 hours';
+    }
+
+    return 'the last 7 days';
+  }
+
+  private formatComparisonTime(
+    time: number,
+    timeframe: ComparisonTimeframe
+  ): string {
     if (timeframe === '1W') {
       return new Date(time * 1000).toLocaleDateString([], {
         month: 'short',
@@ -595,31 +467,5 @@ export class HomeComponent implements OnDestroy {
 
     const [whole, fraction = ''] = normalized.split('.');
     return `${whole}${fraction.padEnd(6, '0')}`.replace(/^0+(?=\d)/, '');
-  }
-
-  private fallbackCandles(): MarketCandle[] {
-    const intervalSeconds = chartIntervalSeconds[this.selectedChartInterval];
-    const now = Math.floor(Date.now() / 1000 / intervalSeconds) * intervalSeconds;
-    const candles: MarketCandle[] = [];
-    let price = 1.95;
-
-    for (let index = 0; index < 72; index += 1) {
-      const drift = Math.sin(index / 5) * 0.018 + Math.cos(index / 11) * 0.012;
-      const open = price;
-      const close = Math.max(0.1, open + drift);
-      const high = Math.max(open, close) + 0.025 + Math.sin(index) * 0.004;
-      const low = Math.min(open, close) - 0.025 + Math.cos(index) * 0.004;
-      price = close;
-      candles.push({
-        time: now - (72 - index) * intervalSeconds,
-        open,
-        high,
-        low,
-        close,
-        volume: 80000 + Math.abs(Math.sin(index / 3)) * 140000,
-      });
-    }
-
-    return candles;
   }
 }

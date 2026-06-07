@@ -2,29 +2,54 @@
 
 :host {
   .main-layout {
-    height: 100vh;
+    min-height: 100vh;
 
     &__content {
       display: grid;
-      height: calc(100vh - 4rem);
+      min-height: calc(100vh - 4rem);
+      align-items: stretch;
       grid-auto-flow: column;
       grid-template-columns: 1fr 1px 0 repeat(6, minmax(0, 1fr));
 
+      app-sidebar,
+      app-animate-line {
+        align-self: stretch;
+      }
+
+      app-animate-line {
+        position: relative;
+        z-index: 2;
+        width: 1px;
+        grid-column: 2;
+      }
+
       &_router {
+        position: relative;
+        z-index: 1;
         grid-column: 4 / 10;
       }
 
       &.mobile {
         display: grid;
-        height: calc(100vh - 4rem);
+        min-height: calc(100vh - 4rem);
         grid-auto-flow: row;
         grid-template-columns: none;
         grid-template-rows: 1fr 4rem;
 
         &_mobile {
-          height: calc(100vh - 4rem);
+          min-height: calc(100vh - 4rem);
         }
       }
+    }
+
+    &__divider {
+      position: relative;
+      z-index: 2;
+      width: 1px;
+      flex-shrink: 0;
+      align-self: stretch;
+      background: var(--main-text-color);
+      grid-column: 2;
     }
   }
 }
