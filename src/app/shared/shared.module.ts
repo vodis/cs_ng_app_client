@@ -10,6 +10,8 @@ import { WalletAccountComponent } from '@shared/components/wallet-account/wallet
 import { SideModalComponent } from '@shared/components/side-modal/side-modal.component';
 import { CommonModule } from '@angular/common';
 import { AvatarComponent } from '@shared/components/avatar/avatar.component';
+import { FormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
 
 const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
 
@@ -17,6 +19,8 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
   imports: [
     ...AngularMaterial,
     CommonModule,
+    FormsModule,
+    HttpClientModule,
     WalletMenuComponent,
     WalletAccountComponent,
     AvatarComponent,
@@ -36,6 +40,9 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     WalletAccountComponent,
     SideModalComponent,
     AvatarComponent,
+    CommonModule,
+    FormsModule,
+    HttpClientModule,
     ...AngularMaterial,
   ],
 })
