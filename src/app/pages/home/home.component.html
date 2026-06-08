@@ -38,7 +38,9 @@
                   {{ fromToken.symbol[0] }}
                 }
               </span>
-              <span class="swap-form__token-symbol">{{ fromToken.symbol }}</span>
+              <span class="swap-form__token-symbol">{{
+                fromToken.symbol
+              }}</span>
               <mat-icon class="swap-form__token-chevron">expand_more</mat-icon>
             </button>
             <input
@@ -189,7 +191,9 @@
             <div
               class="comparison-card__metric"
               [style.borderLeftColor]="tokenColor(fromToken.symbol)">
-              <span>{{ comparison?.baseToken?.symbol || fromToken.symbol }}</span>
+              <span>{{
+                comparison?.baseToken?.symbol || fromToken.symbol
+              }}</span>
               <strong>{{
                 formatPrice(comparison?.baseToken?.currentPrice)
               }}</strong>
@@ -200,7 +204,9 @@
             <div
               class="comparison-card__metric"
               [style.borderLeftColor]="tokenColor(toToken.symbol)">
-              <span>{{ comparison?.quoteToken?.symbol || toToken.symbol }}</span>
+              <span>{{
+                comparison?.quoteToken?.symbol || toToken.symbol
+              }}</span>
               <strong>{{
                 formatPrice(comparison?.quoteToken?.currentPrice)
               }}</strong>

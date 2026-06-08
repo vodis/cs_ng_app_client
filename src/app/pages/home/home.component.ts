@@ -270,7 +270,11 @@ export class HomeComponent {
       'End',
     ];
 
-    if (allowedControlKeys.includes(event.key) || event.ctrlKey || event.metaKey) {
+    if (
+      allowedControlKeys.includes(event.key) ||
+      event.ctrlKey ||
+      event.metaKey
+    ) {
       return;
     }
 
@@ -289,7 +293,10 @@ export class HomeComponent {
   }
 
   public onAmountInput(event: Event): void {
-    this.applySanitizedAmount((event.target as HTMLInputElement).value, event.target as HTMLInputElement);
+    this.applySanitizedAmount(
+      (event.target as HTMLInputElement).value,
+      event.target as HTMLInputElement
+    );
   }
 
   public onAmountPaste(event: ClipboardEvent): void {
