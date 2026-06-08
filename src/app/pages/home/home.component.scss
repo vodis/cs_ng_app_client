@@ -19,11 +19,14 @@
   }
 
   .swap-form {
+    --swap-radius: 10px;
+
     display: grid;
     max-width: 30rem;
     gap: 0;
     padding: 1rem;
     border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: var(--swap-radius);
     background-color: rgb(0 0 0 / 18%);
     background-image: radial-gradient(
       rgb(255 255 255 / 5%) 0.65px,
@@ -36,15 +39,42 @@
       padding: 0.85rem 0.9rem 0.7rem;
       border: 1px solid rgb(255 255 255 / 14%);
       background: rgb(255 255 255 / 3%);
+      border-radius: var(--swap-radius);
       gap: 0.45rem;
 
       &--from {
-        border-color: rgb(254 108 0 / 35%);
-        box-shadow: inset 0 0 0 1px rgb(254 108 0 / 8%);
+        margin-bottom: 0.35rem;
+        position: relative;
+        z-index: 1;
+        border-color: rgb(254 108 0 / 42%);
+        background: rgb(254 108 0 / 4%);
+        box-shadow:
+          0 0 0 1px rgb(254 108 0 / 14%),
+          0 0 14px rgb(254 108 0 / 10%),
+          inset 0 0 0 1px rgb(254 108 0 / 8%);
+        transition:
+          border-color 0.2s ease,
+          background 0.2s ease,
+          box-shadow 0.2s ease;
+
+        .swap-form__label {
+          color: rgb(254 108 0 / 72%);
+        }
+
+        &:focus-within {
+          border-color: rgb(254 108 0 / 58%);
+          background: rgb(254 108 0 / 6%);
+          box-shadow:
+            0 0 0 1px rgb(254 108 0 / 22%),
+            0 0 18px rgb(254 108 0 / 16%),
+            inset 0 0 0 1px rgb(254 108 0 / 12%);
+        }
       }
 
       &--to {
-        margin-top: -0.35rem;
+        margin-top: 0.35rem;
+        border-color: rgb(255 255 255 / 10%);
+        background: rgb(0 0 0 / 12%);
       }
     }
 
@@ -75,6 +105,7 @@
       align-items: center;
       padding: 0.35rem 0.55rem 0.35rem 0.35rem;
       border: 1px solid rgb(255 255 255 / 16%);
+      border-radius: 999px;
       background: rgb(0 0 0 / 28%);
       color: #fff;
       cursor: pointer;
@@ -164,10 +195,10 @@
 
     &__flip-wrap {
       position: relative;
-      z-index: 1;
+      z-index: 3;
       display: flex;
       justify-content: center;
-      margin: -0.85rem 0;
+      margin: -0.95rem 0;
     }
 
     &__flip {
@@ -178,24 +209,30 @@
       justify-content: center;
       padding: 0;
       border: 1px solid rgb(255 255 255 / 18%);
+      border-radius: 50%;
       background: #171c1f;
+      box-shadow: 0 0 0 4px #171c1f;
       color: #fe6c00;
       cursor: pointer;
-      transition:
-        border-color 0.15s ease,
-        background 0.15s ease,
-        transform 0.15s ease;
+      transition: border-color 0.15s ease;
 
       &:hover {
-        border-color: rgb(254 108 0 / 55%);
-        background: rgb(254 108 0 / 12%);
-        transform: rotate(180deg);
+        border-color: rgb(254 108 0 / 70%);
+
+        .swap-form__flip-icon {
+          color: #ff9a47;
+          filter: drop-shadow(0 0 6px rgb(254 108 0 / 75%));
+        }
       }
 
-      mat-icon {
+      &-icon {
         width: 1.1rem;
         height: 1.1rem;
+        color: #fe6c00;
         font-size: 1.1rem;
+        transition:
+          color 0.15s ease,
+          filter 0.15s ease;
       }
     }
 
@@ -204,6 +241,7 @@
       min-height: 2.75rem;
       padding: 0.75rem 1rem;
       border: 1px solid #fe6c00;
+      border-radius: var(--swap-radius);
       margin-top: 0.85rem;
       background: #fe6c00;
       color: #171c1f;
