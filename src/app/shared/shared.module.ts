@@ -8,6 +8,7 @@ import { WalletBarComponent } from '@shared/components/wallet-bar/wallet-bar.com
 import { WalletMenuComponent } from '@shared/components/wallet-menu/wallet-menu.component';
 import { WalletAccountComponent } from '@shared/components/wallet-account/wallet-account.component';
 import { SideModalComponent } from '@shared/components/side-modal/side-modal.component';
+import { TokenSelectPanelComponent } from '@shared/components/token-select-panel/token-select-panel.component';
 import { LiveChartComponent } from '@shared/components/live-chart/live-chart.component';
 import { CommonModule } from '@angular/common';
 import { AvatarComponent } from '@shared/components/avatar/avatar.component';
@@ -31,6 +32,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     WalletsComponent,
     WalletBarComponent,
     SideModalComponent,
+    TokenSelectPanelComponent,
     LiveChartComponent,
   ],
   providers: [],
@@ -41,6 +43,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     WalletMenuComponent,
     WalletAccountComponent,
     SideModalComponent,
+    TokenSelectPanelComponent,
     LiveChartComponent,
     AvatarComponent,
     CommonModule,

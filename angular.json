@@ -84,8 +84,8 @@
           "builder": "ngx-build-plus:dev-server",
           "options": {
             "buildTarget": "cs_ng_app_client:build:development",
-            "publicHost": "http://localhost:5000",
-            "port": 5000,
+            "publicHost": "http://localhost:5002",
+            "port": 5002,
             "extraWebpackConfig": "config/webpack.config.js"
           },
           "configurations": {
@@ -129,5 +129,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }
