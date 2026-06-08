@@ -19,7 +19,7 @@
   <div class="home__block">
     <div class="container">
       <h5 class="mb-1">Exchange</h5>
-      <form class="swap-form" (ngSubmit)="submitQuote()">
+      <form class="swap-form" autocomplete="off" (ngSubmit)="submitQuote()">
         <div class="swap-form__card swap-form__card--from">
           <div class="swap-form__label-row">
             <span class="swap-form__label">From</span>
@@ -43,12 +43,21 @@
             </button>
             <input
               class="swap-form__amount"
-              name="amount"
+              [class.swap-form__amount--muted]="isAmountMuted()"
               type="text"
               inputmode="decimal"
-              [(ngModel)]="amount"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              [value]="amount"
               placeholder="0.00"
-              aria-label="Amount to sell" />
+              aria-label="Amount to sell"
+              (focus)="onAmountFocus()"
+              (blur)="onAmountBlur()"
+              (keydown)="onAmountKeydown($event)"
+              (input)="onAmountInput($event)"
+              (paste)="onAmountPaste($event)" />
           </div>
           <p class="swap-form__fiat">{{ fromFiatEstimate() }}</p>
         </div>

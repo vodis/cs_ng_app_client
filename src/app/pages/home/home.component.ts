@@ -102,7 +102,7 @@ export class HomeComponent {
     },
   ];
 
-  public amount = '1';
+  public amount = '';
   public walletAddress = '';
   public fromToken = this.exchangeTokens[0];
   public toToken = this.exchangeTokens[1];
@@ -156,7 +156,7 @@ export class HomeComponent {
 
     const amount = this.toUsdcBaseUnits(this.amount);
 
-    if (!amount || amount === '0') {
+    if (!amount || /^0+$/.test(amount)) {
       this.quoteError = `Enter a valid ${this.fromToken.symbol} amount.`;
       return;
     }
@@ -248,11 +248,118 @@ export class HomeComponent {
       return String(amount);
     }
 
-    return '0.00';
+    return '';
   }
 
   public primaryActionLabel(): string {
     return this.walletAddress ? 'Get quote' : 'Connect wallet';
+  }
+
+  public onAmountKeydown(event: KeyboardEvent): void {
+    const allowedControlKeys = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ];
+
+    if (allowedControlKeys.includes(event.key) || event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    if (/^\d$/.test(event.key)) {
+      return;
+    }
+
+    if (event.key === '.') {
+      const currentValue = (event.target as HTMLInputElement).value;
+      if (!currentValue.includes('.')) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+  }
+
+  public onAmountInput(event: Event): void {
+    this.applySanitizedAmount((event.target as HTMLInputElement).value, event.target as HTMLInputElement);
+  }
+
+  public onAmountPaste(event: ClipboardEvent): void {
+    event.preventDefault();
+
+    const input = event.target as HTMLInputElement;
+    const pasted = event.clipboardData?.getData('text') ?? '';
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const nextValue =
+      input.value.slice(0, start) + pasted + input.value.slice(end);
+
+    this.applySanitizedAmount(nextValue, input);
+  }
+
+  public onAmountFocus(): void {
+    if (this.isZeroAmountValue(this.amount)) {
+      this.amount = '';
+    }
+  }
+
+  public onAmountBlur(): void {
+    if (!this.amount.trim() || this.isZeroAmountValue(this.amount)) {
+      this.amount = '';
+    }
+  }
+
+  public isAmountMuted(): boolean {
+    const normalized = this.amount.trim();
+    if (!normalized) {
+      return false;
+    }
+
+    return this.isZeroAmountValue(normalized);
+  }
+
+  private applySanitizedAmount(value: string, input?: HTMLInputElement): void {
+    const sanitized = this.sanitizeAmountInput(value);
+    this.amount = sanitized;
+
+    if (input && input.value !== sanitized) {
+      input.value = sanitized;
+    }
+  }
+
+  private sanitizeAmountInput(value: string): string {
+    const digitsAndDot = value.replace(/[^\d.]/g, '');
+    const dotIndex = digitsAndDot.indexOf('.');
+
+    if (dotIndex === -1) {
+      return digitsAndDot;
+    }
+
+    const whole = digitsAndDot.slice(0, dotIndex);
+    const fraction = digitsAndDot
+      .slice(dotIndex + 1)
+      .replace(/\./g, '')
+      .slice(0, 6);
+
+    return `${whole}.${fraction}`;
+  }
+
+  private isZeroAmountValue(value: string): boolean {
+    const normalized = value.trim();
+    if (!normalized) {
+      return true;
+    }
+
+    const parsed = Number.parseFloat(normalized);
+    return !Number.isNaN(parsed) && parsed === 0;
   }
 
   public openTokenSelector(side: TokenSelectorSide): void {
