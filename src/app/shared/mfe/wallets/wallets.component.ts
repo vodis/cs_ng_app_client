@@ -15,6 +15,7 @@ import {
 } from '@mfe-contracts/wallet-mfe.types';
 import { WalletAccountChangedPayload } from '@mfe-contracts/payloads';
 import { AppLoggerService } from '@core/logging/app-logger.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-wallets',
@@ -28,6 +29,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   private unmountMfe: (() => void) | undefined;
   private unsubscribeEvents: (() => void) | undefined;
   private isDestroyed = false;
+  private readonly remoteName = 'mfe-wallets';
 
   constructor(
     private walletsService: WalletsService,
@@ -42,17 +44,24 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   async initializeMfe() {
     const container = this.containerRef?.nativeElement;
     if (!container) {
-      this.logger.log('error', 'Wallets MFE: host container is not available');
+      this.logger.log('error', 'Wallets MFE: host container is not available', {
+        component: 'WalletsComponent',
+        action: 'resolveContainer',
+        remoteName: this.remoteName,
+      });
       return;
     }
 
     try {
       const mfeModule = (await loadRemoteModule({
         type: 'manifest',
-        remoteName: 'mfe-wallets',
+        remoteName: this.remoteName,
         exposedModule: './mount',
       })) as WalletsMfeModule;
       this.logger.log('info', 'Wallets MFE: remote module loaded', {
+        component: 'WalletsComponent',
+        action: 'loadRemoteModule',
+        remoteName: this.remoteName,
         moduleKeys: Object.keys(mfeModule || {}),
       });
 
@@ -69,7 +78,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       const mountResult = mfeModule.mount(container, {
         context: {
           contractVersion: '2.0.0',
-          environment: 'dev',
+          environment: this.mfeEnvironment(),
         },
         callbacks: {
           onAccountChanged: (account: WalletAccountChangedPayload) => {
@@ -107,9 +116,12 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       this.logger.log('info', 'Wallets MFE: mounted successfully');
     } catch (error) {
       container.innerHTML =
-        '<div style="padding:12px;color:#ef4444;font-size:12px;">Wallets MFE failed to mount. Check browser console.</div>';
+        '<div style="padding:12px;color:#ef4444;font-size:12px;" role="alert">Wallet connection is temporarily unavailable.</div>';
       this.logger.log('error', 'Wallets MFE: failed to mount', {
-        error,
+        component: 'WalletsComponent',
+        action: 'loadAndMount',
+        remoteName: this.remoteName,
+        errorMessage: this.errorMessage(error),
       });
     }
   }
@@ -131,6 +143,14 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       'subscribe' in value &&
       'getSnapshot' in value
     );
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  private mfeEnvironment(): 'dev' | 'prod' {
+    return environment.production ? 'prod' : 'dev';
   }
 
   ngOnDestroy(): void {
