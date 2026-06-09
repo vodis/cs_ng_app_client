@@ -19,54 +19,116 @@
   <div class="home__block">
     <div class="container">
       <h5 class="mb-1">Exchange</h5>
-      <form class="exchange-form" (ngSubmit)="submitQuote()">
-        <div class="exchange-form__row">
-          <label class="exchange-form__field">
-            <span>From</span>
-            <input type="text" [value]="fromAssetLabel" disabled />
-          </label>
-          <label class="exchange-form__field">
-            <span>To</span>
-            <input type="text" [value]="toAssetLabel" disabled />
-          </label>
+      <form class="swap-form" autocomplete="off" (ngSubmit)="submitQuote()">
+        <div class="swap-form__card swap-form__card--from">
+          <div class="swap-form__label-row">
+            <span class="swap-form__label">From</span>
+          </div>
+          <div class="swap-form__main-row">
+            <button
+              type="button"
+              class="swap-form__token-pill"
+              (click)="openTokenSelector('from')">
+              <span
+                class="swap-form__token-icon"
+                [style.backgroundColor]="fromToken.color">
+                @if (tokenIcon(fromToken.symbol); as icon) {
+                  <img [src]="icon" [alt]="fromToken.symbol" />
+                } @else {
+                  {{ fromToken.symbol[0] }}
+                }
+              </span>
+              <span class="swap-form__token-symbol">{{
+                fromToken.symbol
+              }}</span>
+              <mat-icon class="swap-form__token-chevron">expand_more</mat-icon>
+            </button>
+            <input
+              class="swap-form__amount"
+              [class.swap-form__amount--muted]="isAmountMuted()"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              [value]="amount"
+              placeholder="0.00"
+              aria-label="Amount to sell"
+              (focus)="onAmountFocus()"
+              (blur)="onAmountBlur()"
+              (keydown)="onAmountKeydown($event)"
+              (input)="onAmountInput($event)"
+              (paste)="onAmountPaste($event)" />
+          </div>
+          <p class="swap-form__fiat">{{ fromFiatEstimate() }}</p>
         </div>
 
-        <label class="exchange-form__field">
-          <span>Amount</span>
-          <input
-            name="amount"
-            type="text"
-            inputmode="decimal"
-            [(ngModel)]="amount"
-            placeholder="1.00" />
-        </label>
+        <div class="swap-form__flip-wrap">
+          <button
+            type="button"
+            class="swap-form__flip"
+            aria-label="Swap tokens"
+            (click)="swapTokens()">
+            <mat-icon class="swap-form__flip-icon">swap_vert</mat-icon>
+          </button>
+        </div>
 
-        <label class="exchange-form__field">
-          <span>Wallet address</span>
-          <input
-            name="walletAddress"
-            type="text"
-            [(ngModel)]="walletAddress"
-            placeholder="Connect wallet or paste address" />
-        </label>
+        <div class="swap-form__card swap-form__card--to">
+          <div class="swap-form__label-row">
+            <span class="swap-form__label">To</span>
+          </div>
+          <div class="swap-form__main-row">
+            <button
+              type="button"
+              class="swap-form__token-pill"
+              (click)="openTokenSelector('to')">
+              <span
+                class="swap-form__token-icon"
+                [style.backgroundColor]="toToken.color">
+                @if (tokenIcon(toToken.symbol); as icon) {
+                  <img [src]="icon" [alt]="toToken.symbol" />
+                } @else {
+                  {{ toToken.symbol[0] }}
+                }
+              </span>
+              <span class="swap-form__token-symbol">{{ toToken.symbol }}</span>
+              <mat-icon class="swap-form__token-chevron">expand_more</mat-icon>
+            </button>
+            <output class="swap-form__amount swap-form__amount--readonly">
+              {{ toAmountDisplay() }}
+            </output>
+          </div>
+          <p class="swap-form__fiat">{{ toFiatEstimate() }}</p>
+        </div>
 
         <button
-          mat-raised-button
-          color="primary"
-          class="btn-sm"
+          class="swap-form__submit"
           type="submit"
           [disabled]="isQuoteLoading">
-          {{ isQuoteLoading ? 'Quoting...' : 'Get quote' }}
+          {{ isQuoteLoading ? 'Quoting...' : primaryActionLabel() }}
         </button>
 
         @if (quoteError) {
-          <p class="exchange-form__error">{{ quoteError }}</p>
+          <p class="swap-form__error">{{ quoteError }}</p>
         }
 
         @if (quoteResult) {
-          <pre class="exchange-form__result">{{ quoteResult | json }}</pre>
+          <pre class="swap-form__result">{{ quoteResult | json }}</pre>
         }
       </form>
+
+      <app-side-modal
+        [isOpen]="isTokenSelectorOpen"
+        (closeRequested)="closeTokenSelector()">
+        <app-token-select-panel
+          [title]="tokenSelectorTitle()"
+          [tokens]="exchangeTokens"
+          [selectedSymbol]="tokenSelectorSelectedSymbol()"
+          [excludedSymbol]="tokenSelectorExcludedSymbol()"
+          (tokenSelected)="handleTokenSelected($event)"
+          (closeRequested)="closeTokenSelector()" />
+      </app-side-modal>
     </div>
   </div>
   <div class="home__block">
@@ -80,20 +142,20 @@
                   [src]="comparison?.baseToken?.icon"
                   [alt]="comparison?.baseToken?.symbol" />
               } @else {
-                <span>{{ fromAssetLabel[0] }}</span>
+                <span>{{ fromToken.symbol[0] }}</span>
               }
               @if (comparison?.quoteToken?.icon) {
                 <img
                   [src]="comparison?.quoteToken?.icon"
                   [alt]="comparison?.quoteToken?.symbol" />
               } @else {
-                <span>{{ toAssetLabel[0] }}</span>
+                <span>{{ toToken.symbol[0] }}</span>
               }
             </div>
             <div>
               <h5 id="comparison-title" class="mb-1">
-                {{ comparison?.base || fromAssetLabel }} &harr;
-                {{ comparison?.quote || toAssetLabel }}
+                {{ comparison?.base || fromToken.symbol }} &harr;
+                {{ comparison?.quote || toToken.symbol }}
               </h5>
               <p class="comparison-card__meta">
                 How each asset moved before you swap
@@ -128,8 +190,10 @@
           <div class="comparison-card__metrics">
             <div
               class="comparison-card__metric"
-              [style.borderLeftColor]="tokenColor(fromAssetLabel)">
-              <span>{{ comparison?.baseToken?.symbol || fromAssetLabel }}</span>
+              [style.borderLeftColor]="tokenColor(fromToken.symbol)">
+              <span>{{
+                comparison?.baseToken?.symbol || fromToken.symbol
+              }}</span>
               <strong>{{
                 formatPrice(comparison?.baseToken?.currentPrice)
               }}</strong>
@@ -139,8 +203,10 @@
             </div>
             <div
               class="comparison-card__metric"
-              [style.borderLeftColor]="tokenColor(toAssetLabel)">
-              <span>{{ comparison?.quoteToken?.symbol || toAssetLabel }}</span>
+              [style.borderLeftColor]="tokenColor(toToken.symbol)">
+              <span>{{
+                comparison?.quoteToken?.symbol || toToken.symbol
+              }}</span>
               <strong>{{
                 formatPrice(comparison?.quoteToken?.currentPrice)
               }}</strong>
@@ -162,9 +228,9 @@
               preserveAspectRatio="none"
               role="img"
               [attr.aria-label]="
-                (comparison?.base || fromAssetLabel) +
+                (comparison?.base || fromToken.symbol) +
                 ' and ' +
-                (comparison?.quote || toAssetLabel) +
+                (comparison?.quote || toToken.symbol) +
                 ' price change comparison'
               ">
               @for (line of comparisonGridLines; track line.y) {
@@ -226,7 +292,7 @@
 
       @if (showAdvancedMarketView) {
         <app-live-chart
-          [coin]="toAssetLabel"
+          [coin]="toToken.symbol"
           [active]="showAdvancedMarketView" />
       }
     </div>

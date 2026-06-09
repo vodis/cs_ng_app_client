@@ -1,7 +1,10 @@
 import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { environment } from '../../../environments/environment';
+
+type TokenSelectorSide = 'from' | 'to';
 
 interface OneClickQuoteRequest {
   dry: boolean;
@@ -83,20 +86,28 @@ export class HomeComponent {
     bottom: 28,
     left: 48,
   };
-  private readonly usdcAsset =
-    'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near';
-  private readonly nearAsset = 'nep141:wrap.near';
+  public readonly exchangeTokens: ExchangeToken[] = [
+    {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      assetId:
+        'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
+      color: '#2f8cff',
+    },
+    {
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      assetId: 'nep141:wrap.near',
+      color: '#2fd17c',
+    },
+  ];
 
-  public amount = '1';
+  public amount = '';
   public walletAddress = '';
-  public readonly fromAssetLabel = 'USDC';
-  public readonly toAssetLabel = 'NEAR';
-  public readonly fromAssetId = this.usdcAsset;
-  public readonly toAssetId = this.nearAsset;
-  public readonly tokenColors: Record<string, string> = {
-    USDC: '#2f8cff',
-    NEAR: '#2fd17c',
-  };
+  public fromToken = this.exchangeTokens[0];
+  public toToken = this.exchangeTokens[1];
+  public isTokenSelectorOpen = false;
+  public tokenSelectorSide: TokenSelectorSide | null = null;
   public isQuoteLoading = false;
   public quoteError = '';
   public quoteResult: unknown;
@@ -145,8 +156,8 @@ export class HomeComponent {
 
     const amount = this.toUsdcBaseUnits(this.amount);
 
-    if (!amount || amount === '0') {
-      this.quoteError = 'Enter a valid USDC amount.';
+    if (!amount || /^0+$/.test(amount)) {
+      this.quoteError = `Enter a valid ${this.fromToken.symbol} amount.`;
       return;
     }
 
@@ -156,8 +167,8 @@ export class HomeComponent {
       .post<QuoteApiResponse>(`${environment.apiUrl}/api/v1/quotes/one-click`, {
         dry: true,
         slippageTolerance: 50,
-        originAsset: this.usdcAsset,
-        destinationAsset: this.nearAsset,
+        originAsset: this.fromToken.assetId,
+        destinationAsset: this.toToken.assetId,
         amount,
         deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         userAddress: this.walletAddress.toLowerCase(),
@@ -192,8 +203,228 @@ export class HomeComponent {
     this.showAdvancedMarketView = !this.showAdvancedMarketView;
   }
 
+  public swapTokens(): void {
+    const previousFrom = this.fromToken;
+    this.fromToken = this.toToken;
+    this.toToken = previousFrom;
+    this.quoteResult = undefined;
+    this.quoteError = '';
+    this.loadMarketComparison();
+  }
+
+  public tokenIcon(symbol: string): string | undefined {
+    const comparison = this.comparison;
+    if (!comparison) {
+      return this.exchangeTokens.find(token => token.symbol === symbol)?.icon;
+    }
+
+    if (comparison.baseToken.symbol === symbol) {
+      return comparison.baseToken.icon;
+    }
+
+    if (comparison.quoteToken.symbol === symbol) {
+      return comparison.quoteToken.icon;
+    }
+
+    return this.exchangeTokens.find(token => token.symbol === symbol)?.icon;
+  }
+
+  public fromFiatEstimate(): string {
+    return this.fiatEstimate(this.fromToken.symbol, this.amount);
+  }
+
+  public toFiatEstimate(): string {
+    return this.fiatEstimate(this.toToken.symbol, this.toAmountDisplay());
+  }
+
+  public toAmountDisplay(): string {
+    const quote = this.quoteResult as Record<string, unknown> | undefined;
+    const amount =
+      quote?.['amountOut'] ??
+      quote?.['destinationAmount'] ??
+      quote?.['toAmount'];
+
+    if (typeof amount === 'string' || typeof amount === 'number') {
+      return String(amount);
+    }
+
+    return '';
+  }
+
+  public primaryActionLabel(): string {
+    return this.walletAddress ? 'Get quote' : 'Connect wallet';
+  }
+
+  public onAmountKeydown(event: KeyboardEvent): void {
+    const allowedControlKeys = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ];
+
+    if (
+      allowedControlKeys.includes(event.key) ||
+      event.ctrlKey ||
+      event.metaKey
+    ) {
+      return;
+    }
+
+    if (/^\d$/.test(event.key)) {
+      return;
+    }
+
+    if (event.key === '.') {
+      const currentValue = (event.target as HTMLInputElement).value;
+      if (!currentValue.includes('.')) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+  }
+
+  public onAmountInput(event: Event): void {
+    this.applySanitizedAmount(
+      (event.target as HTMLInputElement).value,
+      event.target as HTMLInputElement
+    );
+  }
+
+  public onAmountPaste(event: ClipboardEvent): void {
+    event.preventDefault();
+
+    const input = event.target as HTMLInputElement;
+    const pasted = event.clipboardData?.getData('text') ?? '';
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const nextValue =
+      input.value.slice(0, start) + pasted + input.value.slice(end);
+
+    this.applySanitizedAmount(nextValue, input);
+  }
+
+  public onAmountFocus(): void {
+    if (this.isZeroAmountValue(this.amount)) {
+      this.amount = '';
+    }
+  }
+
+  public onAmountBlur(): void {
+    if (!this.amount.trim() || this.isZeroAmountValue(this.amount)) {
+      this.amount = '';
+    }
+  }
+
+  public isAmountMuted(): boolean {
+    const normalized = this.amount.trim();
+    if (!normalized) {
+      return false;
+    }
+
+    return this.isZeroAmountValue(normalized);
+  }
+
+  private applySanitizedAmount(value: string, input?: HTMLInputElement): void {
+    const sanitized = this.sanitizeAmountInput(value);
+    this.amount = sanitized;
+
+    if (input && input.value !== sanitized) {
+      input.value = sanitized;
+    }
+  }
+
+  private sanitizeAmountInput(value: string): string {
+    const digitsAndDot = value.replace(/[^\d.]/g, '');
+    const dotIndex = digitsAndDot.indexOf('.');
+
+    if (dotIndex === -1) {
+      return digitsAndDot;
+    }
+
+    const whole = digitsAndDot.slice(0, dotIndex);
+    const fraction = digitsAndDot
+      .slice(dotIndex + 1)
+      .replace(/\./g, '')
+      .slice(0, 6);
+
+    return `${whole}.${fraction}`;
+  }
+
+  private isZeroAmountValue(value: string): boolean {
+    const normalized = value.trim();
+    if (!normalized) {
+      return true;
+    }
+
+    const parsed = Number.parseFloat(normalized);
+    return !Number.isNaN(parsed) && parsed === 0;
+  }
+
+  public openTokenSelector(side: TokenSelectorSide): void {
+    this.tokenSelectorSide = side;
+    this.isTokenSelectorOpen = true;
+  }
+
+  public closeTokenSelector(): void {
+    this.isTokenSelectorOpen = false;
+    this.tokenSelectorSide = null;
+  }
+
+  public handleTokenSelected(token: ExchangeToken): void {
+    if (this.tokenSelectorSide === 'from') {
+      this.fromToken = token;
+    } else if (this.tokenSelectorSide === 'to') {
+      this.toToken = token;
+    }
+
+    this.quoteResult = undefined;
+    this.quoteError = '';
+    this.closeTokenSelector();
+    this.loadMarketComparison();
+  }
+
+  public tokenSelectorTitle(): string {
+    return this.tokenSelectorSide === 'from'
+      ? 'Select source token'
+      : 'Select destination token';
+  }
+
+  public tokenSelectorSelectedSymbol(): string {
+    if (this.tokenSelectorSide === 'from') {
+      return this.fromToken.symbol;
+    }
+
+    if (this.tokenSelectorSide === 'to') {
+      return this.toToken.symbol;
+    }
+
+    return '';
+  }
+
+  public tokenSelectorExcludedSymbol(): string {
+    if (this.tokenSelectorSide === 'from') {
+      return this.toToken.symbol;
+    }
+
+    if (this.tokenSelectorSide === 'to') {
+      return this.fromToken.symbol;
+    }
+
+    return '';
+  }
+
   public tokenColor(symbol: string): string {
-    return this.tokenColors[symbol] || '#fe6c00';
+    const token = this.exchangeTokens.find(item => item.symbol === symbol);
+    return token?.color || '#fe6c00';
   }
 
   public formatPrice(value: number | undefined): string {
@@ -297,8 +528,8 @@ export class HomeComponent {
         `${environment.apiUrl}/api/v1/markets/comparison`,
         {
           params: {
-            base: this.fromAssetLabel,
-            quote: this.toAssetLabel,
+            base: this.fromToken.symbol,
+            quote: this.toToken.symbol,
             timeframe,
           },
         }
@@ -456,6 +687,34 @@ export class HomeComponent {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  private fiatEstimate(symbol: string, amountValue: string): string {
+    const price = this.tokenPrice(symbol);
+    const amount = Number.parseFloat(amountValue);
+
+    if (price === undefined || Number.isNaN(amount)) {
+      return '$0';
+    }
+
+    return this.formatPrice(price * amount);
+  }
+
+  private tokenPrice(symbol: string): number | undefined {
+    const comparison = this.comparison;
+    if (!comparison) {
+      return undefined;
+    }
+
+    if (comparison.baseToken.symbol === symbol) {
+      return comparison.baseToken.currentPrice;
+    }
+
+    if (comparison.quoteToken.symbol === symbol) {
+      return comparison.quoteToken.currentPrice;
+    }
+
+    return undefined;
   }
 
   private toUsdcBaseUnits(value: string): string {
