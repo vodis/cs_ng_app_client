@@ -28,8 +28,15 @@ This host is the Angular shell for a dApp-style product (DEX-like interaction pa
 2. Run host app with `pnpm start`.
 3. Run wallets MFE from local source `../mfe-wallets` (or matching branch from `git@github.com:vodis/cs_mfe-wallets.git`).
 4. Verify remote entry URL in `src/config/mf.manifest.json`:
-   - Production/default: `"mfe-wallets": "https://wallets-mfe.craftscript.com/remoteEntry.js"`
+   - Production/default: `"mfe-wallets": "https://wallets.craftscript.com/remoteEntry.js"`
    - Local dev testing override (when running local `../mfe-wallets`): `"mfe-wallets": "http://localhost:5001/remoteEntry.js"`
+
+Production wallet remote policy:
+
+- Keep production wallet remote URLs pinned to known CraftScript origins.
+- Do not load arbitrary external wallet bundle URLs in production.
+- Coordinate remote URL, mount contract, and deployment changes with
+  `cs_mfe-wallets` and the orchestrator nginx/CORS policy.
 
 ## Branch and PR Hygiene
 

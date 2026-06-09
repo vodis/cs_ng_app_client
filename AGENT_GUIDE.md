@@ -31,8 +31,15 @@ When validating or documenting backend-dependent host behavior, treat `../cs_nes
 ## Current Runtime Integration
 
 - Host manifest file: `src/config/mf.manifest.json`
-- Production/default wallet entry: `"mfe-wallets": "https://wallets-mfe.craftscript.com/remoteEntry.js"`
+- Production/default wallet entry: `"mfe-wallets": "https://wallets.craftscript.com/remoteEntry.js"`
 - Local dev override can point to: `"mfe-wallets": "http://localhost:5001/remoteEntry.js"`
+
+Production host rules:
+
+- Only load wallet remotes from approved CraftScript wallet origins.
+- Do not add arbitrary external wallet bundle URLs to production manifests.
+- Treat the wallet remote as executable cross-origin code; keep version/source
+  changes reviewable in git and coordinated with `cs_mfe-wallets`.
 
 Any contract change in wallets (routes, exposed modules, events, required inputs) must be mirrored in this host.
 
