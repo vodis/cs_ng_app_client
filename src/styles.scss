@@ -217,10 +217,16 @@ a {
   }
 
   &__token-chevron {
+    display: inline-flex;
     width: 1rem;
     height: 1rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
     color: rgb(255 255 255 / 56%);
     font-size: 1rem;
+    line-height: 1;
   }
 
   &__amount {
@@ -273,6 +279,7 @@ a {
     display: inline-flex;
     width: 2.25rem;
     height: 2.25rem;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     padding: 0;
@@ -282,6 +289,7 @@ a {
     box-shadow: 0 0 0 4px #171c1f;
     color: #fe6c00;
     cursor: pointer;
+    line-height: 0;
     transition: border-color 0.15s ease;
 
     &:hover {
@@ -292,16 +300,21 @@ a {
         filter: drop-shadow(0 0 6px rgb(254 108 0 / 75%));
       }
     }
-  }
 
-  &__flip-icon {
-    width: 1.1rem;
-    height: 1.1rem;
-    color: #fe6c00;
-    font-size: 1.1rem;
-    transition:
-      color 0.15s ease,
-      filter 0.15s ease;
+    .swap-form__flip-icon {
+      display: inline-flex;
+      width: 1.1rem;
+      height: 1.1rem;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      color: #fe6c00;
+      font-size: 1.1rem;
+      line-height: 1;
+      transition:
+        color 0.15s ease,
+        filter 0.15s ease;
+    }
   }
 
   &__submit {
