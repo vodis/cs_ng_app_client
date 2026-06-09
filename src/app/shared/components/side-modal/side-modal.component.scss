@@ -26,7 +26,7 @@
     right: 0;
     width: 100%;
     height: 100%;
-    background: white;
+    background: var(--main-bg-color, #171c1f);
     transform: translateX(100%);
     transition: transform 0.3s ease-in-out;
     will-change: transform;

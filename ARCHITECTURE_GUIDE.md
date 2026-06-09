@@ -18,8 +18,12 @@ This guide defines the target architecture for `cs_ng_app_client` as an Angular 
 
 Remote entry expectations:
 
-- Production/default: `"mfe-wallets": "https://wallets-mfe.craftscript.com/remoteEntry.js"`
+- Production/default: `"mfe-wallets": "https://wallets.craftscript.com/remoteEntry.js"`
 - Local development override: `"mfe-wallets": "http://localhost:5001/remoteEntry.js"`
+
+Production remote entries must come from approved CraftScript wallet origins
+only. The host should not load arbitrary external wallet bundles in the
+production-ready state.
 
 ## 3. Ownership Boundaries
 
