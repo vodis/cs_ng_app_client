@@ -2,6 +2,12 @@
 
 This guide is for AI/code agents and contributors working in `cs_ng_app_client`.
 
+## Branch and PR Workflow
+
+- Start each code-change task from fresh `develop`: checkout `develop`, pull `origin/develop`, then create a new task branch.
+- Open PRs from the task branch to the repository default release branch (`master` today; `main` if the repo is renamed later).
+- Do not open PRs from `develop` directly to `master`/`main`; keep PRs small and free of unrelated `develop` history.
+
 ## Mission
 
 - Keep this repo stable as the host shell app.
