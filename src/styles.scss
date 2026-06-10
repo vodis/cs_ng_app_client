@@ -72,19 +72,8 @@ a {
   cursor: pointer;
 }
 
-.governance {
-  padding: 2rem 0;
-  box-shadow:
-    0 3px 1px -2px rgb(199 196 196 / 20%),
-    0 2px 2px 0 rgb(0 0 0 / 14%),
-    0 1px 5px 0 rgb(0 0 0 / 12%);
+@import './styles/exchange-page.scss';
 
-  &__text {
-    color: #fe6c00;
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-  }
-}
 
 .swap-form {
   --swap-radius: 10px;

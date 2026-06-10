@@ -59,6 +59,7 @@ interface MarketComparisonResponse {
 interface ComparisonChartLine {
   symbol: string;
   path: string;
+  fillPath: string;
   color: string;
 }
 
@@ -69,6 +70,19 @@ interface ComparisonYLabel {
 
 interface ComparisonGridLine {
   y: number;
+}
+
+interface RecentActivityItem {
+  time: string;
+  fromSymbol: string;
+  toSymbol: string;
+  fromDisplay: string;
+  toDisplay: string;
+  fromCoinClass?: string;
+  toCoinClass?: string;
+  amount: string;
+  receive: string;
+  status: string;
 }
 
 @Component({
@@ -86,6 +100,68 @@ export class HomeComponent {
     bottom: 28,
     left: 48,
   };
+  private readonly slippageToleranceBps = 35;
+
+  public readonly recentActivity: RecentActivityItem[] = [
+    {
+      time: '14:25',
+      fromSymbol: 'USDC',
+      toSymbol: 'NEAR',
+      fromDisplay: '$',
+      toDisplay: 'N',
+      toCoinClass: 'greenMini',
+      amount: '100.00 USDC',
+      receive: '45.61 NEAR',
+      status: 'Completed',
+    },
+    {
+      time: '13:58',
+      fromSymbol: 'ETH',
+      toSymbol: 'USDT',
+      fromDisplay: '♦',
+      toDisplay: 'T',
+      fromCoinClass: 'purple',
+      toCoinClass: 'teal',
+      amount: '0.50 ETH',
+      receive: '780.25 USDT',
+      status: 'Completed',
+    },
+    {
+      time: '12:42',
+      fromSymbol: 'SOL',
+      toSymbol: 'USDC',
+      fromDisplay: '≡',
+      toDisplay: '$',
+      fromCoinClass: 'black',
+      amount: '10.00 SOL',
+      receive: '186.72 USDC',
+      status: 'Completed',
+    },
+    {
+      time: '11:21',
+      fromSymbol: 'BTC',
+      toSymbol: 'NEAR',
+      fromDisplay: '₿',
+      toDisplay: 'N',
+      fromCoinClass: 'orangeMini',
+      toCoinClass: 'greenMini',
+      amount: '0.002 BTC',
+      receive: '0.91 NEAR',
+      status: 'Completed',
+    },
+    {
+      time: '10:05',
+      fromSymbol: 'USDC',
+      toSymbol: 'ETH',
+      fromDisplay: '$',
+      toDisplay: '♦',
+      toCoinClass: 'purple',
+      amount: '250.00 USDC',
+      receive: '0.12 ETH',
+      status: 'Completed',
+    },
+  ];
+
   public readonly exchangeTokens: ExchangeToken[] = [
     {
       symbol: 'USDC',
@@ -102,7 +178,7 @@ export class HomeComponent {
     },
   ];
 
-  public amount = '';
+  public amount = '100.00';
   public walletAddress = '';
   public fromToken = this.exchangeTokens[0];
   public toToken = this.exchangeTokens[1];
@@ -118,16 +194,20 @@ export class HomeComponent {
   public comparisonGridLines: ComparisonGridLine[] = [];
   public comparisonLoading = true;
   public comparisonError = '';
-  public selectedComparisonTimeframe: ComparisonTimeframe = '1D';
+  public selectedComparisonTimeframe: ComparisonTimeframe = '1H';
   public readonly comparisonTimeframes: ComparisonTimeframe[] = [
     '1H',
     '1D',
     '1W',
   ];
+  public readonly marketPreviewTimeframes = ['1M'] as const;
   public readonly comparisonViewBox = `0 0 ${this.comparisonWidth} ${this.comparisonHeight}`;
   public readonly comparisonPlotLeft = this.comparisonPadding.left;
   public readonly comparisonPlotRight =
     this.comparisonWidth - this.comparisonPadding.right;
+  public readonly comparisonAxisBottom = this.comparisonHeight - 6;
+  public readonly comparisonAxisCenterX =
+    (this.comparisonPlotLeft + this.comparisonPlotRight) / 2;
   public comparisonAxisStart = '';
   public comparisonAxisMid = '';
   public comparisonAxisEnd = '';
@@ -166,7 +246,7 @@ export class HomeComponent {
     this.httpClient
       .post<QuoteApiResponse>(`${environment.apiUrl}/api/v1/quotes/one-click`, {
         dry: true,
-        slippageTolerance: 50,
+        slippageTolerance: this.slippageToleranceBps,
         originAsset: this.fromToken.assetId,
         destinationAsset: this.toToken.assetId,
         amount,
@@ -234,7 +314,25 @@ export class HomeComponent {
   }
 
   public toFiatEstimate(): string {
-    return this.fiatEstimate(this.toToken.symbol, this.toAmountDisplay());
+    return this.fiatEstimate(this.toToken.symbol, this.toAmountUi());
+  }
+
+  public toAmountUi(): string {
+    const quoted = this.toAmountDisplay();
+    if (quoted) {
+      return quoted;
+    }
+
+    return this.previewToAmount();
+  }
+
+  public marketPriceDisplay(): string {
+    const price = this.comparison?.quoteToken?.currentPrice;
+    if (price === undefined) {
+      return '—';
+    }
+
+    return price.toFixed(2);
   }
 
   public toAmountDisplay(): string {
@@ -253,6 +351,79 @@ export class HomeComponent {
 
   public primaryActionLabel(): string {
     return this.walletAddress ? 'Get quote' : 'Connect wallet';
+  }
+
+  public tokenDisplay(symbol: string): string {
+    if (symbol === 'USDC') {
+      return '$';
+    }
+
+    return symbol[0] ?? '?';
+  }
+
+  public balanceLabel(symbol: string): string {
+    if (symbol === 'USDC') {
+      return 'Balance: 1,250.00 USDC';
+    }
+
+    if (symbol === 'NEAR') {
+      return 'Balance: 42.5000 NEAR';
+    }
+
+    return `Balance: — ${symbol}`;
+  }
+
+  public swapRateLabel(): string {
+    const amountIn = Number.parseFloat(this.amount);
+    const amountOut = Number.parseFloat(this.toAmountUi());
+    const rate =
+      Number.isFinite(amountIn) && amountIn > 0 && Number.isFinite(amountOut)
+        ? amountOut / amountIn
+        : this.previewSwapRate();
+
+    if (rate === undefined) {
+      return `1 ${this.fromToken.symbol} ≈ — ${this.toToken.symbol}`;
+    }
+
+    return `1 ${this.fromToken.symbol} ≈ ${rate.toFixed(4)} ${this.toToken.symbol}`;
+  }
+
+  public swapPriceImpactLabel(): string {
+    const quote = this.quoteResult as Record<string, unknown> | undefined;
+    const impact =
+      quote?.['priceImpact'] ??
+      quote?.['priceImpactPercent'] ??
+      quote?.['price_impact'];
+
+    if (typeof impact === 'number' && Number.isFinite(impact)) {
+      return `${impact.toFixed(2)}%`;
+    }
+
+    if (typeof impact === 'string' && impact.trim()) {
+      return impact.includes('%') ? impact : `${impact}%`;
+    }
+
+    return '0.12%';
+  }
+
+  public slippageLabel(): string {
+    return '0.35%';
+  }
+
+  public networkFeeLabel(): string {
+    const quote = this.quoteResult as Record<string, unknown> | undefined;
+    const fee =
+      quote?.['networkFee'] ?? quote?.['estimatedFee'] ?? quote?.['fee'];
+
+    if (typeof fee === 'number' && Number.isFinite(fee)) {
+      return fee < 0.01 ? '< $0.01' : `$${fee.toFixed(2)}`;
+    }
+
+    if (typeof fee === 'string' && fee.trim()) {
+      return fee;
+    }
+
+    return '< $0.01';
   }
 
   public onAmountKeydown(event: KeyboardEvent): void {
@@ -620,6 +791,8 @@ export class HomeComponent {
       label: this.formatIndexLabel(value),
     }));
 
+    const bottomY = this.comparisonPadding.top + innerHeight;
+
     this.comparisonLines = seriesWithPoints.map(series => {
       const path = series.points
         .map((point, index) => {
@@ -629,9 +802,14 @@ export class HomeComponent {
         })
         .join(' ');
 
+      const firstX = toX(series.points[0].time);
+      const lastX = toX(series.points[series.points.length - 1].time);
+      const fillPath = `${path} L ${lastX.toFixed(2)} ${bottomY.toFixed(2)} L ${firstX.toFixed(2)} ${bottomY.toFixed(2)} Z`;
+
       return {
         symbol: series.symbol,
         path,
+        fillPath,
         color: this.tokenColor(series.symbol),
       };
     });
@@ -687,6 +865,51 @@ export class HomeComponent {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  private previewToAmount(): string {
+    const amountIn = Number.parseFloat(this.amount);
+    const rate = this.previewSwapRate();
+
+    if (!Number.isFinite(amountIn) || amountIn <= 0 || rate === undefined) {
+      return '0.00';
+    }
+
+    return (amountIn * rate).toFixed(2);
+  }
+
+  private previewSwapRate(): number | undefined {
+    const amountIn = Number.parseFloat(this.amount);
+    const amountOut = Number.parseFloat(this.toAmountDisplay());
+
+    if (
+      Number.isFinite(amountIn) &&
+      amountIn > 0 &&
+      Number.isFinite(amountOut) &&
+      amountOut > 0
+    ) {
+      return amountOut / amountIn;
+    }
+
+    const basePrice = this.comparison?.baseToken?.currentPrice;
+    const quotePrice = this.comparison?.quoteToken?.currentPrice;
+
+    if (
+      basePrice !== undefined &&
+      quotePrice !== undefined &&
+      basePrice > 0
+    ) {
+      return quotePrice / basePrice;
+    }
+
+    if (
+      this.fromToken.symbol === 'USDC' &&
+      this.toToken.symbol === 'NEAR'
+    ) {
+      return 0.4561;
+    }
+
+    return undefined;
   }
 
   private fiatEstimate(symbol: string, amountValue: string): string {
