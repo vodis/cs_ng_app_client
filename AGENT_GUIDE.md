@@ -4,10 +4,9 @@ This guide is for AI/code agents and contributors working in `cs_ng_app_client`.
 
 ## Branch and PR Workflow
 
-- Rule 1: start each code-change task from a clean `develop`: checkout
-  `develop`, pull the latest `origin/develop`, create a fresh task branch,
-  commit there, push it, and open the PR back to `develop`.
-- Do not open service task-branch PRs directly to `main`/`master`.
+- Start each code-change task from fresh `develop`: checkout `develop`, pull `origin/develop`, then create a new task branch.
+- Open PRs from the task branch to the repository default release branch (`master` today; `main` if the repo is renamed later).
+- Do not open PRs from `develop` directly to `master`/`main`; keep PRs small and free of unrelated `develop` history.
 
 ## Mission
 
@@ -39,9 +38,7 @@ When validating or documenting backend-dependent host behavior, treat `../cs_nes
 
 - Host manifest file: `src/config/mf.manifest.json`
 - Production/default wallet entry: `"mfe-wallets": "https://wallets.craftscript.com/remoteEntry.js"`
-- Local dev may keep using the production/default wallet entry; the wallet edge
-  must allowlist the local host origin for that flow. Optional local MFE testing
-  can point to: `"mfe-wallets": "http://localhost:5001/remoteEntry.js"`
+- Local dev override can point to: `"mfe-wallets": "http://localhost:5001/remoteEntry.js"`
 
 Production host rules:
 
