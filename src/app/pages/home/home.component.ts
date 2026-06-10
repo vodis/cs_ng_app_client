@@ -92,14 +92,6 @@ export class HomeComponent {
     left: 48,
   };
   private readonly slippageToleranceBps = 35;
-  private readonly tokenIconUrls: Record<string, string> = {
-    BTC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1.png',
-    ETH: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1027.png',
-    NEAR: 'https://s2.coinmarketcap.com/static/img/coins/128x128/6535.png',
-    SOL: 'https://s2.coinmarketcap.com/static/img/coins/128x128/5426.png',
-    USDC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png',
-    USDT: 'https://s2.coinmarketcap.com/static/img/coins/128x128/825.png',
-  };
 
   public readonly recentActivity: RecentActivityItem[] = [
     {
@@ -204,6 +196,7 @@ export class HomeComponent {
     '1W',
     '1M',
   ];
+  public readonly marketPreviewTimeframes = ['1M'] as const;
   public readonly comparisonViewBox = `0 0 ${this.comparisonWidth} ${this.comparisonHeight}`;
   public readonly comparisonPlotLeft = this.comparisonPadding.left;
   public readonly comparisonPlotRight =
@@ -420,7 +413,7 @@ export class HomeComponent {
       return '—';
     }
 
-    return `$${price.toFixed(2)}`;
+    return price.toFixed(2);
   }
 
   public toAmountDisplay(): string {
@@ -508,6 +501,79 @@ export class HomeComponent {
 
   public networkFeeLabel(): string {
     const quote = this.quoteResult;
+    const fee =
+      quote?.['networkFee'] ?? quote?.['estimatedFee'] ?? quote?.['fee'];
+
+    if (typeof fee === 'number' && Number.isFinite(fee)) {
+      return fee < 0.01 ? '< $0.01' : `$${fee.toFixed(2)}`;
+    }
+
+    if (typeof fee === 'string' && fee.trim()) {
+      return fee;
+    }
+
+    return '< $0.01';
+  }
+
+  public tokenDisplay(symbol: string): string {
+    if (symbol === 'USDC') {
+      return '$';
+    }
+
+    return symbol[0] ?? '?';
+  }
+
+  public balanceLabel(symbol: string): string {
+    if (symbol === 'USDC') {
+      return 'Balance: 1,250.00 USDC';
+    }
+
+    if (symbol === 'NEAR') {
+      return 'Balance: 42.5000 NEAR';
+    }
+
+    return `Balance: — ${symbol}`;
+  }
+
+  public swapRateLabel(): string {
+    const amountIn = Number.parseFloat(this.amount);
+    const amountOut = Number.parseFloat(this.toAmountUi());
+    const rate =
+      Number.isFinite(amountIn) && amountIn > 0 && Number.isFinite(amountOut)
+        ? amountOut / amountIn
+        : this.previewSwapRate();
+
+    if (rate === undefined) {
+      return `1 ${this.fromToken.symbol} ≈ — ${this.toToken.symbol}`;
+    }
+
+    return `1 ${this.fromToken.symbol} ≈ ${rate.toFixed(4)} ${this.toToken.symbol}`;
+  }
+
+  public swapPriceImpactLabel(): string {
+    const quote = this.quoteResult as Record<string, unknown> | undefined;
+    const impact =
+      quote?.['priceImpact'] ??
+      quote?.['priceImpactPercent'] ??
+      quote?.['price_impact'];
+
+    if (typeof impact === 'number' && Number.isFinite(impact)) {
+      return `${impact.toFixed(2)}%`;
+    }
+
+    if (typeof impact === 'string' && impact.trim()) {
+      return impact.includes('%') ? impact : `${impact}%`;
+    }
+
+    return '0.12%';
+  }
+
+  public slippageLabel(): string {
+    return '0.35%';
+  }
+
+  public networkFeeLabel(): string {
+    const quote = this.quoteResult as Record<string, unknown> | undefined;
     const fee =
       quote?.['networkFee'] ?? quote?.['estimatedFee'] ?? quote?.['fee'];
 
@@ -1005,11 +1071,18 @@ export class HomeComponent {
     const basePrice = this.comparison?.baseToken?.currentPrice;
     const quotePrice = this.comparison?.quoteToken?.currentPrice;
 
-    if (basePrice !== undefined && quotePrice !== undefined && basePrice > 0) {
+    if (
+      basePrice !== undefined &&
+      quotePrice !== undefined &&
+      basePrice > 0
+    ) {
       return quotePrice / basePrice;
     }
 
-    if (this.fromToken.symbol === 'USDC' && this.toToken.symbol === 'NEAR') {
+    if (
+      this.fromToken.symbol === 'USDC' &&
+      this.toToken.symbol === 'NEAR'
+    ) {
       return 0.4561;
     }
 

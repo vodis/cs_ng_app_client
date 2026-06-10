@@ -11,82 +11,57 @@
       <form autocomplete="off" (ngSubmit)="submitQuote()">
         <div class="swap-stack">
           <div class="swapRow first">
-            <div class="swapRow__main">
-              <div class="swapRow__left">
-                <div class="label">From</div>
-                <button
-                  type="button"
-                  class="select"
-                  (click)="openTokenSelector('from')">
-                  <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
-                  {{ fromToken.symbol }}
-                  <span class="arrow">&#8964;</span>
-                </button>
-              </div>
-              <div class="swapRow__right">
-                <div class="balance">{{ balanceLabel(fromToken.symbol) }}</div>
-                <div class="swapRow__amount">
-                  <input
-                    class="amount"
-                    [class.amount--muted]="isAmountMuted()"
-                    type="text"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    autocorrect="off"
-                    autocapitalize="off"
-                    spellcheck="false"
-                    [value]="amount"
-                    placeholder="0.00"
-                    aria-label="Amount to sell"
-                    (focus)="onAmountFocus()"
-                    (blur)="onAmountBlur()"
-                    (keydown)="onAmountKeydown($event)"
-                    (input)="onAmountInput($event)"
-                    (paste)="onAmountPaste($event)" />
-                  <div class="usd">{{ fromFiatEstimate() }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="swap-divider">
+            <div class="label">From</div>
             <button
               type="button"
-              class="swapCircle"
-              aria-label="Swap tokens"
-              (click)="swapTokens()">
-              <span class="swapCircle__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3 5 6.99h3V14h2V6.99h3L9 3z" />
-                </svg>
-              </span>
+              class="select"
+              (click)="openTokenSelector('from')">
+              <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
+              {{ fromToken.symbol }}
+              <span class="arrow">&#8964;</span>
             </button>
+            <div class="balance">{{ balanceLabel(fromToken.symbol) }}</div>
+            <input
+              class="amount"
+              [class.amount--muted]="isAmountMuted()"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              [value]="amount"
+              placeholder="0.00"
+              aria-label="Amount to sell"
+              (focus)="onAmountFocus()"
+              (blur)="onAmountBlur()"
+              (keydown)="onAmountKeydown($event)"
+              (input)="onAmountInput($event)"
+              (paste)="onAmountPaste($event)" />
+            <div class="usd">{{ fromFiatEstimate() }}</div>
           </div>
 
+          <button
+            type="button"
+            class="swapCircle"
+            aria-label="Swap tokens"
+            (click)="swapTokens()">
+            &#8597;
+          </button>
+
           <div class="swapRow">
-            <div class="swapRow__main">
-              <div class="swapRow__left">
-                <div class="label">To</div>
-                <button
-                  type="button"
-                  class="select"
-                  (click)="openTokenSelector('to')">
-                  <span class="coin near">{{
-                    tokenDisplay(toToken.symbol)
-                  }}</span>
-                  {{ toToken.symbol }}
-                  <span class="arrow">&#8964;</span>
-                </button>
-              </div>
-              <div class="swapRow__right">
-                <div class="balance">{{ balanceLabel(toToken.symbol) }}</div>
-                <div class="swapRow__amount">
-                  <output class="amount">{{ toAmountUi() }}</output>
-                  <div class="usd">{{ toFiatEstimate() }}</div>
-                </div>
-              </div>
-            </div>
+            <div class="label">To</div>
+            <button
+              type="button"
+              class="select"
+              (click)="openTokenSelector('to')">
+              <span class="coin near">{{ tokenDisplay(toToken.symbol) }}</span>
+              {{ toToken.symbol }}
+              <span class="arrow">&#8964;</span>
+            </button>
+            <div class="balance">{{ balanceLabel(toToken.symbol) }}</div>
+            <output class="amount">{{ toAmountUi() }}</output>
+            <div class="usd">{{ toFiatEstimate() }}</div>
           </div>
         </div>
 
@@ -109,23 +84,14 @@
           </div>
         </div>
 
-        <button
-          class="swap-form__submit"
-          type="submit"
-          [disabled]="isQuoteLoading()">
-          {{ primaryActionLabel() }}
+        <button class="connectMain" type="submit" [disabled]="isQuoteLoading()">
+          {{
+            isQuoteLoading() ? 'QUOTING...' : primaryActionLabel().toUpperCase()
+          }}
         </button>
 
         @if (quoteError) {
-          <p class="swap-form__error">{{ quoteError }}</p>
-        }
-
-        @if (intentHash) {
-          <p class="swap-form__result">Intent submitted: {{ intentHash }}</p>
-        }
-
-        @if (quoteResult && !intentHash) {
-          <pre class="swap-form__result">{{ quoteResult | json }}</pre>
+          <p class="exchange-error">{{ quoteError }}</p>
         }
       </form>
     </div>
@@ -143,203 +109,156 @@
         <div class="range" aria-label="Comparison timeframe">
           @for (timeframe of comparisonTimeframes; track timeframe) {
             <button
-              class="rangeBtn"
               type="button"
               [class.active]="selectedComparisonTimeframe === timeframe"
               (click)="changeComparisonTimeframe(timeframe)">
               {{ timeframe }}
             </button>
           }
+          <button type="button" class="range__extra" disabled>1M</button>
         </div>
       </div>
 
-      <div class="marketBody">
-        <div class="marketSummary">
-          <div class="pair">
-            <span class="pair__icons" aria-hidden="true">
-              @if (tokenIcon(fromToken.symbol); as fromIcon) {
-                <img
-                  class="pair__icon"
-                  [src]="fromIcon"
-                  [alt]="fromToken.symbol"
-                  loading="lazy"
-                  width="24"
-                  height="24" />
-              } @else {
-                <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
-              }
-              @if (tokenIcon(toToken.symbol); as toIcon) {
-                <img
-                  class="pair__icon"
-                  [src]="toIcon"
-                  [alt]="toToken.symbol"
-                  loading="lazy"
-                  width="24"
-                  height="24" />
-              } @else {
-                <span class="coin near">{{
-                  tokenDisplay(toToken.symbol)
-                }}</span>
-              }
-            </span>
-            <span class="pair__label"
-              >{{ fromToken.symbol }} / {{ toToken.symbol }}</span
-            >
-          </div>
+      <div class="pair">
+        <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
+        <span class="coin near">{{ tokenDisplay(toToken.symbol) }}</span>
+        {{ fromToken.symbol }} / {{ toToken.symbol }}
+      </div>
 
-          @if (comparisonLoading) {
-            <div class="market-skeleton" aria-hidden="true">
-              <span></span>
-            </div>
-          } @else {
-            <div class="price">{{ marketPriceDisplay() }}</div>
-            <div
-              class="change"
-              [class.positive]="
-                (comparison?.quoteToken?.changePercent ?? 0) > 0
-              "
-              [class.negative]="
-                (comparison?.quoteToken?.changePercent ?? 0) < 0
-              "
-              [class.neutral]="
-                comparison?.quoteToken?.changePercent === undefined ||
-                comparison?.quoteToken?.changePercent === 0
-              ">
-              {{ formatPercent(comparison?.quoteToken?.changePercent) }} (24H)
-            </div>
+      @if (comparisonLoading) {
+        <div class="market-skeleton" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </div>
+      } @else {
+        <div class="price">{{ marketPriceDisplay() }}</div>
+        <div
+          class="change"
+          [class.positive]="
+            (comparison?.quoteToken?.changePercent ?? 0) > 0
+          "
+          [class.negative]="
+            (comparison?.quoteToken?.changePercent ?? 0) < 0
+          "
+          [class.neutral]="
+            comparison?.quoteToken?.changePercent === undefined ||
+            comparison?.quoteToken?.changePercent === 0
+          ">
+          {{ formatPercent(comparison?.quoteToken?.changePercent) }} (24H)
+        </div>
+
+        <div class="chart">
+          @if (comparisonError) {
+            <p class="chart__empty">{{ comparisonError }}</p>
           }
-        </div>
-
-        @if (comparisonLoading) {
-          <div
-            class="market-skeleton market-skeleton--chart"
-            aria-hidden="true">
-            <span></span>
-          </div>
-        } @else {
-          <div class="chart">
-            @if (comparisonError) {
-              <p class="chart__empty">{{ comparisonError }}</p>
-            }
-            <svg
-              [attr.viewBox]="comparisonViewBox"
-              preserveAspectRatio="none"
-              role="img"
-              [attr.aria-label]="
-                fromToken.symbol +
-                ' and ' +
-                toToken.symbol +
-                ' price change comparison'
-              ">
-              <defs>
-                @for (line of comparisonLines; track line.symbol) {
-                  <linearGradient
-                    [attr.id]="'market-grad-' + line.symbol"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1">
-                    <stop
-                      offset="0%"
-                      [attr.stop-color]="line.color"
-                      stop-opacity="0.12" />
-                    <stop
-                      offset="65%"
-                      [attr.stop-color]="line.color"
-                      stop-opacity="0.03" />
-                    <stop
-                      offset="100%"
-                      [attr.stop-color]="line.color"
-                      stop-opacity="0" />
-                  </linearGradient>
-                }
-              </defs>
-              @for (line of comparisonGridLines; track line.y) {
-                <line
-                  class="grid"
-                  [attr.x1]="comparisonPlotLeft"
-                  [attr.y1]="line.y"
-                  [attr.x2]="comparisonPlotRight"
-                  [attr.y2]="line.y" />
-              }
-              @if (comparisonBaselineY) {
-                <line
-                  class="blueLine"
-                  [attr.x1]="comparisonPlotLeft"
-                  [attr.y1]="comparisonBaselineY"
-                  [attr.x2]="comparisonPlotRight"
-                  [attr.y2]="comparisonBaselineY" />
-              }
-              @for (label of comparisonYLabels; track label.label) {
-                <text
-                  x="44"
-                  [attr.y]="label.y"
-                  fill="#c9cccd"
-                  font-size="13"
-                  text-anchor="end">
-                  {{ label.label }}
-                </text>
-              }
-              @if (comparisonAxisStart) {
-                <text
-                  [attr.x]="comparisonPlotLeft"
-                  [attr.y]="comparisonAxisBottom"
-                  fill="#c9cccd"
-                  font-size="13">
-                  {{ comparisonAxisStart }}
-                </text>
-                <text
-                  [attr.x]="comparisonAxisCenterX"
-                  [attr.y]="comparisonAxisBottom"
-                  fill="#c9cccd"
-                  font-size="13"
-                  text-anchor="middle">
-                  {{ comparisonAxisMid }}
-                </text>
-                <text
-                  [attr.x]="comparisonPlotRight"
-                  [attr.y]="comparisonAxisBottom"
-                  fill="#c9cccd"
-                  font-size="13"
-                  text-anchor="end">
-                  {{ comparisonAxisEnd }}
-                </text>
-              }
+          <svg
+            [attr.viewBox]="comparisonViewBox"
+            preserveAspectRatio="none"
+            role="img"
+            [attr.aria-label]="
+              fromToken.symbol +
+              ' and ' +
+              toToken.symbol +
+              ' price change comparison'
+            ">
+            <defs>
               @for (line of comparisonLines; track line.symbol) {
-                @if (line.fillPath) {
-                  <path
-                    class="fill"
-                    [attr.d]="line.fillPath"
-                    [attr.fill]="'url(#market-grad-' + line.symbol + ')'" />
-                }
-                <path
-                  class="line"
-                  [attr.d]="line.path"
-                  [attr.stroke]="line.color" />
+                <linearGradient
+                  [attr.id]="'market-grad-' + line.symbol"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1">
+                  <stop
+                    offset="0%"
+                    [attr.stop-color]="line.color"
+                    stop-opacity="0.28" />
+                  <stop
+                    offset="100%"
+                    [attr.stop-color]="line.color"
+                    stop-opacity="0" />
+                </linearGradient>
               }
-            </svg>
-          </div>
-        }
-      </div>
-
-      <div class="marketFooter">
-        <div class="note">
-          Both lines start at 0% - values show change since window open
+            </defs>
+            @for (line of comparisonGridLines; track line.y) {
+              <line
+                class="grid"
+                [attr.x1]="comparisonPlotLeft"
+                [attr.y1]="line.y"
+                [attr.x2]="comparisonPlotRight"
+                [attr.y2]="line.y" />
+            }
+            @if (comparisonBaselineY) {
+              <line
+                class="blueLine"
+                [attr.x1]="comparisonPlotLeft"
+                [attr.y1]="comparisonBaselineY"
+                [attr.x2]="comparisonPlotRight"
+                [attr.y2]="comparisonBaselineY" />
+            }
+            @for (label of comparisonYLabels; track label.label) {
+              <text
+                x="44"
+                [attr.y]="label.y"
+                fill="#c9cccd"
+                font-size="13"
+                text-anchor="end">
+                {{ label.label }}
+              </text>
+            }
+            @if (comparisonAxisStart) {
+              <text
+                [attr.x]="comparisonPlotLeft"
+                [attr.y]="comparisonAxisBottom"
+                fill="#c9cccd"
+                font-size="13">
+                {{ comparisonAxisStart }}
+              </text>
+              <text
+                [attr.x]="comparisonAxisCenterX"
+                [attr.y]="comparisonAxisBottom"
+                fill="#c9cccd"
+                font-size="13"
+                text-anchor="middle">
+                {{ comparisonAxisMid }}
+              </text>
+              <text
+                [attr.x]="comparisonPlotRight"
+                [attr.y]="comparisonAxisBottom"
+                fill="#c9cccd"
+                font-size="13"
+                text-anchor="end">
+                {{ comparisonAxisEnd }}
+              </text>
+            }
+            @for (line of comparisonLines; track line.symbol) {
+              @if (line.fillPath) {
+                <path
+                  class="fill"
+                  [attr.d]="line.fillPath"
+                  [attr.fill]="'url(#market-grad-' + line.symbol + ')'" />
+              }
+              <path class="line" [attr.d]="line.path" [attr.stroke]="line.color" />
+            }
+          </svg>
         </div>
-        <button
-          type="button"
-          class="advanced"
-          (click)="toggleAdvancedMarketView()">
-          {{
-            showAdvancedMarketView ? 'Hide Advanced Chart' : 'Advanced Chart'
-          }}
-          &rarr;
-        </button>
+      }
+
+      <div class="note">
+        Both lines start at 0% - values show change since window open
       </div>
+      <button
+        type="button"
+        class="advanced"
+        (click)="toggleAdvancedMarketView()">
+        {{
+          showAdvancedMarketView ? 'Hide Advanced Chart' : 'Advanced Chart'
+        }}
+        &rarr;
+      </button>
 
       @if (showAdvancedMarketView) {
         <app-live-chart
-          [coin]="toToken.symbol"
           [coin]="toToken.symbol"
           [active]="showAdvancedMarketView" />
       }
@@ -351,63 +270,41 @@
       <div class="activityTitle">Recent Activity</div>
       <div class="view">View All &rarr;</div>
     </div>
-    <div class="activityTableWrap">
-      <table class="table">
-        <thead>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Pair</th>
+          <th>Amount</th>
+          <th>You Get</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of recentActivity; track item.time + item.amount) {
           <tr>
-            <th>Time</th>
-            <th>Pair</th>
-            <th>Amount</th>
-            <th>You Get</th>
-            <th>Status</th>
+            <td>{{ item.time }}</td>
+            <td>
+              <div class="pairCell">
+                <span class="mini" [class]="item.fromCoinClass">{{
+                  item.fromDisplay
+                }}</span>
+                <span>&rarr;</span>
+                <span class="mini" [class]="item.toCoinClass">{{
+                  item.toDisplay
+                }}</span>
+              </div>
+            </td>
+            <td>{{ item.amount }}</td>
+            <td>{{ item.receive }}</td>
+            <td>
+              <span class="status">{{ item.status }}</span>
+              <span class="external">&#8599;</span>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          @for (item of recentActivity; track item.time + item.amount) {
-            <tr>
-              <td>{{ item.time }}</td>
-              <td>
-                <div class="pairCell">
-                  @if (tokenIcon(item.fromSymbol); as fromIcon) {
-                    <img
-                      class="pairCell__icon"
-                      [src]="fromIcon"
-                      [alt]="item.fromSymbol"
-                      loading="lazy"
-                      width="21"
-                      height="21" />
-                  } @else {
-                    <span class="mini" [class]="item.fromCoinClass">{{
-                      item.fromDisplay
-                    }}</span>
-                  }
-                  <span class="pairCell__arrow" aria-hidden="true">&rarr;</span>
-                  @if (tokenIcon(item.toSymbol); as toIcon) {
-                    <img
-                      class="pairCell__icon"
-                      [src]="toIcon"
-                      [alt]="item.toSymbol"
-                      loading="lazy"
-                      width="21"
-                      height="21" />
-                  } @else {
-                    <span class="mini" [class]="item.toCoinClass">{{
-                      item.toDisplay
-                    }}</span>
-                  }
-                </div>
-              </td>
-              <td>{{ item.amount }}</td>
-              <td>{{ item.receive }}</td>
-              <td class="table__status">
-                <span class="status">{{ item.status }}</span>
-                <span class="external">&#8599;</span>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+        }
+      </tbody>
+    </table>
   </section>
 
   <app-side-modal

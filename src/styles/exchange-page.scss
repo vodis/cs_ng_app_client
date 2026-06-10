@@ -8,12 +8,10 @@
   background: #111719;
 
   .intro {
-    width: 100%;
     height: 112px;
-    box-sizing: border-box;
     padding: 25px 32px;
     border: 1px solid var(--exchange-line);
-    border-radius: 4px;
+    border-radius: 3px;
     margin: 12px 0 14px;
     background: rgb(10 15 17 / 20%);
 
@@ -36,11 +34,9 @@
 
   .gridTop {
     display: grid;
-    width: 100%;
-    align-items: stretch;
-    margin-bottom: 14px;
     gap: 14px;
-    grid-template-columns: 42fr 58fr;
+    grid-template-columns: 42% 58%;
+    margin-bottom: 14px;
   }
 
   .panel {
@@ -50,98 +46,35 @@
     box-shadow: inset 0 0 22px rgb(255 255 255 / 1.5%);
   }
 
+  .swapPanel {
+    height: 486px;
+    padding: 24px;
+  }
+
   .panelTitle {
-    margin: 0 0 20px;
+    margin: 0 0 28px;
     font-size: 20px;
     font-weight: 700;
     text-transform: uppercase;
   }
 
-  .stats {
-    display: grid;
-    min-height: 72px;
-    align-items: stretch;
-    border: 1px solid var(--exchange-line);
-    border-radius: 4px;
-    border-right: 0;
-    border-left: 0;
-    margin: 0;
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .swapPanel {
-    display: flex;
-    height: 486px;
-    flex-direction: column;
-    padding: 24px;
-
-    .panelTitle {
-      flex-shrink: 0;
-      margin-bottom: 16px;
-    }
-
-    form {
-      display: flex;
-      min-height: 0;
-      flex: 1;
-      flex-direction: column;
-    }
-
-    .swap-stack {
-      flex-shrink: 0;
-    }
-
-    .stats {
-      flex-shrink: 0;
-      margin-top: auto;
-    }
+  .swap-stack {
+    position: relative;
   }
 
   .swapRow {
-    padding: 4px 6px 0;
-
-    &__main {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    &__left {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    &__right {
-      min-width: 0;
-      flex: 1;
-      text-align: right;
-    }
-
-    &__amount {
-      text-align: right;
-    }
-  }
-
-  .swap-divider {
     position: relative;
-    height: 20px;
+    height: 112px;
+    padding: 22px 12px 18px;
+    border-bottom: 1px solid var(--exchange-line-soft);
 
-    &::before {
-      position: absolute;
-      top: 50%;
-      right: 8px;
-      left: 8px;
-      height: 1px;
-      background: var(--exchange-line-soft);
-      content: '';
-      transform: translateY(-50%);
+    &.first {
+      margin-bottom: 0;
     }
   }
 
   .label {
-    margin: 0;
+    margin-bottom: 14px;
     color: var(--exchange-orange);
     font-size: 13px;
     font-weight: 700;
@@ -151,7 +84,7 @@
   .select {
     display: inline-flex;
     min-width: 142px;
-    height: 38px;
+    height: 42px;
     align-items: center;
     padding: 0 14px;
     border: 1px solid var(--exchange-line);
@@ -192,22 +125,26 @@
   }
 
   .balance {
-    margin-bottom: 6px;
+    position: absolute;
+    top: 22px;
+    right: 8px;
     color: #c4c6c7;
     font-size: 12px;
-    text-align: right;
     text-transform: uppercase;
   }
 
   .amount {
-    display: block;
-    width: 100%;
+    position: absolute;
+    top: 48px;
+    right: 8px;
+    width: auto;
+    max-width: calc(100% - 10rem);
     padding: 0;
     border: 0;
     background: transparent;
     color: #fff;
     font-family: 'Aeonik Fono', monospace;
-    font-size: 28px;
+    font-size: 32px;
     line-height: 1;
     text-align: right;
 
@@ -221,9 +158,11 @@
   }
 
   .usd {
-    margin-top: 2px;
+    position: absolute;
+    top: 88px;
+    right: 8px;
     color: #c4c6c7;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .swapCircle {
@@ -231,87 +170,52 @@
     z-index: 2;
     top: 50%;
     left: 50%;
-    display: inline-grid;
+    display: grid;
     width: 48px;
     height: 48px;
     padding: 0;
-    border: 1px solid rgb(255 255 255 / 14%);
+    border: 1px solid var(--exchange-line);
     border-radius: 50%;
     margin: 0;
-    background: linear-gradient(180deg, #151d21 0%, #0c1215 100%);
-    box-shadow:
-      0 0 0 4px #111719,
-      0 4px 14px rgb(0 0 0 / 32%);
+    background: #12181a;
     color: var(--exchange-orange);
-    cursor: pointer;
     font-family: inherit;
-    line-height: 0;
+    font-size: 22px;
+    line-height: 1;
     place-items: center;
     transform: translate(-50%, -50%);
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease,
-      transform 0.15s ease;
+  }
 
-    &__icon {
-      display: inline-flex;
-      width: 20px;
-      height: 20px;
-      align-items: center;
-      justify-content: center;
-
-      svg {
-        display: block;
-        width: 100%;
-        height: 100%;
-      }
-    }
-
-    &:hover {
-      border-color: rgb(255 105 0 / 55%);
-      box-shadow:
-        0 0 0 4px #111719,
-        0 0 16px rgb(255 105 0 / 24%);
-
-      .swapCircle__icon {
-        filter: drop-shadow(0 0 5px rgb(255 105 0 / 70%));
-      }
-    }
-
-    &:active {
-      transform: translate(-50%, -50%) scale(0.96);
-    }
-
-    &:focus-visible {
-      outline: 2px solid rgb(255 105 0 / 65%);
-      outline-offset: 2px;
-    }
+  .stats {
+    display: grid;
+    height: 70px;
+    border: 1px solid var(--exchange-line);
+    border-right: 0;
+    border-left: 0;
+    border-radius: 4px;
+    margin: 14px 0;
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .stat {
-    display: grid;
-    min-height: 72px;
-    align-content: center;
-    padding: 0 8px;
+    padding: 13px 12px;
     border-right: 1px solid var(--exchange-line-soft);
-    justify-items: center;
-    text-align: center;
 
     &:last-child {
       border-right: none;
     }
 
     span {
-      margin-bottom: 6px;
+      display: block;
+      margin-bottom: 9px;
       color: #b9bdbf;
       font-size: 11px;
-      line-height: 1.2;
       text-transform: uppercase;
     }
 
     b {
+      display: block;
       overflow: hidden;
-      max-width: 100%;
       font-size: 13px;
       font-weight: 600;
       line-height: 1.2;
@@ -331,10 +235,9 @@
   .connectMain {
     width: 100%;
     height: 45px;
-    flex-shrink: 0;
     border: 0;
     border-radius: 4px;
-    margin: 12px 0 0;
+    margin: 0;
     background: linear-gradient(180deg, #ff7607, #f05d00);
     color: #fff;
     font-family: inherit;
@@ -356,9 +259,8 @@
   }
 
   .marketPanel {
-    display: flex;
+    position: relative;
     height: 486px;
-    flex-direction: column;
     padding: 24px 28px;
   }
 
@@ -372,7 +274,7 @@
     display: flex;
     color: #b6b9ba;
     font-size: 13px;
-    gap: 25px;
+    gap: 34px;
     text-transform: uppercase;
 
     b {
@@ -394,86 +296,47 @@
   .range {
     display: flex;
     gap: 8px;
-  }
 
-  .rangeBtn {
-    width: 43px;
-    height: 36px;
-    border: 1px solid var(--exchange-line);
-    border-radius: 4px;
-    background: #0e1416;
-    color: #fff;
-    font-size: 13px;
+    button {
+      width: 43px;
+      height: 36px;
+      border: 1px solid var(--exchange-line);
+      border-radius: 4px;
+      background: #0e1416;
+      color: #fff;
+      font-size: 13px;
 
-    &.active {
-      border-color: var(--exchange-orange);
-      color: var(--exchange-orange);
+      &.active {
+        border-color: var(--exchange-orange);
+        color: var(--exchange-orange);
+      }
+
+      &:disabled {
+        cursor: default;
+        opacity: 0.55;
+      }
     }
-
-    &:disabled {
-      cursor: default;
-      opacity: 0.55;
-    }
-  }
-
-  .marketBody {
-    display: grid;
-    flex-shrink: 0;
-    align-content: start;
-    align-items: center;
-    margin-top: 32px;
-    gap: 8px 10px;
-    grid-template-columns: max-content minmax(0, 1fr);
-  }
-
-  .marketSummary {
-    min-width: 0;
   }
 
   .pair {
     display: flex;
-    flex-wrap: nowrap;
     align-items: center;
-    margin-top: 0;
-    font-size: 14px;
+    margin-top: 42px;
+    font-size: 15px;
     font-weight: 700;
-    gap: 8px;
-    line-height: 1.25;
-    white-space: nowrap;
-
-    &__icons {
-      display: inline-flex;
-      flex-shrink: 0;
-      align-items: center;
-      gap: 5px;
-    }
-
-    &__icon {
-      display: block;
-      width: 24px;
-      height: 24px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    &__label {
-      font-size: 12px;
-      white-space: nowrap;
-    }
+    gap: 10px;
   }
 
   .price {
-    margin-top: 14px;
-    font-size: 32px;
+    margin-top: 18px;
+    font-size: 34px;
     line-height: 1;
   }
 
   .change {
-    margin-top: 6px;
-    font-size: 14px;
+    margin-top: 8px;
+    font-size: 15px;
     font-weight: 700;
-    line-height: 1.2;
 
     &.positive {
       color: var(--exchange-green);
@@ -490,7 +353,7 @@
 
   .market-skeleton {
     display: grid;
-    margin-top: 14px;
+    margin-top: 18px;
     gap: 12px;
 
     span {
@@ -506,21 +369,17 @@
       background-size: 200% 100%;
     }
 
-    &--chart {
-      margin-top: 0;
-      grid-column: 2;
-      grid-row: 1;
-
-      span {
-        height: 230px;
-      }
+    span:last-child {
+      height: 230px;
     }
   }
 
   .chart {
+    position: absolute;
+    top: 130px;
+    right: 46px;
+    left: 150px;
     height: 230px;
-    grid-column: 2;
-    grid-row: 1;
 
     svg {
       overflow: visible;
@@ -558,24 +417,20 @@
     }
   }
 
-  .marketFooter {
-    flex-shrink: 0;
-  }
-
   .note {
-    margin-top: 16px;
+    position: absolute;
+    bottom: 74px;
+    left: 126px;
     color: #b9bdbf;
     font-size: 13px;
-    line-height: 1.3;
-    text-align: center;
   }
 
   .advanced {
-    display: block;
+    position: absolute;
+    right: 40px;
+    bottom: 32px;
     padding: 0;
     border: 0;
-    margin-top: 12px;
-    margin-left: auto;
     background: transparent;
     color: var(--exchange-orange);
     font-family: inherit;
@@ -585,28 +440,15 @@
   }
 
   .activity {
-    display: flex;
-    overflow: hidden;
-    width: 100%;
-    min-width: 0;
     height: 310px;
-    box-sizing: border-box;
-    flex-direction: column;
     padding: 24px 26px;
   }
 
   .activityHead {
     display: flex;
-    flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
-  }
-
-  .activityTableWrap {
-    overflow: auto;
-    min-height: 0;
-    flex: 1;
+    margin-bottom: 20px;
   }
 
   .activityTitle {
@@ -625,87 +467,27 @@
   .table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
 
     th {
-      overflow: hidden;
-      padding: 0 8px 12px 0;
+      padding: 0 0 14px;
       color: #b6bbbc;
       font-size: 12px;
       font-weight: 700;
       text-align: left;
-      text-overflow: ellipsis;
       text-transform: uppercase;
-      white-space: nowrap;
-
-      &:last-child {
-        padding-right: 0;
-        text-align: right;
-      }
     }
 
     td {
-      overflow: hidden;
-      padding: 10px 8px 10px 0;
+      padding: 13px 0;
       border-top: 1px solid #1e282b;
       font-size: 15px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-
-      &:last-child {
-        padding-right: 0;
-      }
-    }
-
-    th:nth-child(1),
-    td:nth-child(1) {
-      width: 11%;
-    }
-
-    th:nth-child(2),
-    td:nth-child(2) {
-      width: 18%;
-    }
-
-    th:nth-child(3),
-    td:nth-child(3) {
-      width: 24%;
-    }
-
-    th:nth-child(4),
-    td:nth-child(4) {
-      width: 24%;
-    }
-
-    th:nth-child(5),
-    td:nth-child(5) {
-      width: 23%;
-    }
-
-    &__status {
-      text-align: right;
     }
   }
 
   .pairCell {
     display: flex;
     align-items: center;
-    gap: 8px;
-
-    &__icon {
-      display: block;
-      width: 21px;
-      height: 21px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    &__arrow {
-      color: rgb(255 255 255 / 45%);
-      font-size: 12px;
-      line-height: 1;
-    }
+    gap: 22px;
   }
 
   .mini {
@@ -763,24 +545,15 @@
       height: auto;
     }
 
-    .marketBody {
-      align-items: start;
-      margin-top: 28px;
-      grid-template-columns: 1fr;
+    .chart {
+      position: relative;
+      inset: auto;
+      margin-top: 20px;
     }
 
-    .chart,
-    .market-skeleton--chart {
-      margin-top: 16px;
-      grid-column: 1;
-      grid-row: auto;
-    }
-
-    .marketFooter {
-      margin-top: 4px;
-    }
-
-    .note {
+    .note,
+    .advanced {
+      position: static;
       margin-top: 20px;
     }
   }
