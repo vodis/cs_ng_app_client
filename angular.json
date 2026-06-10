@@ -70,15 +70,6 @@
               "extraWebpackConfig": "config/webpack.prod.config.js"
             },
             "development": {
-              "assets": [
-                "src/favicon.ico",
-                "src/assets",
-                {
-                  "glob": "mf.manifest.json",
-                  "input": "src/config/development",
-                  "output": "assets"
-                }
-              ],
               "buildOptimizer": false,
               "optimization": false,
               "vendorChunk": true,
