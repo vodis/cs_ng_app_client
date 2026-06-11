@@ -70,8 +70,7 @@ export type WalletsMfeMountApi = {
   unmount: () => void;
   subscribe: (listener: (event: WalletsMfeEvent) => void) => () => void;
   getSnapshot: () => WalletConnectionSnapshot;
-  /** Optional until wallet MFE exposes gateway control on mount. */
-  sendGatewayEvent?: (event: WalletGatewayEvent) => void;
+  sendGatewayEvent: (event: WalletGatewayEvent) => void;
 };
 
 export type WalletsMfeModule = {
