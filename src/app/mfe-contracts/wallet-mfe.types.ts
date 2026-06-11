@@ -1,4 +1,8 @@
-import { WalletAccountChangedPayload } from './payloads';
+import type { WalletGatewayEvent } from './gateway-events';
+import {
+  WalletAccountChangedPayload,
+  WalletIntentSignedPayload,
+} from './payloads';
 
 export type WalletConnectionStatus =
   | 'idle'
@@ -44,12 +48,29 @@ export type WalletsMfeContext = {
 export type WalletsMfeCallbacks = {
   onAccountChanged?: (payload: WalletAccountChangedPayload) => void;
   onCloseRequested?: () => void;
+  onChainChanged?: (payload: { chainId: number }) => void;
+  onVerificationChanged?: (payload: {
+    isVerified: boolean;
+    reason?: string;
+  }) => void;
+  onWalletSafetyChanged?: (payload: {
+    safetyStatus: 'safe' | 'unsafe';
+    isBypassed?: boolean;
+  }) => void;
+  onExecutionStateChanged?: (payload: {
+    state: string;
+    reason?: string;
+    errorCode?: string;
+  }) => void;
+  /** Emitted when the gateway completes intent signing (Path B). */
+  onIntentSigned?: (payload: WalletIntentSignedPayload) => void;
 };
 
 export type WalletsMfeMountApi = {
   unmount: () => void;
   subscribe: (listener: (event: WalletsMfeEvent) => void) => () => void;
   getSnapshot: () => WalletConnectionSnapshot;
+  sendGatewayEvent: (event: WalletGatewayEvent) => void;
 };
 
 export type WalletsMfeModule = {

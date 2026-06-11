@@ -124,7 +124,28 @@ Before merging contract changes:
 - At least one backend-connected flow validates API envelope handling.
 - Error and fallback flows are verified (MFE unavailable or API failure).
 
-## 6) Suggested file placement
+## 6) Path B swap intent flow (host orchestration)
+
+Host-owned sequence for near-intents swaps:
+
+1. `POST /api/v1/swaps/prepare` (BFF) returns `ApprovedIntentPrepareRequest`
+2. Host sends `PREPARE_INTENT_MESSAGE_REQUESTED` to wallet MFE
+3. MFE builds `WalletMessage` via SDK only
+4. Host sends `SIGN_REQUESTED`
+5. MFE signs through gateway gates and emits `onIntentSigned`
+6. Host calls `POST /api/v1/swaps/execute` with `signature`, `quoteHashes`, and user context  
+   (`prepareBroadcastRequest.prepareSwapSignedData` runs in the BFF execute handler)
+
+Host files:
+
+- `src/app/mfe-contracts/intent-prepare.contract.ts`
+- `src/app/mfe-contracts/gateway-events.ts`
+- `src/app/domains/exchange/application/swap-execution.workflow.ts`
+- `src/app/shared/mfe/wallets/wallet-gateway.bridge.service.ts`
+
+Wallet MFE must expose `sendGatewayEvent` on `WalletsMfeMountApi` and `onIntentSigned` callback for the full flow to complete.
+
+## 7) Suggested file placement
 
 If/when extracting typed contracts into code, place them under:
 
