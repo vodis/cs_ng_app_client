@@ -1,28 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
+import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
+import type { SwapFlowState } from '@domains/exchange/models/swap.models';
 import { environment } from '../../../environments/environment';
 
 type TokenSelectorSide = 'from' | 'to';
-
-interface OneClickQuoteRequest {
-  dry: boolean;
-  slippageTolerance: number;
-  originAsset: string;
-  destinationAsset: string;
-  amount: string;
-  deadline: string;
-  userAddress: string;
-  authMethod: 'evm';
-  swapType: 'EXACT_INPUT';
-  isConfidential: boolean;
-  isAuthenticated: boolean;
-}
-
-interface QuoteApiResponse {
-  data: unknown;
-}
 
 type ComparisonTimeframe = '1H' | '1D' | '1W';
 
@@ -78,6 +63,7 @@ interface ComparisonGridLine {
   styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly comparisonWidth = 720;
   private readonly comparisonHeight = 220;
   private readonly comparisonPadding = {
@@ -108,9 +94,10 @@ export class HomeComponent {
   public toToken = this.exchangeTokens[1];
   public isTokenSelectorOpen = false;
   public tokenSelectorSide: TokenSelectorSide | null = null;
-  public isQuoteLoading = false;
+  public swapFlowState: SwapFlowState = 'idle';
   public quoteError = '';
-  public quoteResult: unknown;
+  public quoteResult: Record<string, unknown> | undefined;
+  public intentHash = '';
   public comparison?: MarketComparisonResponse;
   public comparisonLines: ComparisonChartLine[] = [];
   public comparisonYLabels: ComparisonYLabel[] = [];
@@ -135,20 +122,45 @@ export class HomeComponent {
 
   constructor(
     private readonly httpClient: HttpClient,
-    private readonly walletsService: WalletsService
+    private readonly walletsService: WalletsService,
+    private readonly swapFlowFacade: SwapFlowFacade
   ) {
-    this.walletsService.account.subscribe(account => {
-      if (account?.account) {
-        this.walletAddress = account.account;
-      }
-    });
+    this.walletsService.account
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(account => {
+        if (account?.account) {
+          this.walletAddress = account.account;
+        }
+      });
+
+    this.swapFlowFacade.state$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        this.swapFlowState = state;
+      });
+
+    this.swapFlowFacade.quotePreview$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(preview => {
+        this.quoteResult = preview?.raw;
+      });
+
+    this.swapFlowFacade.error$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(error => {
+        this.quoteError = error?.message ?? '';
+      });
+
+    this.swapFlowFacade.intentHash$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(intentHash => {
+        this.intentHash = intentHash ?? '';
+      });
+
     this.loadMarketComparison();
   }
 
   public submitQuote(): void {
-    this.quoteError = '';
-    this.quoteResult = undefined;
-
     if (!this.walletAddress) {
       this.quoteError = 'Connect wallet first.';
       return;
@@ -161,33 +173,45 @@ export class HomeComponent {
       return;
     }
 
-    this.isQuoteLoading = true;
+    if (this.quoteResult && this.canExecuteSwap()) {
+      void this.executeSwap(amount);
+      return;
+    }
 
-    this.httpClient
-      .post<QuoteApiResponse>(`${environment.apiUrl}/api/v1/quotes/one-click`, {
-        dry: true,
-        slippageTolerance: 50,
-        originAsset: this.fromToken.assetId,
-        destinationAsset: this.toToken.assetId,
-        amount,
-        deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        userAddress: this.walletAddress.toLowerCase(),
-        authMethod: 'evm',
-        swapType: 'EXACT_INPUT',
-        isConfidential: false,
-        isAuthenticated: true,
-      } satisfies OneClickQuoteRequest)
-      .subscribe({
-        next: response => {
-          this.quoteResult = response.data;
-          this.isQuoteLoading = false;
-        },
-        error: error => {
-          this.quoteError =
-            error?.error?.message || 'Quote request failed. Try again.';
-          this.isQuoteLoading = false;
-        },
-      });
+    void this.swapFlowFacade.requestQuotePreview(this.buildSwapInput(amount));
+  }
+
+  public isQuoteLoading(): boolean {
+    return (
+      this.swapFlowState === 'requestingQuote' ||
+      this.swapFlowState === 'validating' ||
+      this.swapFlowState === 'awaitingUserSignature' ||
+      this.swapFlowState === 'submittingTransaction'
+    );
+  }
+
+  private canExecuteSwap(): boolean {
+    return (
+      this.swapFlowState === 'idle' ||
+      this.swapFlowState === 'completed' ||
+      this.swapFlowState === 'failed'
+    );
+  }
+
+  private async executeSwap(amount: string): Promise<void> {
+    await this.swapFlowFacade.executeSwap(this.buildSwapInput(amount));
+  }
+
+  private buildSwapInput(amount: string) {
+    return {
+      originAsset: this.fromToken.assetId,
+      destinationAsset: this.toToken.assetId,
+      amount,
+      userAddress: this.walletAddress.toLowerCase(),
+      slippageTolerance: 50,
+      deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      authMethod: 'evm' as const,
+    };
   }
 
   public changeComparisonTimeframe(timeframe: ComparisonTimeframe): void {
@@ -207,8 +231,10 @@ export class HomeComponent {
     const previousFrom = this.fromToken;
     this.fromToken = this.toToken;
     this.toToken = previousFrom;
+    this.swapFlowFacade.reset();
     this.quoteResult = undefined;
     this.quoteError = '';
+    this.intentHash = '';
     this.loadMarketComparison();
   }
 
@@ -238,7 +264,7 @@ export class HomeComponent {
   }
 
   public toAmountDisplay(): string {
-    const quote = this.quoteResult as Record<string, unknown> | undefined;
+    const quote = this.quoteResult;
     const amount =
       quote?.['amountOut'] ??
       quote?.['destinationAmount'] ??
@@ -248,11 +274,19 @@ export class HomeComponent {
       return String(amount);
     }
 
-    return '';
+    return this.swapFlowFacade.quotePreview?.amountOut ?? '';
   }
 
   public primaryActionLabel(): string {
-    return this.walletAddress ? 'Get quote' : 'Connect wallet';
+    if (!this.walletAddress) {
+      return 'Connect wallet';
+    }
+
+    if (this.quoteResult) {
+      return this.isQuoteLoading() ? 'Signing swap...' : 'Sign & swap';
+    }
+
+    return this.isQuoteLoading() ? 'Quoting...' : 'Get quote';
   }
 
   public onAmountKeydown(event: KeyboardEvent): void {
@@ -386,8 +420,10 @@ export class HomeComponent {
       this.toToken = token;
     }
 
+    this.swapFlowFacade.reset();
     this.quoteResult = undefined;
     this.quoteError = '';
+    this.intentHash = '';
     this.closeTokenSelector();
     this.loadMarketComparison();
   }

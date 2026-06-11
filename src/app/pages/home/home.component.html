@@ -105,15 +105,19 @@
         <button
           class="swap-form__submit"
           type="submit"
-          [disabled]="isQuoteLoading">
-          {{ isQuoteLoading ? 'Quoting...' : primaryActionLabel() }}
+          [disabled]="isQuoteLoading()">
+          {{ primaryActionLabel() }}
         </button>
 
         @if (quoteError) {
           <p class="swap-form__error">{{ quoteError }}</p>
         }
 
-        @if (quoteResult) {
+        @if (intentHash) {
+          <p class="swap-form__result">Intent submitted: {{ intentHash }}</p>
+        }
+
+        @if (quoteResult && !intentHash) {
           <pre class="swap-form__result">{{ quoteResult | json }}</pre>
         }
       </form>
