@@ -3,8 +3,13 @@
 :host {
   .header {
     display: flex;
-    height: 4rem;
+    height: var(--shell-header-height);
     flex-direction: column;
+
+    &__logo img {
+      width: auto;
+      height: 56px;
+    }
 
     &__line {
       width: 100%;
