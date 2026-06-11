@@ -101,6 +101,14 @@ export class HomeComponent {
     left: 48,
   };
   private readonly slippageToleranceBps = 35;
+  private readonly tokenIconUrls: Record<string, string> = {
+    BTC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1.png',
+    ETH: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1027.png',
+    NEAR: 'https://s2.coinmarketcap.com/static/img/coins/128x128/6535.png',
+    SOL: 'https://s2.coinmarketcap.com/static/img/coins/128x128/5426.png',
+    USDC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png',
+    USDT: 'https://s2.coinmarketcap.com/static/img/coins/128x128/825.png',
+  };
 
   public readonly recentActivity: RecentActivityItem[] = [
     {
@@ -296,19 +304,23 @@ export class HomeComponent {
 
   public tokenIcon(symbol: string): string | undefined {
     const comparison = this.comparison;
-    if (!comparison) {
-      return this.exchangeTokens.find(token => token.symbol === symbol)?.icon;
-    }
 
-    if (comparison.baseToken.symbol === symbol) {
+    if (comparison?.baseToken.symbol === symbol && comparison.baseToken.icon) {
       return comparison.baseToken.icon;
     }
 
-    if (comparison.quoteToken.symbol === symbol) {
+    if (comparison?.quoteToken.symbol === symbol && comparison.quoteToken.icon) {
       return comparison.quoteToken.icon;
     }
 
-    return this.exchangeTokens.find(token => token.symbol === symbol)?.icon;
+    const exchangeIcon = this.exchangeTokens.find(
+      token => token.symbol === symbol
+    )?.icon;
+    if (exchangeIcon) {
+      return exchangeIcon;
+    }
+
+    return this.tokenIconUrls[symbol];
   }
 
   public fromFiatEstimate(): string {
