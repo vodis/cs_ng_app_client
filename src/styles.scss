@@ -40,6 +40,11 @@
   box-sizing: border-box;
 }
 
+:root {
+  --shell-header-height: 5.375rem;
+  --shell-sidebar-min-width: 252px;
+}
+
 html {
   position: static;
 }

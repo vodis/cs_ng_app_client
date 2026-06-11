@@ -4,7 +4,7 @@
   .animate-line {
     &--row {
       width: 1px;
-      height: var(--line-size, calc(100vh - 4rem));
+      height: var(--line-size, calc(100vh - var(--shell-header-height)));
     }
 
     &--column {
