@@ -11,57 +11,77 @@
       <form autocomplete="off" (ngSubmit)="submitQuote()">
         <div class="swap-stack">
           <div class="swapRow first">
-            <div class="label">From</div>
-            <button
-              type="button"
-              class="select"
-              (click)="openTokenSelector('from')">
-              <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
-              {{ fromToken.symbol }}
-              <span class="arrow">&#8964;</span>
-            </button>
-            <div class="balance">{{ balanceLabel(fromToken.symbol) }}</div>
-            <input
-              class="amount"
-              [class.amount--muted]="isAmountMuted()"
-              type="text"
-              inputmode="decimal"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              spellcheck="false"
-              [value]="amount"
-              placeholder="0.00"
-              aria-label="Amount to sell"
-              (focus)="onAmountFocus()"
-              (blur)="onAmountBlur()"
-              (keydown)="onAmountKeydown($event)"
-              (input)="onAmountInput($event)"
-              (paste)="onAmountPaste($event)" />
-            <div class="usd">{{ fromFiatEstimate() }}</div>
+            <div class="swapRow__main">
+              <div class="swapRow__left">
+                <div class="label">From</div>
+                <button
+                  type="button"
+                  class="select"
+                  (click)="openTokenSelector('from')">
+                  <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
+                  {{ fromToken.symbol }}
+                  <span class="arrow">&#8964;</span>
+                </button>
+              </div>
+              <div class="swapRow__right">
+                <div class="balance">{{ balanceLabel(fromToken.symbol) }}</div>
+                <div class="swapRow__amount">
+                  <input
+                    class="amount"
+                    [class.amount--muted]="isAmountMuted()"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    [value]="amount"
+                    placeholder="0.00"
+                    aria-label="Amount to sell"
+                    (focus)="onAmountFocus()"
+                    (blur)="onAmountBlur()"
+                    (keydown)="onAmountKeydown($event)"
+                    (input)="onAmountInput($event)"
+                    (paste)="onAmountPaste($event)" />
+                  <div class="usd">{{ fromFiatEstimate() }}</div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <button
-            type="button"
-            class="swapCircle"
-            aria-label="Swap tokens"
-            (click)="swapTokens()">
-            &#8597;
-          </button>
-
-          <div class="swapRow">
-            <div class="label">To</div>
+          <div class="swap-divider">
             <button
               type="button"
-              class="select"
-              (click)="openTokenSelector('to')">
-              <span class="coin near">{{ tokenDisplay(toToken.symbol) }}</span>
-              {{ toToken.symbol }}
-              <span class="arrow">&#8964;</span>
+              class="swapCircle"
+              aria-label="Swap tokens"
+              (click)="swapTokens()">
+              &#8597;
             </button>
-            <div class="balance">{{ balanceLabel(toToken.symbol) }}</div>
-            <output class="amount">{{ toAmountUi() }}</output>
-            <div class="usd">{{ toFiatEstimate() }}</div>
+          </div>
+
+          <div class="swapRow">
+            <div class="swapRow__main">
+              <div class="swapRow__left">
+                <div class="label">To</div>
+                <button
+                  type="button"
+                  class="select"
+                  (click)="openTokenSelector('to')">
+                  <span class="coin near">{{
+                    tokenDisplay(toToken.symbol)
+                  }}</span>
+                  {{ toToken.symbol }}
+                  <span class="arrow">&#8964;</span>
+                </button>
+              </div>
+              <div class="swapRow__right">
+                <div class="balance">{{ balanceLabel(toToken.symbol) }}</div>
+                <div class="swapRow__amount">
+                  <output class="amount">{{ toAmountUi() }}</output>
+                  <div class="usd">{{ toFiatEstimate() }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -134,12 +154,8 @@
         <div class="price">{{ marketPriceDisplay() }}</div>
         <div
           class="change"
-          [class.positive]="
-            (comparison?.quoteToken?.changePercent ?? 0) > 0
-          "
-          [class.negative]="
-            (comparison?.quoteToken?.changePercent ?? 0) < 0
-          "
+          [class.positive]="(comparison?.quoteToken?.changePercent ?? 0) > 0"
+          [class.negative]="(comparison?.quoteToken?.changePercent ?? 0) < 0"
           [class.neutral]="
             comparison?.quoteToken?.changePercent === undefined ||
             comparison?.quoteToken?.changePercent === 0
@@ -238,7 +254,10 @@
                   [attr.d]="line.fillPath"
                   [attr.fill]="'url(#market-grad-' + line.symbol + ')'" />
               }
-              <path class="line" [attr.d]="line.path" [attr.stroke]="line.color" />
+              <path
+                class="line"
+                [attr.d]="line.path"
+                [attr.stroke]="line.color" />
             }
           </svg>
         </div>
@@ -251,9 +270,7 @@
         type="button"
         class="advanced"
         (click)="toggleAdvancedMarketView()">
-        {{
-          showAdvancedMarketView ? 'Hide Advanced Chart' : 'Advanced Chart'
-        }}
+        {{ showAdvancedMarketView ? 'Hide Advanced Chart' : 'Advanced Chart' }}
         &rarr;
       </button>
 
