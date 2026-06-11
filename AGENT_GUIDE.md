@@ -78,11 +78,12 @@ Right column.
 | Block | Markup / classes | Behavior |
 | --- | --- | --- |
 | Header | `.marketHead` | Title + tabs (Price / Volume / Liquidity) and timeframe buttons |
-| Timeframes | `.range` | `1H`, `1D`, `1W` (active state); `1M` preview button is disabled |
+| Timeframes | `.range` | `1H`, `1D`, `1W`, `1M` (active state switches comparison window) |
+| Summary column | `.marketBody`, `.marketSummary` | Narrow left column (`~104px`) for pair, price, and 24h change |
 | Pair | `.pair` | Base/quote token icons and symbol pair |
 | Price | `.price`, `.change` | Quote token price and 24h change from comparison API |
-| Chart | `.chart` | SVG comparison chart with grid, baseline, gradient fill |
-| Footer | `.note`, `.advanced` | Comparison hint + toggle for `app-live-chart` |
+| Chart | `.chart` | SVG comparison chart in the right grid column (`1fr`) |
+| Footer | `.marketFooter`, `.note`, `.advanced` | Hint (`margin-top: 16px`) + advanced link (`margin-top: 12px`) in normal flow below the chart |
 
 Market data loads from `GET ${environment.apiUrl}/api/v1/markets/comparison`.
 
@@ -118,6 +119,7 @@ Typography and spacing targets:
 - Panel padding: `24px` (swap), `24px 28px` (market)
 - Swap row height: `112px`; stats row height: `70px`
 - Market panel height: `486px` on desktop (auto on `<= 1100px`)
+- Market body grid: `104px / 1fr` — keep the price column compact so the chart gets most of the width
 - Amount fields use `Aeonik Fono` via `.amount`
 
 Keep new exchange UI inside `.exchange-page` selectors. Avoid leaking exchange-specific rules into global shell styles.

@@ -24,7 +24,7 @@ interface QuoteApiResponse {
   data: unknown;
 }
 
-type ComparisonTimeframe = '1H' | '1D' | '1W';
+type ComparisonTimeframe = '1H' | '1D' | '1W' | '1M';
 
 interface MarketComparisonToken {
   symbol: string;
@@ -169,12 +169,14 @@ export class HomeComponent {
       assetId:
         'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
       color: '#2f8cff',
+      icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png',
     },
     {
       symbol: 'NEAR',
       name: 'NEAR Protocol',
       assetId: 'nep141:wrap.near',
       color: '#2fd17c',
+      icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/6535.png',
     },
   ];
 
@@ -199,8 +201,8 @@ export class HomeComponent {
     '1H',
     '1D',
     '1W',
+    '1M',
   ];
-  public readonly marketPreviewTimeframes = ['1M'] as const;
   public readonly comparisonViewBox = `0 0 ${this.comparisonWidth} ${this.comparisonHeight}`;
   public readonly comparisonPlotLeft = this.comparisonPadding.left;
   public readonly comparisonPlotRight =
@@ -332,7 +334,7 @@ export class HomeComponent {
       return '—';
     }
 
-    return price.toFixed(2);
+    return `$${price.toFixed(2)}`;
   }
 
   public toAmountDisplay(): string {
@@ -847,14 +849,18 @@ export class HomeComponent {
       return 'the last 24 hours';
     }
 
-    return 'the last 7 days';
+    if (timeframe === '1W') {
+      return 'the last 7 days';
+    }
+
+    return 'the last 30 days';
   }
 
   private formatComparisonTime(
     time: number,
     timeframe: ComparisonTimeframe
   ): string {
-    if (timeframe === '1W') {
+    if (timeframe === '1W' || timeframe === '1M') {
       return new Date(time * 1000).toLocaleDateString([], {
         month: 'short',
         day: 'numeric',
