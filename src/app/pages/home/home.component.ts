@@ -196,7 +196,6 @@ export class HomeComponent {
     '1W',
     '1M',
   ];
-  public readonly marketPreviewTimeframes = ['1M'] as const;
   public readonly comparisonViewBox = `0 0 ${this.comparisonWidth} ${this.comparisonHeight}`;
   public readonly comparisonPlotLeft = this.comparisonPadding.left;
   public readonly comparisonPlotRight =
@@ -413,7 +412,7 @@ export class HomeComponent {
       return '—';
     }
 
-    return price.toFixed(2);
+    return `$${price.toFixed(2)}`;
   }
 
   public toAmountDisplay(): string {

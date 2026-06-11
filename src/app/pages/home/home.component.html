@@ -140,144 +140,190 @@
               {{ timeframe }}
             </button>
           }
-          <button type="button" class="range__extra" disabled>1M</button>
         </div>
       </div>
 
-      <div class="pair">
-        <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
-        <span class="coin near">{{ tokenDisplay(toToken.symbol) }}</span>
-        {{ fromToken.symbol }} / {{ toToken.symbol }}
-      </div>
+      <div class="marketBody">
+        <div class="marketSummary">
+          <div class="pair">
+            <span class="pair__icons" aria-hidden="true">
+              @if (tokenIcon(fromToken.symbol); as fromIcon) {
+                <img
+                  class="pair__icon"
+                  [src]="fromIcon"
+                  [alt]="fromToken.symbol"
+                  loading="lazy"
+                  width="24"
+                  height="24" />
+              } @else {
+                <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
+              }
+              @if (tokenIcon(toToken.symbol); as toIcon) {
+                <img
+                  class="pair__icon"
+                  [src]="toIcon"
+                  [alt]="toToken.symbol"
+                  loading="lazy"
+                  width="24"
+                  height="24" />
+              } @else {
+                <span class="coin near">{{ tokenDisplay(toToken.symbol) }}</span>
+              }
+            </span>
+            <span class="pair__label"
+              >{{ fromToken.symbol }} / {{ toToken.symbol }}</span
+            >
+          </div>
 
-      @if (comparisonLoading) {
-        <div class="market-skeleton" aria-hidden="true">
-          <span></span>
-          <span></span>
-        </div>
-      } @else {
-        <div class="price">{{ marketPriceDisplay() }}</div>
-        <div
-          class="change"
-          [class.positive]="(comparison?.quoteToken?.changePercent ?? 0) > 0"
-          [class.negative]="(comparison?.quoteToken?.changePercent ?? 0) < 0"
-          [class.neutral]="
-            comparison?.quoteToken?.changePercent === undefined ||
-            comparison?.quoteToken?.changePercent === 0
-          ">
-          {{ formatPercent(comparison?.quoteToken?.changePercent) }} (24H)
-        </div>
-
-        <div class="chart">
-          @if (comparisonError) {
-            <p class="chart__empty">{{ comparisonError }}</p>
+          @if (comparisonLoading) {
+            <div class="market-skeleton" aria-hidden="true">
+              <span></span>
+            </div>
+          } @else {
+            <div class="price">{{ marketPriceDisplay() }}</div>
+            <div
+              class="change"
+              [class.positive]="
+                (comparison?.quoteToken?.changePercent ?? 0) > 0
+              "
+              [class.negative]="
+                (comparison?.quoteToken?.changePercent ?? 0) < 0
+              "
+              [class.neutral]="
+                comparison?.quoteToken?.changePercent === undefined ||
+                comparison?.quoteToken?.changePercent === 0
+              ">
+              {{ formatPercent(comparison?.quoteToken?.changePercent) }} (24H)
+            </div>
           }
-          <svg
-            [attr.viewBox]="comparisonViewBox"
-            preserveAspectRatio="none"
-            role="img"
-            [attr.aria-label]="
-              fromToken.symbol +
-              ' and ' +
-              toToken.symbol +
-              ' price change comparison'
-            ">
-            <defs>
-              @for (line of comparisonLines; track line.symbol) {
-                <linearGradient
-                  [attr.id]="'market-grad-' + line.symbol"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1">
-                  <stop
-                    offset="0%"
-                    [attr.stop-color]="line.color"
-                    stop-opacity="0.28" />
-                  <stop
-                    offset="100%"
-                    [attr.stop-color]="line.color"
-                    stop-opacity="0" />
-                </linearGradient>
-              }
-            </defs>
-            @for (line of comparisonGridLines; track line.y) {
-              <line
-                class="grid"
-                [attr.x1]="comparisonPlotLeft"
-                [attr.y1]="line.y"
-                [attr.x2]="comparisonPlotRight"
-                [attr.y2]="line.y" />
-            }
-            @if (comparisonBaselineY) {
-              <line
-                class="blueLine"
-                [attr.x1]="comparisonPlotLeft"
-                [attr.y1]="comparisonBaselineY"
-                [attr.x2]="comparisonPlotRight"
-                [attr.y2]="comparisonBaselineY" />
-            }
-            @for (label of comparisonYLabels; track label.label) {
-              <text
-                x="44"
-                [attr.y]="label.y"
-                fill="#c9cccd"
-                font-size="13"
-                text-anchor="end">
-                {{ label.label }}
-              </text>
-            }
-            @if (comparisonAxisStart) {
-              <text
-                [attr.x]="comparisonPlotLeft"
-                [attr.y]="comparisonAxisBottom"
-                fill="#c9cccd"
-                font-size="13">
-                {{ comparisonAxisStart }}
-              </text>
-              <text
-                [attr.x]="comparisonAxisCenterX"
-                [attr.y]="comparisonAxisBottom"
-                fill="#c9cccd"
-                font-size="13"
-                text-anchor="middle">
-                {{ comparisonAxisMid }}
-              </text>
-              <text
-                [attr.x]="comparisonPlotRight"
-                [attr.y]="comparisonAxisBottom"
-                fill="#c9cccd"
-                font-size="13"
-                text-anchor="end">
-                {{ comparisonAxisEnd }}
-              </text>
-            }
-            @for (line of comparisonLines; track line.symbol) {
-              @if (line.fillPath) {
-                <path
-                  class="fill"
-                  [attr.d]="line.fillPath"
-                  [attr.fill]="'url(#market-grad-' + line.symbol + ')'" />
-              }
-              <path
-                class="line"
-                [attr.d]="line.path"
-                [attr.stroke]="line.color" />
-            }
-          </svg>
         </div>
-      }
 
-      <div class="note">
-        Both lines start at 0% - values show change since window open
+        @if (comparisonLoading) {
+          <div
+            class="market-skeleton market-skeleton--chart"
+            aria-hidden="true">
+            <span></span>
+          </div>
+        } @else {
+          <div class="chart">
+            @if (comparisonError) {
+              <p class="chart__empty">{{ comparisonError }}</p>
+            }
+            <svg
+              [attr.viewBox]="comparisonViewBox"
+              preserveAspectRatio="none"
+              role="img"
+              [attr.aria-label]="
+                fromToken.symbol +
+                ' and ' +
+                toToken.symbol +
+                ' price change comparison'
+              ">
+              <defs>
+                @for (line of comparisonLines; track line.symbol) {
+                  <linearGradient
+                    [attr.id]="'market-grad-' + line.symbol"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1">
+                    <stop
+                      offset="0%"
+                      [attr.stop-color]="line.color"
+                      stop-opacity="0.12" />
+                    <stop
+                      offset="65%"
+                      [attr.stop-color]="line.color"
+                      stop-opacity="0.03" />
+                    <stop
+                      offset="100%"
+                      [attr.stop-color]="line.color"
+                      stop-opacity="0" />
+                  </linearGradient>
+                }
+              </defs>
+              @for (line of comparisonGridLines; track line.y) {
+                <line
+                  class="grid"
+                  [attr.x1]="comparisonPlotLeft"
+                  [attr.y1]="line.y"
+                  [attr.x2]="comparisonPlotRight"
+                  [attr.y2]="line.y" />
+              }
+              @if (comparisonBaselineY) {
+                <line
+                  class="blueLine"
+                  [attr.x1]="comparisonPlotLeft"
+                  [attr.y1]="comparisonBaselineY"
+                  [attr.x2]="comparisonPlotRight"
+                  [attr.y2]="comparisonBaselineY" />
+              }
+              @for (label of comparisonYLabels; track label.label) {
+                <text
+                  x="44"
+                  [attr.y]="label.y"
+                  fill="#c9cccd"
+                  font-size="13"
+                  text-anchor="end">
+                  {{ label.label }}
+                </text>
+              }
+              @if (comparisonAxisStart) {
+                <text
+                  [attr.x]="comparisonPlotLeft"
+                  [attr.y]="comparisonAxisBottom"
+                  fill="#c9cccd"
+                  font-size="13">
+                  {{ comparisonAxisStart }}
+                </text>
+                <text
+                  [attr.x]="comparisonAxisCenterX"
+                  [attr.y]="comparisonAxisBottom"
+                  fill="#c9cccd"
+                  font-size="13"
+                  text-anchor="middle">
+                  {{ comparisonAxisMid }}
+                </text>
+                <text
+                  [attr.x]="comparisonPlotRight"
+                  [attr.y]="comparisonAxisBottom"
+                  fill="#c9cccd"
+                  font-size="13"
+                  text-anchor="end">
+                  {{ comparisonAxisEnd }}
+                </text>
+              }
+              @for (line of comparisonLines; track line.symbol) {
+                @if (line.fillPath) {
+                  <path
+                    class="fill"
+                    [attr.d]="line.fillPath"
+                    [attr.fill]="'url(#market-grad-' + line.symbol + ')'" />
+                }
+                <path
+                  class="line"
+                  [attr.d]="line.path"
+                  [attr.stroke]="line.color" />
+              }
+            </svg>
+          </div>
+        }
       </div>
-      <button
-        type="button"
-        class="advanced"
-        (click)="toggleAdvancedMarketView()">
-        {{ showAdvancedMarketView ? 'Hide Advanced Chart' : 'Advanced Chart' }}
-        &rarr;
-      </button>
+
+      <div class="marketFooter">
+        <div class="note">
+          Both lines start at 0% - values show change since window open
+        </div>
+        <button
+          type="button"
+          class="advanced"
+          (click)="toggleAdvancedMarketView()">
+          {{
+            showAdvancedMarketView ? 'Hide Advanced Chart' : 'Advanced Chart'
+          }}
+          &rarr;
+        </button>
+      </div>
 
       @if (showAdvancedMarketView) {
         <app-live-chart
