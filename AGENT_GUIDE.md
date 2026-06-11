@@ -14,6 +14,131 @@ This guide is for AI/code agents and contributors working in `cs_ng_app_client`.
 - Integrate `mfe-wallets` safely through Module Federation.
 - Build a robust Angular dApp shell with predictable contracts.
 
+## Exchange Page UI Reference
+
+The default route (`/`) renders the **Token Exchange** screen inside the host shell. Treat the layout below as the product baseline when changing home-page UI or styles.
+
+### Shell frame
+
+```text
++------------------------------------------------------------------+
+| [Logo]                                    [CONNECT WALLET]       |
++----------+-------------------------------------------------------+
+| Sidebar  | Main content (HomeComponent / `.exchange-page`)       |
+|          |                                                       |
+| Inform.  |  TOKEN EXCHANGE intro banner                          |
+|  Board   |  +------------------+  +---------------------------+  |
+| Finance  |  | Swap Tokens      |  | Market Overview           |  |
+|  Farm    |  |                  |  |                           |  |
+| Dev Act. |  +------------------+  +---------------------------+  |
+| Proposals|  | Recent Activity (full-width table)                |  |
++----------+-------------------------------------------------------+
+```
+
+| Shell area | Route | Primary files |
+| --- | --- | --- |
+| Header (logo + wallet) | global | `src/app/components/header/` |
+| Sidebar navigation | `/`, `/farm`, `/proposals` | `src/app/components/sidebar/` |
+| App frame | global | `src/app/components/layout/` |
+| Token Exchange page | `/` | `src/app/pages/home/` |
+
+Sidebar groups:
+
+- **Informations** → Board (`/`)
+- **Finance** → Farm (`/farm`)
+- **Dev Activity** → Proposals (`/proposals`)
+
+Wallet connect lives in the header (`app-wallet-bar`, wallets MFE). Swap panel submit also requires a connected wallet.
+
+### Page sections
+
+#### 1. Intro banner (`.intro`)
+
+- Title: `Token Exchange`
+- Subtitle: `Best routes. Best price. Powered by CraftScript.`
+
+#### 2. Swap Tokens (`.panel.swapPanel`)
+
+Left column (`gridTop` is `42% / 58%` on desktop).
+
+| Block | Markup / classes | Behavior |
+| --- | --- | --- |
+| From row | `.swapRow.first` | Token selector, balance, amount input, USD estimate |
+| Flip control | `.swapCircle` | Swaps from/to tokens and reloads market comparison |
+| To row | `.swapRow` | Token selector, balance, quoted/output amount, USD estimate |
+| Details grid | `.stats` / `.stat` | Rate, Price Impact, Slippage, Network Fee |
+| Primary CTA | `.connectMain` | Submits quote (`submitQuote()`); label follows wallet state |
+
+Token pickers open `app-side-modal` with `app-token-select-panel`. Amount editing, paste guards, and decimal validation stay in `HomeComponent`.
+
+#### 3. Market Overview (`.panel.marketPanel`)
+
+Right column.
+
+| Block | Markup / classes | Behavior |
+| --- | --- | --- |
+| Header | `.marketHead` | Title + tabs (Price / Volume / Liquidity) and timeframe buttons |
+| Timeframes | `.range` | `1H`, `1D`, `1W` (active state); `1M` preview button is disabled |
+| Pair | `.pair` | Base/quote token icons and symbol pair |
+| Price | `.price`, `.change` | Quote token price and 24h change from comparison API |
+| Chart | `.chart` | SVG comparison chart with grid, baseline, gradient fill |
+| Footer | `.note`, `.advanced` | Comparison hint + toggle for `app-live-chart` |
+
+Market data loads from `GET ${environment.apiUrl}/api/v1/markets/comparison`.
+
+#### 4. Recent Activity (`.panel.activity`)
+
+Full-width table below the top grid.
+
+| Column | Content |
+| --- | --- |
+| Time | Trade timestamp |
+| Pair | Token icons with arrow (`.pairCell`, `.mini`) |
+| Amount | Sold amount |
+| You Get | Received amount |
+| Status | Completion state (`.status`, `.external`) |
+
+Row data is currently defined in `HomeComponent.recentActivity` (host-owned demo content until backend history is wired).
+
+### Styling contract
+
+Exchange page styles are scoped under `.exchange-page` in `src/styles/exchange-page.scss` (imported from `src/styles.scss`).
+
+| Token | Value | Usage |
+| --- | --- | --- |
+| `--exchange-orange` | `#ff6900` | Labels, active tabs, CTAs, links |
+| `--exchange-green` | `#00d084` | Positive change, completed status |
+| `--exchange-line` | `#2a3437` | Panel borders |
+| `--exchange-line-soft` | `#20292c` | Row dividers |
+| Page background | `#111719` | Exchange content area |
+| Panel background | `rgba(12, 18, 20, 0.55)` | Cards with inset highlight |
+
+Typography and spacing targets:
+
+- Panel padding: `24px` (swap), `24px 28px` (market)
+- Swap row height: `112px`; stats row height: `70px`
+- Market panel height: `486px` on desktop (auto on `<= 1100px`)
+- Amount fields use `Aeonik Fono` via `.amount`
+
+Keep new exchange UI inside `.exchange-page` selectors. Avoid leaking exchange-specific rules into global shell styles.
+
+### Exchange APIs used by Home
+
+| Action | Endpoint | Owner |
+| --- | --- | --- |
+| Dry quote | `POST /api/v1/quotes/one-click` | NestJS BFF |
+| Market comparison chart | `GET /api/v1/markets/comparison` | NestJS BFF |
+
+Client token metadata in `HomeComponent.exchangeTokens` is display/bootstrap only. Authoritative tradability and quote validation remain on the backend.
+
+### UI change checklist (Exchange page)
+
+1. Update `home.component.html` structure only when the product layout actually changes.
+2. Mirror class renames in `src/styles/exchange-page.scss`.
+3. Preserve wallet gating, token modal flow, quote submission, and comparison reload on token swap.
+4. Verify desktop grid (`42% / 58%`) and mobile single-column breakpoint (`<= 1100px`).
+5. Run lint/tests/build before finishing.
+
 ## Target Architecture Baseline
 
 - Architecture style: Angular host shell + domain MFEs + NestJS BFF.
@@ -162,14 +287,15 @@ Compatibility policy:
 ## Change Workflow (Agent Checklist)
 
 1. Identify touched communication level(s).
-2. Verify host wiring in `src/config/mf.manifest.json`.
-3. Cross-check wallet side in `../mfe-wallets` (or remote repository when needed).
-4. Sync with latest wallets commit contract changes before editing host docs.
-5. Update docs/contracts in this repo when behavior changes.
-6. Update dApp communication layer docs (channels/events/payload versions) when Level 2+ changes occur.
-7. Validate locally (host + wallet MFE running together).
-8. Validate key dApp flow (wallet mount + at least one happy-path interaction).
-9. Run quality gates (`pnpm` scripts) before finalizing.
+2. For home/exchange UI work, confirm changes still match **Exchange Page UI Reference** above.
+3. Verify host wiring in `src/config/mf.manifest.json`.
+4. Cross-check wallet side in `../mfe-wallets` (or remote repository when needed).
+5. Sync with latest wallets commit contract changes before editing host docs.
+6. Update docs/contracts in this repo when behavior changes.
+7. Update dApp communication layer docs (channels/events/payload versions) when Level 2+ changes occur.
+8. Validate locally (host + wallet MFE running together).
+9. Validate key dApp flow (wallet mount + at least one happy-path interaction).
+10. Run quality gates (`pnpm` scripts) before finalizing.
 
 ## Validation Minimum
 

@@ -34,6 +34,7 @@
 
   .gridTop {
     display: grid;
+    align-items: start;
     gap: 14px;
     grid-template-columns: 42% 58%;
     margin-bottom: 14px;
@@ -47,34 +48,66 @@
   }
 
   .swapPanel {
-    height: 486px;
-    padding: 24px;
+    height: auto;
+    padding: 20px;
+
+    .panelTitle {
+      margin-bottom: 16px;
+    }
   }
 
   .panelTitle {
-    margin: 0 0 28px;
+    margin: 0 0 20px;
     font-size: 20px;
     font-weight: 700;
     text-transform: uppercase;
   }
 
-  .swap-stack {
-    position: relative;
+  .swapRow {
+    padding: 4px 6px 0;
+
+    &__main {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    &__left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    &__right {
+      flex: 1;
+      min-width: 0;
+      text-align: right;
+    }
+
+    &__amount {
+      text-align: right;
+    }
   }
 
-  .swapRow {
+  .swap-divider {
     position: relative;
-    height: 112px;
-    padding: 22px 12px 18px;
-    border-bottom: 1px solid var(--exchange-line-soft);
+    height: 16px;
 
-    &.first {
-      margin-bottom: 0;
+    &::before {
+      position: absolute;
+      top: 50%;
+      right: 8px;
+      left: 8px;
+      height: 1px;
+      background: var(--exchange-line-soft);
+      content: '';
+      transform: translateY(-50%);
     }
   }
 
   .label {
-    margin-bottom: 14px;
+    margin: 0;
     color: var(--exchange-orange);
     font-size: 13px;
     font-weight: 700;
@@ -84,7 +117,7 @@
   .select {
     display: inline-flex;
     min-width: 142px;
-    height: 42px;
+    height: 38px;
     align-items: center;
     padding: 0 14px;
     border: 1px solid var(--exchange-line);
@@ -125,26 +158,22 @@
   }
 
   .balance {
-    position: absolute;
-    top: 22px;
-    right: 8px;
+    margin-bottom: 6px;
     color: #c4c6c7;
     font-size: 12px;
+    text-align: right;
     text-transform: uppercase;
   }
 
   .amount {
-    position: absolute;
-    top: 48px;
-    right: 8px;
-    width: auto;
-    max-width: calc(100% - 10rem);
+    display: block;
+    width: 100%;
     padding: 0;
     border: 0;
     background: transparent;
     color: #fff;
     font-family: 'Aeonik Fono', monospace;
-    font-size: 32px;
+    font-size: 28px;
     line-height: 1;
     text-align: right;
 
@@ -158,11 +187,9 @@
   }
 
   .usd {
-    position: absolute;
-    top: 88px;
-    right: 8px;
+    margin-top: 2px;
     color: #c4c6c7;
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .swapCircle {
@@ -171,8 +198,8 @@
     top: 50%;
     left: 50%;
     display: grid;
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     border: 1px solid var(--exchange-line);
     border-radius: 50%;
@@ -180,7 +207,7 @@
     background: #12181a;
     color: var(--exchange-orange);
     font-family: inherit;
-    font-size: 22px;
+    font-size: 20px;
     line-height: 1;
     place-items: center;
     transform: translate(-50%, -50%);
@@ -188,33 +215,39 @@
 
   .stats {
     display: grid;
-    height: 70px;
+    min-height: 72px;
+    align-items: stretch;
     border: 1px solid var(--exchange-line);
     border-right: 0;
     border-left: 0;
     border-radius: 4px;
-    margin: 14px 0;
+    margin: 8px 0 0;
     grid-template-columns: repeat(4, 1fr);
   }
 
   .stat {
-    padding: 13px 12px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    min-height: 72px;
+    padding: 0 8px;
     border-right: 1px solid var(--exchange-line-soft);
+    text-align: center;
 
     &:last-child {
       border-right: none;
     }
 
     span {
-      display: block;
-      margin-bottom: 9px;
+      margin-bottom: 6px;
       color: #b9bdbf;
       font-size: 11px;
+      line-height: 1.2;
       text-transform: uppercase;
     }
 
     b {
-      display: block;
+      max-width: 100%;
       overflow: hidden;
       font-size: 13px;
       font-weight: 600;
@@ -232,9 +265,14 @@
     color: var(--exchange-green) !important;
   }
 
+  .swapPanel .connectMain {
+    margin-top: 12px;
+  }
+
   .connectMain {
     width: 100%;
     height: 45px;
+    flex-shrink: 0;
     border: 0;
     border-radius: 4px;
     margin: 0;
