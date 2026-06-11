@@ -109,14 +109,23 @@
           </div>
         </div>
 
-        <button class="connectMain" type="submit" [disabled]="isQuoteLoading">
-          {{
-            isQuoteLoading ? 'QUOTING...' : primaryActionLabel().toUpperCase()
-          }}
+        <button
+          class="swap-form__submit"
+          type="submit"
+          [disabled]="isQuoteLoading()">
+          {{ primaryActionLabel() }}
         </button>
 
         @if (quoteError) {
-          <p class="exchange-error">{{ quoteError }}</p>
+          <p class="swap-form__error">{{ quoteError }}</p>
+        }
+
+        @if (intentHash) {
+          <p class="swap-form__result">Intent submitted: {{ intentHash }}</p>
+        }
+
+        @if (quoteResult && !intentHash) {
+          <pre class="swap-form__result">{{ quoteResult | json }}</pre>
         }
       </form>
     </div>

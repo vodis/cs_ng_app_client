@@ -23,6 +23,12 @@ export interface WalletTxSignedPayload {
   chainId?: number;
 }
 
+/** Path B: wallet returned an intent signature; relay submit stays in the host. */
+export interface WalletIntentSignedPayload {
+  signature: Record<string, unknown>;
+  authMethod: string;
+}
+
 export interface WalletErrorPayload {
   code: string;
   message: string;
