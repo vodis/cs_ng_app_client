@@ -9,7 +9,7 @@ import { environment } from '../../../environments/environment';
 
 type TokenSelectorSide = 'from' | 'to';
 
-type ComparisonTimeframe = '1H' | '1D' | '1W';
+type ComparisonTimeframe = '1H' | '1D' | '1W' | '1M';
 
 interface MarketComparisonToken {
   symbol: string;
@@ -402,6 +402,79 @@ export class HomeComponent {
     }
 
     return this.isQuoteLoading() ? 'Quoting...' : 'Get quote';
+  }
+
+  public tokenDisplay(symbol: string): string {
+    if (symbol === 'USDC') {
+      return '$';
+    }
+
+    return symbol[0] ?? '?';
+  }
+
+  public balanceLabel(symbol: string): string {
+    if (symbol === 'USDC') {
+      return 'Balance: 1,250.00 USDC';
+    }
+
+    if (symbol === 'NEAR') {
+      return 'Balance: 42.5000 NEAR';
+    }
+
+    return `Balance: — ${symbol}`;
+  }
+
+  public swapRateLabel(): string {
+    const amountIn = Number.parseFloat(this.amount);
+    const amountOut = Number.parseFloat(this.toAmountUi());
+    const rate =
+      Number.isFinite(amountIn) && amountIn > 0 && Number.isFinite(amountOut)
+        ? amountOut / amountIn
+        : this.previewSwapRate();
+
+    if (rate === undefined) {
+      return `1 ${this.fromToken.symbol} ≈ — ${this.toToken.symbol}`;
+    }
+
+    return `1 ${this.fromToken.symbol} ≈ ${rate.toFixed(4)} ${this.toToken.symbol}`;
+  }
+
+  public swapPriceImpactLabel(): string {
+    const quote = this.quoteResult;
+    const impact =
+      quote?.['priceImpact'] ??
+      quote?.['priceImpactPercent'] ??
+      quote?.['price_impact'];
+
+    if (typeof impact === 'number' && Number.isFinite(impact)) {
+      return `${impact.toFixed(2)}%`;
+    }
+
+    if (typeof impact === 'string' && impact.trim()) {
+      return impact.includes('%') ? impact : `${impact}%`;
+    }
+
+    return '0.12%';
+  }
+
+  public slippageLabel(): string {
+    return '0.35%';
+  }
+
+  public networkFeeLabel(): string {
+    const quote = this.quoteResult;
+    const fee =
+      quote?.['networkFee'] ?? quote?.['estimatedFee'] ?? quote?.['fee'];
+
+    if (typeof fee === 'number' && Number.isFinite(fee)) {
+      return fee < 0.01 ? '< $0.01' : `$${fee.toFixed(2)}`;
+    }
+
+    if (typeof fee === 'string' && fee.trim()) {
+      return fee;
+    }
+
+    return '< $0.01';
   }
 
   public onAmountKeydown(event: KeyboardEvent): void {
