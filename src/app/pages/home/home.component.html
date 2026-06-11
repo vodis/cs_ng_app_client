@@ -134,6 +134,7 @@
         <div class="range" aria-label="Comparison timeframe">
           @for (timeframe of comparisonTimeframes; track timeframe) {
             <button
+              class="rangeBtn"
               type="button"
               [class.active]="selectedComparisonTimeframe === timeframe"
               (click)="changeComparisonTimeframe(timeframe)">
@@ -167,7 +168,9 @@
                   width="24"
                   height="24" />
               } @else {
-                <span class="coin near">{{ tokenDisplay(toToken.symbol) }}</span>
+                <span class="coin near">{{
+                  tokenDisplay(toToken.symbol)
+                }}</span>
               }
             </span>
             <span class="pair__label"
@@ -328,6 +331,7 @@
       @if (showAdvancedMarketView) {
         <app-live-chart
           [coin]="toToken.symbol"
+          [coin]="toToken.symbol"
           [active]="showAdvancedMarketView" />
       }
     </div>
@@ -368,9 +372,7 @@
                       item.fromDisplay
                     }}</span>
                   }
-                  <span class="pairCell__arrow" aria-hidden="true"
-                    >&rarr;</span
-                  >
+                  <span class="pairCell__arrow" aria-hidden="true">&rarr;</span>
                   @if (tokenIcon(item.toSymbol); as toIcon) {
                     <img
                       class="pairCell__icon"

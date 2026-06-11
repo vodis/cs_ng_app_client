@@ -309,7 +309,10 @@ export class HomeComponent {
       return comparison.baseToken.icon;
     }
 
-    if (comparison?.quoteToken.symbol === symbol && comparison.quoteToken.icon) {
+    if (
+      comparison?.quoteToken.symbol === symbol &&
+      comparison.quoteToken.icon
+    ) {
       return comparison.quoteToken.icon;
     }
 
@@ -912,18 +915,11 @@ export class HomeComponent {
     const basePrice = this.comparison?.baseToken?.currentPrice;
     const quotePrice = this.comparison?.quoteToken?.currentPrice;
 
-    if (
-      basePrice !== undefined &&
-      quotePrice !== undefined &&
-      basePrice > 0
-    ) {
+    if (basePrice !== undefined && quotePrice !== undefined && basePrice > 0) {
       return quotePrice / basePrice;
     }
 
-    if (
-      this.fromToken.symbol === 'USDC' &&
-      this.toToken.symbol === 'NEAR'
-    ) {
+    if (this.fromToken.symbol === 'USDC' && this.toToken.symbol === 'NEAR') {
       return 0.4561;
     }
 

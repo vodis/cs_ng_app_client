@@ -38,9 +38,9 @@
     display: grid;
     width: 100%;
     align-items: stretch;
+    margin-bottom: 14px;
     gap: 14px;
     grid-template-columns: 42fr 58fr;
-    margin-bottom: 14px;
   }
 
   .panel {
@@ -50,10 +50,29 @@
     box-shadow: inset 0 0 22px rgb(255 255 255 / 1.5%);
   }
 
+  .panelTitle {
+    margin: 0 0 20px;
+    font-size: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .stats {
+    display: grid;
+    min-height: 72px;
+    align-items: stretch;
+    border: 1px solid var(--exchange-line);
+    border-radius: 4px;
+    border-right: 0;
+    border-left: 0;
+    margin: 0;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
   .swapPanel {
     display: flex;
-    flex-direction: column;
     height: 486px;
+    flex-direction: column;
     padding: 24px;
 
     .panelTitle {
@@ -63,9 +82,9 @@
 
     form {
       display: flex;
+      min-height: 0;
       flex: 1;
       flex-direction: column;
-      min-height: 0;
     }
 
     .swap-stack {
@@ -76,13 +95,6 @@
       flex-shrink: 0;
       margin-top: auto;
     }
-  }
-
-  .panelTitle {
-    margin: 0 0 20px;
-    font-size: 20px;
-    font-weight: 700;
-    text-transform: uppercase;
   }
 
   .swapRow {
@@ -102,8 +114,8 @@
     }
 
     &__right {
-      flex: 1;
       min-width: 0;
+      flex: 1;
       text-align: right;
     }
 
@@ -276,25 +288,13 @@
     }
   }
 
-  .stats {
-    display: grid;
-    min-height: 72px;
-    align-items: stretch;
-    border: 1px solid var(--exchange-line);
-    border-right: 0;
-    border-left: 0;
-    border-radius: 4px;
-    margin: 0;
-    grid-template-columns: repeat(4, 1fr);
-  }
-
   .stat {
     display: grid;
-    align-content: center;
-    justify-items: center;
     min-height: 72px;
+    align-content: center;
     padding: 0 8px;
     border-right: 1px solid var(--exchange-line-soft);
+    justify-items: center;
     text-align: center;
 
     &:last-child {
@@ -310,8 +310,8 @@
     }
 
     b {
-      max-width: 100%;
       overflow: hidden;
+      max-width: 100%;
       font-size: 13px;
       font-weight: 600;
       line-height: 1.2;
@@ -328,17 +328,13 @@
     color: var(--exchange-green) !important;
   }
 
-  .swapPanel .connectMain {
-    margin-top: 12px;
-  }
-
   .connectMain {
     width: 100%;
     height: 45px;
     flex-shrink: 0;
     border: 0;
     border-radius: 4px;
-    margin: 0;
+    margin: 12px 0 0;
     background: linear-gradient(180deg, #ff7607, #f05d00);
     color: #fff;
     font-family: inherit;
@@ -361,8 +357,8 @@
 
   .marketPanel {
     display: flex;
-    flex-direction: column;
     height: 486px;
+    flex-direction: column;
     padding: 24px 28px;
   }
 
@@ -398,33 +394,33 @@
   .range {
     display: flex;
     gap: 8px;
+  }
 
-    button {
-      width: 43px;
-      height: 36px;
-      border: 1px solid var(--exchange-line);
-      border-radius: 4px;
-      background: #0e1416;
-      color: #fff;
-      font-size: 13px;
+  .rangeBtn {
+    width: 43px;
+    height: 36px;
+    border: 1px solid var(--exchange-line);
+    border-radius: 4px;
+    background: #0e1416;
+    color: #fff;
+    font-size: 13px;
 
-      &.active {
-        border-color: var(--exchange-orange);
-        color: var(--exchange-orange);
-      }
+    &.active {
+      border-color: var(--exchange-orange);
+      color: var(--exchange-orange);
+    }
 
-      &:disabled {
-        cursor: default;
-        opacity: 0.55;
-      }
+    &:disabled {
+      cursor: default;
+      opacity: 0.55;
     }
   }
 
   .marketBody {
     display: grid;
     flex-shrink: 0;
-    align-items: center;
     align-content: start;
+    align-items: center;
     margin-top: 32px;
     gap: 8px 10px;
     grid-template-columns: max-content minmax(0, 1fr);
@@ -590,13 +586,13 @@
 
   .activity {
     display: flex;
+    overflow: hidden;
     width: 100%;
+    min-width: 0;
     height: 310px;
     box-sizing: border-box;
     flex-direction: column;
     padding: 24px 26px;
-    min-width: 0;
-    overflow: hidden;
   }
 
   .activityHead {
@@ -608,9 +604,9 @@
   }
 
   .activityTableWrap {
-    flex: 1;
-    min-height: 0;
     overflow: auto;
+    min-height: 0;
+    flex: 1;
   }
 
   .activityTitle {
@@ -769,15 +765,15 @@
 
     .marketBody {
       align-items: start;
-      grid-template-columns: 1fr;
       margin-top: 28px;
+      grid-template-columns: 1fr;
     }
 
     .chart,
     .market-skeleton--chart {
+      margin-top: 16px;
       grid-column: 1;
       grid-row: auto;
-      margin-top: 16px;
     }
 
     .marketFooter {
