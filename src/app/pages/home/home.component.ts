@@ -218,8 +218,10 @@ export class HomeComponent {
     this.walletsService.account
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(account => {
-        if (account?.account) {
-          this.walletAddress = account.account;
+        const nextWalletAddress = account?.account ?? '';
+        if (this.walletAddress !== nextWalletAddress) {
+          this.walletAddress = nextWalletAddress;
+          this.resetSwapQuoteState();
         }
       });
 
@@ -321,10 +323,7 @@ export class HomeComponent {
     const previousFrom = this.fromToken;
     this.fromToken = this.toToken;
     this.toToken = previousFrom;
-    this.swapFlowFacade.reset();
-    this.quoteResult = undefined;
-    this.quoteError = '';
-    this.intentHash = '';
+    this.resetSwapQuoteState();
     this.loadMarketComparison();
   }
 
@@ -557,11 +556,23 @@ export class HomeComponent {
 
   private applySanitizedAmount(value: string, input?: HTMLInputElement): void {
     const sanitized = this.sanitizeAmountInput(value);
+    const previousAmount = this.amount;
     this.amount = sanitized;
 
     if (input && input.value !== sanitized) {
       input.value = sanitized;
     }
+
+    if (sanitized !== previousAmount) {
+      this.resetSwapQuoteState();
+    }
+  }
+
+  private resetSwapQuoteState(): void {
+    this.swapFlowFacade.reset();
+    this.quoteResult = undefined;
+    this.quoteError = '';
+    this.intentHash = '';
   }
 
   private sanitizeAmountInput(value: string): string {
@@ -608,10 +619,7 @@ export class HomeComponent {
       this.toToken = token;
     }
 
-    this.swapFlowFacade.reset();
-    this.quoteResult = undefined;
-    this.quoteError = '';
-    this.intentHash = '';
+    this.resetSwapQuoteState();
     this.closeTokenSelector();
     this.loadMarketComparison();
   }

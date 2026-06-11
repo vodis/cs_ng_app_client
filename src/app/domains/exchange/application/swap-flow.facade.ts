@@ -33,6 +33,7 @@ export class SwapFlowFacade {
     undefined
   );
   private activeTraceId = createTraceId();
+  private quoteRequestVersion = 0;
 
   readonly state$ = this.stateSubject.asObservable();
   readonly quotePreview$ = this.quotePreviewSubject.asObservable();
@@ -55,6 +56,7 @@ export class SwapFlowFacade {
 
   async requestQuotePreview(input: SwapFormInput): Promise<void> {
     this.activeTraceId = createTraceId();
+    const requestVersion = ++this.quoteRequestVersion;
     this.errorSubject.next(undefined);
     this.intentHashSubject.next(undefined);
     this.setState('requestingQuote');
@@ -64,9 +66,15 @@ export class SwapFlowFacade {
         input,
         this.activeTraceId
       );
+      if (requestVersion !== this.quoteRequestVersion) {
+        return;
+      }
       this.quotePreviewSubject.next(preview);
       this.setState('idle');
     } catch (error) {
+      if (requestVersion !== this.quoteRequestVersion) {
+        return;
+      }
       this.errorSubject.next(this.toFlowError('requestingQuote', error));
       this.setState('idle');
     }
@@ -93,6 +101,7 @@ export class SwapFlowFacade {
 
   reset(): void {
     this.activeTraceId = createTraceId();
+    this.quoteRequestVersion++;
     this.quotePreviewSubject.next(undefined);
     this.errorSubject.next(undefined);
     this.intentHashSubject.next(undefined);
