@@ -4,12 +4,17 @@ import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
-import type { SwapFlowState } from '@domains/exchange/models/swap.models';
+import type {
+  SwapFlowState,
+  SwapPrepareRequest,
+} from '@domains/exchange/models/swap.models';
 import { environment } from '../../../environments/environment';
+import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 
 type TokenSelectorSide = 'from' | 'to';
 
 type ComparisonTimeframe = '1H' | '1D' | '1W' | '1M';
+type SupportedSwapAuthMethod = SwapPrepareRequest['authMethod'];
 
 interface MarketComparisonToken {
   symbol: string;
@@ -176,6 +181,7 @@ export class HomeComponent {
 
   public amount = '100.00';
   public walletAddress = '';
+  public walletChainId: number | null = null;
   public fromToken = this.exchangeTokens[0];
   public toToken = this.exchangeTokens[1];
   public isTokenSelectorOpen = false;
@@ -219,8 +225,13 @@ export class HomeComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(account => {
         const nextWalletAddress = account?.account ?? '';
-        if (this.walletAddress !== nextWalletAddress) {
+        const nextWalletChainId = account?.chainId ?? null;
+        if (
+          this.walletAddress !== nextWalletAddress ||
+          this.walletChainId !== nextWalletChainId
+        ) {
           this.walletAddress = nextWalletAddress;
+          this.walletChainId = nextWalletChainId;
           this.resetSwapQuoteState();
         }
       });
@@ -258,6 +269,17 @@ export class HomeComponent {
       return;
     }
 
+    const authMethod = this.resolveSwapAuthMethod({
+      account: this.walletAddress,
+      chainId: this.walletChainId,
+    });
+
+    if (!authMethod) {
+      this.quoteError =
+        'This wallet is not supported for swaps yet. Connect an EVM or NEAR wallet.';
+      return;
+    }
+
     const amount = this.toUsdcBaseUnits(this.amount);
 
     if (!amount || /^0+$/.test(amount)) {
@@ -266,11 +288,13 @@ export class HomeComponent {
     }
 
     if (this.quoteResult && this.canExecuteSwap()) {
-      void this.executeSwap(amount);
+      void this.executeSwap(amount, authMethod);
       return;
     }
 
-    void this.swapFlowFacade.requestQuotePreview(this.buildSwapInput(amount));
+    void this.swapFlowFacade.requestQuotePreview(
+      this.buildSwapInput(amount, authMethod)
+    );
   }
 
   public isQuoteLoading(): boolean {
@@ -290,11 +314,19 @@ export class HomeComponent {
     );
   }
 
-  private async executeSwap(amount: string): Promise<void> {
-    await this.swapFlowFacade.executeSwap(this.buildSwapInput(amount));
+  private async executeSwap(
+    amount: string,
+    authMethod: SupportedSwapAuthMethod
+  ): Promise<void> {
+    await this.swapFlowFacade.executeSwap(
+      this.buildSwapInput(amount, authMethod)
+    );
   }
 
-  private buildSwapInput(amount: string) {
+  private buildSwapInput(
+    amount: string,
+    authMethod: SupportedSwapAuthMethod
+  ): Omit<SwapPrepareRequest, 'traceId'> {
     return {
       originAsset: this.fromToken.assetId,
       destinationAsset: this.toToken.assetId,
@@ -302,8 +334,22 @@ export class HomeComponent {
       userAddress: this.walletAddress.toLowerCase(),
       slippageTolerance: 50,
       deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      authMethod: 'evm' as const,
+      authMethod,
     };
+  }
+
+  private resolveSwapAuthMethod(
+    wallet: WalletAccount
+  ): SupportedSwapAuthMethod | undefined {
+    if (/^0x[a-fA-F0-9]{40}$/.test(wallet.account)) {
+      return 'evm';
+    }
+
+    if (/^[a-z0-9._-]+\.(?:near|testnet|tg)$/i.test(wallet.account)) {
+      return 'near';
+    }
+
+    return undefined;
   }
 
   public changeComparisonTimeframe(timeframe: ComparisonTimeframe): void {

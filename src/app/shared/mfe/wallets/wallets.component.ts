@@ -85,7 +85,10 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         callbacks: {
           onAccountChanged: (account: WalletAccountChangedPayload) => {
             this.ngZone.run(() => {
-              this.walletsService.setAccount(account);
+              this.walletsService.setAccount({
+                account: account.account,
+                chainId: this.walletsService.account.value?.chainId ?? null,
+              });
             });
           },
           onCloseRequested: () => {
@@ -142,7 +145,10 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
 
   private applyConnectionSnapshot(snapshot: WalletConnectionSnapshot): void {
     if (snapshot.account) {
-      this.walletsService.setAccount({ account: snapshot.account });
+      this.walletsService.setAccount({
+        account: snapshot.account,
+        chainId: snapshot.chainId,
+      });
       return;
     }
 
