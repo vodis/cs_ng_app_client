@@ -6,10 +6,12 @@
 
     &__content {
       display: grid;
-      min-height: calc(100vh - 4rem);
+      min-height: calc(100vh - var(--shell-header-height));
       align-items: stretch;
       grid-auto-flow: column;
-      grid-template-columns: 1fr 1px 0 repeat(6, minmax(0, 1fr));
+      grid-template-columns:
+        minmax(var(--shell-sidebar-min-width), 1.45fr) 1px 0
+        repeat(6, minmax(0, 1fr));
 
       app-sidebar,
       app-animate-line {
@@ -31,13 +33,13 @@
 
       &.mobile {
         display: grid;
-        min-height: calc(100vh - 4rem);
+        min-height: calc(100vh - var(--shell-header-height));
         grid-auto-flow: row;
         grid-template-columns: none;
-        grid-template-rows: 1fr 4rem;
+        grid-template-rows: 1fr var(--shell-header-height);
 
         &_mobile {
-          min-height: calc(100vh - 4rem);
+          min-height: calc(100vh - var(--shell-header-height));
         }
       }
     }

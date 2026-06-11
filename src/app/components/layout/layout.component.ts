@@ -82,12 +82,12 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public get verticalLineHeight(): string {
     if (this.verticalLineAnimating) {
-      return 'calc(100vh - 4rem)';
+      return 'calc(100vh - var(--shell-header-height))';
     }
 
     return this.contentHeight
       ? `${this.contentHeight}px`
-      : 'calc(100vh - 4rem)';
+      : 'calc(100vh - var(--shell-header-height))';
   }
 
   private updateContentHeight(): void {
