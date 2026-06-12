@@ -8,6 +8,7 @@ import type {
   SwapFlowState,
   SwapPrepareRequest,
 } from '@domains/exchange/models/swap.models';
+import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import { environment } from '../../../environments/environment';
 import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 
@@ -163,29 +164,29 @@ export class HomeComponent {
     },
   ];
 
-  public readonly exchangeTokens: ExchangeToken[] = [
-    {
-      symbol: 'USDC',
-      name: 'USD Coin',
-      assetId:
-        'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
-      color: '#2f8cff',
-      icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png',
-    },
-    {
-      symbol: 'NEAR',
-      name: 'NEAR Protocol',
-      assetId: 'nep141:wrap.near',
-      color: '#2fd17c',
-      icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/6535.png',
-    },
-  ];
+  public exchangeTokens: ExchangeToken[] = [];
+  public exchangeAssetsLoading = true;
+  public exchangeAssetsError = '';
 
   public amount = '';
   public walletAddress = '';
   public walletChainId: number | null = null;
-  public fromToken = this.exchangeTokens[0];
-  public toToken = this.exchangeTokens[1];
+  public fromToken: ExchangeToken = {
+    symbol: 'USDC',
+    displaySymbol: 'USDC',
+    name: 'USD Coin',
+    assetId: '',
+    color: '#2f8cff',
+    icon: this.tokenIconUrls['USDC'],
+  };
+  public toToken: ExchangeToken = {
+    symbol: 'wNEAR',
+    displaySymbol: 'NEAR',
+    name: 'NEAR Protocol',
+    assetId: 'nep141:wrap.near',
+    color: '#2fd17c',
+    icon: this.tokenIconUrls['NEAR'],
+  };
   public isTokenSelectorOpen = false;
   public tokenSelectorSide: TokenSelectorSide | null = null;
   public swapFlowState: SwapFlowState = 'idle';
@@ -221,7 +222,8 @@ export class HomeComponent {
   constructor(
     private readonly httpClient: HttpClient,
     private readonly walletsService: WalletsService,
-    private readonly swapFlowFacade: SwapFlowFacade
+    private readonly swapFlowFacade: SwapFlowFacade,
+    private readonly exchangeAssetsService: ExchangeAssetsService
   ) {
     this.walletsService.account
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -262,6 +264,7 @@ export class HomeComponent {
         this.intentHash = intentHash ?? '';
       });
 
+    this.loadExchangeAssets();
     this.loadMarketComparison();
   }
 
@@ -375,25 +378,59 @@ export class HomeComponent {
     this.loadMarketComparison();
   }
 
+  public tokenSymbolLabel(token: ExchangeToken): string {
+    return token.displaySymbol?.trim() || token.symbol;
+  }
+
+  public resolveTokenIcon(token: ExchangeToken): string {
+    const directIcon = token.icon?.trim();
+    if (directIcon) {
+      return directIcon;
+    }
+
+    return this.tokenIcon(token.symbol) ?? '';
+  }
+
+  public tokenIconFor(token: ExchangeToken): string | undefined {
+    const icon = this.resolveTokenIcon(token);
+    return icon || undefined;
+  }
+
   public tokenIcon(symbol: string): string | undefined {
+    const selectedToken = this.findExchangeToken(symbol);
+    if (selectedToken?.icon?.trim()) {
+      return selectedToken.icon;
+    }
+
     const comparison = this.comparison;
 
     if (comparison?.baseToken.symbol === symbol && comparison.baseToken.icon) {
       return comparison.baseToken.icon;
     }
 
-    if (comparison?.quoteToken.symbol === symbol && comparison.quoteToken.icon) {
+    if (
+      comparison?.quoteToken.symbol === symbol &&
+      comparison.quoteToken.icon
+    ) {
       return comparison.quoteToken.icon;
     }
 
-    const exchangeIcon = this.exchangeTokens.find(
-      token => token.symbol === symbol
-    )?.icon;
-    if (exchangeIcon) {
-      return exchangeIcon;
+    return (
+      this.tokenIconUrls[symbol] ??
+      this.tokenIconUrls[symbol.replace(/^w/i, '')]
+    );
+  }
+
+  private findExchangeToken(symbol: string): ExchangeToken | undefined {
+    if (this.fromToken.symbol === symbol) {
+      return this.fromToken;
     }
 
-    return this.tokenIconUrls[symbol];
+    if (this.toToken.symbol === symbol) {
+      return this.toToken;
+    }
+
+    return this.exchangeTokens.find(token => token.symbol === symbol);
   }
 
   public fromFiatEstimate(): string {
@@ -427,7 +464,10 @@ export class HomeComponent {
 
   public toAmountFormatted(): string {
     const raw = this.toAmountUi();
-    if (!raw.trim() || this.isZeroAmountValue(this.normalizeAmountStorage(raw))) {
+    if (
+      !raw.trim() ||
+      this.isZeroAmountValue(this.normalizeAmountStorage(raw))
+    ) {
       return '0.00';
     }
 
@@ -485,80 +525,7 @@ export class HomeComponent {
       return 'Balance: 1,250.00 USDC';
     }
 
-    if (symbol === 'NEAR') {
-      return 'Balance: 42.5000 NEAR';
-    }
-
-    return `Balance: — ${symbol}`;
-  }
-
-  public swapRateLabel(): string {
-    const amountIn = Number.parseFloat(this.amount);
-    const amountOut = Number.parseFloat(this.toAmountUi());
-    const rate =
-      Number.isFinite(amountIn) && amountIn > 0 && Number.isFinite(amountOut)
-        ? amountOut / amountIn
-        : this.previewSwapRate();
-
-    if (rate === undefined) {
-      return `1 ${this.fromToken.symbol} ≈ — ${this.toToken.symbol}`;
-    }
-
-    return `1 ${this.fromToken.symbol} ≈ ${rate.toFixed(4)} ${this.toToken.symbol}`;
-  }
-
-  public swapPriceImpactLabel(): string {
-    const quote = this.quoteResult;
-    const impact =
-      quote?.['priceImpact'] ??
-      quote?.['priceImpactPercent'] ??
-      quote?.['price_impact'];
-
-    if (typeof impact === 'number' && Number.isFinite(impact)) {
-      return `${impact.toFixed(2)}%`;
-    }
-
-    if (typeof impact === 'string' && impact.trim()) {
-      return impact.includes('%') ? impact : `${impact}%`;
-    }
-
-    return '0.12%';
-  }
-
-  public slippageLabel(): string {
-    return '0.35%';
-  }
-
-  public networkFeeLabel(): string {
-    const quote = this.quoteResult;
-    const fee =
-      quote?.['networkFee'] ?? quote?.['estimatedFee'] ?? quote?.['fee'];
-
-    if (typeof fee === 'number' && Number.isFinite(fee)) {
-      return fee < 0.01 ? '< $0.01' : `$${fee.toFixed(2)}`;
-    }
-
-    if (typeof fee === 'string' && fee.trim()) {
-      return fee;
-    }
-
-    return '< $0.01';
-  }
-
-  public tokenDisplay(symbol: string): string {
-    if (symbol === 'USDC') {
-      return '$';
-    }
-
-    return symbol[0] ?? '?';
-  }
-
-  public balanceLabel(symbol: string): string {
-    if (symbol === 'USDC') {
-      return 'Balance: 1,250.00 USDC';
-    }
-
-    if (symbol === 'NEAR') {
+    if (symbol === 'NEAR' || symbol === 'wNEAR') {
       return 'Balance: 42.5000 NEAR';
     }
 
@@ -694,6 +661,7 @@ export class HomeComponent {
 
     const input = event.target as HTMLInputElement;
     input.value = this.fromAmountDisplay();
+    this.scrollAmountToEnd(input);
   }
 
   public isAmountMuted(): boolean {
@@ -739,6 +707,8 @@ export class HomeComponent {
     if (sanitized !== previousAmount) {
       this.resetSwapQuoteState();
     }
+
+    this.scrollAmountToEnd(input);
   }
 
   private resetSwapQuoteState(): void {
@@ -746,6 +716,12 @@ export class HomeComponent {
     this.quoteResult = undefined;
     this.quoteError = '';
     this.intentHash = '';
+  }
+
+  private scrollAmountToEnd(input: HTMLInputElement): void {
+    requestAnimationFrame(() => {
+      input.scrollLeft = input.scrollWidth;
+    });
   }
 
   private sanitizeAmountInput(value: string): string {
@@ -786,7 +762,10 @@ export class HomeComponent {
     return fraction ? `${whole}.${fraction}` : whole;
   }
 
-  private parseDisplayedAmount(value: string): { whole: string; fraction: string } {
+  private parseDisplayedAmount(value: string): {
+    whole: string;
+    fraction: string;
+  } {
     const cleaned = value.replace(/[^\d.]/g, '');
     if (!cleaned) {
       return { whole: '', fraction: '' };
@@ -858,7 +837,8 @@ export class HomeComponent {
     }
 
     const dotIndex = normalized.indexOf('.');
-    const wholePart = dotIndex === -1 ? normalized : normalized.slice(0, dotIndex);
+    const wholePart =
+      dotIndex === -1 ? normalized : normalized.slice(0, dotIndex);
     const fractionPart =
       dotIndex === -1
         ? ''
@@ -895,17 +875,12 @@ export class HomeComponent {
 
     if (preferInteger) {
       const rounded = Math.round(value);
-      if (
-        Math.abs(value - rounded) / Math.max(1, Math.abs(value)) <
-        1e-9
-      ) {
+      if (Math.abs(value - rounded) / Math.max(1, Math.abs(value)) < 1e-9) {
         return String(rounded);
       }
     }
 
-    return value
-      .toFixed(maxFractionDigits)
-      .replace(/\.?0+$/, '');
+    return value.toFixed(maxFractionDigits).replace(/\.?0+$/, '');
   }
 
   private restoreCaretAfterDigits(
@@ -965,10 +940,12 @@ export class HomeComponent {
   }
 
   public handleTokenSelected(token: ExchangeToken): void {
+    const selected = this.enrichToken(token);
+
     if (this.tokenSelectorSide === 'from') {
-      this.fromToken = token;
+      this.fromToken = selected;
     } else if (this.tokenSelectorSide === 'to') {
-      this.toToken = token;
+      this.toToken = selected;
     }
 
     this.resetSwapQuoteState();
@@ -1016,11 +993,29 @@ export class HomeComponent {
       return 'Unavailable';
     }
 
-    if (value >= 1000) {
+    if (!Number.isFinite(value)) {
+      return '$—';
+    }
+
+    const absValue = Math.abs(value);
+
+    if (absValue >= 1e15) {
+      return `$${value.toExponential(2)}`;
+    }
+
+    if (absValue >= 1e9) {
+      return `$${value.toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+        notation: 'compact',
+        compactDisplay: 'short',
+      })}`;
+    }
+
+    if (absValue >= 1000) {
       return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     }
 
-    if (value >= 1) {
+    if (absValue >= 1) {
       return `$${value.toFixed(2)}`;
     }
 
@@ -1100,6 +1095,124 @@ export class HomeComponent {
     }
 
     return `${fromLabel} and ${toLabel} over ${window}.`;
+  }
+
+  private loadExchangeAssets(): void {
+    this.exchangeAssetsLoading = true;
+    this.exchangeAssetsError = '';
+
+    this.exchangeAssetsService.loadAssets().subscribe({
+      next: tokens => {
+        this.exchangeTokens = tokens;
+        this.exchangeAssetsLoading = false;
+
+        if (tokens.length === 0) {
+          this.exchangeAssetsError = 'No tradable assets available.';
+          return;
+        }
+
+        const previousFrom = this.fromToken;
+        const previousTo = this.toToken;
+        this.fromToken = this.enrichToken(
+          this.resolveSelectedToken(
+            previousFrom,
+            this.pickDefaultFromToken()
+          ) ?? tokens[0]
+        );
+        this.toToken = this.enrichToken(
+          this.resolveSelectedToken(previousTo, this.pickDefaultToToken()) ??
+            tokens[Math.min(1, tokens.length - 1)]
+        );
+
+        if (this.fromToken.assetId === this.toToken.assetId) {
+          this.toToken =
+            tokens.find(token => token.assetId !== this.fromToken.assetId) ??
+            this.toToken;
+        }
+
+        this.loadMarketComparison();
+      },
+      error: () => {
+        this.exchangeTokens = [];
+        this.exchangeAssetsLoading = false;
+        this.exchangeAssetsError = 'Failed to load assets. Try again later.';
+      },
+    });
+  }
+
+  private pickDefaultFromToken(): ExchangeToken | undefined {
+    return this.exchangeTokens.find(token => token.symbol === 'USDC');
+  }
+
+  private pickDefaultToToken(): ExchangeToken | undefined {
+    return (
+      this.exchangeTokens.find(token => token.assetId === 'nep141:wrap.near') ??
+      this.exchangeTokens.find(
+        token => token.symbol === 'wNEAR' || token.symbol === 'NEAR'
+      ) ??
+      this.exchangeTokens.find(token => token.symbol !== this.fromToken.symbol)
+    );
+  }
+
+  private enrichToken(token: ExchangeToken): ExchangeToken {
+    const icon =
+      token.icon?.trim() ||
+      this.tokenIconUrls[token.symbol] ||
+      this.tokenIconUrls[token.symbol.replace(/^w/i, '')];
+
+    return {
+      ...token,
+      displaySymbol: token.displaySymbol ?? this.displaySymbolFor(token.symbol),
+      icon: icon || token.icon,
+    };
+  }
+
+  private displaySymbolFor(symbol: string): string {
+    if (symbol === 'wNEAR') {
+      return 'NEAR';
+    }
+
+    if (symbol === 'wBTC') {
+      return 'BTC';
+    }
+
+    return symbol;
+  }
+
+  private resolveSelectedToken(
+    current: ExchangeToken,
+    fallback?: ExchangeToken
+  ): ExchangeToken | undefined {
+    if (current.assetId) {
+      const byAssetId = this.exchangeTokens.find(
+        token => token.assetId === current.assetId
+      );
+      if (byAssetId) {
+        return byAssetId;
+      }
+    }
+
+    const bySymbol = this.exchangeTokens.find(
+      token => token.symbol === current.symbol
+    );
+    if (bySymbol) {
+      return bySymbol;
+    }
+
+    if (!fallback) {
+      return undefined;
+    }
+
+    if (fallback.assetId) {
+      const byFallbackAssetId = this.exchangeTokens.find(
+        token => token.assetId === fallback.assetId
+      );
+      if (byFallbackAssetId) {
+        return byFallbackAssetId;
+      }
+    }
+
+    return this.exchangeTokens.find(token => token.symbol === fallback.symbol);
   }
 
   private loadMarketComparison(): void {
@@ -1302,7 +1415,9 @@ export class HomeComponent {
       return '';
     }
 
-    const maxFractionDigits = this.swapAmountFractionDigits(this.toToken.symbol);
+    const maxFractionDigits = this.swapAmountFractionDigits(
+      this.toToken.symbol
+    );
     const inputHasFraction = rawAmount.includes('.');
 
     return this.numberToAmountString(
@@ -1328,17 +1443,13 @@ export class HomeComponent {
     const basePrice = this.comparison?.baseToken?.currentPrice;
     const quotePrice = this.comparison?.quoteToken?.currentPrice;
 
-    if (
-      basePrice !== undefined &&
-      quotePrice !== undefined &&
-      basePrice > 0
-    ) {
+    if (basePrice !== undefined && quotePrice !== undefined && basePrice > 0) {
       return quotePrice / basePrice;
     }
 
     if (
       this.fromToken.symbol === 'USDC' &&
-      this.toToken.symbol === 'NEAR'
+      (this.toToken.symbol === 'NEAR' || this.toToken.symbol === 'wNEAR')
     ) {
       return 0.4561;
     }
