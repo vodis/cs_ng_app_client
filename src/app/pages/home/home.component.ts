@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
+import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import { environment } from '../../../environments/environment';
 
 type TokenSelectorSide = 'from' | 'to';
@@ -172,28 +173,28 @@ export class HomeComponent {
     },
   ];
 
-  public readonly exchangeTokens: ExchangeToken[] = [
-    {
-      symbol: 'USDC',
-      name: 'USD Coin',
-      assetId:
-        'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
-      color: '#2f8cff',
-      icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png',
-    },
-    {
-      symbol: 'NEAR',
-      name: 'NEAR Protocol',
-      assetId: 'nep141:wrap.near',
-      color: '#2fd17c',
-      icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/6535.png',
-    },
-  ];
+  public exchangeTokens: ExchangeToken[] = [];
+  public exchangeAssetsLoading = true;
+  public exchangeAssetsError = '';
 
   public amount = '';
   public walletAddress = '';
-  public fromToken = this.exchangeTokens[0];
-  public toToken = this.exchangeTokens[1];
+  public fromToken: ExchangeToken = {
+    symbol: 'USDC',
+    displaySymbol: 'USDC',
+    name: 'USD Coin',
+    assetId: '',
+    color: '#2f8cff',
+    icon: this.tokenIconUrls['USDC'],
+  };
+  public toToken: ExchangeToken = {
+    symbol: 'wNEAR',
+    displaySymbol: 'NEAR',
+    name: 'NEAR Protocol',
+    assetId: 'nep141:wrap.near',
+    color: '#2fd17c',
+    icon: this.tokenIconUrls['NEAR'],
+  };
   public isTokenSelectorOpen = false;
   public tokenSelectorSide: TokenSelectorSide | null = null;
   public isQuoteLoading = false;
@@ -227,14 +228,15 @@ export class HomeComponent {
 
   constructor(
     private readonly httpClient: HttpClient,
-    private readonly walletsService: WalletsService
+    private readonly walletsService: WalletsService,
+    private readonly exchangeAssetsService: ExchangeAssetsService
   ) {
     this.walletsService.account.subscribe(account => {
       if (account?.account) {
         this.walletAddress = account.account;
       }
     });
-    this.loadMarketComparison();
+    this.loadExchangeAssets();
   }
 
   public submitQuote(): void {
@@ -304,7 +306,30 @@ export class HomeComponent {
     this.loadMarketComparison();
   }
 
+  public tokenSymbolLabel(token: ExchangeToken): string {
+    return token.displaySymbol?.trim() || token.symbol;
+  }
+
+  public resolveTokenIcon(token: ExchangeToken): string {
+    const directIcon = token.icon?.trim();
+    if (directIcon) {
+      return directIcon;
+    }
+
+    return this.tokenIcon(token.symbol) ?? '';
+  }
+
+  public tokenIconFor(token: ExchangeToken): string | undefined {
+    const icon = this.resolveTokenIcon(token);
+    return icon || undefined;
+  }
+
   public tokenIcon(symbol: string): string | undefined {
+    const selectedToken = this.findExchangeToken(symbol);
+    if (selectedToken?.icon?.trim()) {
+      return selectedToken.icon;
+    }
+
     const comparison = this.comparison;
 
     if (comparison?.baseToken.symbol === symbol && comparison.baseToken.icon) {
@@ -315,14 +340,22 @@ export class HomeComponent {
       return comparison.quoteToken.icon;
     }
 
-    const exchangeIcon = this.exchangeTokens.find(
-      token => token.symbol === symbol
-    )?.icon;
-    if (exchangeIcon) {
-      return exchangeIcon;
+    return (
+      this.tokenIconUrls[symbol] ??
+      this.tokenIconUrls[symbol.replace(/^w/i, '')]
+    );
+  }
+
+  private findExchangeToken(symbol: string): ExchangeToken | undefined {
+    if (this.fromToken.symbol === symbol) {
+      return this.fromToken;
     }
 
-    return this.tokenIconUrls[symbol];
+    if (this.toToken.symbol === symbol) {
+      return this.toToken;
+    }
+
+    return this.exchangeTokens.find(token => token.symbol === symbol);
   }
 
   public fromFiatEstimate(): string {
@@ -406,7 +439,7 @@ export class HomeComponent {
       return 'Balance: 1,250.00 USDC';
     }
 
-    if (symbol === 'NEAR') {
+    if (symbol === 'NEAR' || symbol === 'wNEAR') {
       return 'Balance: 42.5000 NEAR';
     }
 
@@ -542,6 +575,7 @@ export class HomeComponent {
 
     const input = event.target as HTMLInputElement;
     input.value = this.fromAmountDisplay();
+    this.scrollAmountToEnd(input);
   }
 
   public isAmountMuted(): boolean {
@@ -582,6 +616,14 @@ export class HomeComponent {
       input.value = display;
       this.restoreCaretAfterDigits(input, previousValue, caret, display);
     }
+
+    this.scrollAmountToEnd(input);
+  }
+
+  private scrollAmountToEnd(input: HTMLInputElement): void {
+    requestAnimationFrame(() => {
+      input.scrollLeft = input.scrollWidth;
+    });
   }
 
   private sanitizeAmountInput(value: string): string {
@@ -801,10 +843,12 @@ export class HomeComponent {
   }
 
   public handleTokenSelected(token: ExchangeToken): void {
+    const selected = this.enrichToken(token);
+
     if (this.tokenSelectorSide === 'from') {
-      this.fromToken = token;
+      this.fromToken = selected;
     } else if (this.tokenSelectorSide === 'to') {
-      this.toToken = token;
+      this.toToken = selected;
     }
 
     this.quoteResult = undefined;
@@ -853,11 +897,29 @@ export class HomeComponent {
       return 'Unavailable';
     }
 
-    if (value >= 1000) {
+    if (!Number.isFinite(value)) {
+      return '$—';
+    }
+
+    const absValue = Math.abs(value);
+
+    if (absValue >= 1e15) {
+      return `$${value.toExponential(2)}`;
+    }
+
+    if (absValue >= 1e9) {
+      return `$${value.toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+        notation: 'compact',
+        compactDisplay: 'short',
+      })}`;
+    }
+
+    if (absValue >= 1000) {
       return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     }
 
-    if (value >= 1) {
+    if (absValue >= 1) {
       return `$${value.toFixed(2)}`;
     }
 
@@ -937,6 +999,124 @@ export class HomeComponent {
     }
 
     return `${fromLabel} and ${toLabel} over ${window}.`;
+  }
+
+  private loadExchangeAssets(): void {
+    this.exchangeAssetsLoading = true;
+    this.exchangeAssetsError = '';
+
+    this.exchangeAssetsService.loadAssets().subscribe({
+      next: tokens => {
+        this.exchangeTokens = tokens;
+        this.exchangeAssetsLoading = false;
+
+        if (tokens.length === 0) {
+          this.exchangeAssetsError = 'No tradable assets available.';
+          return;
+        }
+
+        const previousFrom = this.fromToken;
+        const previousTo = this.toToken;
+        this.fromToken = this.enrichToken(
+          this.resolveSelectedToken(previousFrom, this.pickDefaultFromToken()) ??
+            tokens[0]
+        );
+        this.toToken = this.enrichToken(
+          this.resolveSelectedToken(previousTo, this.pickDefaultToToken()) ??
+            tokens[Math.min(1, tokens.length - 1)]
+        );
+
+        if (this.fromToken.assetId === this.toToken.assetId) {
+          this.toToken =
+            tokens.find(token => token.assetId !== this.fromToken.assetId) ??
+            this.toToken;
+        }
+
+        this.loadMarketComparison();
+      },
+      error: () => {
+        this.exchangeTokens = [];
+        this.exchangeAssetsLoading = false;
+        this.exchangeAssetsError = 'Failed to load assets. Try again later.';
+      },
+    });
+  }
+
+  private pickDefaultFromToken(): ExchangeToken | undefined {
+    return this.exchangeTokens.find(token => token.symbol === 'USDC');
+  }
+
+  private pickDefaultToToken(): ExchangeToken | undefined {
+    return (
+      this.exchangeTokens.find(
+        token => token.assetId === 'nep141:wrap.near'
+      ) ??
+      this.exchangeTokens.find(
+        token => token.symbol === 'wNEAR' || token.symbol === 'NEAR'
+      ) ??
+      this.exchangeTokens.find(token => token.symbol !== this.fromToken.symbol)
+    );
+  }
+
+  private enrichToken(token: ExchangeToken): ExchangeToken {
+    const icon =
+      token.icon?.trim() ||
+      this.tokenIconUrls[token.symbol] ||
+      this.tokenIconUrls[token.symbol.replace(/^w/i, '')];
+
+    return {
+      ...token,
+      displaySymbol: token.displaySymbol ?? this.displaySymbolFor(token.symbol),
+      icon: icon || token.icon,
+    };
+  }
+
+  private displaySymbolFor(symbol: string): string {
+    if (symbol === 'wNEAR') {
+      return 'NEAR';
+    }
+
+    if (symbol === 'wBTC') {
+      return 'BTC';
+    }
+
+    return symbol;
+  }
+
+  private resolveSelectedToken(
+    current: ExchangeToken,
+    fallback?: ExchangeToken
+  ): ExchangeToken | undefined {
+    if (current.assetId) {
+      const byAssetId = this.exchangeTokens.find(
+        token => token.assetId === current.assetId
+      );
+      if (byAssetId) {
+        return byAssetId;
+      }
+    }
+
+    const bySymbol = this.exchangeTokens.find(
+      token => token.symbol === current.symbol
+    );
+    if (bySymbol) {
+      return bySymbol;
+    }
+
+    if (!fallback) {
+      return undefined;
+    }
+
+    if (fallback.assetId) {
+      const byFallbackAssetId = this.exchangeTokens.find(
+        token => token.assetId === fallback.assetId
+      );
+      if (byFallbackAssetId) {
+        return byFallbackAssetId;
+      }
+    }
+
+    return this.exchangeTokens.find(token => token.symbol === fallback.symbol);
   }
 
   private loadMarketComparison(): void {
@@ -1175,7 +1355,7 @@ export class HomeComponent {
 
     if (
       this.fromToken.symbol === 'USDC' &&
-      this.toToken.symbol === 'NEAR'
+      (this.toToken.symbol === 'NEAR' || this.toToken.symbol === 'wNEAR')
     ) {
       return 0.4561;
     }

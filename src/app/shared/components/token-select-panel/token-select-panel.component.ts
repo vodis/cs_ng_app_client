@@ -10,6 +10,8 @@ import { ExchangeToken } from '@shared/models/exchange-token.model';
 export class TokenSelectPanelComponent {
   @Input() title = 'Select token';
   @Input() tokens: ExchangeToken[] = [];
+  @Input() loading = false;
+  @Input() loadError = '';
   @Input() selectedSymbol = '';
   @Input() excludedSymbol = '';
 
