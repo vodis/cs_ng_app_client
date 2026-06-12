@@ -35,11 +35,11 @@
                     autocorrect="off"
                     autocapitalize="off"
                     spellcheck="false"
-                    [value]="amount"
+                    [value]="fromAmountDisplay()"
                     placeholder="0.00"
                     aria-label="Amount to sell"
-                    (focus)="onAmountFocus()"
-                    (blur)="onAmountBlur()"
+                    (focus)="onAmountFocus($event)"
+                    (blur)="onAmountBlur($event)"
                     (keydown)="onAmountKeydown($event)"
                     (input)="onAmountInput($event)"
                     (paste)="onAmountPaste($event)" />
@@ -82,7 +82,11 @@
               <div class="swapRow__right">
                 <div class="balance">{{ balanceLabel(toToken.symbol) }}</div>
                 <div class="swapRow__amount">
-                  <output class="amount">{{ toAmountUi() }}</output>
+                  <output
+                    class="amount"
+                    [class.amount--muted]="isToAmountMuted()"
+                    >{{ toAmountFormatted() }}</output
+                  >
                   <div class="usd">{{ toFiatEstimate() }}</div>
                 </div>
               </div>

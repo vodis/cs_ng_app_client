@@ -101,6 +101,8 @@ export class HomeComponent {
     left: 48,
   };
   private readonly slippageToleranceBps = 35;
+  private readonly maxAmountFractionDigits = 6;
+  private isAmountInputFocused = false;
   private readonly tokenIconUrls: Record<string, string> = {
     BTC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1.png',
     ETH: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1027.png',
@@ -188,7 +190,7 @@ export class HomeComponent {
     },
   ];
 
-  public amount = '100.00';
+  public amount = '';
   public walletAddress = '';
   public fromToken = this.exchangeTokens[0];
   public toToken = this.exchangeTokens[1];
@@ -340,6 +342,30 @@ export class HomeComponent {
     return this.previewToAmount();
   }
 
+  public fromAmountDisplay(): string {
+    if (!this.amount.trim()) {
+      return '';
+    }
+
+    return this.formatSwapAmount(
+      this.amount,
+      this.swapAmountFractionDigits(this.fromToken.symbol),
+      true
+    );
+  }
+
+  public toAmountFormatted(): string {
+    const raw = this.toAmountUi();
+    if (!raw.trim() || this.isZeroAmountValue(this.normalizeAmountStorage(raw))) {
+      return '0.00';
+    }
+
+    return this.formatSwapAmount(
+      raw,
+      this.swapAmountFractionDigits(this.toToken.symbol)
+    );
+  }
+
   public marketPriceDisplay(): string {
     const price = this.comparison?.quoteToken?.currentPrice;
     if (price === undefined) {
@@ -388,8 +414,8 @@ export class HomeComponent {
   }
 
   public swapRateLabel(): string {
-    const amountIn = Number.parseFloat(this.amount);
-    const amountOut = Number.parseFloat(this.toAmountUi());
+    const amountIn = this.parseAmount(this.amount);
+    const amountOut = this.parseAmount(this.toAmountUi());
     const rate =
       Number.isFinite(amountIn) && amountIn > 0 && Number.isFinite(amountOut)
         ? amountOut / amountIn
@@ -468,8 +494,10 @@ export class HomeComponent {
     }
 
     if (event.key === '.') {
-      const currentValue = (event.target as HTMLInputElement).value;
-      if (!currentValue.includes('.')) {
+      const storage = this.normalizeAmountStorage(
+        (event.target as HTMLInputElement).value
+      );
+      if (!storage.includes('.')) {
         return;
       }
     }
@@ -497,56 +525,264 @@ export class HomeComponent {
     this.applySanitizedAmount(nextValue, input);
   }
 
-  public onAmountFocus(): void {
-    if (this.isZeroAmountValue(this.amount)) {
-      this.amount = '';
-    }
+  public onAmountFocus(event: FocusEvent): void {
+    this.isAmountInputFocused = true;
+    this.amount = '';
+
+    const input = event.target as HTMLInputElement;
+    input.value = '';
   }
 
-  public onAmountBlur(): void {
+  public onAmountBlur(event: FocusEvent): void {
+    this.isAmountInputFocused = false;
+
     if (!this.amount.trim() || this.isZeroAmountValue(this.amount)) {
       this.amount = '';
     }
+
+    const input = event.target as HTMLInputElement;
+    input.value = this.fromAmountDisplay();
   }
 
   public isAmountMuted(): boolean {
     const normalized = this.amount.trim();
     if (!normalized) {
-      return false;
+      return true;
+    }
+
+    return this.isZeroAmountValue(normalized);
+  }
+
+  public isToAmountMuted(): boolean {
+    const normalized = this.toAmountUi().trim();
+    if (!normalized) {
+      return true;
     }
 
     return this.isZeroAmountValue(normalized);
   }
 
   private applySanitizedAmount(value: string, input?: HTMLInputElement): void {
+    const caret = input?.selectionStart ?? null;
+    const previousValue = input?.value ?? value;
     const sanitized = this.sanitizeAmountInput(value);
     this.amount = sanitized;
 
-    if (input && input.value !== sanitized) {
-      input.value = sanitized;
+    if (!input) {
+      return;
+    }
+
+    const display = this.formatSwapAmount(
+      sanitized,
+      this.swapAmountFractionDigits(this.fromToken.symbol),
+      true
+    );
+
+    if (input.value !== display) {
+      input.value = display;
+      this.restoreCaretAfterDigits(input, previousValue, caret, display);
     }
   }
 
   private sanitizeAmountInput(value: string): string {
-    const digitsAndDot = value.replace(/[^\d.]/g, '');
-    const dotIndex = digitsAndDot.indexOf('.');
-
-    if (dotIndex === -1) {
-      return digitsAndDot;
+    const cleaned = value.replace(/[^\d.]/g, '');
+    if (!cleaned) {
+      return '';
     }
 
-    const whole = digitsAndDot.slice(0, dotIndex);
-    const fraction = digitsAndDot
-      .slice(dotIndex + 1)
-      .replace(/\./g, '')
-      .slice(0, 6);
+    if (cleaned.endsWith('.')) {
+      const { whole } = this.parseDisplayedAmount(cleaned.slice(0, -1));
+      return whole ? `${whole}.` : '.';
+    }
 
-    return `${whole}.${fraction}`;
+    const { whole, fraction } = this.parseDisplayedAmount(cleaned);
+    if (!whole && !fraction) {
+      return '';
+    }
+
+    return fraction ? `${whole}.${fraction}` : whole;
+  }
+
+  private normalizeAmountStorage(value: string): string {
+    const cleaned = value.replace(/\s/g, '').trim();
+    if (!cleaned) {
+      return '';
+    }
+
+    if (cleaned.endsWith('.')) {
+      const { whole } = this.parseDisplayedAmount(cleaned.slice(0, -1));
+      return whole ? `${whole}.` : '.';
+    }
+
+    const { whole, fraction } = this.parseDisplayedAmount(cleaned);
+    if (!whole && !fraction) {
+      return '';
+    }
+
+    return fraction ? `${whole}.${fraction}` : whole;
+  }
+
+  private parseDisplayedAmount(value: string): { whole: string; fraction: string } {
+    const cleaned = value.replace(/[^\d.]/g, '');
+    if (!cleaned) {
+      return { whole: '', fraction: '' };
+    }
+
+    if (!cleaned.includes('.')) {
+      return {
+        whole: cleaned.replace(/^0+(?=\d)/, ''),
+        fraction: '',
+      };
+    }
+
+    const lastDot = cleaned.lastIndexOf('.');
+    const tail = cleaned.slice(lastDot + 1).replace(/\./g, '');
+    const head = cleaned.slice(0, lastDot);
+    const tailIsDecimal =
+      tail.length > 0 &&
+      tail.length <= this.maxAmountFractionDigits &&
+      tail.length < 3;
+
+    if (tailIsDecimal) {
+      return {
+        whole: (head.replace(/\./g, '') || '0').replace(/^0+(?=\d)/, ''),
+        fraction: tail,
+      };
+    }
+
+    return {
+      whole: cleaned.replace(/\./g, '').replace(/^0+(?=\d)/, ''),
+      fraction: '',
+    };
+  }
+
+  private formatWholeWithDots(whole: string): string {
+    const digits = whole.replace(/\D/g, '');
+    if (!digits) {
+      return '0';
+    }
+
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  private parseAmount(value: string): number {
+    const normalized = this.normalizeAmountStorage(value);
+    if (!normalized) {
+      return Number.NaN;
+    }
+
+    return Number.parseFloat(normalized);
+  }
+
+  private formatSwapAmount(
+    value: string,
+    maxFractionDigits: number,
+    allowEmpty = false
+  ): string {
+    const normalized = value.trim();
+    if (!normalized) {
+      return allowEmpty ? '' : '0.00';
+    }
+
+    if (normalized === '.') {
+      return '0.';
+    }
+
+    if (normalized.endsWith('.')) {
+      const wholePart = normalized.slice(0, -1);
+      return `${this.formatWholeWithDots(wholePart || '0')}.`;
+    }
+
+    const dotIndex = normalized.indexOf('.');
+    const wholePart = dotIndex === -1 ? normalized : normalized.slice(0, dotIndex);
+    const fractionPart =
+      dotIndex === -1
+        ? ''
+        : normalized.slice(dotIndex + 1).slice(0, maxFractionDigits);
+    const whole = this.formatWholeWithDots(wholePart || '0');
+
+    if (!fractionPart) {
+      return whole;
+    }
+
+    return `${whole}.${fractionPart}`;
+  }
+
+  private swapAmountFractionDigits(symbol: string): number {
+    if (symbol === 'USDC' || symbol === 'USDT') {
+      return 2;
+    }
+
+    if (symbol === 'NEAR' || symbol === 'ETH' || symbol === 'BTC') {
+      return 4;
+    }
+
+    return this.maxAmountFractionDigits;
+  }
+
+  private numberToAmountString(
+    value: number,
+    maxFractionDigits: number,
+    preferInteger: boolean
+  ): string {
+    if (!Number.isFinite(value)) {
+      return '';
+    }
+
+    if (preferInteger) {
+      const rounded = Math.round(value);
+      if (
+        Math.abs(value - rounded) / Math.max(1, Math.abs(value)) <
+        1e-9
+      ) {
+        return String(rounded);
+      }
+    }
+
+    return value
+      .toFixed(maxFractionDigits)
+      .replace(/\.?0+$/, '');
+  }
+
+  private restoreCaretAfterDigits(
+    input: HTMLInputElement,
+    previousValue: string,
+    caret: number | null,
+    nextValue: string
+  ): void {
+    if (caret === null) {
+      return;
+    }
+
+    const digitsBeforeCaret = previousValue
+      .slice(0, caret)
+      .replace(/[^\d]/g, '').length;
+
+    if (digitsBeforeCaret <= 0) {
+      input.setSelectionRange(0, 0);
+      return;
+    }
+
+    let seen = 0;
+    let newCaret = nextValue.length;
+
+    for (let index = 0; index < nextValue.length; index += 1) {
+      if (/\d/.test(nextValue[index])) {
+        seen += 1;
+      }
+
+      if (seen >= digitsBeforeCaret) {
+        newCaret = index + 1;
+        break;
+      }
+    }
+
+    input.setSelectionRange(newCaret, newCaret);
   }
 
   private isZeroAmountValue(value: string): boolean {
-    const normalized = value.trim();
-    if (!normalized) {
+    const normalized = this.normalizeAmountStorage(value);
+    if (!normalized || normalized === '.') {
       return true;
     }
 
@@ -886,18 +1122,35 @@ export class HomeComponent {
   }
 
   private previewToAmount(): string {
-    const amountIn = Number.parseFloat(this.amount);
+    const rawAmount = this.normalizeAmountStorage(this.amount);
     const rate = this.previewSwapRate();
 
-    if (!Number.isFinite(amountIn) || amountIn <= 0 || rate === undefined) {
-      return '0.00';
+    if (!rawAmount || this.isZeroAmountValue(rawAmount) || rate === undefined) {
+      return '';
     }
 
-    return (amountIn * rate).toFixed(2);
+    const amountIn = this.parseAmount(rawAmount);
+    if (!Number.isFinite(amountIn) || amountIn <= 0) {
+      return '';
+    }
+
+    const product = amountIn * rate;
+    if (!Number.isFinite(product)) {
+      return '';
+    }
+
+    const maxFractionDigits = this.swapAmountFractionDigits(this.toToken.symbol);
+    const inputHasFraction = rawAmount.includes('.');
+
+    return this.numberToAmountString(
+      product,
+      maxFractionDigits,
+      !inputHasFraction
+    );
   }
 
   private previewSwapRate(): number | undefined {
-    const amountIn = Number.parseFloat(this.amount);
+    const amountIn = this.parseAmount(this.amount);
     const amountOut = Number.parseFloat(this.toAmountDisplay());
 
     if (
@@ -932,7 +1185,7 @@ export class HomeComponent {
 
   private fiatEstimate(symbol: string, amountValue: string): string {
     const price = this.tokenPrice(symbol);
-    const amount = Number.parseFloat(amountValue);
+    const amount = this.parseAmount(amountValue);
 
     if (price === undefined || Number.isNaN(amount)) {
       return '$0';
@@ -959,7 +1212,7 @@ export class HomeComponent {
   }
 
   private toUsdcBaseUnits(value: string): string {
-    const normalized = value.trim();
+    const normalized = this.normalizeAmountStorage(value);
 
     if (!/^\d+(\.\d{0,6})?$/.test(normalized)) {
       return '';
