@@ -151,14 +151,16 @@
           </div>
         </div>
 
-        <button class="connectMain" type="submit" [disabled]="isQuoteLoading">
-          {{
-            isQuoteLoading ? 'QUOTING...' : primaryActionLabel().toUpperCase()
-          }}
+        <button class="connectMain" type="submit" [disabled]="isQuoteLoading()">
+          {{ primaryActionLabel().toUpperCase() }}
         </button>
 
         @if (quoteError) {
           <p class="exchange-error">{{ quoteError }}</p>
+        }
+
+        @if (intentHash) {
+          <p class="exchange-error">Intent submitted: {{ intentHash }}</p>
         }
       </form>
     </div>

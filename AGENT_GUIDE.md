@@ -35,12 +35,12 @@ The default route (`/`) renders the **Token Exchange** screen inside the host sh
 +----------+-------------------------------------------------------+
 ```
 
-| Shell area | Route | Primary files |
-| --- | --- | --- |
-| Header (logo + wallet) | global | `src/app/components/header/` |
-| Sidebar navigation | `/`, `/farm`, `/proposals` | `src/app/components/sidebar/` |
-| App frame | global | `src/app/components/layout/` |
-| Token Exchange page | `/` | `src/app/pages/home/` |
+| Shell area             | Route                      | Primary files                 |
+| ---------------------- | -------------------------- | ----------------------------- |
+| Header (logo + wallet) | global                     | `src/app/components/header/`  |
+| Sidebar navigation     | `/`, `/farm`, `/proposals` | `src/app/components/sidebar/` |
+| App frame              | global                     | `src/app/components/layout/`  |
+| Token Exchange page    | `/`                        | `src/app/pages/home/`         |
 
 Sidebar groups:
 
@@ -61,13 +61,13 @@ Wallet connect lives in the header (`app-wallet-bar`, wallets MFE). Swap panel s
 
 Left column (`gridTop` is `42% / 58%` on desktop).
 
-| Block | Markup / classes | Behavior |
-| --- | --- | --- |
-| From row | `.swapRow.first` | Token selector, balance, amount input, USD estimate |
-| Flip control | `.swapCircle` | Swaps from/to tokens and reloads market comparison |
-| To row | `.swapRow` | Token selector, balance, quoted/output amount, USD estimate |
-| Details grid | `.stats` / `.stat` | Rate, Price Impact, Slippage, Network Fee |
-| Primary CTA | `.connectMain` | Submits quote (`submitQuote()`); label follows wallet state |
+| Block        | Markup / classes   | Behavior                                                    |
+| ------------ | ------------------ | ----------------------------------------------------------- |
+| From row     | `.swapRow.first`   | Token selector, balance, amount input, USD estimate         |
+| Flip control | `.swapCircle`      | Swaps from/to tokens and reloads market comparison          |
+| To row       | `.swapRow`         | Token selector, balance, quoted/output amount, USD estimate |
+| Details grid | `.stats` / `.stat` | Rate, Price Impact, Slippage, Network Fee                   |
+| Primary CTA  | `.connectMain`     | Submits quote (`submitQuote()`); label follows wallet state |
 
 Token pickers open `app-side-modal` with `app-token-select-panel`. Amount editing, paste guards, and decimal validation stay in `HomeComponent`.
 
@@ -75,15 +75,15 @@ Token pickers open `app-side-modal` with `app-token-select-panel`. Amount editin
 
 Right column.
 
-| Block | Markup / classes | Behavior |
-| --- | --- | --- |
-| Header | `.marketHead` | Title + tabs (Price / Volume / Liquidity) and timeframe buttons |
-| Timeframes | `.range` | `1H`, `1D`, `1W`, `1M` (active state switches comparison window) |
-| Summary column | `.marketBody`, `.marketSummary` | Narrow left column (`~104px`) for pair, price, and 24h change |
-| Pair | `.pair` | Base/quote token icons and symbol pair |
-| Price | `.price`, `.change` | Quote token price and 24h change from comparison API |
-| Chart | `.chart` | SVG comparison chart in the right grid column (`1fr`) |
-| Footer | `.marketFooter`, `.note`, `.advanced` | Hint (`margin-top: 16px`) + advanced link (`margin-top: 12px`) in normal flow below the chart |
+| Block          | Markup / classes                      | Behavior                                                                                      |
+| -------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Header         | `.marketHead`                         | Title + tabs (Price / Volume / Liquidity) and timeframe buttons                               |
+| Timeframes     | `.range`                              | `1H`, `1D`, `1W`, `1M` (active state switches comparison window)                              |
+| Summary column | `.marketBody`, `.marketSummary`       | Narrow left column (`~104px`) for pair, price, and 24h change                                 |
+| Pair           | `.pair`                               | Base/quote token icons and symbol pair                                                        |
+| Price          | `.price`, `.change`                   | Quote token price and 24h change from comparison API                                          |
+| Chart          | `.chart`                              | SVG comparison chart in the right grid column (`1fr`)                                         |
+| Footer         | `.marketFooter`, `.note`, `.advanced` | Hint (`margin-top: 16px`) + advanced link (`margin-top: 12px`) in normal flow below the chart |
 
 Market data loads from `GET ${environment.apiUrl}/api/v1/markets/comparison`.
 
@@ -91,13 +91,13 @@ Market data loads from `GET ${environment.apiUrl}/api/v1/markets/comparison`.
 
 Full-width table below the top grid.
 
-| Column | Content |
-| --- | --- |
-| Time | Trade timestamp |
-| Pair | Token icons with arrow (`.pairCell`, `.mini`) |
-| Amount | Sold amount |
-| You Get | Received amount |
-| Status | Completion state (`.status`, `.external`) |
+| Column  | Content                                       |
+| ------- | --------------------------------------------- |
+| Time    | Trade timestamp                               |
+| Pair    | Token icons with arrow (`.pairCell`, `.mini`) |
+| Amount  | Sold amount                                   |
+| You Get | Received amount                               |
+| Status  | Completion state (`.status`, `.external`)     |
 
 Row data is currently defined in `HomeComponent.recentActivity` (host-owned demo content until backend history is wired).
 
@@ -105,14 +105,14 @@ Row data is currently defined in `HomeComponent.recentActivity` (host-owned demo
 
 Exchange page styles are scoped under `.exchange-page` in `src/styles/exchange-page.scss` (imported from `src/styles.scss`).
 
-| Token | Value | Usage |
-| --- | --- | --- |
-| `--exchange-orange` | `#ff6900` | Labels, active tabs, CTAs, links |
-| `--exchange-green` | `#00d084` | Positive change, completed status |
-| `--exchange-line` | `#2a3437` | Panel borders |
-| `--exchange-line-soft` | `#20292c` | Row dividers |
-| Page background | `#111719` | Exchange content area |
-| Panel background | `rgba(12, 18, 20, 0.55)` | Cards with inset highlight |
+| Token                  | Value                    | Usage                             |
+| ---------------------- | ------------------------ | --------------------------------- |
+| `--exchange-orange`    | `#ff6900`                | Labels, active tabs, CTAs, links  |
+| `--exchange-green`     | `#00d084`                | Positive change, completed status |
+| `--exchange-line`      | `#2a3437`                | Panel borders                     |
+| `--exchange-line-soft` | `#20292c`                | Row dividers                      |
+| Page background        | `#111719`                | Exchange content area             |
+| Panel background       | `rgba(12, 18, 20, 0.55)` | Cards with inset highlight        |
 
 Typography and spacing targets:
 
@@ -126,9 +126,9 @@ Keep new exchange UI inside `.exchange-page` selectors. Avoid leaking exchange-s
 
 ### Exchange APIs used by Home
 
-| Action | Endpoint | Owner |
-| --- | --- | --- |
-| Dry quote | `POST /api/v1/quotes/one-click` | NestJS BFF |
+| Action                  | Endpoint                         | Owner      |
+| ----------------------- | -------------------------------- | ---------- |
+| Dry quote               | `POST /api/v1/quotes/one-click`  | NestJS BFF |
 | Market comparison chart | `GET /api/v1/markets/comparison` | NestJS BFF |
 
 Client token metadata in `HomeComponent.exchangeTokens` is display/bootstrap only. Authoritative tradability and quote validation remain on the backend.

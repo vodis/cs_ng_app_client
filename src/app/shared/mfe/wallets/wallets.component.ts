@@ -15,6 +15,7 @@ import {
 } from '@mfe-contracts/wallet-mfe.types';
 import { WalletAccountChangedPayload } from '@mfe-contracts/payloads';
 import { AppLoggerService } from '@core/logging/app-logger.service';
+import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -33,6 +34,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
 
   constructor(
     private walletsService: WalletsService,
+    private walletGatewayBridge: WalletGatewayBridgeService,
     private logger: AppLoggerService,
     private ngZone: NgZone
   ) {}
@@ -83,12 +85,25 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         callbacks: {
           onAccountChanged: (account: WalletAccountChangedPayload) => {
             this.ngZone.run(() => {
-              this.walletsService.setAccount(account);
+              this.walletsService.setAccount({
+                account: account.account,
+                chainId: this.walletsService.account.value?.chainId ?? null,
+              });
             });
           },
           onCloseRequested: () => {
             this.ngZone.run(() => {
               this.walletsService.requestClose();
+            });
+          },
+          onExecutionStateChanged: payload => {
+            this.ngZone.run(() => {
+              this.walletGatewayBridge.handleExecutionStateChanged(payload);
+            });
+          },
+          onIntentSigned: payload => {
+            this.ngZone.run(() => {
+              this.walletGatewayBridge.handleIntentSigned(payload);
             });
           },
         },
@@ -99,11 +114,13 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       if (this.isMountApi(mountResult)) {
         this.unmountMfe = mountResult.unmount;
         this.ngZone.run(() => {
+          this.walletGatewayBridge.registerMountApi(mountResult);
           this.applyConnectionSnapshot(mountResult.getSnapshot());
         });
         this.unsubscribeEvents = mountResult.subscribe(event => {
           if (event.type === 'connection.snapshot.updated') {
             this.ngZone.run(() => {
+              this.walletGatewayBridge.updateSnapshot(event.payload);
               this.applyConnectionSnapshot(event.payload);
             });
           }
@@ -128,7 +145,10 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
 
   private applyConnectionSnapshot(snapshot: WalletConnectionSnapshot): void {
     if (snapshot.account) {
-      this.walletsService.setAccount({ account: snapshot.account });
+      this.walletsService.setAccount({
+        account: snapshot.account,
+        chainId: snapshot.chainId,
+      });
       return;
     }
 
@@ -157,6 +177,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
     this.isDestroyed = true;
     this.unsubscribeEvents?.();
     this.unsubscribeEvents = undefined;
+    this.walletGatewayBridge.clearMountApi();
     this.unmountMfe?.();
     this.unmountMfe = undefined;
   }
