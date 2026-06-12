@@ -108,6 +108,7 @@
     }
 
     &__amount {
+      min-width: 0;
       text-align: right;
     }
   }
@@ -189,18 +190,28 @@
 
   .amount {
     display: block;
+    overflow: hidden;
     width: 100%;
+    min-width: 0;
     padding: 0;
     border: 0;
     background: transparent;
     color: #fff;
     font-family: 'Aeonik Fono', monospace;
-    font-size: 28px;
-    line-height: 1;
+    font-size: clamp(1rem, 4.5vw, 1.75rem);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
     text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &::placeholder {
+      color: rgb(255 255 255 / 28%);
+    }
 
     &:focus {
       outline: none;
+      color: #fff;
     }
 
     &--muted {
