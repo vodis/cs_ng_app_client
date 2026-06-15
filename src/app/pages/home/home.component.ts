@@ -2,13 +2,13 @@ import { Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
 import type {
   SwapFlowState,
   SwapPrepareRequest,
 } from '@domains/exchange/models/swap.models';
-import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import { environment } from '../../../environments/environment';
 import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 
@@ -164,29 +164,29 @@ export class HomeComponent {
     },
   ];
 
-  public exchangeTokens: ExchangeToken[] = [];
-  public exchangeAssetsLoading = true;
-  public exchangeAssetsError = '';
+  public exchangeTokens: ExchangeToken[] = [
+    {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      assetId:
+        'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
+      color: '#2f8cff',
+      icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png',
+    },
+    {
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      assetId: 'nep141:wrap.near',
+      color: '#2fd17c',
+      icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/6535.png',
+    },
+  ];
 
-  public amount = '';
+  public amount = '100.00';
   public walletAddress = '';
   public walletChainId: number | null = null;
-  public fromToken: ExchangeToken = {
-    symbol: 'USDC',
-    displaySymbol: 'USDC',
-    name: 'USD Coin',
-    assetId: '',
-    color: '#2f8cff',
-    icon: this.tokenIconUrls['USDC'],
-  };
-  public toToken: ExchangeToken = {
-    symbol: 'wNEAR',
-    displaySymbol: 'NEAR',
-    name: 'NEAR Protocol',
-    assetId: 'nep141:wrap.near',
-    color: '#2fd17c',
-    icon: this.tokenIconUrls['NEAR'],
-  };
+  public fromToken = this.exchangeTokens[0];
+  public toToken = this.exchangeTokens[1];
   public isTokenSelectorOpen = false;
   public tokenSelectorSide: TokenSelectorSide | null = null;
   public swapFlowState: SwapFlowState = 'idle';
@@ -218,6 +218,8 @@ export class HomeComponent {
   public comparisonAxisMid = '';
   public comparisonAxisEnd = '';
   public showAdvancedMarketView = false;
+  public exchangeAssetsLoading = false;
+  public exchangeAssetsError = '';
 
   constructor(
     private readonly httpClient: HttpClient,

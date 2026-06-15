@@ -6,11 +6,11 @@
 
   overflow: hidden;
   width: 100%;
-  max-width: 100%;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0 30px 26px;
   background: #111719;
-  box-sizing: border-box;
 
   .intro {
     width: 100%;
@@ -44,9 +44,9 @@
     width: 100%;
     min-width: 0;
     align-items: stretch;
+    margin-bottom: 14px;
     gap: 14px;
     grid-template-columns: minmax(0, 42fr) minmax(0, 58fr);
-    margin-bottom: 14px;
 
     > * {
       min-width: 0;
@@ -56,25 +56,47 @@
   .panel {
     overflow: hidden;
     width: 100%;
-    max-width: 100%;
     min-width: 0;
+    max-width: 100%;
     border: 1px solid var(--exchange-line);
     border-radius: 4px;
     background: rgb(12 18 20 / 55%);
     box-shadow: inset 0 0 22px rgb(255 255 255 / 1.5%);
   }
 
+  .panelTitle {
+    margin: 0 0 20px;
+    font-size: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .stats {
+    display: grid;
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    min-height: 72px;
+    align-items: stretch;
+    border: 1px solid var(--exchange-line);
+    border-radius: 4px;
+    border-right: 0;
+    border-left: 0;
+    margin: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .swapPanel {
     display: flex;
     overflow: hidden;
     width: 100%;
-    max-width: 100%;
     min-width: 0;
+    max-width: 100%;
     height: 486px;
     box-sizing: border-box;
-    contain: inline-size;
     flex-direction: column;
     padding: 24px;
+    contain: inline-size;
 
     .panelTitle {
       flex-shrink: 0;
@@ -85,9 +107,9 @@
       display: flex;
       overflow: hidden;
       min-width: 0;
+      min-height: 0;
       flex: 1;
       flex-direction: column;
-      min-height: 0;
     }
 
     .swap-stack {
@@ -102,28 +124,21 @@
     }
   }
 
-  .panelTitle {
-    margin: 0 0 20px;
-    font-size: 20px;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-
   .swapRow {
+    overflow: hidden;
+    min-width: 0;
     height: 112px;
     box-sizing: border-box;
     padding: 4px 6px 0;
-    overflow: hidden;
-    min-width: 0;
 
     &__main {
       display: flex;
+      overflow: hidden;
+      min-width: 0;
       height: 100%;
       align-items: flex-start;
       justify-content: space-between;
       gap: 10px;
-      overflow: hidden;
-      min-width: 0;
     }
 
     &__left {
@@ -135,30 +150,68 @@
     }
 
     &__right {
-      flex: 1 1 0;
+      overflow: hidden;
       width: 0;
       min-width: 0;
       max-width: 100%;
-      overflow: hidden;
+      flex: 1 1 0;
       text-align: right;
     }
 
     &__amount {
+      overflow: hidden;
       width: 100%;
       min-width: 0;
       max-width: 100%;
-      overflow: hidden;
       text-align: right;
     }
   }
 
+  .amount {
+    display: block;
+    overflow: auto hidden;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font-family: 'Aeonik Fono', monospace;
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    text-align: right;
+    text-overflow: clip;
+    white-space: nowrap;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &::placeholder {
+      color: rgb(255 255 255 / 28%);
+    }
+
+    &:focus {
+      color: #fff;
+      outline: none;
+    }
+
+    &--muted {
+      color: rgb(255 255 255 / 28%);
+    }
+  }
+
   .amountTrack {
-    overflow-x: auto;
     width: 100%;
     min-width: 0;
     direction: rtl;
-    scrollbar-width: none;
     -ms-overflow-style: none;
+    overflow-x: auto;
+    scrollbar-width: none;
 
     &::-webkit-scrollbar {
       display: none;
@@ -166,11 +219,11 @@
 
     .amount {
       display: inline-block;
+      overflow: visible;
       width: max-content;
       min-width: 100%;
       max-width: none;
       direction: ltr;
-      overflow: visible;
       text-align: right;
       vertical-align: top;
     }
@@ -238,11 +291,11 @@
 
     &__arrow {
       display: inline-flex;
+      width: 18px;
+      height: 18px;
       flex-shrink: 0;
       align-items: center;
       justify-content: center;
-      width: 18px;
-      height: 18px;
       margin-left: 2px;
       color: rgb(255 255 255 / 80%);
       font-size: 20px;
@@ -253,6 +306,7 @@
 
   .coin {
     display: inline-grid;
+    overflow: hidden;
     width: 22px;
     height: 22px;
     flex-shrink: 0;
@@ -261,7 +315,6 @@
     background: #148bff;
     color: #fff;
     font-size: 14px;
-    overflow: hidden;
     place-items: center;
 
     img {
@@ -273,9 +326,9 @@
     }
 
     &--image {
+      box-sizing: border-box;
       border: 1px solid rgb(255 255 255 / 12%);
       background: rgb(255 255 255 / 8%);
-      box-sizing: border-box;
     }
 
     &.near {
@@ -297,51 +350,12 @@
     white-space: nowrap;
   }
 
-  .amount {
-    display: block;
-    overflow-x: auto;
-    overflow-y: hidden;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: #fff;
-    font-family: 'Aeonik Fono', monospace;
-    font-size: 1.75rem;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
-    text-align: right;
-    text-overflow: clip;
-    white-space: nowrap;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-
-    &::placeholder {
-      color: rgb(255 255 255 / 28%);
-    }
-
-    &:focus {
-      outline: none;
-      color: #fff;
-    }
-
-    &--muted {
-      color: rgb(255 255 255 / 28%);
-    }
-  }
-
   .usd {
     display: block;
     overflow: hidden;
     width: 100%;
-    max-width: 100%;
     min-width: 0;
+    max-width: 100%;
     margin-top: 2px;
     color: #c4c6c7;
     font-size: 13px;
@@ -413,28 +427,13 @@
     }
   }
 
-  .stats {
-    display: grid;
-    overflow: hidden;
-    width: 100%;
-    min-width: 0;
-    min-height: 72px;
-    align-items: stretch;
-    border: 1px solid var(--exchange-line);
-    border-right: 0;
-    border-left: 0;
-    border-radius: 4px;
-    margin: 0;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .stat {
     display: grid;
-    align-content: center;
-    justify-items: center;
     min-height: 72px;
+    align-content: center;
     padding: 0 8px;
     border-right: 1px solid var(--exchange-line-soft);
+    justify-items: center;
     text-align: center;
 
     &:last-child {
@@ -450,8 +449,8 @@
     }
 
     b {
-      max-width: 100%;
       overflow: hidden;
+      max-width: 100%;
       font-size: 13px;
       font-weight: 600;
       line-height: 1.2;
@@ -466,10 +465,6 @@
 
   .green {
     color: var(--exchange-green) !important;
-  }
-
-  .swapPanel .connectMain {
-    margin-top: 12px;
   }
 
   .connectMain {
@@ -493,6 +488,10 @@
     }
   }
 
+  .swapPanel .connectMain {
+    margin-top: 12px;
+  }
+
   .exchange-error {
     margin: 12px 0 0;
     color: var(--exchange-orange);
@@ -503,8 +502,8 @@
     display: flex;
     overflow: hidden;
     width: 100%;
-    max-width: 100%;
     min-width: 0;
+    max-width: 100%;
     height: 486px;
     box-sizing: border-box;
     flex-direction: column;
@@ -553,23 +552,23 @@
       color: #fff;
       font-size: 13px;
 
-      &.active {
-        border-color: var(--exchange-orange);
-        color: var(--exchange-orange);
-      }
-
       &:disabled {
         cursor: default;
         opacity: 0.55;
       }
+    }
+
+    .active {
+      border-color: var(--exchange-orange);
+      color: var(--exchange-orange);
     }
   }
 
   .marketBody {
     display: grid;
     flex-shrink: 0;
-    align-items: center;
     align-content: start;
+    align-items: center;
     margin-top: 32px;
     gap: 8px 10px;
     grid-template-columns: max-content minmax(0, 1fr);
@@ -599,6 +598,7 @@
 
     &__iconWrap {
       display: inline-flex;
+      overflow: hidden;
       width: 24px;
       height: 24px;
       flex-shrink: 0;
@@ -607,7 +607,6 @@
       border: 1px solid rgb(255 255 255 / 12%);
       border-radius: 50%;
       background: rgb(255 255 255 / 8%);
-      overflow: hidden;
     }
 
     &__icon {
@@ -747,13 +746,13 @@
 
   .activity {
     display: flex;
+    overflow: hidden;
     width: 100%;
+    min-width: 0;
     height: 310px;
     box-sizing: border-box;
     flex-direction: column;
     padding: 24px 26px;
-    min-width: 0;
-    overflow: hidden;
   }
 
   .activityHead {
@@ -765,9 +764,9 @@
   }
 
   .activityTableWrap {
-    flex: 1;
-    min-height: 0;
     overflow: auto;
+    min-height: 0;
+    flex: 1;
   }
 
   .activityTitle {
@@ -926,15 +925,15 @@
 
     .marketBody {
       align-items: start;
-      grid-template-columns: 1fr;
       margin-top: 28px;
+      grid-template-columns: 1fr;
     }
 
     .chart,
     .market-skeleton--chart {
+      margin-top: 16px;
       grid-column: 1;
       grid-row: auto;
-      margin-top: 16px;
     }
 
     .marketFooter {
