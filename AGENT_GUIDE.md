@@ -78,11 +78,11 @@ Right column.
 | Block          | Markup / classes                      | Behavior                                                                                      |
 | -------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Header         | `.marketHead`                         | Title + tabs (Price / Volume / Liquidity) and timeframe buttons                               |
-| Timeframes     | `.range`                              | `1H`, `1D`, `1W`, `1M` (active state switches comparison window)                              |
+| Timeframes     | `.range`                              | `1H`, `1D`, `1W` (active state switches comparison window; backend comparison currently has no `1M` contract) |
 | Summary column | `.marketBody`, `.marketSummary`       | Narrow left column (`~104px`) for pair, price, and 24h change                                 |
 | Pair           | `.pair`                               | Base/quote token icons and symbol pair                                                        |
 | Price          | `.price`, `.change`                   | Quote token price and 24h change from comparison API                                          |
-| Chart          | `.chart`                              | SVG comparison chart in the right grid column (`1fr`)                                         |
+| Chart          | `.chart`                              | SVG relative-performance chart in the right grid column (`1fr`); line is quote-token move minus base-token move |
 | Footer         | `.marketFooter`, `.note`, `.advanced` | Hint (`margin-top: 16px`) + advanced link (`margin-top: 12px`) in normal flow below the chart |
 
 Market data loads from `GET ${environment.apiUrl}/api/v1/markets/comparison`.
