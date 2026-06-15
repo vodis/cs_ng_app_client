@@ -1245,7 +1245,8 @@ export class HomeComponent {
           this.comparison = response;
           this.buildComparisonChart(response);
           this.comparisonError =
-            response.status === 'unavailable'
+            response.status === 'unavailable' ||
+            this.comparisonLines.length === 0
               ? 'Comparison data unavailable'
               : '';
           this.comparisonLoading = false;
@@ -1270,17 +1271,30 @@ export class HomeComponent {
   }
 
   private buildComparisonChart(response: MarketComparisonResponse): void {
+    const baseSymbol = this.normalizeMarketSymbol(response.base);
+    const quoteSymbol = this.normalizeMarketSymbol(response.quote);
+    const series = Array.isArray(response.series) ? response.series : [];
     const baseSeries =
-      response.series.find(
-        series => series.symbol === response.base && series.points.length > 0
-      ) ?? response.series.find(series => series.points.length > 0);
-    const quoteSeries =
-      response.series.find(
-        series => series.symbol === response.quote && series.points.length > 0
+      series.find(
+        item =>
+          this.normalizeMarketSymbol(item.symbol) === baseSymbol &&
+          Array.isArray(item.points) &&
+          item.points.length > 0
       ) ??
-      response.series.find(
-        series =>
-          series.symbol !== baseSeries?.symbol && series.points.length > 0
+      series.find(item => Array.isArray(item.points) && item.points.length > 0);
+    const quoteSeries =
+      series.find(
+        item =>
+          this.normalizeMarketSymbol(item.symbol) === quoteSymbol &&
+          Array.isArray(item.points) &&
+          item.points.length > 0
+      ) ??
+      series.find(
+        item =>
+          this.normalizeMarketSymbol(item.symbol) !==
+            this.normalizeMarketSymbol(baseSeries?.symbol ?? '') &&
+          Array.isArray(item.points) &&
+          item.points.length > 0
       );
 
     if (!baseSeries || !quoteSeries) {
@@ -1293,7 +1307,7 @@ export class HomeComponent {
       quoteSeries.points
     );
 
-    if (differencePoints.length === 0) {
+    if (differencePoints.length < 2) {
       this.clearComparisonChart();
       return;
     }
@@ -1348,7 +1362,9 @@ export class HomeComponent {
 
     this.comparisonLines = [
       {
-        symbol: `${quoteSeries.symbol}-${baseSeries.symbol}`,
+        symbol: `${this.normalizeMarketSymbol(
+          quoteSeries.symbol
+        )}-${this.normalizeMarketSymbol(baseSeries.symbol)}`,
         path,
         fillPath,
         color: this.tokenColor(quoteSeries.symbol),
@@ -1410,20 +1426,34 @@ export class HomeComponent {
   private sortedFiniteComparisonPoints(
     points: MarketComparisonPoint[]
   ): MarketComparisonPoint[] {
-    return points
-      .filter(
-        point =>
-          Number.isFinite(point.time) &&
-          Number.isFinite(point.value) &&
-          point.value > 0
-      )
+    const uniqueByTime = new Map<number, MarketComparisonPoint>();
+
+    for (const point of points) {
+      if (
+        Number.isFinite(point.time) &&
+        Number.isFinite(point.value) &&
+        point.value > 0
+      ) {
+        uniqueByTime.set(point.time, point);
+      }
+    }
+
+    return Array.from(uniqueByTime.values())
       .sort((left, right) => left.time - right.time);
+  }
+
+  private normalizeMarketSymbol(symbol: string): string {
+    return symbol.trim().toUpperCase();
   }
 
   private interpolateComparisonValue(
     points: MarketComparisonPoint[],
     time: number
   ): number | undefined {
+    if (points.length === 0) {
+      return undefined;
+    }
+
     if (time < points[0].time || time > points[points.length - 1].time) {
       return undefined;
     }

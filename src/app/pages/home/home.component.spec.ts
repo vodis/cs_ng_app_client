@@ -122,6 +122,30 @@ describe('HomeComponent market overview', () => {
     }).flush(comparisonResponse('USDC', 'BTC', '1D'));
   });
 
+  it('shows an unavailable state when there is not enough data to render a spread', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush({
+      ...comparisonResponse('USDC', 'NEAR', '1H'),
+      status: 'ready',
+      series: [
+        {
+          symbol: 'USDC',
+          points: [{ time: 1_700_000_000, value: 100 }],
+        },
+        {
+          symbol: 'NEAR',
+          points: [{ time: 1_700_000_000, value: 100 }],
+        },
+      ],
+    });
+
+    expect(component.comparisonLines).toEqual([]);
+    expect(component.comparisonError).toBe('Comparison data unavailable');
+  });
+
   function expectComparisonRequest(expected: {
     base: string;
     quote: string;
