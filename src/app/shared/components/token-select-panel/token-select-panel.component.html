@@ -10,33 +10,46 @@
     </button>
   </header>
 
-  <ul class="token-select-panel__list" role="listbox" [attr.aria-label]="title">
-    @for (token of availableTokens; track token.symbol) {
-      <li role="presentation">
-        <button
-          type="button"
-          class="token-select-panel__item"
-          role="option"
-          [attr.aria-selected]="token.symbol === selectedSymbol"
-          [class.token-select-panel__item--selected]="
-            token.symbol === selectedSymbol
-          "
-          (click)="handleSelect(token)">
-          <span
-            class="token-select-panel__icon"
-            [style.backgroundColor]="token.color">
-            @if (token.icon) {
-              <img [src]="token.icon" [alt]="token.symbol" />
-            } @else {
-              {{ token.symbol[0] }}
-            }
-          </span>
-          <span class="token-select-panel__meta">
-            <strong>{{ token.symbol }}</strong>
-            <span>{{ token.name }}</span>
-          </span>
-        </button>
-      </li>
+  <div class="token-select-panel__body">
+    @if (viewModel.state !== 'ready') {
+      <p
+        class="token-select-panel__status"
+        [class.token-select-panel__status--error]="viewModel.isError">
+        {{ viewModel.statusMessage }}
+      </p>
+    } @else {
+      <ul
+        class="token-select-panel__list"
+        role="listbox"
+        [attr.aria-label]="title">
+        @for (token of availableTokens; track token.assetId) {
+          <li role="presentation">
+            <button
+              type="button"
+              class="token-select-panel__item"
+              role="option"
+              [attr.aria-selected]="token.symbol === selectedSymbol"
+              [class.token-select-panel__item--selected]="
+                token.symbol === selectedSymbol
+              "
+              (click)="handleSelect(token)">
+              <span
+                class="token-select-panel__icon"
+                [style.backgroundColor]="token.color">
+                @if (token.icon) {
+                  <img [src]="token.icon" [alt]="token.symbol" />
+                } @else {
+                  {{ token.symbol[0] }}
+                }
+              </span>
+              <span class="token-select-panel__meta">
+                <strong>{{ token.displaySymbol || token.symbol }}</strong>
+                <span>{{ token.name }}</span>
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
     }
-  </ul>
+  </div>
 </div>

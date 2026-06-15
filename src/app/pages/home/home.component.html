@@ -13,14 +13,35 @@
           <div class="swapRow first">
             <div class="swapRow__main">
               <div class="swapRow__left">
-                <div class="label">From</div>
+                <div class="label">FROM</div>
                 <button
                   type="button"
                   class="select"
                   (click)="openTokenSelector('from')">
-                  <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
-                  {{ fromToken.symbol }}
-                  <span class="arrow">&#8964;</span>
+                  <span class="select__value">
+                    @if (resolveTokenIcon(fromToken); as fromIcon) {
+                      <span
+                        class="coin coin--image"
+                        [style.backgroundColor]="fromToken.color">
+                        <img
+                          [src]="fromIcon"
+                          [alt]="tokenSymbolLabel(fromToken)"
+                          loading="lazy"
+                          width="22"
+                          height="22" />
+                      </span>
+                    } @else {
+                      <span class="coin">{{
+                        tokenDisplay(tokenSymbolLabel(fromToken))
+                      }}</span>
+                    }
+                    <span class="select__symbol">{{
+                      tokenSymbolLabel(fromToken)
+                    }}</span>
+                    <span class="select__arrow" aria-hidden="true"
+                      >&#8964;</span
+                    >
+                  </span>
                 </button>
               </div>
               <div class="swapRow__right">
@@ -35,11 +56,11 @@
                     autocorrect="off"
                     autocapitalize="off"
                     spellcheck="false"
-                    [value]="amount"
+                    [value]="fromAmountDisplay()"
                     placeholder="0.00"
                     aria-label="Amount to sell"
-                    (focus)="onAmountFocus()"
-                    (blur)="onAmountBlur()"
+                    (focus)="onAmountFocus($event)"
+                    (blur)="onAmountBlur($event)"
                     (keydown)="onAmountKeydown($event)"
                     (input)="onAmountInput($event)"
                     (paste)="onAmountPaste($event)" />
@@ -67,22 +88,47 @@
           <div class="swapRow">
             <div class="swapRow__main">
               <div class="swapRow__left">
-                <div class="label">To</div>
+                <div class="label">TO</div>
                 <button
                   type="button"
                   class="select"
                   (click)="openTokenSelector('to')">
-                  <span class="coin near">{{
-                    tokenDisplay(toToken.symbol)
-                  }}</span>
-                  {{ toToken.symbol }}
-                  <span class="arrow">&#8964;</span>
+                  <span class="select__value">
+                    @if (resolveTokenIcon(toToken); as toIcon) {
+                      <span
+                        class="coin coin--image"
+                        [style.backgroundColor]="toToken.color">
+                        <img
+                          [src]="toIcon"
+                          [alt]="tokenSymbolLabel(toToken)"
+                          loading="lazy"
+                          width="22"
+                          height="22" />
+                      </span>
+                    } @else {
+                      <span class="coin">{{
+                        tokenDisplay(tokenSymbolLabel(toToken))
+                      }}</span>
+                    }
+                    <span class="select__symbol">{{
+                      tokenSymbolLabel(toToken)
+                    }}</span>
+                    <span class="select__arrow" aria-hidden="true"
+                      >&#8964;</span
+                    >
+                  </span>
                 </button>
               </div>
               <div class="swapRow__right">
                 <div class="balance">{{ balanceLabel(toToken.symbol) }}</div>
                 <div class="swapRow__amount">
-                  <output class="amount">{{ toAmountUi() }}</output>
+                  <div class="amountTrack">
+                    <output
+                      class="amount"
+                      [class.amount--muted]="isToAmountMuted()"
+                      >{{ toAmountFormatted() }}</output
+                    >
+                  </div>
                   <div class="usd">{{ toFiatEstimate() }}</div>
                 </div>
               </div>
@@ -109,23 +155,14 @@
           </div>
         </div>
 
-        <button
-          class="swap-form__submit"
-          type="submit"
-          [disabled]="isQuoteLoading()">
-          {{ primaryActionLabel() }}
+        <button class="connectMain" type="submit" [disabled]="isQuoteLoading()">
+          {{
+            isQuoteLoading() ? 'QUOTING...' : primaryActionLabel().toUpperCase()
+          }}
         </button>
 
         @if (quoteError) {
-          <p class="swap-form__error">{{ quoteError }}</p>
-        }
-
-        @if (intentHash) {
-          <p class="swap-form__result">Intent submitted: {{ intentHash }}</p>
-        }
-
-        @if (quoteResult && !intentHash) {
-          <pre class="swap-form__result">{{ quoteResult | json }}</pre>
+          <p class="exchange-error">{{ quoteError }}</p>
         }
       </form>
     </div>
@@ -143,7 +180,6 @@
         <div class="range" aria-label="Comparison timeframe">
           @for (timeframe of comparisonTimeframes; track timeframe) {
             <button
-              class="rangeBtn"
               type="button"
               [class.active]="selectedComparisonTimeframe === timeframe"
               (click)="changeComparisonTimeframe(timeframe)">
@@ -157,33 +193,44 @@
         <div class="marketSummary">
           <div class="pair">
             <span class="pair__icons" aria-hidden="true">
-              @if (tokenIcon(fromToken.symbol); as fromIcon) {
-                <img
-                  class="pair__icon"
-                  [src]="fromIcon"
-                  [alt]="fromToken.symbol"
-                  loading="lazy"
-                  width="24"
-                  height="24" />
+              @if (tokenIconFor(fromToken); as fromIcon) {
+                <span
+                  class="pair__iconWrap"
+                  [style.backgroundColor]="fromToken.color">
+                  <img
+                    class="pair__icon"
+                    [src]="fromIcon"
+                    [alt]="tokenSymbolLabel(fromToken)"
+                    loading="lazy"
+                    width="24"
+                    height="24" />
+                </span>
               } @else {
-                <span class="coin">{{ tokenDisplay(fromToken.symbol) }}</span>
+                <span class="coin">{{
+                  tokenDisplay(tokenSymbolLabel(fromToken))
+                }}</span>
               }
-              @if (tokenIcon(toToken.symbol); as toIcon) {
-                <img
-                  class="pair__icon"
-                  [src]="toIcon"
-                  [alt]="toToken.symbol"
-                  loading="lazy"
-                  width="24"
-                  height="24" />
+              @if (tokenIconFor(toToken); as toIcon) {
+                <span
+                  class="pair__iconWrap"
+                  [style.backgroundColor]="toToken.color">
+                  <img
+                    class="pair__icon"
+                    [src]="toIcon"
+                    [alt]="tokenSymbolLabel(toToken)"
+                    loading="lazy"
+                    width="24"
+                    height="24" />
+                </span>
               } @else {
                 <span class="coin near">{{
-                  tokenDisplay(toToken.symbol)
+                  tokenDisplay(tokenSymbolLabel(toToken))
                 }}</span>
               }
             </span>
             <span class="pair__label"
-              >{{ fromToken.symbol }} / {{ toToken.symbol }}</span
+              >{{ tokenSymbolLabel(fromToken) }} /
+              {{ tokenSymbolLabel(toToken) }}</span
             >
           </div>
 
@@ -340,7 +387,6 @@
       @if (showAdvancedMarketView) {
         <app-live-chart
           [coin]="toToken.symbol"
-          [coin]="toToken.symbol"
           [active]="showAdvancedMarketView" />
       }
     </div>
@@ -416,6 +462,8 @@
     <app-token-select-panel
       [title]="tokenSelectorTitle()"
       [tokens]="exchangeTokens"
+      [loading]="exchangeAssetsLoading"
+      [loadError]="exchangeAssetsError"
       [selectedSymbol]="tokenSelectorSelectedSymbol()"
       [excludedSymbol]="tokenSelectorExcludedSymbol()"
       (tokenSelected)="handleTokenSelected($event)"

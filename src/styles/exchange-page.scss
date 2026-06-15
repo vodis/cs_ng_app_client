@@ -4,8 +4,13 @@
   --exchange-orange: #ff6900;
   --exchange-green: #00d084;
 
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 0 30px 26px;
   background: #111719;
+  box-sizing: border-box;
 
   .intro {
     width: 100%;
@@ -37,41 +42,37 @@
   .gridTop {
     display: grid;
     width: 100%;
+    min-width: 0;
     align-items: stretch;
-    margin-bottom: 14px;
     gap: 14px;
-    grid-template-columns: 42fr 58fr;
+    grid-template-columns: minmax(0, 42fr) minmax(0, 58fr);
+    margin-bottom: 14px;
+
+    > * {
+      min-width: 0;
+    }
   }
 
   .panel {
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     border: 1px solid var(--exchange-line);
     border-radius: 4px;
     background: rgb(12 18 20 / 55%);
     box-shadow: inset 0 0 22px rgb(255 255 255 / 1.5%);
   }
 
-  .panelTitle {
-    margin: 0 0 20px;
-    font-size: 20px;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-
-  .stats {
-    display: grid;
-    min-height: 72px;
-    align-items: stretch;
-    border: 1px solid var(--exchange-line);
-    border-radius: 4px;
-    border-right: 0;
-    border-left: 0;
-    margin: 0;
-    grid-template-columns: repeat(4, 1fr);
-  }
-
   .swapPanel {
     display: flex;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     height: 486px;
+    box-sizing: border-box;
+    contain: inline-size;
     flex-direction: column;
     padding: 24px;
 
@@ -82,12 +83,16 @@
 
     form {
       display: flex;
-      min-height: 0;
+      overflow: hidden;
+      min-width: 0;
       flex: 1;
       flex-direction: column;
+      min-height: 0;
     }
 
     .swap-stack {
+      overflow: hidden;
+      min-width: 0;
       flex-shrink: 0;
     }
 
@@ -97,30 +102,77 @@
     }
   }
 
+  .panelTitle {
+    margin: 0 0 20px;
+    font-size: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
   .swapRow {
+    height: 112px;
+    box-sizing: border-box;
     padding: 4px 6px 0;
+    overflow: hidden;
+    min-width: 0;
 
     &__main {
       display: flex;
+      height: 100%;
       align-items: flex-start;
       justify-content: space-between;
       gap: 10px;
+      overflow: hidden;
+      min-width: 0;
     }
 
     &__left {
       display: flex;
+      width: 142px;
       flex-direction: column;
+      flex-shrink: 0;
       gap: 6px;
     }
 
     &__right {
+      flex: 1 1 0;
+      width: 0;
       min-width: 0;
-      flex: 1;
+      max-width: 100%;
+      overflow: hidden;
       text-align: right;
     }
 
     &__amount {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
       text-align: right;
+    }
+  }
+
+  .amountTrack {
+    overflow-x: auto;
+    width: 100%;
+    min-width: 0;
+    direction: rtl;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    .amount {
+      display: inline-block;
+      width: max-content;
+      min-width: 100%;
+      max-width: none;
+      direction: ltr;
+      overflow: visible;
+      text-align: right;
+      vertical-align: top;
     }
   }
 
@@ -143,17 +195,20 @@
   .label {
     margin: 0;
     color: var(--exchange-orange);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1;
     text-transform: uppercase;
   }
 
   .select {
-    display: inline-flex;
-    min-width: 142px;
+    display: flex;
+    width: 100%;
     height: 38px;
+    box-sizing: border-box;
     align-items: center;
-    padding: 0 14px;
+    padding: 0 12px;
     border: 1px solid var(--exchange-line);
     border-radius: 6px;
     margin: 0;
@@ -163,20 +218,65 @@
     font-family: inherit;
     font-size: 16px;
     font-weight: 700;
-    gap: 10px;
+    gap: 8px;
     line-height: 1;
+
+    &__value {
+      display: inline-flex;
+      min-width: 0;
+      flex: 1;
+      align-items: center;
+      gap: 10px;
+    }
+
+    &__symbol {
+      overflow: hidden;
+      flex-shrink: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__arrow {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      margin-left: 2px;
+      color: rgb(255 255 255 / 80%);
+      font-size: 20px;
+      line-height: 1;
+      transform: translateY(1px);
+    }
   }
 
   .coin {
     display: inline-grid;
     width: 22px;
     height: 22px;
+    flex-shrink: 0;
     border: 2px solid #38a0ff;
     border-radius: 50%;
     background: #148bff;
     color: #fff;
     font-size: 14px;
+    overflow: hidden;
     place-items: center;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    &--image {
+      border: 1px solid rgb(255 255 255 / 12%);
+      background: rgb(255 255 255 / 8%);
+      box-sizing: border-box;
+    }
 
     &.near {
       border-color: #00d992;
@@ -186,33 +286,49 @@
     }
   }
 
-  .arrow {
-    margin-left: 10px;
-    opacity: 0.8;
-  }
-
   .balance {
+    overflow: hidden;
     margin-bottom: 6px;
     color: #c4c6c7;
     font-size: 12px;
     text-align: right;
+    text-overflow: ellipsis;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .amount {
     display: block;
+    overflow-x: auto;
+    overflow-y: hidden;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding: 0;
     border: 0;
     background: transparent;
     color: #fff;
     font-family: 'Aeonik Fono', monospace;
-    font-size: 28px;
-    line-height: 1;
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
     text-align: right;
+    text-overflow: clip;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &::placeholder {
+      color: rgb(255 255 255 / 28%);
+    }
 
     &:focus {
       outline: none;
+      color: #fff;
     }
 
     &--muted {
@@ -221,9 +337,18 @@
   }
 
   .usd {
+    display: block;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     margin-top: 2px;
     color: #c4c6c7;
     font-size: 13px;
+    line-height: 1.2;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .swapCircle {
@@ -288,13 +413,28 @@
     }
   }
 
+  .stats {
+    display: grid;
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    min-height: 72px;
+    align-items: stretch;
+    border: 1px solid var(--exchange-line);
+    border-right: 0;
+    border-left: 0;
+    border-radius: 4px;
+    margin: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .stat {
     display: grid;
-    min-height: 72px;
     align-content: center;
+    justify-items: center;
+    min-height: 72px;
     padding: 0 8px;
     border-right: 1px solid var(--exchange-line-soft);
-    justify-items: center;
     text-align: center;
 
     &:last-child {
@@ -310,8 +450,8 @@
     }
 
     b {
-      overflow: hidden;
       max-width: 100%;
+      overflow: hidden;
       font-size: 13px;
       font-weight: 600;
       line-height: 1.2;
@@ -328,13 +468,17 @@
     color: var(--exchange-green) !important;
   }
 
+  .swapPanel .connectMain {
+    margin-top: 12px;
+  }
+
   .connectMain {
     width: 100%;
     height: 45px;
     flex-shrink: 0;
     border: 0;
     border-radius: 4px;
-    margin: 12px 0 0;
+    margin: 0;
     background: linear-gradient(180deg, #ff7607, #f05d00);
     color: #fff;
     font-family: inherit;
@@ -357,7 +501,12 @@
 
   .marketPanel {
     display: flex;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     height: 486px;
+    box-sizing: border-box;
     flex-direction: column;
     padding: 24px 28px;
   }
@@ -394,33 +543,33 @@
   .range {
     display: flex;
     gap: 8px;
-  }
 
-  .rangeBtn {
-    width: 43px;
-    height: 36px;
-    border: 1px solid var(--exchange-line);
-    border-radius: 4px;
-    background: #0e1416;
-    color: #fff;
-    font-size: 13px;
+    button {
+      width: 43px;
+      height: 36px;
+      border: 1px solid var(--exchange-line);
+      border-radius: 4px;
+      background: #0e1416;
+      color: #fff;
+      font-size: 13px;
 
-    &.active {
-      border-color: var(--exchange-orange);
-      color: var(--exchange-orange);
-    }
+      &.active {
+        border-color: var(--exchange-orange);
+        color: var(--exchange-orange);
+      }
 
-    &:disabled {
-      cursor: default;
-      opacity: 0.55;
+      &:disabled {
+        cursor: default;
+        opacity: 0.55;
+      }
     }
   }
 
   .marketBody {
     display: grid;
     flex-shrink: 0;
-    align-content: start;
     align-items: center;
+    align-content: start;
     margin-top: 32px;
     gap: 8px 10px;
     grid-template-columns: max-content minmax(0, 1fr);
@@ -448,11 +597,23 @@
       gap: 5px;
     }
 
-    &__icon {
-      display: block;
+    &__iconWrap {
+      display: inline-flex;
       width: 24px;
       height: 24px;
       flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgb(255 255 255 / 12%);
+      border-radius: 50%;
+      background: rgb(255 255 255 / 8%);
+      overflow: hidden;
+    }
+
+    &__icon {
+      display: block;
+      width: 100%;
+      height: 100%;
       border-radius: 50%;
       object-fit: cover;
     }
@@ -586,13 +747,13 @@
 
   .activity {
     display: flex;
-    overflow: hidden;
     width: 100%;
-    min-width: 0;
     height: 310px;
     box-sizing: border-box;
     flex-direction: column;
     padding: 24px 26px;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .activityHead {
@@ -604,9 +765,9 @@
   }
 
   .activityTableWrap {
-    overflow: auto;
-    min-height: 0;
     flex: 1;
+    min-height: 0;
+    overflow: auto;
   }
 
   .activityTitle {
@@ -765,15 +926,15 @@
 
     .marketBody {
       align-items: start;
-      margin-top: 28px;
       grid-template-columns: 1fr;
+      margin-top: 28px;
     }
 
     .chart,
     .market-skeleton--chart {
-      margin-top: 16px;
       grid-column: 1;
       grid-row: auto;
+      margin-top: 16px;
     }
 
     .marketFooter {
