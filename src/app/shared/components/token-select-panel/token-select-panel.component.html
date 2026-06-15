@@ -20,7 +20,10 @@
     } @else if (availableTokens.length === 0) {
       <p class="token-select-panel__status">No assets available.</p>
     } @else {
-      <ul class="token-select-panel__list" role="listbox" [attr.aria-label]="title">
+      <ul
+        class="token-select-panel__list"
+        role="listbox"
+        [attr.aria-label]="title">
         @for (token of availableTokens; track token.assetId) {
           <li role="presentation">
             <button
