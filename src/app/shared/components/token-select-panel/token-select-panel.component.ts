@@ -1,5 +1,9 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
+import {
+  resolveTokenSelectPanelViewModel,
+  TokenSelectPanelViewModel,
+} from './token-select-panel.utils';
 
 @Component({
   selector: 'app-token-select-panel',
@@ -10,6 +14,8 @@ import { ExchangeToken } from '@shared/models/exchange-token.model';
 export class TokenSelectPanelComponent {
   @Input() title = 'Select token';
   @Input() tokens: ExchangeToken[] = [];
+  @Input() loading = false;
+  @Input() loadError = '';
   @Input() selectedSymbol = '';
   @Input() excludedSymbol = '';
 
@@ -18,6 +24,14 @@ export class TokenSelectPanelComponent {
 
   public get availableTokens(): ExchangeToken[] {
     return this.tokens.filter(token => token.symbol !== this.excludedSymbol);
+  }
+
+  public get viewModel(): TokenSelectPanelViewModel {
+    return resolveTokenSelectPanelViewModel({
+      loading: this.loading,
+      loadError: this.loadError,
+      availableTokenCount: this.availableTokens.length,
+    });
   }
 
   public handleSelect(token: ExchangeToken): void {

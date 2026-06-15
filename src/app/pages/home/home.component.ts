@@ -2,6 +2,7 @@ import { Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
 import type {
@@ -92,6 +93,8 @@ export class HomeComponent {
     left: 48,
   };
   private readonly slippageToleranceBps = 35;
+  private readonly maxAmountFractionDigits = 6;
+  private isAmountInputFocused = false;
   private readonly tokenIconUrls: Record<string, string> = {
     BTC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1.png',
     ETH: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1027.png',
@@ -161,7 +164,7 @@ export class HomeComponent {
     },
   ];
 
-  public readonly exchangeTokens: ExchangeToken[] = [
+  public exchangeTokens: ExchangeToken[] = [
     {
       symbol: 'USDC',
       name: 'USD Coin',
@@ -215,11 +218,14 @@ export class HomeComponent {
   public comparisonAxisMid = '';
   public comparisonAxisEnd = '';
   public showAdvancedMarketView = false;
+  public exchangeAssetsLoading = false;
+  public exchangeAssetsError = '';
 
   constructor(
     private readonly httpClient: HttpClient,
     private readonly walletsService: WalletsService,
-    private readonly swapFlowFacade: SwapFlowFacade
+    private readonly swapFlowFacade: SwapFlowFacade,
+    private readonly exchangeAssetsService: ExchangeAssetsService
   ) {
     this.walletsService.account
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -260,6 +266,7 @@ export class HomeComponent {
         this.intentHash = intentHash ?? '';
       });
 
+    this.loadExchangeAssets();
     this.loadMarketComparison();
   }
 
@@ -373,7 +380,30 @@ export class HomeComponent {
     this.loadMarketComparison();
   }
 
+  public tokenSymbolLabel(token: ExchangeToken): string {
+    return token.displaySymbol?.trim() || token.symbol;
+  }
+
+  public resolveTokenIcon(token: ExchangeToken): string {
+    const directIcon = token.icon?.trim();
+    if (directIcon) {
+      return directIcon;
+    }
+
+    return this.tokenIcon(token.symbol) ?? '';
+  }
+
+  public tokenIconFor(token: ExchangeToken): string | undefined {
+    const icon = this.resolveTokenIcon(token);
+    return icon || undefined;
+  }
+
   public tokenIcon(symbol: string): string | undefined {
+    const selectedToken = this.findExchangeToken(symbol);
+    if (selectedToken?.icon?.trim()) {
+      return selectedToken.icon;
+    }
+
     const comparison = this.comparison;
 
     if (comparison?.baseToken.symbol === symbol && comparison.baseToken.icon) {
@@ -387,14 +417,22 @@ export class HomeComponent {
       return comparison.quoteToken.icon;
     }
 
-    const exchangeIcon = this.exchangeTokens.find(
-      token => token.symbol === symbol
-    )?.icon;
-    if (exchangeIcon) {
-      return exchangeIcon;
+    return (
+      this.tokenIconUrls[symbol] ??
+      this.tokenIconUrls[symbol.replace(/^w/i, '')]
+    );
+  }
+
+  private findExchangeToken(symbol: string): ExchangeToken | undefined {
+    if (this.fromToken.symbol === symbol) {
+      return this.fromToken;
     }
 
-    return this.tokenIconUrls[symbol];
+    if (this.toToken.symbol === symbol) {
+      return this.toToken;
+    }
+
+    return this.exchangeTokens.find(token => token.symbol === symbol);
   }
 
   public fromFiatEstimate(): string {
@@ -412,6 +450,33 @@ export class HomeComponent {
     }
 
     return this.previewToAmount();
+  }
+
+  public fromAmountDisplay(): string {
+    if (!this.amount.trim()) {
+      return '';
+    }
+
+    return this.formatSwapAmount(
+      this.amount,
+      this.swapAmountFractionDigits(this.fromToken.symbol),
+      true
+    );
+  }
+
+  public toAmountFormatted(): string {
+    const raw = this.toAmountUi();
+    if (
+      !raw.trim() ||
+      this.isZeroAmountValue(this.normalizeAmountStorage(raw))
+    ) {
+      return '0.00';
+    }
+
+    return this.formatSwapAmount(
+      raw,
+      this.swapAmountFractionDigits(this.toToken.symbol)
+    );
   }
 
   public marketPriceDisplay(): string {
@@ -462,7 +527,7 @@ export class HomeComponent {
       return 'Balance: 1,250.00 USDC';
     }
 
-    if (symbol === 'NEAR') {
+    if (symbol === 'NEAR' || symbol === 'wNEAR') {
       return 'Balance: 42.5000 NEAR';
     }
 
@@ -470,8 +535,8 @@ export class HomeComponent {
   }
 
   public swapRateLabel(): string {
-    const amountIn = Number.parseFloat(this.amount);
-    const amountOut = Number.parseFloat(this.toAmountUi());
+    const amountIn = this.parseAmount(this.amount);
+    const amountOut = this.parseAmount(this.toAmountUi());
     const rate =
       Number.isFinite(amountIn) && amountIn > 0 && Number.isFinite(amountOut)
         ? amountOut / amountIn
@@ -485,7 +550,7 @@ export class HomeComponent {
   }
 
   public swapPriceImpactLabel(): string {
-    const quote = this.quoteResult;
+    const quote = this.quoteResult as Record<string, unknown> | undefined;
     const impact =
       quote?.['priceImpact'] ??
       quote?.['priceImpactPercent'] ??
@@ -507,7 +572,7 @@ export class HomeComponent {
   }
 
   public networkFeeLabel(): string {
-    const quote = this.quoteResult;
+    const quote = this.quoteResult as Record<string, unknown> | undefined;
     const fee =
       quote?.['networkFee'] ?? quote?.['estimatedFee'] ?? quote?.['fee'];
 
@@ -550,8 +615,10 @@ export class HomeComponent {
     }
 
     if (event.key === '.') {
-      const currentValue = (event.target as HTMLInputElement).value;
-      if (!currentValue.includes('.')) {
+      const storage = this.normalizeAmountStorage(
+        (event.target as HTMLInputElement).value
+      );
+      if (!storage.includes('.')) {
         return;
       }
     }
@@ -579,39 +646,71 @@ export class HomeComponent {
     this.applySanitizedAmount(nextValue, input);
   }
 
-  public onAmountFocus(): void {
-    if (this.isZeroAmountValue(this.amount)) {
-      this.amount = '';
-    }
+  public onAmountFocus(event: FocusEvent): void {
+    this.isAmountInputFocused = true;
+    this.amount = '';
+
+    const input = event.target as HTMLInputElement;
+    input.value = '';
   }
 
-  public onAmountBlur(): void {
+  public onAmountBlur(event: FocusEvent): void {
+    this.isAmountInputFocused = false;
+
     if (!this.amount.trim() || this.isZeroAmountValue(this.amount)) {
       this.amount = '';
     }
+
+    const input = event.target as HTMLInputElement;
+    input.value = this.fromAmountDisplay();
+    this.scrollAmountToEnd(input);
   }
 
   public isAmountMuted(): boolean {
     const normalized = this.amount.trim();
     if (!normalized) {
-      return false;
+      return true;
+    }
+
+    return this.isZeroAmountValue(normalized);
+  }
+
+  public isToAmountMuted(): boolean {
+    const normalized = this.toAmountUi().trim();
+    if (!normalized) {
+      return true;
     }
 
     return this.isZeroAmountValue(normalized);
   }
 
   private applySanitizedAmount(value: string, input?: HTMLInputElement): void {
+    const caret = input?.selectionStart ?? null;
+    const previousValue = input?.value ?? value;
     const sanitized = this.sanitizeAmountInput(value);
     const previousAmount = this.amount;
     this.amount = sanitized;
 
-    if (input && input.value !== sanitized) {
-      input.value = sanitized;
+    if (!input) {
+      return;
+    }
+
+    const display = this.formatSwapAmount(
+      sanitized,
+      this.swapAmountFractionDigits(this.fromToken.symbol),
+      true
+    );
+
+    if (input.value !== display) {
+      input.value = display;
+      this.restoreCaretAfterDigits(input, previousValue, caret, display);
     }
 
     if (sanitized !== previousAmount) {
       this.resetSwapQuoteState();
     }
+
+    this.scrollAmountToEnd(input);
   }
 
   private resetSwapQuoteState(): void {
@@ -621,26 +720,210 @@ export class HomeComponent {
     this.intentHash = '';
   }
 
-  private sanitizeAmountInput(value: string): string {
-    const digitsAndDot = value.replace(/[^\d.]/g, '');
-    const dotIndex = digitsAndDot.indexOf('.');
+  private scrollAmountToEnd(input: HTMLInputElement): void {
+    requestAnimationFrame(() => {
+      input.scrollLeft = input.scrollWidth;
+    });
+  }
 
-    if (dotIndex === -1) {
-      return digitsAndDot;
+  private sanitizeAmountInput(value: string): string {
+    const cleaned = value.replace(/[^\d.]/g, '');
+    if (!cleaned) {
+      return '';
     }
 
-    const whole = digitsAndDot.slice(0, dotIndex);
-    const fraction = digitsAndDot
-      .slice(dotIndex + 1)
-      .replace(/\./g, '')
-      .slice(0, 6);
+    if (cleaned.endsWith('.')) {
+      const { whole } = this.parseDisplayedAmount(cleaned.slice(0, -1));
+      return whole ? `${whole}.` : '.';
+    }
 
-    return `${whole}.${fraction}`;
+    const { whole, fraction } = this.parseDisplayedAmount(cleaned);
+    if (!whole && !fraction) {
+      return '';
+    }
+
+    return fraction ? `${whole}.${fraction}` : whole;
+  }
+
+  private normalizeAmountStorage(value: string): string {
+    const cleaned = value.replace(/\s/g, '').trim();
+    if (!cleaned) {
+      return '';
+    }
+
+    if (cleaned.endsWith('.')) {
+      const { whole } = this.parseDisplayedAmount(cleaned.slice(0, -1));
+      return whole ? `${whole}.` : '.';
+    }
+
+    const { whole, fraction } = this.parseDisplayedAmount(cleaned);
+    if (!whole && !fraction) {
+      return '';
+    }
+
+    return fraction ? `${whole}.${fraction}` : whole;
+  }
+
+  private parseDisplayedAmount(value: string): {
+    whole: string;
+    fraction: string;
+  } {
+    const cleaned = value.replace(/[^\d.]/g, '');
+    if (!cleaned) {
+      return { whole: '', fraction: '' };
+    }
+
+    if (!cleaned.includes('.')) {
+      return {
+        whole: cleaned.replace(/^0+(?=\d)/, ''),
+        fraction: '',
+      };
+    }
+
+    const lastDot = cleaned.lastIndexOf('.');
+    const tail = cleaned.slice(lastDot + 1).replace(/\./g, '');
+    const head = cleaned.slice(0, lastDot);
+    const tailIsDecimal =
+      tail.length > 0 &&
+      tail.length <= this.maxAmountFractionDigits &&
+      tail.length < 3;
+
+    if (tailIsDecimal) {
+      return {
+        whole: (head.replace(/\./g, '') || '0').replace(/^0+(?=\d)/, ''),
+        fraction: tail,
+      };
+    }
+
+    return {
+      whole: cleaned.replace(/\./g, '').replace(/^0+(?=\d)/, ''),
+      fraction: '',
+    };
+  }
+
+  private formatWholeWithDots(whole: string): string {
+    const digits = whole.replace(/\D/g, '');
+    if (!digits) {
+      return '0';
+    }
+
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  private parseAmount(value: string): number {
+    const normalized = this.normalizeAmountStorage(value);
+    if (!normalized) {
+      return Number.NaN;
+    }
+
+    return Number.parseFloat(normalized);
+  }
+
+  private formatSwapAmount(
+    value: string,
+    maxFractionDigits: number,
+    allowEmpty = false
+  ): string {
+    const normalized = value.trim();
+    if (!normalized) {
+      return allowEmpty ? '' : '0.00';
+    }
+
+    if (normalized === '.') {
+      return '0.';
+    }
+
+    if (normalized.endsWith('.')) {
+      const wholePart = normalized.slice(0, -1);
+      return `${this.formatWholeWithDots(wholePart || '0')}.`;
+    }
+
+    const dotIndex = normalized.indexOf('.');
+    const wholePart =
+      dotIndex === -1 ? normalized : normalized.slice(0, dotIndex);
+    const fractionPart =
+      dotIndex === -1
+        ? ''
+        : normalized.slice(dotIndex + 1).slice(0, maxFractionDigits);
+    const whole = this.formatWholeWithDots(wholePart || '0');
+
+    if (!fractionPart) {
+      return whole;
+    }
+
+    return `${whole}.${fractionPart}`;
+  }
+
+  private swapAmountFractionDigits(symbol: string): number {
+    if (symbol === 'USDC' || symbol === 'USDT') {
+      return 2;
+    }
+
+    if (symbol === 'NEAR' || symbol === 'ETH' || symbol === 'BTC') {
+      return 4;
+    }
+
+    return this.maxAmountFractionDigits;
+  }
+
+  private numberToAmountString(
+    value: number,
+    maxFractionDigits: number,
+    preferInteger: boolean
+  ): string {
+    if (!Number.isFinite(value)) {
+      return '';
+    }
+
+    if (preferInteger) {
+      const rounded = Math.round(value);
+      if (Math.abs(value - rounded) / Math.max(1, Math.abs(value)) < 1e-9) {
+        return String(rounded);
+      }
+    }
+
+    return value.toFixed(maxFractionDigits).replace(/\.?0+$/, '');
+  }
+
+  private restoreCaretAfterDigits(
+    input: HTMLInputElement,
+    previousValue: string,
+    caret: number | null,
+    nextValue: string
+  ): void {
+    if (caret === null) {
+      return;
+    }
+
+    const digitsBeforeCaret = previousValue
+      .slice(0, caret)
+      .replace(/[^\d]/g, '').length;
+
+    if (digitsBeforeCaret <= 0) {
+      input.setSelectionRange(0, 0);
+      return;
+    }
+
+    let seen = 0;
+    let newCaret = nextValue.length;
+
+    for (let index = 0; index < nextValue.length; index += 1) {
+      if (/\d/.test(nextValue[index])) {
+        seen += 1;
+      }
+
+      if (seen >= digitsBeforeCaret) {
+        newCaret = index + 1;
+        break;
+      }
+    }
+
+    input.setSelectionRange(newCaret, newCaret);
   }
 
   private isZeroAmountValue(value: string): boolean {
-    const normalized = value.trim();
-    if (!normalized) {
+    const normalized = this.normalizeAmountStorage(value);
+    if (!normalized || normalized === '.') {
       return true;
     }
 
@@ -659,10 +942,12 @@ export class HomeComponent {
   }
 
   public handleTokenSelected(token: ExchangeToken): void {
+    const selected = this.enrichToken(token);
+
     if (this.tokenSelectorSide === 'from') {
-      this.fromToken = token;
+      this.fromToken = selected;
     } else if (this.tokenSelectorSide === 'to') {
-      this.toToken = token;
+      this.toToken = selected;
     }
 
     this.resetSwapQuoteState();
@@ -710,11 +995,29 @@ export class HomeComponent {
       return 'Unavailable';
     }
 
-    if (value >= 1000) {
+    if (!Number.isFinite(value)) {
+      return '$—';
+    }
+
+    const absValue = Math.abs(value);
+
+    if (absValue >= 1e15) {
+      return `$${value.toExponential(2)}`;
+    }
+
+    if (absValue >= 1e9) {
+      return `$${value.toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+        notation: 'compact',
+        compactDisplay: 'short',
+      })}`;
+    }
+
+    if (absValue >= 1000) {
       return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     }
 
-    if (value >= 1) {
+    if (absValue >= 1) {
       return `$${value.toFixed(2)}`;
     }
 
@@ -794,6 +1097,124 @@ export class HomeComponent {
     }
 
     return `${fromLabel} and ${toLabel} over ${window}.`;
+  }
+
+  private loadExchangeAssets(): void {
+    this.exchangeAssetsLoading = true;
+    this.exchangeAssetsError = '';
+
+    this.exchangeAssetsService.loadAssets().subscribe({
+      next: tokens => {
+        this.exchangeTokens = tokens;
+        this.exchangeAssetsLoading = false;
+
+        if (tokens.length === 0) {
+          this.exchangeAssetsError = 'No tradable assets available.';
+          return;
+        }
+
+        const previousFrom = this.fromToken;
+        const previousTo = this.toToken;
+        this.fromToken = this.enrichToken(
+          this.resolveSelectedToken(
+            previousFrom,
+            this.pickDefaultFromToken()
+          ) ?? tokens[0]
+        );
+        this.toToken = this.enrichToken(
+          this.resolveSelectedToken(previousTo, this.pickDefaultToToken()) ??
+            tokens[Math.min(1, tokens.length - 1)]
+        );
+
+        if (this.fromToken.assetId === this.toToken.assetId) {
+          this.toToken =
+            tokens.find(token => token.assetId !== this.fromToken.assetId) ??
+            this.toToken;
+        }
+
+        this.loadMarketComparison();
+      },
+      error: () => {
+        this.exchangeTokens = [];
+        this.exchangeAssetsLoading = false;
+        this.exchangeAssetsError = 'Failed to load assets. Try again later.';
+      },
+    });
+  }
+
+  private pickDefaultFromToken(): ExchangeToken | undefined {
+    return this.exchangeTokens.find(token => token.symbol === 'USDC');
+  }
+
+  private pickDefaultToToken(): ExchangeToken | undefined {
+    return (
+      this.exchangeTokens.find(token => token.assetId === 'nep141:wrap.near') ??
+      this.exchangeTokens.find(
+        token => token.symbol === 'wNEAR' || token.symbol === 'NEAR'
+      ) ??
+      this.exchangeTokens.find(token => token.symbol !== this.fromToken.symbol)
+    );
+  }
+
+  private enrichToken(token: ExchangeToken): ExchangeToken {
+    const icon =
+      token.icon?.trim() ||
+      this.tokenIconUrls[token.symbol] ||
+      this.tokenIconUrls[token.symbol.replace(/^w/i, '')];
+
+    return {
+      ...token,
+      displaySymbol: token.displaySymbol ?? this.displaySymbolFor(token.symbol),
+      icon: icon || token.icon,
+    };
+  }
+
+  private displaySymbolFor(symbol: string): string {
+    if (symbol === 'wNEAR') {
+      return 'NEAR';
+    }
+
+    if (symbol === 'wBTC') {
+      return 'BTC';
+    }
+
+    return symbol;
+  }
+
+  private resolveSelectedToken(
+    current: ExchangeToken,
+    fallback?: ExchangeToken
+  ): ExchangeToken | undefined {
+    if (current.assetId) {
+      const byAssetId = this.exchangeTokens.find(
+        token => token.assetId === current.assetId
+      );
+      if (byAssetId) {
+        return byAssetId;
+      }
+    }
+
+    const bySymbol = this.exchangeTokens.find(
+      token => token.symbol === current.symbol
+    );
+    if (bySymbol) {
+      return bySymbol;
+    }
+
+    if (!fallback) {
+      return undefined;
+    }
+
+    if (fallback.assetId) {
+      const byFallbackAssetId = this.exchangeTokens.find(
+        token => token.assetId === fallback.assetId
+      );
+      if (byFallbackAssetId) {
+        return byFallbackAssetId;
+      }
+    }
+
+    return this.exchangeTokens.find(token => token.symbol === fallback.symbol);
   }
 
   private loadMarketComparison(): void {
@@ -979,18 +1400,37 @@ export class HomeComponent {
   }
 
   private previewToAmount(): string {
-    const amountIn = Number.parseFloat(this.amount);
+    const rawAmount = this.normalizeAmountStorage(this.amount);
     const rate = this.previewSwapRate();
 
-    if (!Number.isFinite(amountIn) || amountIn <= 0 || rate === undefined) {
-      return '0.00';
+    if (!rawAmount || this.isZeroAmountValue(rawAmount) || rate === undefined) {
+      return '';
     }
 
-    return (amountIn * rate).toFixed(2);
+    const amountIn = this.parseAmount(rawAmount);
+    if (!Number.isFinite(amountIn) || amountIn <= 0) {
+      return '';
+    }
+
+    const product = amountIn * rate;
+    if (!Number.isFinite(product)) {
+      return '';
+    }
+
+    const maxFractionDigits = this.swapAmountFractionDigits(
+      this.toToken.symbol
+    );
+    const inputHasFraction = rawAmount.includes('.');
+
+    return this.numberToAmountString(
+      product,
+      maxFractionDigits,
+      !inputHasFraction
+    );
   }
 
   private previewSwapRate(): number | undefined {
-    const amountIn = Number.parseFloat(this.amount);
+    const amountIn = this.parseAmount(this.amount);
     const amountOut = Number.parseFloat(this.toAmountDisplay());
 
     if (
@@ -1009,7 +1449,10 @@ export class HomeComponent {
       return quotePrice / basePrice;
     }
 
-    if (this.fromToken.symbol === 'USDC' && this.toToken.symbol === 'NEAR') {
+    if (
+      this.fromToken.symbol === 'USDC' &&
+      (this.toToken.symbol === 'NEAR' || this.toToken.symbol === 'wNEAR')
+    ) {
       return 0.4561;
     }
 
@@ -1018,7 +1461,7 @@ export class HomeComponent {
 
   private fiatEstimate(symbol: string, amountValue: string): string {
     const price = this.tokenPrice(symbol);
-    const amount = Number.parseFloat(amountValue);
+    const amount = this.parseAmount(amountValue);
 
     if (price === undefined || Number.isNaN(amount)) {
       return '$0';
@@ -1045,7 +1488,7 @@ export class HomeComponent {
   }
 
   private toUsdcBaseUnits(value: string): string {
-    const normalized = value.trim();
+    const normalized = this.normalizeAmountStorage(value);
 
     if (!/^\d+(\.\d{0,6})?$/.test(normalized)) {
       return '';
