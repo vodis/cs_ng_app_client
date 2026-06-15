@@ -4,7 +4,7 @@ import {
   HttpClientTestingModule,
   HttpTestingController,
 } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { BehaviorSubject, of } from 'rxjs';
 import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
@@ -58,6 +58,7 @@ class ExchangeAssetsServiceStub {
 
 describe('HomeComponent market overview', () => {
   let component: HomeComponent;
+  let fixture: ComponentFixture<HomeComponent>;
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
@@ -72,7 +73,8 @@ describe('HomeComponent market overview', () => {
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
 
-    component = TestBed.createComponent(HomeComponent).componentInstance;
+    fixture = TestBed.createComponent(HomeComponent);
+    component = fixture.componentInstance;
     httpMock = TestBed.inject(HttpTestingController);
   });
 
@@ -96,6 +98,11 @@ describe('HomeComponent market overview', () => {
     expect(component.comparisonYLabels.map(label => label.label)).toContain(
       '0%'
     );
+
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.chart__empty')).toBeNull();
+    expect(compiled.querySelector('.chart svg')).toBeTruthy();
   });
 
   it('uses display symbols for wrapped assets when the timeframe changes', () => {
@@ -144,6 +151,13 @@ describe('HomeComponent market overview', () => {
 
     expect(component.comparisonLines).toEqual([]);
     expect(component.comparisonError).toBe('Comparison data unavailable');
+
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.chart__empty')?.textContent?.trim()).toBe(
+      'Comparison data unavailable'
+    );
+    expect(compiled.querySelector('.chart svg')).toBeNull();
   });
 
   function expectComparisonRequest(expected: {
