@@ -109,4 +109,40 @@ describe('TokenSelectPanelComponent', () => {
 
     expect(emitSpy).toHaveBeenCalledWith(tokens[0]);
   });
+
+  it('should render loading status when assets are loading', () => {
+    component.loading = true;
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector(
+      '.token-select-panel__status'
+    );
+
+    expect(status?.textContent?.trim()).toBe('Loading assets...');
+    expect(
+      fixture.nativeElement.querySelector('.token-select-panel__list')
+    ).toBeNull();
+  });
+
+  it('should render error status when asset loading fails', () => {
+    component.loadError = 'Failed to load assets.';
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector(
+      '.token-select-panel__status--error'
+    );
+
+    expect(status?.textContent?.trim()).toBe('Failed to load assets.');
+  });
+
+  it('should render empty status when no tokens are available', () => {
+    component.tokens = [];
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector(
+      '.token-select-panel__status'
+    );
+
+    expect(status?.textContent?.trim()).toBe('No assets available.');
+  });
 });

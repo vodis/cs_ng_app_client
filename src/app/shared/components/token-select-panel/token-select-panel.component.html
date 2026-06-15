@@ -11,14 +11,12 @@
   </header>
 
   <div class="token-select-panel__body">
-    @if (loading) {
-      <p class="token-select-panel__status">Loading assets...</p>
-    } @else if (loadError) {
-      <p class="token-select-panel__status token-select-panel__status--error">
-        {{ loadError }}
+    @if (viewModel.state !== 'ready') {
+      <p
+        class="token-select-panel__status"
+        [class.token-select-panel__status--error]="viewModel.isError">
+        {{ viewModel.statusMessage }}
       </p>
-    } @else if (availableTokens.length === 0) {
-      <p class="token-select-panel__status">No assets available.</p>
     } @else {
       <ul
         class="token-select-panel__list"
