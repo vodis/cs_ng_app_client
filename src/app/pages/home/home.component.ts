@@ -14,7 +14,7 @@ import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 
 type TokenSelectorSide = 'from' | 'to';
 
-type ComparisonTimeframe = '1H' | '1D' | '1W' | '1M';
+type ComparisonTimeframe = '1H' | '1D' | '1W';
 type SupportedSwapAuthMethod = SwapPrepareRequest['authMethod'];
 
 interface MarketComparisonToken {
@@ -205,7 +205,6 @@ export class HomeComponent {
     '1H',
     '1D',
     '1W',
-    '1M',
   ];
   public readonly comparisonViewBox = `0 0 ${this.comparisonWidth} ${this.comparisonHeight}`;
   public readonly comparisonPlotLeft = this.comparisonPadding.left;
@@ -382,6 +381,10 @@ export class HomeComponent {
 
   public tokenSymbolLabel(token: ExchangeToken): string {
     return token.displaySymbol?.trim() || token.symbol;
+  }
+
+  public marketSymbolFor(token: ExchangeToken): string {
+    return this.tokenSymbolLabel(token).toUpperCase();
   }
 
   public resolveTokenIcon(token: ExchangeToken): string {
@@ -986,7 +989,9 @@ export class HomeComponent {
   }
 
   public tokenColor(symbol: string): string {
-    const token = this.exchangeTokens.find(item => item.symbol === symbol);
+    const token = this.exchangeTokens.find(
+      item => item.symbol === symbol || this.marketSymbolFor(item) === symbol
+    );
     return token?.color || '#fe6c00';
   }
 
@@ -1227,8 +1232,8 @@ export class HomeComponent {
         `${environment.apiUrl}/api/v1/markets/comparison`,
         {
           params: {
-            base: this.fromToken.symbol,
-            quote: this.toToken.symbol,
+            base: this.marketSymbolFor(this.fromToken),
+            quote: this.marketSymbolFor(this.toToken),
             timeframe,
           },
         }
@@ -1242,7 +1247,8 @@ export class HomeComponent {
           this.comparison = response;
           this.buildComparisonChart(response);
           this.comparisonError =
-            response.status === 'unavailable'
+            response.status === 'unavailable' ||
+            this.comparisonLines.length === 0
               ? 'Comparison data unavailable'
               : '';
           this.comparisonLoading = false;
@@ -1267,31 +1273,56 @@ export class HomeComponent {
   }
 
   private buildComparisonChart(response: MarketComparisonResponse): void {
-    const seriesWithPoints = response.series.filter(
-      series => series.points.length > 0
-    );
-    const allPoints = seriesWithPoints.flatMap(series => series.points);
+    const baseSymbol = this.normalizeMarketSymbol(response.base);
+    const quoteSymbol = this.normalizeMarketSymbol(response.quote);
+    const series = Array.isArray(response.series) ? response.series : [];
+    const baseSeries =
+      series.find(
+        item =>
+          this.normalizeMarketSymbol(item.symbol) === baseSymbol &&
+          Array.isArray(item.points) &&
+          item.points.length > 0
+      ) ??
+      series.find(item => Array.isArray(item.points) && item.points.length > 0);
+    const quoteSeries =
+      series.find(
+        item =>
+          this.normalizeMarketSymbol(item.symbol) === quoteSymbol &&
+          Array.isArray(item.points) &&
+          item.points.length > 0
+      ) ??
+      series.find(
+        item =>
+          this.normalizeMarketSymbol(item.symbol) !==
+            this.normalizeMarketSymbol(baseSeries?.symbol ?? '') &&
+          Array.isArray(item.points) &&
+          item.points.length > 0
+      );
 
-    if (allPoints.length === 0) {
-      this.comparisonLines = [];
-      this.comparisonYLabels = [];
-      this.comparisonGridLines = [];
-      this.comparisonBaselineY = 0;
-      this.comparisonAxisStart = '';
-      this.comparisonAxisMid = '';
-      this.comparisonAxisEnd = '';
+    if (!baseSeries || !quoteSeries) {
+      this.clearComparisonChart();
       return;
     }
 
-    const timeMin = Math.min(...allPoints.map(point => point.time));
-    const timeMax = Math.max(...allPoints.map(point => point.time));
+    const differencePoints = this.buildComparisonDifferencePoints(
+      baseSeries.points,
+      quoteSeries.points
+    );
+
+    if (differencePoints.length < 2) {
+      this.clearComparisonChart();
+      return;
+    }
+
+    const timeMin = Math.min(...differencePoints.map(point => point.time));
+    const timeMax = Math.max(...differencePoints.map(point => point.time));
     const timeRange = Math.max(timeMax - timeMin, 1);
-    const minValue = Math.min(...allPoints.map(point => point.value));
-    const maxValue = Math.max(...allPoints.map(point => point.value));
+    const minValue = Math.min(...differencePoints.map(point => point.value));
+    const maxValue = Math.max(...differencePoints.map(point => point.value));
     const spread = Math.max(maxValue - minValue, 0.5);
     const yPad = Math.max(spread * 0.15, 0.25);
-    const yMin = Math.min(minValue, 100) - yPad;
-    const yMax = Math.max(maxValue, 100) + yPad;
+    const yMin = Math.min(minValue, 0) - yPad;
+    const yMax = Math.max(maxValue, 0) + yPad;
     const yRange = Math.max(yMax - yMin, 0.0001);
     const innerWidth =
       this.comparisonWidth -
@@ -1308,39 +1339,39 @@ export class HomeComponent {
     const toY = (value: number): number =>
       this.comparisonPadding.top + ((yMax - value) / yRange) * innerHeight;
 
-    this.comparisonBaselineY = toY(100);
+    this.comparisonBaselineY = toY(0);
     this.comparisonGridLines = [0, 1, 2, 3].map(index => ({
       y: this.comparisonPadding.top + (index / 3) * innerHeight,
     }));
 
-    const labelValues = [yMax, 100, yMin];
+    const labelValues = [yMax, 0, yMin];
     this.comparisonYLabels = labelValues.map(value => ({
       y: toY(value),
-      label: this.formatIndexLabel(value),
+      label: this.formatDifferenceLabel(value),
     }));
 
     const bottomY = this.comparisonPadding.top + innerHeight;
+    const path = differencePoints
+      .map((point, index) => {
+        const x = toX(point.time);
+        const y = toY(point.value);
+        return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+      })
+      .join(' ');
+    const firstX = toX(differencePoints[0].time);
+    const lastX = toX(differencePoints[differencePoints.length - 1].time);
+    const fillPath = `${path} L ${lastX.toFixed(2)} ${bottomY.toFixed(2)} L ${firstX.toFixed(2)} ${bottomY.toFixed(2)} Z`;
 
-    this.comparisonLines = seriesWithPoints.map(series => {
-      const path = series.points
-        .map((point, index) => {
-          const x = toX(point.time);
-          const y = toY(point.value);
-          return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-        })
-        .join(' ');
-
-      const firstX = toX(series.points[0].time);
-      const lastX = toX(series.points[series.points.length - 1].time);
-      const fillPath = `${path} L ${lastX.toFixed(2)} ${bottomY.toFixed(2)} L ${firstX.toFixed(2)} ${bottomY.toFixed(2)} Z`;
-
-      return {
-        symbol: series.symbol,
+    this.comparisonLines = [
+      {
+        symbol: `${this.normalizeMarketSymbol(
+          quoteSeries.symbol
+        )}-${this.normalizeMarketSymbol(baseSeries.symbol)}`,
         path,
         fillPath,
-        color: this.tokenColor(series.symbol),
-      };
-    });
+        color: this.tokenColor(quoteSeries.symbol),
+      },
+    ];
 
     this.comparisonAxisStart = this.formatComparisonTime(
       timeMin,
@@ -1356,14 +1387,115 @@ export class HomeComponent {
     );
   }
 
-  private formatIndexLabel(value: number): string {
-    const change = value - 100;
+  private clearComparisonChart(): void {
+    this.comparisonLines = [];
+    this.comparisonYLabels = [];
+    this.comparisonGridLines = [];
+    this.comparisonBaselineY = 0;
+    this.comparisonAxisStart = '';
+    this.comparisonAxisMid = '';
+    this.comparisonAxisEnd = '';
+  }
 
-    if (Math.abs(change) < 0.05) {
+  private buildComparisonDifferencePoints(
+    basePoints: MarketComparisonPoint[],
+    quotePoints: MarketComparisonPoint[]
+  ): MarketComparisonPoint[] {
+    const sortedBasePoints = this.sortedFiniteComparisonPoints(basePoints);
+    const sortedQuotePoints = this.sortedFiniteComparisonPoints(quotePoints);
+    if (sortedBasePoints.length === 0 || sortedQuotePoints.length === 0) {
+      return [];
+    }
+
+    return sortedBasePoints
+      .map(basePoint => {
+        const quoteValue = this.interpolateComparisonValue(
+          sortedQuotePoints,
+          basePoint.time
+        );
+        if (quoteValue === undefined) {
+          return undefined;
+        }
+
+        return {
+          time: basePoint.time,
+          value: quoteValue - basePoint.value,
+        };
+      })
+      .filter((point): point is MarketComparisonPoint => point !== undefined);
+  }
+
+  private sortedFiniteComparisonPoints(
+    points: MarketComparisonPoint[]
+  ): MarketComparisonPoint[] {
+    const uniqueByTime = new Map<number, MarketComparisonPoint>();
+
+    for (const point of points) {
+      if (
+        Number.isFinite(point.time) &&
+        Number.isFinite(point.value) &&
+        point.value > 0
+      ) {
+        uniqueByTime.set(point.time, point);
+      }
+    }
+
+    return Array.from(uniqueByTime.values())
+      .sort((left, right) => left.time - right.time);
+  }
+
+  private normalizeMarketSymbol(symbol: string): string {
+    return symbol.trim().toUpperCase();
+  }
+
+  private interpolateComparisonValue(
+    points: MarketComparisonPoint[],
+    time: number
+  ): number | undefined {
+    if (points.length === 0) {
+      return undefined;
+    }
+
+    if (time < points[0].time || time > points[points.length - 1].time) {
+      return undefined;
+    }
+
+    const exactPoint = points.find(point => point.time === time);
+    if (exactPoint) {
+      return exactPoint.value;
+    }
+
+    for (let index = 1; index < points.length; index += 1) {
+      const previous = points[index - 1];
+      const next = points[index];
+      if (time < previous.time || time > next.time) {
+        continue;
+      }
+
+      const range = next.time - previous.time;
+      if (range <= 0) {
+        return previous.value;
+      }
+
+      return (
+        previous.value +
+        ((time - previous.time) / range) * (next.value - previous.value)
+      );
+    }
+
+    return undefined;
+  }
+
+  private formatDifferenceLabel(value: number): string {
+    const absValue = Math.abs(value);
+    if (absValue < 0.05) {
       return '0%';
     }
 
-    return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+    return `${value >= 0 ? '+' : ''}${value.toLocaleString(undefined, {
+      maximumFractionDigits: absValue >= 100 ? 0 : 1,
+      minimumFractionDigits: absValue >= 100 ? 0 : 1,
+    })}%`;
   }
 
   private timeframeLabel(timeframe: ComparisonTimeframe): string {
@@ -1375,18 +1507,14 @@ export class HomeComponent {
       return 'the last 24 hours';
     }
 
-    if (timeframe === '1W') {
-      return 'the last 7 days';
-    }
-
-    return 'the last 30 days';
+    return 'the last 7 days';
   }
 
   private formatComparisonTime(
     time: number,
     timeframe: ComparisonTimeframe
   ): string {
-    if (timeframe === '1W' || timeframe === '1M') {
+    if (timeframe === '1W') {
       return new Date(time * 1000).toLocaleDateString([], {
         month: 'short',
         day: 'numeric',
