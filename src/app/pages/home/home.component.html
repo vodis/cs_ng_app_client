@@ -273,10 +273,10 @@
               preserveAspectRatio="none"
               role="img"
               [attr.aria-label]="
-                fromToken.symbol +
-                ' and ' +
-                toToken.symbol +
-                ' price change comparison'
+                tokenSymbolLabel(toToken) +
+                ' minus ' +
+                tokenSymbolLabel(fromToken) +
+                ' relative price change'
               ">
               <defs>
                 @for (line of comparisonLines; track line.symbol) {
@@ -371,7 +371,8 @@
 
       <div class="marketFooter">
         <div class="note">
-          Both lines start at 0% - values show change since window open
+          Line shows {{ tokenSymbolLabel(toToken) }} percentage move minus
+          {{ tokenSymbolLabel(fromToken) }} percentage move
         </div>
         <button
           type="button"
@@ -386,7 +387,7 @@
 
       @if (showAdvancedMarketView) {
         <app-live-chart
-          [coin]="toToken.symbol"
+          [coin]="marketSymbolFor(toToken)"
           [active]="showAdvancedMarketView" />
       }
     </div>
