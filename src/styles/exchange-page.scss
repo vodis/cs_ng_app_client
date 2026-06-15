@@ -4,6 +4,11 @@
   --exchange-orange: #ff6900;
   --exchange-green: #00d084;
 
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0 30px 26px;
   background: #111719;
 
@@ -37,13 +42,22 @@
   .gridTop {
     display: grid;
     width: 100%;
+    min-width: 0;
     align-items: stretch;
     margin-bottom: 14px;
     gap: 14px;
-    grid-template-columns: 42fr 58fr;
+    grid-template-columns: minmax(0, 42fr) minmax(0, 58fr);
+
+    > * {
+      min-width: 0;
+    }
   }
 
   .panel {
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     border: 1px solid var(--exchange-line);
     border-radius: 4px;
     background: rgb(12 18 20 / 55%);
@@ -59,6 +73,9 @@
 
   .stats {
     display: grid;
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
     min-height: 72px;
     align-items: stretch;
     border: 1px solid var(--exchange-line);
@@ -66,14 +83,20 @@
     border-right: 0;
     border-left: 0;
     margin: 0;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .swapPanel {
     display: flex;
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     height: 486px;
+    box-sizing: border-box;
     flex-direction: column;
     padding: 24px;
+    contain: inline-size;
 
     .panelTitle {
       flex-shrink: 0;
@@ -82,12 +105,16 @@
 
     form {
       display: flex;
+      overflow: hidden;
+      min-width: 0;
       min-height: 0;
       flex: 1;
       flex-direction: column;
     }
 
     .swap-stack {
+      overflow: hidden;
+      min-width: 0;
       flex-shrink: 0;
     }
 
@@ -98,10 +125,17 @@
   }
 
   .swapRow {
+    overflow: hidden;
+    min-width: 0;
+    height: 112px;
+    box-sizing: border-box;
     padding: 4px 6px 0;
 
     &__main {
       display: flex;
+      overflow: hidden;
+      min-width: 0;
+      height: 100%;
       align-items: flex-start;
       justify-content: space-between;
       gap: 10px;
@@ -109,18 +143,89 @@
 
     &__left {
       display: flex;
+      width: 142px;
       flex-direction: column;
+      flex-shrink: 0;
       gap: 6px;
     }
 
     &__right {
+      overflow: hidden;
+      width: 0;
       min-width: 0;
-      flex: 1;
+      max-width: 100%;
+      flex: 1 1 0;
       text-align: right;
     }
 
     &__amount {
+      overflow: hidden;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
       text-align: right;
+    }
+  }
+
+  .amount {
+    display: block;
+    overflow: auto hidden;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font-family: 'Aeonik Fono', monospace;
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    text-align: right;
+    text-overflow: clip;
+    white-space: nowrap;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &::placeholder {
+      color: rgb(255 255 255 / 28%);
+    }
+
+    &:focus {
+      color: #fff;
+      outline: none;
+    }
+
+    &--muted {
+      color: rgb(255 255 255 / 28%);
+    }
+  }
+
+  .amountTrack {
+    width: 100%;
+    min-width: 0;
+    direction: rtl;
+    -ms-overflow-style: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    .amount {
+      display: inline-block;
+      overflow: visible;
+      width: max-content;
+      min-width: 100%;
+      max-width: none;
+      direction: ltr;
+      text-align: right;
+      vertical-align: top;
     }
   }
 
@@ -143,17 +248,20 @@
   .label {
     margin: 0;
     color: var(--exchange-orange);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1;
     text-transform: uppercase;
   }
 
   .select {
-    display: inline-flex;
-    min-width: 142px;
+    display: flex;
+    width: 100%;
     height: 38px;
+    box-sizing: border-box;
     align-items: center;
-    padding: 0 14px;
+    padding: 0 12px;
     border: 1px solid var(--exchange-line);
     border-radius: 6px;
     margin: 0;
@@ -163,20 +271,65 @@
     font-family: inherit;
     font-size: 16px;
     font-weight: 700;
-    gap: 10px;
+    gap: 8px;
     line-height: 1;
+
+    &__value {
+      display: inline-flex;
+      min-width: 0;
+      flex: 1;
+      align-items: center;
+      gap: 10px;
+    }
+
+    &__symbol {
+      overflow: hidden;
+      flex-shrink: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__arrow {
+      display: inline-flex;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      margin-left: 2px;
+      color: rgb(255 255 255 / 80%);
+      font-size: 20px;
+      line-height: 1;
+      transform: translateY(1px);
+    }
   }
 
   .coin {
     display: inline-grid;
+    overflow: hidden;
     width: 22px;
     height: 22px;
+    flex-shrink: 0;
     border: 2px solid #38a0ff;
     border-radius: 50%;
     background: #148bff;
     color: #fff;
     font-size: 14px;
     place-items: center;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    &--image {
+      box-sizing: border-box;
+      border: 1px solid rgb(255 255 255 / 12%);
+      background: rgb(255 255 255 / 8%);
+    }
 
     &.near {
       border-color: #00d992;
@@ -186,44 +339,30 @@
     }
   }
 
-  .arrow {
-    margin-left: 10px;
-    opacity: 0.8;
-  }
-
   .balance {
+    overflow: hidden;
     margin-bottom: 6px;
     color: #c4c6c7;
     font-size: 12px;
     text-align: right;
+    text-overflow: ellipsis;
     text-transform: uppercase;
-  }
-
-  .amount {
-    display: block;
-    width: 100%;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: #fff;
-    font-family: 'Aeonik Fono', monospace;
-    font-size: 28px;
-    line-height: 1;
-    text-align: right;
-
-    &:focus {
-      outline: none;
-    }
-
-    &--muted {
-      color: rgb(255 255 255 / 28%);
-    }
+    white-space: nowrap;
   }
 
   .usd {
+    display: block;
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     margin-top: 2px;
     color: #c4c6c7;
     font-size: 13px;
+    line-height: 1.2;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .swapCircle {
@@ -334,7 +473,7 @@
     flex-shrink: 0;
     border: 0;
     border-radius: 4px;
-    margin: 12px 0 0;
+    margin: 0;
     background: linear-gradient(180deg, #ff7607, #f05d00);
     color: #fff;
     font-family: inherit;
@@ -349,6 +488,10 @@
     }
   }
 
+  .swapPanel .connectMain {
+    margin-top: 12px;
+  }
+
   .exchange-error {
     margin: 12px 0 0;
     color: var(--exchange-orange);
@@ -357,7 +500,12 @@
 
   .marketPanel {
     display: flex;
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     height: 486px;
+    box-sizing: border-box;
     flex-direction: column;
     padding: 24px 28px;
   }
@@ -394,25 +542,25 @@
   .range {
     display: flex;
     gap: 8px;
-  }
 
-  .rangeBtn {
-    width: 43px;
-    height: 36px;
-    border: 1px solid var(--exchange-line);
-    border-radius: 4px;
-    background: #0e1416;
-    color: #fff;
-    font-size: 13px;
+    button {
+      width: 43px;
+      height: 36px;
+      border: 1px solid var(--exchange-line);
+      border-radius: 4px;
+      background: #0e1416;
+      color: #fff;
+      font-size: 13px;
 
-    &.active {
-      border-color: var(--exchange-orange);
-      color: var(--exchange-orange);
+      &:disabled {
+        cursor: default;
+        opacity: 0.55;
+      }
     }
 
-    &:disabled {
-      cursor: default;
-      opacity: 0.55;
+    .active {
+      border-color: var(--exchange-orange);
+      color: var(--exchange-orange);
     }
   }
 
@@ -448,11 +596,23 @@
       gap: 5px;
     }
 
-    &__icon {
-      display: block;
+    &__iconWrap {
+      display: inline-flex;
+      overflow: hidden;
       width: 24px;
       height: 24px;
       flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgb(255 255 255 / 12%);
+      border-radius: 50%;
+      background: rgb(255 255 255 / 8%);
+    }
+
+    &__icon {
+      display: block;
+      width: 100%;
+      height: 100%;
       border-radius: 50%;
       object-fit: cover;
     }
