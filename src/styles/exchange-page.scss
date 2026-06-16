@@ -1,7 +1,7 @@
 .exchange-page {
   --exchange-line: #2a3437;
   --exchange-line-soft: #20292c;
-  --exchange-orange: #ff6900;
+  --exchange-orange: var(--primary-text-color);
   --exchange-green: #00d084;
 
   overflow: hidden;
@@ -9,8 +9,8 @@
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 0 30px 26px;
-  background: #111719;
+  padding: 0 1.5rem 1.625rem;
+  background: var(--main-bg-color);
 
   .intro {
     width: 100%;
@@ -379,7 +379,7 @@
     margin: 0;
     background: linear-gradient(180deg, #151d21 0%, #0c1215 100%);
     box-shadow:
-      0 0 0 4px #111719,
+      0 0 0 4px var(--main-bg-color),
       0 4px 14px rgb(0 0 0 / 32%);
     color: var(--exchange-orange);
     cursor: pointer;
@@ -409,7 +409,7 @@
     &:hover {
       border-color: rgb(255 105 0 / 55%);
       box-shadow:
-        0 0 0 4px #111719,
+        0 0 0 4px var(--main-bg-color),
         0 0 16px rgb(255 105 0 / 24%);
 
       .swapCircle__icon {
@@ -474,7 +474,7 @@
     border: 0;
     border-radius: 4px;
     margin: 0;
-    background: linear-gradient(180deg, #ff7607, #f05d00);
+    background: linear-gradient(180deg, var(--primary-text-color), #e56200);
     color: #fff;
     font-family: inherit;
     font-size: 15px;

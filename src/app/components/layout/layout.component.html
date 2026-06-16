@@ -10,13 +10,12 @@
     <app-animate-line
       *ngIf="verticalLineAnimating"
       [direction]="DirectionType.Row"
-      [size]="verticalLineHeight"
+      size="100%"
       [resetKey]="lineResetKey"
       (animationComplete)="onVerticalLineAnimationComplete()" />
     <div
       *ngIf="!verticalLineAnimating"
       class="main-layout__divider"
-      [style.height]="verticalLineHeight"
       aria-hidden="true"></div>
     <div #contentRouter class="main-layout__content_router">
       <ng-container *ngTemplateOutlet="content"></ng-container>

@@ -9,14 +9,16 @@
 }
 
 .btn-lg.mdc-button {
-  font-size: 1.2rem;
+  --mdc-outlined-button-container-height: 36px;
+  font-size: 0.75rem;
   font-weight: 400;
-  line-height: 90%;
+  line-height: 1;
   text-transform: uppercase;
 }
 
 @media (max-width: 976px) {
   .btn-lg.mdc-button {
-    font-size: 0.8rem;
+    --mdc-outlined-button-container-height: 32px;
+    font-size: 0.65rem;
   }
 }

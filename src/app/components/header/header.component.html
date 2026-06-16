@@ -1,23 +1,19 @@
 <header class="header" [ngClass]="{ mobile: isMobileView }">
-  <div class="d-flex align-items-center h-100">
-    <div class="header__content w-100 h-100">
-      <a
-        class="header__logo d-flex align-items-center justify-content-center"
-        href="{{ originUrl }}"
-        routerLinkActive="_active">
-        <img
-          alt="CraftScript Logo"
-          height="56"
-          loading="lazy"
-          src="../../../assets/img/logo/logo.svg" />
-      </a>
-      <div class="header__content_connect">
-        <app-wallet-bar />
-      </div>
+  <div class="header__content">
+    <a class="header__logo" href="{{ originUrl }}" routerLinkActive="_active">
+      <img
+        alt="CraftScript Logo"
+        height="40"
+        loading="lazy"
+        src="../../../assets/img/logo/logo.svg" />
+    </a>
+    <div class="header__content_connect">
+      <app-wallet-bar />
     </div>
   </div>
   <app-animate-line
     *ngIf="horizontalLineAnimating"
+    class="header__animate-line"
     [resetKey]="lineResetKey"
     (animationComplete)="onHorizontalLineAnimationComplete()" />
   <div
