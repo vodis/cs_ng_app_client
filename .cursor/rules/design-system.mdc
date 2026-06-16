@@ -1,0 +1,93 @@
+---
+description: CraftScript dashboard design system — grid, colors, chrome heights, layout rules
+alwaysApply: true
+---
+
+# CraftScript Dashboard Design System
+
+This repo is the **DeFi dashboard** (`app.craftscript.com`). The marketing/landing site lives in `cs_nextjs_client` and has its own layout. Shared brand tokens and grid philosophy apply to both.
+
+## Grid system
+
+| Breakpoint | Columns |
+|------------|---------|
+| Mobile (`< 768px`) | **4** |
+| Desktop (`≥ 768px`) | **7** |
+
+### Rules
+
+- Grids are **full viewport width** — no `max-width` container.
+- Header, sidebar, and main content share the same **7-column** desktop grid.
+- Grid lines / dividers use `--main-border-color` (`#d4d4d3`).
+
+### Desktop column map
+
+| Element | Column |
+|---------|--------|
+| Logo (header) | 1 |
+| Sidebar | 1 |
+| Vertical divider | border on sidebar col 1, or col 2 |
+| Main content (router) | 2–7 |
+| Connect Wallet (header) | 6–7 |
+
+### Mobile column map
+
+| Element | Column |
+|---------|--------|
+| Logo | 1 |
+| Connect Wallet | 3 |
+| Bottom nav items | 4 equal columns |
+
+## Chrome heights
+
+- Header: **64px** (`4rem`) — `--shell-header-height`
+- Mobile bottom nav: same height as header
+- Scrollable content: `calc(100vh - var(--shell-header-height))`
+
+## Color palette
+
+Defined in `src/assets/styles/default-theme-colors.css`.
+
+| Token | Hex | Usage |
+|-------|-----|--------|
+| `--primary-text-color` / orange | `#FE6C00` | CTAs, links, accents, active states |
+| `--main-bg-color` / black | `#171c1f` | Shell and page background |
+| `--main-border-color` | `#d4d4d3` | Grid lines, shell dividers |
+| `--gray-30` | `#CFCBD2` | Decorative text, secondary lines |
+| `--gray-100` | `#080708` | Body text on light contexts |
+| `--main-text-color` / white | `#fff` | Primary text on dark backgrounds |
+
+**Pattern:** dark gray/black base + orange highlights.
+
+Exchange page panel borders (`--exchange-line`) may be darker than shell grid lines — that is intentional.
+
+## Dashboard CTAs
+
+- **Connect Wallet** in the header uses a bordered/filled Material button — correct for this app.
+- Marketing **Launch App** is a plain orange text link — do not apply that pattern here.
+
+## Exchange page
+
+- Scope all exchange-specific styles under `.exchange-page` in `src/styles/exchange-page.scss`.
+- Reuse shell tokens (`--primary-text-color`, `--main-bg-color`) — do not introduce alternate orange/background hex values.
+- Do not leak exchange styles into global shell components.
+
+## Reference files
+
+- `src/assets/styles/default-theme-colors.css` — color tokens
+- `src/styles.scss` — shell tokens (`--shell-header-height`, grid columns)
+- `src/app/components/layout/` — app frame grid
+- `src/app/components/header/` — logo + wallet placement
+- `src/app/components/sidebar/` — navigation
+- `src/styles/exchange-page.scss` — Token Exchange page
+- `docs/design-system.md` — human-readable summary
+- `cs_nextjs_client/docs/design-system.md` — marketing site details
+
+## Agent checklist for layout/styling changes
+
+1. Keep header at exactly `4rem` including bottom border — no overflow from separate line elements.
+2. Sidebar width must equal header column 1 (`1/7` viewport on desktop).
+3. Use CSS variables for orange and background — never hardcode `#ff6900` or `#111719`.
+4. Preserve wallet MFE integration and exchange page class structure.
+5. Run `pnpm run lint` and `pnpm run build` before finishing.
+6. Run `pnpm run e2e` when changing shell layout, header, sidebar, or grid chrome.

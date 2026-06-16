@@ -41,8 +41,9 @@
 }
 
 :root {
-  --shell-header-height: 5.375rem;
-  --shell-sidebar-min-width: 252px;
+  --shell-header-height: 4rem;
+  --shell-grid-columns: 7;
+  --shell-grid-columns-mobile: 4;
 }
 
 html {

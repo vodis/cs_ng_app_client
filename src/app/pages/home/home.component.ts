@@ -1440,8 +1440,9 @@ export class HomeComponent {
       }
     }
 
-    return Array.from(uniqueByTime.values())
-      .sort((left, right) => left.time - right.time);
+    return Array.from(uniqueByTime.values()).sort(
+      (left, right) => left.time - right.time
+    );
   }
 
   private normalizeMarketSymbol(symbol: string): string {

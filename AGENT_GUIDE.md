@@ -75,15 +75,15 @@ Token pickers open `app-side-modal` with `app-token-select-panel`. Amount editin
 
 Right column.
 
-| Block          | Markup / classes                      | Behavior                                                                                      |
-| -------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Header         | `.marketHead`                         | Title + tabs (Price / Volume / Liquidity) and timeframe buttons                               |
-| Timeframes     | `.range`                              | `1H`, `1D`, `1W` (active state switches comparison window; backend comparison currently has no `1M` contract) |
-| Summary column | `.marketBody`, `.marketSummary`       | Narrow left column (`~104px`) for pair, price, and 24h change                                 |
-| Pair           | `.pair`                               | Base/quote token icons and symbol pair                                                        |
-| Price          | `.price`, `.change`                   | Quote token price and 24h change from comparison API                                          |
+| Block          | Markup / classes                      | Behavior                                                                                                        |
+| -------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Header         | `.marketHead`                         | Title + tabs (Price / Volume / Liquidity) and timeframe buttons                                                 |
+| Timeframes     | `.range`                              | `1H`, `1D`, `1W` (active state switches comparison window; backend comparison currently has no `1M` contract)   |
+| Summary column | `.marketBody`, `.marketSummary`       | Narrow left column (`~104px`) for pair, price, and 24h change                                                   |
+| Pair           | `.pair`                               | Base/quote token icons and symbol pair                                                                          |
+| Price          | `.price`, `.change`                   | Quote token price and 24h change from comparison API                                                            |
 | Chart          | `.chart`                              | SVG relative-performance chart in the right grid column (`1fr`); line is quote-token move minus base-token move |
-| Footer         | `.marketFooter`, `.note`, `.advanced` | Hint (`margin-top: 16px`) + advanced link (`margin-top: 12px`) in normal flow below the chart |
+| Footer         | `.marketFooter`, `.note`, `.advanced` | Hint (`margin-top: 16px`) + advanced link (`margin-top: 12px`) in normal flow below the chart                   |
 
 Market data loads from `GET ${environment.apiUrl}/api/v1/markets/comparison`.
 
@@ -105,14 +105,14 @@ Row data is currently defined in `HomeComponent.recentActivity` (host-owned demo
 
 Exchange page styles are scoped under `.exchange-page` in `src/styles/exchange-page.scss` (imported from `src/styles.scss`).
 
-| Token                  | Value                    | Usage                             |
-| ---------------------- | ------------------------ | --------------------------------- |
-| `--exchange-orange`    | `#ff6900`                | Labels, active tabs, CTAs, links  |
-| `--exchange-green`     | `#00d084`                | Positive change, completed status |
-| `--exchange-line`      | `#2a3437`                | Panel borders                     |
-| `--exchange-line-soft` | `#20292c`                | Row dividers                      |
-| Page background        | `#111719`                | Exchange content area             |
-| Panel background       | `rgba(12, 18, 20, 0.55)` | Cards with inset highlight        |
+| Token                  | Value                                   | Usage                             |
+| ---------------------- | --------------------------------------- | --------------------------------- |
+| `--exchange-orange`    | `var(--primary-text-color)` / `#fe6c00` | Labels, active tabs, CTAs, links  |
+| `--exchange-green`     | `#00d084`                               | Positive change, completed status |
+| `--exchange-line`      | `#2a3437`                               | Panel borders                     |
+| `--exchange-line-soft` | `#20292c`                               | Row dividers                      |
+| Page background        | `var(--main-bg-color)` / `#171c1f`      | Exchange content area             |
+| Panel background       | `rgba(12, 18, 20, 0.55)`                | Cards with inset highlight        |
 
 Typography and spacing targets:
 
@@ -140,6 +140,27 @@ Client token metadata in `HomeComponent.exchangeTokens` is display/bootstrap onl
 3. Preserve wallet gating, token modal flow, quote submission, and comparison reload on token swap.
 4. Verify desktop grid (`42% / 58%`) and mobile single-column breakpoint (`<= 1100px`).
 5. Run lint/tests/build before finishing.
+6. Run `pnpm run e2e` when changing shell layout, header, sidebar, or exchange page chrome.
+
+### Shell layout E2E (Playwright)
+
+Regression tests live in `e2e/shell-layout.spec.ts`. They guard:
+
+- 64px header height
+- Content flush below header (no grid row gap)
+- Persistent vertical divider after load animation
+- Sidebar width = 1/7 viewport column
+- Grid row alignment for sidebar / divider / router
+
+Commands:
+
+| Action                                         | Command                |
+| ---------------------------------------------- | ---------------------- |
+| Run E2E (reuses local `pnpm start` if running) | `pnpm run e2e`         |
+| Install Chromium for CI/local                  | `pnpm run e2e:install` |
+| Interactive debug                              | `pnpm run e2e:ui`      |
+
+CI (`/.github/workflows/build-dev.yml`) runs `pnpm run e2e` against a production build on every push/PR to `develop`.
 
 ## Target Architecture Baseline
 
