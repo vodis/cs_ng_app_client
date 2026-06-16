@@ -172,9 +172,18 @@
         <div>
           <div class="panelTitle">Market Overview</div>
           <div class="tabs" aria-label="Market data tabs">
-            <b>Price</b>
-            <span>Volume</span>
-            <span>Liquidity</span>
+            <button
+              type="button"
+              [class.active]="selectedMarketChartMode === 'price'"
+              (click)="changeMarketChartMode('price')">
+              Price
+            </button>
+            <button
+              type="button"
+              [class.active]="selectedMarketChartMode === 'relative'"
+              (click)="changeMarketChartMode('relative')">
+              Relative
+            </button>
           </div>
         </div>
         <div class="range" aria-label="Comparison timeframe">
@@ -272,12 +281,7 @@
                 [attr.viewBox]="comparisonViewBox"
                 preserveAspectRatio="none"
                 role="img"
-                [attr.aria-label]="
-                  tokenSymbolLabel(toToken) +
-                  ' minus ' +
-                  tokenSymbolLabel(fromToken) +
-                  ' relative price change'
-                ">
+                [attr.aria-label]="comparisonChartAriaLabel()">
                 <defs>
                   @for (line of comparisonLines; track line.symbol) {
                     <linearGradient
@@ -309,7 +313,7 @@
                     [attr.x2]="comparisonPlotRight"
                     [attr.y2]="line.y" />
                 }
-                @if (comparisonBaselineY) {
+                @if (comparisonShowBaseline) {
                   <line
                     class="blueLine"
                     [attr.x1]="comparisonPlotLeft"
@@ -372,8 +376,7 @@
 
       <div class="marketFooter">
         <div class="note">
-          Line shows {{ tokenSymbolLabel(toToken) }} percentage move minus
-          {{ tokenSymbolLabel(fromToken) }} percentage move
+          {{ comparisonNoteText() }}
         </div>
         <button
           type="button"

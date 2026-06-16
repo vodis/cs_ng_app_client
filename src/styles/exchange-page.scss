@@ -518,24 +518,23 @@
 
   .tabs {
     display: flex;
-    color: #b6b9ba;
-    font-size: 13px;
-    gap: 25px;
-    text-transform: uppercase;
+    gap: 12px;
 
-    b {
+    button {
+      padding: 0 0 4px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: #b6b9ba;
+      cursor: pointer;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+
+    .active {
       position: relative;
+      border-bottom-color: var(--exchange-orange);
       color: var(--exchange-orange);
-
-      &::after {
-        position: absolute;
-        right: -12px;
-        bottom: -14px;
-        left: 0;
-        height: 2px;
-        background: var(--exchange-orange);
-        content: '';
-      }
     }
   }
 

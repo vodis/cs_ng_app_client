@@ -95,9 +95,9 @@ describe('HomeComponent market overview', () => {
     expect(component.comparisonError).toBe('');
     expect(component.comparisonLines.length).toBe(1);
     expect(component.comparisonLines[0].symbol).toBe('NEAR-USDC');
-    expect(component.comparisonYLabels.map(label => label.label)).toContain(
-      '0%'
-    );
+    expect(component.selectedMarketChartMode).toBe('price');
+    expect(component.comparisonShowBaseline).toBeFalse();
+    expect(component.comparisonYLabels[0]?.label.startsWith('$')).toBeTrue();
 
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -158,6 +158,69 @@ describe('HomeComponent market overview', () => {
       'Comparison data unavailable'
     );
     expect(compiled.querySelector('.chart svg')).toBeNull();
+  });
+
+  it('shows relative chart baseline when switching to relative mode', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.changeMarketChartMode('relative');
+
+    expect(component.selectedMarketChartMode).toBe('relative');
+    expect(component.comparisonShowBaseline).toBeTrue();
+    expect(component.comparisonYLabels.map(label => label.label)).toContain(
+      '0%'
+    );
+  });
+
+  it('uses base/quote direction for fallback swap rate', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.amount = '1';
+    component.quoteResult = undefined;
+    component.fromToken = {
+      ...component.fromToken,
+      symbol: 'NEAR',
+      displaySymbol: 'NEAR',
+    };
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'ETH',
+      displaySymbol: 'ETH',
+    };
+    component.changeComparisonTimeframe('1D');
+    expectComparisonRequest({
+      base: 'NEAR',
+      quote: 'ETH',
+      timeframe: '1D',
+    }).flush(comparisonResponse('NEAR', 'ETH', '1D'));
+
+    const rate = component['previewSwapRate']();
+    expect(rate).toBeCloseTo(1 / 4, 8);
+  });
+
+  it('normalizes integer quote amount using destination decimals', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'ETH',
+      decimals: 6,
+    };
+    component.quoteResult = { amountOut: '7385926' };
+
+    expect(component.toAmountDisplay()).toBe('7.385926');
   });
 
   function expectComparisonRequest(expected: {

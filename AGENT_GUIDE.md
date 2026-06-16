@@ -328,6 +328,13 @@ Compatibility policy:
 - Main wallet flow mounts and renders without console/runtime errors.
 - One backend-connected flow validates contract mapping and error handling.
 
+## Type Safety Rule (Mandatory)
+
+- Do not add `any` in new or modified code.
+- Do not use type-cast escapes to bypass typing (`as any`, `as unknown as T`, `<any>...`).
+- Fix typing at the source (interfaces, unions, guards, and precise generics).
+- If legacy code already contains unavoidable casts, do not propagate the pattern; keep changes strictly typed.
+
 ## Non-Goals
 
 - Do not tightly couple host to wallet private implementation details.

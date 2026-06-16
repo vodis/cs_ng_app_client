@@ -1,0 +1,25 @@
+# Type Safety: no `any`, no type-cast escapes
+
+This repository requires strict, explicit typing.
+
+## Rules
+
+- Do not introduce `any` in new or modified code.
+  - Forbidden: `: any`, `Array<any>`, `Record<string, any>`, `any[]`, generic defaults to `any`.
+- Do not use type-cast escapes to silence type errors.
+  - Forbidden: `as any`, `as unknown as T`, `<any>value`, broad unsafe assertions.
+- Prefer proper typing at the source:
+  - Add/adjust interfaces or union types.
+  - Narrow unknown values with runtime guards.
+  - Refactor code to keep type inference accurate instead of forcing assertions.
+
+## Allowed exceptions
+
+- Existing legacy code may remain untouched unless the task requires modifying it.
+- Third-party/global bridge points (for example framework polyfills) may keep existing casts only when no typed alternative exists; do not expand this pattern.
+
+## Agent checklist
+
+1. When fixing type errors, first improve the type model, not assertions.
+2. Before finishing, search changed files for `any` and `as ` assertions and remove unsafe ones.
+3. If an assertion is truly unavoidable, document why in code comments and keep the narrowest possible type.

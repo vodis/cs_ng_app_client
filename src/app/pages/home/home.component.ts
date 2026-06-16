@@ -11,10 +11,17 @@ import type {
 } from '@domains/exchange/models/swap.models';
 import { environment } from '../../../environments/environment';
 import type { WalletAccount } from '@domains/wallet/models/wallet.models';
+import {
+  changeClass as changePriceClass,
+  formatDifferenceLabel as formatPriceDifferenceLabel,
+  formatPercent as formatPricePercent,
+  formatPrice as formatCurrencyPrice,
+} from './home-price.utils';
 
 type TokenSelectorSide = 'from' | 'to';
 
 type ComparisonTimeframe = '1H' | '1D' | '1W';
+type MarketChartMode = 'price' | 'relative';
 type SupportedSwapAuthMethod = SwapPrepareRequest['authMethod'];
 
 interface MarketComparisonToken {
@@ -197,10 +204,12 @@ export class HomeComponent {
   public comparisonLines: ComparisonChartLine[] = [];
   public comparisonYLabels: ComparisonYLabel[] = [];
   public comparisonBaselineY = 0;
+  public comparisonShowBaseline = false;
   public comparisonGridLines: ComparisonGridLine[] = [];
   public comparisonLoading = true;
   public comparisonError = '';
   public selectedComparisonTimeframe: ComparisonTimeframe = '1H';
+  public selectedMarketChartMode: MarketChartMode = 'price';
   public readonly comparisonTimeframes: ComparisonTimeframe[] = [
     '1H',
     '1D',
@@ -286,7 +295,7 @@ export class HomeComponent {
       return;
     }
 
-    const amount = this.toUsdcBaseUnits(this.amount);
+    const amount = this.toBaseUnits(this.amount, this.fromToken.decimals);
 
     if (!amount || /^0+$/.test(amount)) {
       this.quoteError = `Enter a valid ${this.fromToken.symbol} amount.`;
@@ -365,6 +374,22 @@ export class HomeComponent {
 
     this.selectedComparisonTimeframe = timeframe;
     this.loadMarketComparison();
+  }
+
+  public changeMarketChartMode(mode: MarketChartMode): void {
+    if (this.selectedMarketChartMode === mode) {
+      return;
+    }
+
+    this.selectedMarketChartMode = mode;
+    if (this.comparison) {
+      this.buildComparisonChart(this.comparison);
+      this.comparisonError =
+        this.comparison.status === 'unavailable' ||
+        this.comparisonLines.length === 0
+          ? 'Comparison data unavailable'
+          : '';
+    }
   }
 
   public toggleAdvancedMarketView(): void {
@@ -483,26 +508,30 @@ export class HomeComponent {
   }
 
   public marketPriceDisplay(): string {
-    const price = this.comparison?.quoteToken?.currentPrice;
-    if (price === undefined) {
+    const basePrice = this.comparison?.baseToken?.currentPrice;
+    const quotePrice = this.comparison?.quoteToken?.currentPrice;
+    if (
+      basePrice === undefined ||
+      quotePrice === undefined ||
+      !Number.isFinite(basePrice) ||
+      !Number.isFinite(quotePrice) ||
+      quotePrice <= 0
+    ) {
       return '—';
     }
 
-    return `$${price.toFixed(2)}`;
+    const rate = basePrice / quotePrice;
+    const fractionDigits = this.swapAmountFractionDigits(this.toToken.symbol);
+    return `1 ${this.tokenSymbolLabel(this.fromToken)} = ${rate.toFixed(fractionDigits)} ${this.tokenSymbolLabel(this.toToken)}`;
   }
 
   public toAmountDisplay(): string {
-    const quote = this.quoteResult;
-    const amount =
-      quote?.['amountOut'] ??
-      quote?.['destinationAmount'] ??
-      quote?.['toAmount'];
-
-    if (typeof amount === 'string' || typeof amount === 'number') {
-      return String(amount);
+    const amount = this.rawQuoteAmount();
+    if (!amount) {
+      return '';
     }
 
-    return this.swapFlowFacade.quotePreview?.amountOut ?? '';
+    return this.normalizeQuoteAmount(amount, this.toToken.decimals);
   }
 
   public primaryActionLabel(): string {
@@ -996,53 +1025,15 @@ export class HomeComponent {
   }
 
   public formatPrice(value: number | undefined): string {
-    if (value === undefined) {
-      return 'Unavailable';
-    }
-
-    if (!Number.isFinite(value)) {
-      return '$—';
-    }
-
-    const absValue = Math.abs(value);
-
-    if (absValue >= 1e15) {
-      return `$${value.toExponential(2)}`;
-    }
-
-    if (absValue >= 1e9) {
-      return `$${value.toLocaleString(undefined, {
-        maximumFractionDigits: 2,
-        notation: 'compact',
-        compactDisplay: 'short',
-      })}`;
-    }
-
-    if (absValue >= 1000) {
-      return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-    }
-
-    if (absValue >= 1) {
-      return `$${value.toFixed(2)}`;
-    }
-
-    return `$${value.toFixed(4)}`;
+    return formatCurrencyPrice(value);
   }
 
   public formatPercent(value: number | undefined): string {
-    if (value === undefined) {
-      return '--';
-    }
-
-    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+    return formatPricePercent(value);
   }
 
   public changeClass(value: number | undefined): string {
-    if (value === undefined || value === 0) {
-      return 'neutral';
-    }
-
-    return value > 0 ? 'positive' : 'negative';
+    return changePriceClass(value);
   }
 
   public relativeStrengthText(): string {
@@ -1304,25 +1295,39 @@ export class HomeComponent {
       return;
     }
 
-    const differencePoints = this.buildComparisonDifferencePoints(
-      baseSeries.points,
-      quoteSeries.points
-    );
+    const chartPoints =
+      this.selectedMarketChartMode === 'relative'
+        ? this.buildComparisonDifferencePoints(
+            baseSeries.points,
+            quoteSeries.points
+          )
+        : this.buildPairPricePoints(
+            response.baseToken.currentPrice,
+            response.quoteToken.currentPrice,
+            baseSeries.points,
+            quoteSeries.points
+          );
 
-    if (differencePoints.length < 2) {
+    if (chartPoints.length < 2) {
       this.clearComparisonChart();
       return;
     }
 
-    const timeMin = Math.min(...differencePoints.map(point => point.time));
-    const timeMax = Math.max(...differencePoints.map(point => point.time));
+    const timeMin = Math.min(...chartPoints.map(point => point.time));
+    const timeMax = Math.max(...chartPoints.map(point => point.time));
     const timeRange = Math.max(timeMax - timeMin, 1);
-    const minValue = Math.min(...differencePoints.map(point => point.value));
-    const maxValue = Math.max(...differencePoints.map(point => point.value));
-    const spread = Math.max(maxValue - minValue, 0.5);
-    const yPad = Math.max(spread * 0.15, 0.25);
-    const yMin = Math.min(minValue, 0) - yPad;
-    const yMax = Math.max(maxValue, 0) + yPad;
+    const minValue = Math.min(...chartPoints.map(point => point.value));
+    const maxValue = Math.max(...chartPoints.map(point => point.value));
+    const spread = Math.max(
+      maxValue - minValue,
+      this.selectedMarketChartMode === 'relative' ? 0.5 : 0.01
+    );
+    const yPad = Math.max(
+      spread * 0.15,
+      this.selectedMarketChartMode === 'relative' ? 0.25 : 0.01
+    );
+    const yMin = minValue - yPad;
+    const yMax = maxValue + yPad;
     const yRange = Math.max(yMax - yMin, 0.0001);
     const innerWidth =
       this.comparisonWidth -
@@ -1339,27 +1344,34 @@ export class HomeComponent {
     const toY = (value: number): number =>
       this.comparisonPadding.top + ((yMax - value) / yRange) * innerHeight;
 
-    this.comparisonBaselineY = toY(0);
+    this.comparisonShowBaseline = this.selectedMarketChartMode === 'relative';
+    this.comparisonBaselineY = this.comparisonShowBaseline ? toY(0) : 0;
     this.comparisonGridLines = [0, 1, 2, 3].map(index => ({
       y: this.comparisonPadding.top + (index / 3) * innerHeight,
     }));
 
-    const labelValues = [yMax, 0, yMin];
+    const labelValues =
+      this.selectedMarketChartMode === 'relative'
+        ? [yMax, 0, yMin]
+        : [yMax, (yMax + yMin) / 2, yMin];
     this.comparisonYLabels = labelValues.map(value => ({
       y: toY(value),
-      label: this.formatDifferenceLabel(value),
+      label:
+        this.selectedMarketChartMode === 'relative'
+          ? this.formatDifferenceLabel(value)
+          : this.formatPairRateLabel(value),
     }));
 
     const bottomY = this.comparisonPadding.top + innerHeight;
-    const path = differencePoints
+    const path = chartPoints
       .map((point, index) => {
         const x = toX(point.time);
         const y = toY(point.value);
         return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
       })
       .join(' ');
-    const firstX = toX(differencePoints[0].time);
-    const lastX = toX(differencePoints[differencePoints.length - 1].time);
+    const firstX = toX(chartPoints[0].time);
+    const lastX = toX(chartPoints[chartPoints.length - 1].time);
     const fillPath = `${path} L ${lastX.toFixed(2)} ${bottomY.toFixed(2)} L ${firstX.toFixed(2)} ${bottomY.toFixed(2)} Z`;
 
     this.comparisonLines = [
@@ -1392,6 +1404,7 @@ export class HomeComponent {
     this.comparisonYLabels = [];
     this.comparisonGridLines = [];
     this.comparisonBaselineY = 0;
+    this.comparisonShowBaseline = false;
     this.comparisonAxisStart = '';
     this.comparisonAxisMid = '';
     this.comparisonAxisEnd = '';
@@ -1423,6 +1436,66 @@ export class HomeComponent {
         };
       })
       .filter((point): point is MarketComparisonPoint => point !== undefined);
+  }
+
+  private buildPairPricePoints(
+    basePrice: number | undefined,
+    quotePrice: number | undefined,
+    basePoints: MarketComparisonPoint[],
+    quotePoints: MarketComparisonPoint[]
+  ): MarketComparisonPoint[] {
+    const sortedBasePoints = this.sortedFiniteComparisonPoints(basePoints);
+    const sortedQuotePoints = this.sortedFiniteComparisonPoints(quotePoints);
+    if (sortedBasePoints.length === 0 || sortedQuotePoints.length === 0) {
+      return [];
+    }
+
+    const pairRatePoints = sortedBasePoints
+      .map(basePoint => {
+        const quoteValue = this.interpolateComparisonValue(
+          sortedQuotePoints,
+          basePoint.time
+        );
+        if (
+          quoteValue === undefined ||
+          !Number.isFinite(quoteValue) ||
+          quoteValue <= 0
+        ) {
+          return undefined;
+        }
+
+        return {
+          time: basePoint.time,
+          value: basePoint.value / quoteValue,
+        };
+      })
+      .filter((point): point is MarketComparisonPoint => point !== undefined);
+
+    if (pairRatePoints.length < 2) {
+      return [];
+    }
+
+    if (
+      basePrice === undefined ||
+      quotePrice === undefined ||
+      !Number.isFinite(basePrice) ||
+      !Number.isFinite(quotePrice) ||
+      quotePrice <= 0
+    ) {
+      return pairRatePoints;
+    }
+
+    const currentPairRate = basePrice / quotePrice;
+    const lastPoint = pairRatePoints[pairRatePoints.length - 1];
+    if (!Number.isFinite(lastPoint.value) || lastPoint.value <= 0) {
+      return pairRatePoints;
+    }
+
+    const scale = currentPairRate / lastPoint.value;
+    return pairRatePoints.map(point => ({
+      time: point.time,
+      value: point.value * scale,
+    }));
   }
 
   private sortedFiniteComparisonPoints(
@@ -1488,15 +1561,19 @@ export class HomeComponent {
   }
 
   private formatDifferenceLabel(value: number): string {
-    const absValue = Math.abs(value);
-    if (absValue < 0.05) {
-      return '0%';
+    return formatPriceDifferenceLabel(value);
+  }
+
+  private formatPairRateLabel(value: number): string {
+    if (!Number.isFinite(value)) {
+      return '—';
     }
 
-    return `${value >= 0 ? '+' : ''}${value.toLocaleString(undefined, {
-      maximumFractionDigits: absValue >= 100 ? 0 : 1,
-      minimumFractionDigits: absValue >= 100 ? 0 : 1,
-    })}%`;
+    if (Math.abs(value) >= 1) {
+      return value.toFixed(2);
+    }
+
+    return value.toFixed(6);
   }
 
   private timeframeLabel(timeframe: ComparisonTimeframe): string {
@@ -1574,8 +1651,13 @@ export class HomeComponent {
     const basePrice = this.comparison?.baseToken?.currentPrice;
     const quotePrice = this.comparison?.quoteToken?.currentPrice;
 
-    if (basePrice !== undefined && quotePrice !== undefined && basePrice > 0) {
-      return quotePrice / basePrice;
+    if (
+      basePrice !== undefined &&
+      quotePrice !== undefined &&
+      basePrice > 0 &&
+      quotePrice > 0
+    ) {
+      return basePrice / quotePrice;
     }
 
     if (
@@ -1616,14 +1698,101 @@ export class HomeComponent {
     return undefined;
   }
 
-  private toUsdcBaseUnits(value: string): string {
-    const normalized = this.normalizeAmountStorage(value);
+  public comparisonChartAriaLabel(): string {
+    if (this.selectedMarketChartMode === 'relative') {
+      return (
+        this.tokenSymbolLabel(this.toToken) +
+        ' minus ' +
+        this.tokenSymbolLabel(this.fromToken) +
+        ' relative price change'
+      );
+    }
 
-    if (!/^\d+(\.\d{0,6})?$/.test(normalized)) {
+    return `${this.tokenSymbolLabel(this.fromToken)} to ${this.tokenSymbolLabel(this.toToken)} rate over time`;
+  }
+
+  public comparisonNoteText(): string {
+    if (this.selectedMarketChartMode === 'relative') {
+      return `Line shows ${this.tokenSymbolLabel(this.toToken)} percentage move minus ${this.tokenSymbolLabel(this.fromToken)} percentage move`;
+    }
+
+    return `${this.tokenSymbolLabel(this.fromToken)} / ${this.tokenSymbolLabel(this.toToken)} rate over selected timeframe`;
+  }
+
+  private rawQuoteAmount(): string {
+    const quote = this.quoteResult;
+    const amount =
+      quote?.['amountOut'] ??
+      quote?.['destinationAmount'] ??
+      quote?.['toAmount'] ??
+      this.swapFlowFacade.quotePreview?.amountOut;
+
+    if (typeof amount === 'number') {
+      return Number.isFinite(amount) ? String(amount) : '';
+    }
+
+    if (typeof amount === 'string') {
+      return amount.trim();
+    }
+
+    return '';
+  }
+
+  private normalizeQuoteAmount(rawAmount: string, decimals?: number): string {
+    const normalized = this.normalizeAmountStorage(rawAmount);
+    if (!normalized) {
+      return '';
+    }
+
+    if (normalized.includes('.')) {
+      return normalized;
+    }
+
+    return this.fromBaseUnits(normalized, this.tokenDecimals(decimals));
+  }
+
+  private toBaseUnits(value: string, decimals?: number): string {
+    const normalized = this.normalizeAmountStorage(value);
+    const precision = this.tokenDecimals(decimals);
+    const decimalPattern = new RegExp(`^\\d+(\\.\\d{0,${precision}})?$`);
+
+    if (!decimalPattern.test(normalized)) {
       return '';
     }
 
     const [whole, fraction = ''] = normalized.split('.');
-    return `${whole}${fraction.padEnd(6, '0')}`.replace(/^0+(?=\d)/, '');
+    const digits = `${whole}${fraction.padEnd(precision, '0')}`.replace(
+      /^0+(?=\d)/,
+      ''
+    );
+    return digits || '0';
+  }
+
+  private fromBaseUnits(value: string, decimals: number): string {
+    const digits = value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
+    if (!digits) {
+      return '0';
+    }
+
+    if (decimals <= 0) {
+      return digits;
+    }
+
+    if (digits.length <= decimals) {
+      const padded = digits.padStart(decimals, '0');
+      return `0.${padded}`.replace(/\.?0+$/, '') || '0';
+    }
+
+    const whole = digits.slice(0, digits.length - decimals);
+    const fraction = digits.slice(digits.length - decimals).replace(/0+$/, '');
+    return fraction ? `${whole}.${fraction}` : whole;
+  }
+
+  private tokenDecimals(value?: number): number {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+      return this.maxAmountFractionDigits;
+    }
+
+    return Math.min(value, 18);
   }
 }
