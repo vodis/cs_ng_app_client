@@ -61,6 +61,11 @@ interface ComparisonChartLine {
   color: string;
 }
 
+interface ComparisonChartSeries {
+  symbol: string;
+  points: MarketComparisonPoint[];
+}
+
 interface ComparisonYLabel {
   y: number;
   label: string;
@@ -1295,37 +1300,44 @@ export class HomeComponent {
       return;
     }
 
-    const chartPoints =
+    const chartSeries = (
       this.selectedMarketChartMode === 'relative'
-        ? this.buildComparisonDifferencePoints(
-            baseSeries.points,
-            quoteSeries.points
-          )
-        : this.buildPairPricePoints(
-            response.baseToken.currentPrice,
-            response.quoteToken.currentPrice,
-            baseSeries.points,
-            quoteSeries.points
-          );
+        ? [
+            {
+              symbol: `${this.normalizeMarketSymbol(
+                quoteSeries.symbol
+              )}-${this.normalizeMarketSymbol(baseSeries.symbol)}`,
+              points: this.buildComparisonDifferencePoints(
+                baseSeries.points,
+                quoteSeries.points
+              ),
+            },
+          ]
+        : [
+            {
+              symbol: this.normalizeMarketSymbol(baseSeries.symbol),
+              points: this.buildIndexedPriceChangePoints(baseSeries.points),
+            },
+            {
+              symbol: this.normalizeMarketSymbol(quoteSeries.symbol),
+              points: this.buildIndexedPriceChangePoints(quoteSeries.points),
+            },
+          ]
+    ).filter(seriesItem => seriesItem.points.length >= 2);
 
-    if (chartPoints.length < 2) {
+    if (chartSeries.length === 0) {
       this.clearComparisonChart();
       return;
     }
 
-    const timeMin = Math.min(...chartPoints.map(point => point.time));
-    const timeMax = Math.max(...chartPoints.map(point => point.time));
+    const allChartPoints = chartSeries.flatMap(seriesItem => seriesItem.points);
+    const timeMin = Math.min(...allChartPoints.map(point => point.time));
+    const timeMax = Math.max(...allChartPoints.map(point => point.time));
     const timeRange = Math.max(timeMax - timeMin, 1);
-    const minValue = Math.min(...chartPoints.map(point => point.value));
-    const maxValue = Math.max(...chartPoints.map(point => point.value));
-    const spread = Math.max(
-      maxValue - minValue,
-      this.selectedMarketChartMode === 'relative' ? 0.5 : 0.01
-    );
-    const yPad = Math.max(
-      spread * 0.15,
-      this.selectedMarketChartMode === 'relative' ? 0.25 : 0.01
-    );
+    const minValue = Math.min(0, ...allChartPoints.map(point => point.value));
+    const maxValue = Math.max(0, ...allChartPoints.map(point => point.value));
+    const spread = Math.max(maxValue - minValue, 0.5);
+    const yPad = Math.max(spread * 0.15, 0.25);
     const yMin = minValue - yPad;
     const yMax = maxValue + yPad;
     const yRange = Math.max(yMax - yMin, 0.0001);
@@ -1344,46 +1356,22 @@ export class HomeComponent {
     const toY = (value: number): number =>
       this.comparisonPadding.top + ((yMax - value) / yRange) * innerHeight;
 
-    this.comparisonShowBaseline = this.selectedMarketChartMode === 'relative';
-    this.comparisonBaselineY = this.comparisonShowBaseline ? toY(0) : 0;
+    this.comparisonShowBaseline = true;
+    this.comparisonBaselineY = toY(0);
     this.comparisonGridLines = [0, 1, 2, 3].map(index => ({
       y: this.comparisonPadding.top + (index / 3) * innerHeight,
     }));
 
-    const labelValues =
-      this.selectedMarketChartMode === 'relative'
-        ? [yMax, 0, yMin]
-        : [yMax, (yMax + yMin) / 2, yMin];
+    const labelValues = [yMax, 0, yMin];
     this.comparisonYLabels = labelValues.map(value => ({
       y: toY(value),
-      label:
-        this.selectedMarketChartMode === 'relative'
-          ? this.formatDifferenceLabel(value)
-          : this.formatPairRateLabel(value),
+      label: this.formatDifferenceLabel(value),
     }));
 
     const bottomY = this.comparisonPadding.top + innerHeight;
-    const path = chartPoints
-      .map((point, index) => {
-        const x = toX(point.time);
-        const y = toY(point.value);
-        return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-      })
-      .join(' ');
-    const firstX = toX(chartPoints[0].time);
-    const lastX = toX(chartPoints[chartPoints.length - 1].time);
-    const fillPath = `${path} L ${lastX.toFixed(2)} ${bottomY.toFixed(2)} L ${firstX.toFixed(2)} ${bottomY.toFixed(2)} Z`;
-
-    this.comparisonLines = [
-      {
-        symbol: `${this.normalizeMarketSymbol(
-          quoteSeries.symbol
-        )}-${this.normalizeMarketSymbol(baseSeries.symbol)}`,
-        path,
-        fillPath,
-        color: this.tokenColor(quoteSeries.symbol),
-      },
-    ];
+    this.comparisonLines = chartSeries.map((seriesItem, index) =>
+      this.buildComparisonLine(seriesItem, index, bottomY, toX, toY)
+    );
 
     this.comparisonAxisStart = this.formatComparisonTime(
       timeMin,
@@ -1414,8 +1402,8 @@ export class HomeComponent {
     basePoints: MarketComparisonPoint[],
     quotePoints: MarketComparisonPoint[]
   ): MarketComparisonPoint[] {
-    const sortedBasePoints = this.sortedFiniteComparisonPoints(basePoints);
-    const sortedQuotePoints = this.sortedFiniteComparisonPoints(quotePoints);
+    const sortedBasePoints = this.buildIndexedPriceChangePoints(basePoints);
+    const sortedQuotePoints = this.buildIndexedPriceChangePoints(quotePoints);
     if (sortedBasePoints.length === 0 || sortedQuotePoints.length === 0) {
       return [];
     }
@@ -1438,64 +1426,51 @@ export class HomeComponent {
       .filter((point): point is MarketComparisonPoint => point !== undefined);
   }
 
-  private buildPairPricePoints(
-    basePrice: number | undefined,
-    quotePrice: number | undefined,
-    basePoints: MarketComparisonPoint[],
-    quotePoints: MarketComparisonPoint[]
+  private buildIndexedPriceChangePoints(
+    points: MarketComparisonPoint[]
   ): MarketComparisonPoint[] {
-    const sortedBasePoints = this.sortedFiniteComparisonPoints(basePoints);
-    const sortedQuotePoints = this.sortedFiniteComparisonPoints(quotePoints);
-    if (sortedBasePoints.length === 0 || sortedQuotePoints.length === 0) {
+    const sortedPoints = this.sortedFiniteComparisonPoints(points);
+    const firstPoint = sortedPoints[0];
+    if (!firstPoint || firstPoint.value <= 0) {
       return [];
     }
 
-    const pairRatePoints = sortedBasePoints
-      .map(basePoint => {
-        const quoteValue = this.interpolateComparisonValue(
-          sortedQuotePoints,
-          basePoint.time
-        );
-        if (
-          quoteValue === undefined ||
-          !Number.isFinite(quoteValue) ||
-          quoteValue <= 0
-        ) {
-          return undefined;
-        }
-
-        return {
-          time: basePoint.time,
-          value: basePoint.value / quoteValue,
-        };
-      })
-      .filter((point): point is MarketComparisonPoint => point !== undefined);
-
-    if (pairRatePoints.length < 2) {
-      return [];
-    }
-
-    if (
-      basePrice === undefined ||
-      quotePrice === undefined ||
-      !Number.isFinite(basePrice) ||
-      !Number.isFinite(quotePrice) ||
-      quotePrice <= 0
-    ) {
-      return pairRatePoints;
-    }
-
-    const currentPairRate = basePrice / quotePrice;
-    const lastPoint = pairRatePoints[pairRatePoints.length - 1];
-    if (!Number.isFinite(lastPoint.value) || lastPoint.value <= 0) {
-      return pairRatePoints;
-    }
-
-    const scale = currentPairRate / lastPoint.value;
-    return pairRatePoints.map(point => ({
+    return sortedPoints.map(point => ({
       time: point.time,
-      value: point.value * scale,
+      value: (point.value / firstPoint.value - 1) * 100,
     }));
+  }
+
+  private buildComparisonLine(
+    seriesItem: ComparisonChartSeries,
+    index: number,
+    bottomY: number,
+    toX: (time: number) => number,
+    toY: (value: number) => number
+  ): ComparisonChartLine {
+    const path = seriesItem.points
+      .map((point, pointIndex) => {
+        const x = toX(point.time);
+        const y = toY(point.value);
+        return `${pointIndex === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+      })
+      .join(' ');
+    const firstX = toX(seriesItem.points[0].time);
+    const lastX = toX(seriesItem.points[seriesItem.points.length - 1].time);
+    const fillPath =
+      this.selectedMarketChartMode === 'relative'
+        ? `${path} L ${lastX.toFixed(2)} ${bottomY.toFixed(2)} L ${firstX.toFixed(2)} ${bottomY.toFixed(2)} Z`
+        : '';
+
+    return {
+      symbol: seriesItem.symbol,
+      path,
+      fillPath,
+      color:
+        index === 0 && this.selectedMarketChartMode !== 'relative'
+          ? this.tokenColor(this.fromToken.symbol)
+          : this.tokenColor(seriesItem.symbol),
+    };
   }
 
   private sortedFiniteComparisonPoints(
@@ -1562,18 +1537,6 @@ export class HomeComponent {
 
   private formatDifferenceLabel(value: number): string {
     return formatPriceDifferenceLabel(value);
-  }
-
-  private formatPairRateLabel(value: number): string {
-    if (!Number.isFinite(value)) {
-      return '—';
-    }
-
-    if (Math.abs(value) >= 1) {
-      return value.toFixed(2);
-    }
-
-    return value.toFixed(6);
   }
 
   private timeframeLabel(timeframe: ComparisonTimeframe): string {
@@ -1708,7 +1671,7 @@ export class HomeComponent {
       );
     }
 
-    return `${this.tokenSymbolLabel(this.fromToken)} to ${this.tokenSymbolLabel(this.toToken)} rate over time`;
+    return `${this.tokenSymbolLabel(this.fromToken)} and ${this.tokenSymbolLabel(this.toToken)} price change over time`;
   }
 
   public comparisonNoteText(): string {
@@ -1716,7 +1679,7 @@ export class HomeComponent {
       return `Line shows ${this.tokenSymbolLabel(this.toToken)} percentage move minus ${this.tokenSymbolLabel(this.fromToken)} percentage move`;
     }
 
-    return `${this.tokenSymbolLabel(this.fromToken)} / ${this.tokenSymbolLabel(this.toToken)} rate over selected timeframe`;
+    return `${this.tokenSymbolLabel(this.fromToken)} and ${this.tokenSymbolLabel(this.toToken)} are normalized to 0% at the start of the selected timeframe`;
   }
 
   private rawQuoteAmount(): string {

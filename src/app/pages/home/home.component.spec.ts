@@ -93,11 +93,16 @@ describe('HomeComponent market overview', () => {
     initialRequest.flush(comparisonResponse('USDC', 'NEAR', '1H'));
 
     expect(component.comparisonError).toBe('');
-    expect(component.comparisonLines.length).toBe(1);
-    expect(component.comparisonLines[0].symbol).toBe('NEAR-USDC');
+    expect(component.comparisonLines.length).toBe(2);
+    expect(component.comparisonLines.map(line => line.symbol)).toEqual([
+      'USDC',
+      'NEAR',
+    ]);
     expect(component.selectedMarketChartMode).toBe('price');
-    expect(component.comparisonShowBaseline).toBeFalse();
-    expect(component.comparisonYLabels[0]?.label.startsWith('$')).toBeTrue();
+    expect(component.comparisonShowBaseline).toBeTrue();
+    expect(component.comparisonYLabels.map(label => label.label)).toContain(
+      '0%'
+    );
 
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -170,6 +175,8 @@ describe('HomeComponent market overview', () => {
     component.changeMarketChartMode('relative');
 
     expect(component.selectedMarketChartMode).toBe('relative');
+    expect(component.comparisonLines.length).toBe(1);
+    expect(component.comparisonLines[0].symbol).toBe('NEAR-USDC');
     expect(component.comparisonShowBaseline).toBeTrue();
     expect(component.comparisonYLabels.map(label => label.label)).toContain(
       '0%'
