@@ -518,24 +518,28 @@
 
   .tabs {
     display: flex;
-    color: #b6b9ba;
-    font-size: 13px;
-    gap: 25px;
-    text-transform: uppercase;
+    gap: 12px;
 
-    b {
-      position: relative;
-      color: var(--exchange-orange);
+    button {
+      padding: 0 0 4px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: #b6b9ba;
+      cursor: pointer;
+      font-size: 13px;
+      text-transform: uppercase;
 
-      &::after {
-        position: absolute;
-        right: -12px;
-        bottom: -14px;
-        left: 0;
-        height: 2px;
-        background: var(--exchange-orange);
-        content: '';
+      &:disabled {
+        cursor: default;
+        opacity: 0.45;
       }
+    }
+
+    .active {
+      position: relative;
+      border-bottom-color: var(--exchange-orange);
+      color: var(--exchange-orange);
     }
   }
 
@@ -572,6 +576,40 @@
     margin-top: 32px;
     gap: 8px 10px;
     grid-template-columns: max-content minmax(0, 1fr);
+  }
+
+  .marketAdvanced {
+    overflow: hidden;
+    min-height: 0;
+    margin-top: 18px;
+    flex: 1 1 auto;
+
+    app-live-chart {
+      display: block;
+      height: 100%;
+      min-height: 0;
+    }
+
+    ::ng-deep .live-chart {
+      display: flex;
+      height: 100%;
+      min-height: 0;
+      flex-direction: column;
+      padding-top: 0;
+    }
+
+    ::ng-deep .live-chart__panel {
+      display: flex;
+      min-height: 0;
+      flex: 1 1 auto;
+      flex-direction: column;
+    }
+
+    ::ng-deep .live-chart__canvas {
+      min-height: 0;
+      flex: 1 1 auto;
+      aspect-ratio: auto;
+    }
   }
 
   .marketSummary {
