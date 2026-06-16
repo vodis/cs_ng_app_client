@@ -93,21 +93,18 @@ describe('HomeComponent market overview', () => {
     initialRequest.flush(comparisonResponse('USDC', 'NEAR', '1H'));
 
     expect(component.comparisonError).toBe('');
-    expect(component.comparisonLines.length).toBe(2);
-    expect(component.comparisonLines.map(line => line.symbol)).toEqual([
+    expect(component.comparisonChartSeries.length).toBe(2);
+    expect(component.comparisonChartSeries.map(line => line.id)).toEqual([
       'USDC',
       'NEAR',
     ]);
     expect(component.selectedMarketChartMode).toBe('price');
-    expect(component.comparisonShowBaseline).toBeTrue();
-    expect(component.comparisonYLabels.map(label => label.label)).toContain(
-      '0%'
-    );
+    expect(component.comparisonChartSeries[0].points[0].value).toBe(0);
 
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.chart__empty')).toBeNull();
-    expect(compiled.querySelector('.chart svg')).toBeTruthy();
+    expect(compiled.querySelector('app-market-overview-chart')).toBeTruthy();
   });
 
   it('uses display symbols for wrapped assets when the timeframe changes', () => {
@@ -154,7 +151,7 @@ describe('HomeComponent market overview', () => {
       ],
     });
 
-    expect(component.comparisonLines).toEqual([]);
+    expect(component.comparisonChartSeries).toEqual([]);
     expect(component.comparisonError).toBe('Comparison data unavailable');
 
     fixture.detectChanges();
@@ -162,7 +159,7 @@ describe('HomeComponent market overview', () => {
     expect(compiled.querySelector('.chart__empty')?.textContent?.trim()).toBe(
       'Comparison data unavailable'
     );
-    expect(compiled.querySelector('.chart svg')).toBeNull();
+    expect(compiled.querySelector('app-market-overview-chart')).toBeNull();
   });
 
   it('shows relative chart baseline when switching to relative mode', () => {
@@ -175,12 +172,9 @@ describe('HomeComponent market overview', () => {
     component.changeMarketChartMode('relative');
 
     expect(component.selectedMarketChartMode).toBe('relative');
-    expect(component.comparisonLines.length).toBe(1);
-    expect(component.comparisonLines[0].symbol).toBe('NEAR-USDC');
-    expect(component.comparisonShowBaseline).toBeTrue();
-    expect(component.comparisonYLabels.map(label => label.label)).toContain(
-      '0%'
-    );
+    expect(component.comparisonChartSeries.length).toBe(1);
+    expect(component.comparisonChartSeries[0].id).toBe('NEAR-USDC');
+    expect(component.comparisonChartSeries[0].points[0].value).toBe(0);
   });
 
   it('uses base/quote direction for fallback swap rate', () => {
