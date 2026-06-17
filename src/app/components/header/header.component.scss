@@ -33,6 +33,7 @@
       display: flex;
       align-items: center;
       justify-content: flex-end;
+      padding-top: 6px;
       padding-right: 1rem;
       grid-column: 6 / 8;
     }
@@ -58,6 +59,7 @@
 
     &__content_connect {
       justify-content: center;
+      padding-top: 6px;
       grid-column: 3 / 5;
     }
   }
