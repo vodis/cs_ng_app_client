@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, map } from 'rxjs';
 import { AppLoggerService } from '@core/logging/app-logger.service';
 import { createTraceId } from '@core/trace/create-trace-id';
 import type {
@@ -30,15 +30,24 @@ export class SwapExecutionWorkflow {
     request: Omit<SwapQuoteRequest, 'traceId' | 'dry'>,
     traceId = createTraceId()
   ): Promise<{ traceId: string; preview: SwapQuotePreview }> {
-    const preview = await firstValueFrom(
-      this.swapApiClient.requestQuotePreview({
+    const { preview } = await firstValueFrom(
+      this.requestQuotePreviewStream(request, traceId)
+    );
+
+    return { traceId, preview };
+  }
+
+  requestQuotePreviewStream(
+    request: Omit<SwapQuoteRequest, 'traceId' | 'dry'>,
+    traceId = createTraceId()
+  ): Observable<{ traceId: string; preview: SwapQuotePreview }> {
+    return this.swapApiClient
+      .requestQuotePreview({
         ...request,
         traceId,
         dry: true,
       })
-    );
-
-    return { traceId, preview };
+      .pipe(map(preview => ({ traceId, preview })));
   }
 
   async executeSwap(

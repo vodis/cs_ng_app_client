@@ -42,6 +42,14 @@ class SwapFlowFacadeStub {
   public readonly intentHash$ = this.intentHashSubject.asObservable();
   public readonly quotePreview: SwapQuotePreview | undefined = undefined;
 
+  public watchQuotePreview(): void {
+    return undefined;
+  }
+
+  public refreshQuotePreview(): void {
+    return undefined;
+  }
+
   public reset(): void {
     this.quotePreviewSubject.next(undefined);
     this.errorSubject.next(undefined);

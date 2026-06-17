@@ -8,6 +8,7 @@ import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
 import type {
   SwapFlowState,
   SwapPrepareRequest,
+  SwapQuotePreview,
 } from '@domains/exchange/models/swap.models';
 import { environment } from '../../../environments/environment';
 import type { WalletAccount } from '@domains/wallet/models/wallet.models';
@@ -179,6 +180,7 @@ export class HomeComponent {
   public tokenSelectorSide: TokenSelectorSide | null = null;
   public swapFlowState: SwapFlowState = 'idle';
   public quoteError = '';
+  public quotePreview: SwapQuotePreview | undefined;
   public quoteResult: Record<string, unknown> | undefined;
   public intentHash = '';
   public comparison?: MarketComparisonResponse;
@@ -213,7 +215,7 @@ export class HomeComponent {
         ) {
           this.walletAddress = nextWalletAddress;
           this.walletChainId = nextWalletChainId;
-          this.resetSwapQuoteState();
+          this.refreshSwapQuotePreview();
         }
       });
 
@@ -226,6 +228,7 @@ export class HomeComponent {
     this.swapFlowFacade.quotePreview$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(preview => {
+        this.quotePreview = preview;
         this.quoteResult = preview?.raw;
       });
 
@@ -274,7 +277,7 @@ export class HomeComponent {
       return;
     }
 
-    void this.swapFlowFacade.requestQuotePreview(
+    this.swapFlowFacade.refreshQuotePreview(
       this.buildSwapInput(amount, authMethod)
     );
   }
@@ -367,7 +370,7 @@ export class HomeComponent {
     const previousFrom = this.fromToken;
     this.fromToken = this.toToken;
     this.toToken = previousFrom;
-    this.resetSwapQuoteState();
+    this.refreshSwapQuotePreview();
     this.loadMarketComparison();
   }
 
@@ -439,12 +442,7 @@ export class HomeComponent {
   }
 
   public toAmountUi(): string {
-    const quoted = this.toAmountDisplay();
-    if (quoted) {
-      return quoted;
-    }
-
-    return this.previewToAmount();
+    return this.toAmountDisplay();
   }
 
   public fromAmountDisplay(): string {
@@ -648,6 +646,7 @@ export class HomeComponent {
   public onAmountFocus(event: FocusEvent): void {
     this.isAmountInputFocused = true;
     this.amount = '';
+    this.refreshSwapQuotePreview();
 
     const input = event.target as HTMLInputElement;
     input.value = '';
@@ -659,6 +658,8 @@ export class HomeComponent {
     if (!this.amount.trim() || this.isZeroAmountValue(this.amount)) {
       this.amount = '';
     }
+
+    this.refreshSwapQuotePreview();
 
     const input = event.target as HTMLInputElement;
     input.value = this.fromAmountDisplay();
@@ -706,17 +707,50 @@ export class HomeComponent {
     }
 
     if (sanitized !== previousAmount) {
-      this.resetSwapQuoteState();
+      this.refreshSwapQuotePreview();
     }
 
     this.scrollAmountToEnd(input);
   }
 
-  private resetSwapQuoteState(): void {
-    this.swapFlowFacade.reset();
-    this.quoteResult = undefined;
-    this.quoteError = '';
-    this.intentHash = '';
+  private refreshSwapQuotePreview(): void {
+    const input = this.buildQuotePreviewInput();
+
+    if (!input) {
+      this.swapFlowFacade.watchQuotePreview(undefined);
+      this.quotePreview = undefined;
+      this.quoteResult = undefined;
+      this.quoteError = '';
+      this.intentHash = '';
+      return;
+    }
+
+    this.swapFlowFacade.watchQuotePreview(input);
+  }
+
+  private buildQuotePreviewInput():
+    | Omit<SwapPrepareRequest, 'traceId'>
+    | undefined {
+    if (!this.walletAddress) {
+      return undefined;
+    }
+
+    const authMethod = this.resolveSwapAuthMethod({
+      account: this.walletAddress,
+      chainId: this.walletChainId,
+    });
+
+    if (!authMethod) {
+      return undefined;
+    }
+
+    const amount = this.toBaseUnits(this.amount, this.fromToken.decimals);
+
+    if (!amount || /^0+$/.test(amount)) {
+      return undefined;
+    }
+
+    return this.buildSwapInput(amount, authMethod);
   }
 
   private scrollAmountToEnd(input: HTMLInputElement): void {
@@ -865,25 +899,6 @@ export class HomeComponent {
     return this.maxAmountFractionDigits;
   }
 
-  private numberToAmountString(
-    value: number,
-    maxFractionDigits: number,
-    preferInteger: boolean
-  ): string {
-    if (!Number.isFinite(value)) {
-      return '';
-    }
-
-    if (preferInteger) {
-      const rounded = Math.round(value);
-      if (Math.abs(value - rounded) / Math.max(1, Math.abs(value)) < 1e-9) {
-        return String(rounded);
-      }
-    }
-
-    return value.toFixed(maxFractionDigits).replace(/\.?0+$/, '');
-  }
-
   private restoreCaretAfterDigits(
     input: HTMLInputElement,
     previousValue: string,
@@ -949,7 +964,7 @@ export class HomeComponent {
       this.toToken = selected;
     }
 
-    this.resetSwapQuoteState();
+    this.refreshSwapQuotePreview();
     this.closeTokenSelector();
     this.loadMarketComparison();
   }
@@ -1444,36 +1459,6 @@ export class HomeComponent {
     });
   }
 
-  private previewToAmount(): string {
-    const rawAmount = this.normalizeAmountStorage(this.amount);
-    const rate = this.previewSwapRate();
-
-    if (!rawAmount || this.isZeroAmountValue(rawAmount) || rate === undefined) {
-      return '';
-    }
-
-    const amountIn = this.parseAmount(rawAmount);
-    if (!Number.isFinite(amountIn) || amountIn <= 0) {
-      return '';
-    }
-
-    const product = amountIn * rate;
-    if (!Number.isFinite(product)) {
-      return '';
-    }
-
-    const maxFractionDigits = this.swapAmountFractionDigits(
-      this.toToken.symbol
-    );
-    const inputHasFraction = rawAmount.includes('.');
-
-    return this.numberToAmountString(
-      product,
-      maxFractionDigits,
-      !inputHasFraction
-    );
-  }
-
   private previewSwapRate(): number | undefined {
     const amountIn = this.parseAmount(this.amount);
     const amountOut = Number.parseFloat(this.toAmountDisplay());
@@ -1564,7 +1549,7 @@ export class HomeComponent {
       quote?.['amountOut'] ??
       quote?.['destinationAmount'] ??
       quote?.['toAmount'] ??
-      this.swapFlowFacade.quotePreview?.amountOut;
+      this.quotePreview?.amountOut;
 
     if (typeof amount === 'number') {
       return Number.isFinite(amount) ? String(amount) : '';
