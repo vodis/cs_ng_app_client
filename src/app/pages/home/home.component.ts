@@ -16,6 +16,7 @@ import {
   changeClass as changePriceClass,
   formatPercent as formatPricePercent,
   formatPrice as formatCurrencyPrice,
+  formatSwapFiatEstimate,
 } from './home-price.utils';
 import {
   AMOUNT_DECIMAL_SEPARATOR,
@@ -1440,7 +1441,7 @@ export class HomeComponent {
       return '$0';
     }
 
-    return this.formatPrice(price * amount);
+    return formatSwapFiatEstimate(price * amount);
   }
 
   private tokenPrice(symbol: string): number | undefined {

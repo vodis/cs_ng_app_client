@@ -3,6 +3,7 @@ import {
   formatDifferenceLabel,
   formatPercent,
   formatPrice,
+  formatSwapFiatEstimate,
 } from './home-price.utils';
 
 describe('home-price.utils', () => {
@@ -22,6 +23,24 @@ describe('home-price.utils', () => {
 
     it('formats compact values for billions', () => {
       expect(formatPrice(3_162_148_952)).toContain('$3.16B');
+    });
+  });
+
+  describe('formatSwapFiatEstimate', () => {
+    it('uses european decimal separators for regular values', () => {
+      expect(formatSwapFiatEstimate(886.71)).toBe('$886,71');
+      expect(formatSwapFiatEstimate(0.886767)).toBe('$0,8868');
+    });
+
+    it('uses neutral compact suffixes with european decimals', () => {
+      expect(formatSwapFiatEstimate(9.98e12)).toBe('$9,98T');
+      expect(formatSwapFiatEstimate(99_840_000_000)).toBe('$99,84B');
+      expect(formatSwapFiatEstimate(9.98e12)).not.toContain('трлн');
+      expect(formatSwapFiatEstimate(99_840_000_000)).not.toContain('млрд');
+    });
+
+    it('formats thousands with dot grouping', () => {
+      expect(formatSwapFiatEstimate(1250)).toBe('$1.250');
     });
   });
 

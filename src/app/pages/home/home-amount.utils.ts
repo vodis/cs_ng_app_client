@@ -141,6 +141,24 @@ export function formatSwapAmountDisplay(
   return `${whole}${AMOUNT_DECIMAL_SEPARATOR}${fractionPart}`;
 }
 
+export function formatEuropeanNumber(
+  value: number,
+  maxFractionDigits: number
+): string {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+  const normalized = abs.toLocaleString('en-US', {
+    maximumFractionDigits: maxFractionDigits,
+    useGrouping: false,
+  });
+
+  return sign + formatSwapAmountDisplay(normalized, maxFractionDigits);
+}
+
 function parseWithDecimalSeparator(
   cleaned: string,
   separatorIndex: number,
