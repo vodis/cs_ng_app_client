@@ -40,6 +40,10 @@ Production wallet remote policy:
 
 ## Branch and PR Hygiene
 
+- Start task branches and task worktrees from a freshly pulled `develop`.
+- Before creating a new worktree, remove stale clean worktrees for this
+  repository; preserve any worktree with uncommitted or unpushed work.
+- Open PRs back to `develop`.
 - Keep PRs focused to one concern (wiring, contract, UI, refactor, test).
 - If host and wallets both change, open coordinated PRs and cross-link them.
 - Document compatibility notes when one PR depends on the other.

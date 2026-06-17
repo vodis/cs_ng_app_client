@@ -4,9 +4,15 @@ This guide is for AI/code agents and contributors working in `cs_ng_app_client`.
 
 ## Branch and PR Workflow
 
-- Start each code-change task from fresh `develop`: checkout `develop`, pull `origin/develop`, then create a new task branch.
-- Open PRs from the task branch to the repository default release branch (`master` today; `main` if the repo is renamed later).
-- Do not open PRs from `develop` directly to `master`/`main`; keep PRs small and free of unrelated `develop` history.
+- Before starting a new task or creating a new worktree, run `git worktree list`
+  and remove stale clean worktrees for this repository. Do not remove a worktree
+  with uncommitted or unpushed work.
+- Start each code-change task from fresh `develop`: checkout `develop`, pull
+  `origin/develop`, then create a new task branch or worktree from that updated
+  `develop`.
+- Open PRs from the task branch to `develop`.
+- Do not open PRs from `develop` directly to `master`/`main`; keep PRs small and
+  free of unrelated history.
 
 ## Mission
 
