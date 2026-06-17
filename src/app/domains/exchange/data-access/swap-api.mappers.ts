@@ -30,10 +30,13 @@ export function mapQuotePreviewResponse(
   envelope: ApiResponseEnvelope<unknown>
 ): SwapQuotePreview {
   const payload = unwrapData(envelope);
+  const quote = isRecord(payload['quote']) ? payload['quote'] : undefined;
   const amountOut =
     readString(payload, 'amountOut') ??
     readString(payload, 'destinationAmount') ??
     readString(payload, 'toAmount') ??
+    (quote ? readString(quote, 'amountOut') : undefined) ??
+    (quote ? readString(quote, 'amount_out') : undefined) ??
     '';
 
   return {

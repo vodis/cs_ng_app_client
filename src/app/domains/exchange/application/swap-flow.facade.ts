@@ -1,5 +1,14 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import {
+  BehaviorSubject,
+  EMPTY,
+  Subject,
+  catchError,
+  distinctUntilChanged,
+  switchMap,
+  tap,
+  timer,
+} from 'rxjs';
 import { createTraceId } from '@core/trace/create-trace-id';
 import type {
   SwapFlowError,
@@ -32,6 +41,9 @@ export class SwapFlowFacade {
   private readonly intentHashSubject = new BehaviorSubject<string | undefined>(
     undefined
   );
+  private readonly quoteInputSubject = new Subject<SwapFormInput | undefined>();
+  private readonly quoteDebounceMs = 350;
+  private readonly quoteRefreshMs = 60_000;
   private activeTraceId = createTraceId();
   private quoteRequestVersion = 0;
 
@@ -40,7 +52,17 @@ export class SwapFlowFacade {
   readonly error$ = this.errorSubject.asObservable();
   readonly intentHash$ = this.intentHashSubject.asObservable();
 
-  constructor(private readonly workflow: SwapExecutionWorkflow) {}
+  constructor(private readonly workflow: SwapExecutionWorkflow) {
+    this.quoteInputSubject
+      .pipe(
+        distinctUntilChanged(
+          (previous, current) =>
+            this.quoteInputKey(previous) === this.quoteInputKey(current)
+        ),
+        switchMap(input => this.watchQuoteInput(input))
+      )
+      .subscribe();
+  }
 
   get state(): SwapFlowState {
     return this.stateSubject.value;
@@ -80,8 +102,20 @@ export class SwapFlowFacade {
     }
   }
 
+  watchQuotePreview(input: SwapFormInput | undefined): void {
+    this.quoteInputSubject.next(input);
+  }
+
+  refreshQuotePreview(input: SwapFormInput): void {
+    this.quoteInputSubject.next(undefined);
+    this.quoteInputSubject.next(input);
+  }
+
   async executeSwap(input: SwapFormInput): Promise<void> {
     this.activeTraceId = createTraceId();
+    const currentQuotePreview = this.quotePreview;
+    this.quoteInputSubject.next(undefined);
+    this.quotePreviewSubject.next(currentQuotePreview);
     this.errorSubject.next(undefined);
     this.intentHashSubject.next(undefined);
     this.setState('validating');
@@ -102,10 +136,65 @@ export class SwapFlowFacade {
   reset(): void {
     this.activeTraceId = createTraceId();
     this.quoteRequestVersion++;
+    this.quoteInputSubject.next(undefined);
     this.quotePreviewSubject.next(undefined);
     this.errorSubject.next(undefined);
     this.intentHashSubject.next(undefined);
     this.setState('idle');
+  }
+
+  private watchQuoteInput(input: SwapFormInput | undefined) {
+    const requestVersion = ++this.quoteRequestVersion;
+    this.errorSubject.next(undefined);
+    this.intentHashSubject.next(undefined);
+    this.quotePreviewSubject.next(undefined);
+
+    if (!input) {
+      this.setState('idle');
+      return EMPTY;
+    }
+
+    return timer(this.quoteDebounceMs, this.quoteRefreshMs).pipe(
+      switchMap(() => {
+        const traceId = createTraceId();
+        this.activeTraceId = traceId;
+        this.setState('requestingQuote');
+
+        return this.workflow.requestQuotePreviewStream(input, traceId).pipe(
+          tap(({ preview }) => {
+            if (requestVersion !== this.quoteRequestVersion) {
+              return;
+            }
+
+            this.quotePreviewSubject.next(preview);
+            this.setState('idle');
+          }),
+          catchError(error => {
+            if (requestVersion === this.quoteRequestVersion) {
+              this.errorSubject.next(this.toFlowError('requestingQuote', error));
+              this.setState('idle');
+            }
+
+            return EMPTY;
+          })
+        );
+      })
+    );
+  }
+
+  private quoteInputKey(input: SwapFormInput | undefined): string {
+    if (!input) {
+      return '';
+    }
+
+    return [
+      input.originAsset,
+      input.destinationAsset,
+      input.amount,
+      input.userAddress.toLowerCase(),
+      input.slippageTolerance,
+      input.authMethod,
+    ].join('|');
   }
 
   private setState(state: SwapFlowState): void {
