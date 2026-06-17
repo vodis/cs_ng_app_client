@@ -42,6 +42,14 @@ class SwapFlowFacadeStub {
   public readonly intentHash$ = this.intentHashSubject.asObservable();
   public readonly quotePreview: SwapQuotePreview | undefined = undefined;
 
+  public watchQuotePreview(): void {
+    return undefined;
+  }
+
+  public refreshQuotePreview(): void {
+    return undefined;
+  }
+
   public reset(): void {
     this.quotePreviewSubject.next(undefined);
     this.errorSubject.next(undefined);
@@ -93,16 +101,18 @@ describe('HomeComponent market overview', () => {
     initialRequest.flush(comparisonResponse('USDC', 'NEAR', '1H'));
 
     expect(component.comparisonError).toBe('');
-    expect(component.comparisonLines.length).toBe(1);
-    expect(component.comparisonLines[0].symbol).toBe('NEAR-USDC');
-    expect(component.comparisonYLabels.map(label => label.label)).toContain(
-      '0%'
-    );
+    expect(component.comparisonChartSeries.length).toBe(2);
+    expect(component.comparisonChartSeries.map(line => line.id)).toEqual([
+      'USDC',
+      'NEAR',
+    ]);
+    expect(component.selectedMarketChartMode).toBe('price');
+    expect(component.comparisonChartSeries[0].points[0].value).toBe(0);
 
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.chart__empty')).toBeNull();
-    expect(compiled.querySelector('.chart svg')).toBeTruthy();
+    expect(compiled.querySelector('app-market-overview-chart')).toBeTruthy();
   });
 
   it('uses display symbols for wrapped assets when the timeframe changes', () => {
@@ -149,7 +159,7 @@ describe('HomeComponent market overview', () => {
       ],
     });
 
-    expect(component.comparisonLines).toEqual([]);
+    expect(component.comparisonChartSeries).toEqual([]);
     expect(component.comparisonError).toBe('Comparison data unavailable');
 
     fixture.detectChanges();
@@ -157,7 +167,69 @@ describe('HomeComponent market overview', () => {
     expect(compiled.querySelector('.chart__empty')?.textContent?.trim()).toBe(
       'Comparison data unavailable'
     );
-    expect(compiled.querySelector('.chart svg')).toBeNull();
+    expect(compiled.querySelector('app-market-overview-chart')).toBeNull();
+  });
+
+  it('shows relative chart baseline when switching to relative mode', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.changeMarketChartMode('relative');
+
+    expect(component.selectedMarketChartMode).toBe('relative');
+    expect(component.comparisonChartSeries.length).toBe(1);
+    expect(component.comparisonChartSeries[0].id).toBe('NEAR-USDC');
+    expect(component.comparisonChartSeries[0].points[0].value).toBe(0);
+  });
+
+  it('uses base/quote direction for fallback swap rate', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.amount = '1';
+    component.quoteResult = undefined;
+    component.fromToken = {
+      ...component.fromToken,
+      symbol: 'NEAR',
+      displaySymbol: 'NEAR',
+    };
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'ETH',
+      displaySymbol: 'ETH',
+    };
+    component.changeComparisonTimeframe('1D');
+    expectComparisonRequest({
+      base: 'NEAR',
+      quote: 'ETH',
+      timeframe: '1D',
+    }).flush(comparisonResponse('NEAR', 'ETH', '1D'));
+
+    const rate = component['previewSwapRate']();
+    expect(rate).toBeCloseTo(1 / 4, 8);
+  });
+
+  it('normalizes integer quote amount using destination decimals', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'ETH',
+      decimals: 6,
+    };
+    component.quoteResult = { amountOut: '7385926' };
+
+    expect(component.toAmountDisplay()).toBe('7.385926');
   });
 
   function expectComparisonRequest(expected: {

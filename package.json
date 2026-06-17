@@ -15,7 +15,10 @@
     "format": "prettier --write ./",
     "stylelint-check": "stylelint src/**/*scss",
     "stylelint-fix": "stylelint src/**/*scss --fix",
-    "audit": "pnpm audit"
+    "audit": "pnpm audit",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:install": "playwright install --with-deps chromium"
   },
   "private": true,
   "dependencies": {
@@ -51,6 +54,7 @@
     "@angular/cli": "^19.2.0",
     "@angular/compiler-cli": "^19.2.0",
     "@babel/plugin-transform-runtime": "^7.29.0",
+    "@playwright/test": "^1.61.0",
     "@types/jasmine": "^5.1.4",
     "@types/jasminewd2": "^2.0.13",
     "@types/node": "^20.11.21",
@@ -90,7 +94,7 @@
       "pnpm run lint",
       "pnpm run format"
     ],
-    "*.{scss}": [
+    "*.scss": [
       "pnpm run stylelint-fix"
     ]
   },

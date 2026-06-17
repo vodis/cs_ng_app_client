@@ -5,6 +5,8 @@
   --main-text-color: #ffffff;
   --primary-text-color: #fe6c00;
   --secondary-text-color: #767676;
+  --gray-30: #cfcbd2;
+  --gray-100: #080708;
 
   /* System font stack (override Material’s Roboto) */
   --app-font-sans:

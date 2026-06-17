@@ -27,8 +27,8 @@
                           [src]="fromIcon"
                           [alt]="tokenSymbolLabel(fromToken)"
                           loading="lazy"
-                          width="22"
-                          height="22" />
+                          width="34"
+                          height="34" />
                       </span>
                     } @else {
                       <span class="coin">{{
@@ -39,7 +39,7 @@
                       tokenSymbolLabel(fromToken)
                     }}</span>
                     <span class="select__arrow" aria-hidden="true"
-                      >&#8964;</span
+                      >&#9662;</span
                     >
                   </span>
                 </button>
@@ -102,8 +102,8 @@
                           [src]="toIcon"
                           [alt]="tokenSymbolLabel(toToken)"
                           loading="lazy"
-                          width="22"
-                          height="22" />
+                          width="34"
+                          height="34" />
                       </span>
                     } @else {
                       <span class="coin">{{
@@ -114,7 +114,7 @@
                       tokenSymbolLabel(toToken)
                     }}</span>
                     <span class="select__arrow" aria-hidden="true"
-                      >&#8964;</span
+                      >&#9662;</span
                     >
                   </span>
                 </button>
@@ -172,15 +172,27 @@
         <div>
           <div class="panelTitle">Market Overview</div>
           <div class="tabs" aria-label="Market data tabs">
-            <b>Price</b>
-            <span>Volume</span>
-            <span>Liquidity</span>
+            <button
+              type="button"
+              [disabled]="showAdvancedMarketView"
+              [class.active]="selectedMarketChartMode === 'price'"
+              (click)="changeMarketChartMode('price')">
+              Change
+            </button>
+            <button
+              type="button"
+              [disabled]="showAdvancedMarketView"
+              [class.active]="selectedMarketChartMode === 'relative'"
+              (click)="changeMarketChartMode('relative')">
+              Relative
+            </button>
           </div>
         </div>
         <div class="range" aria-label="Comparison timeframe">
           @for (timeframe of comparisonTimeframes; track timeframe) {
             <button
               type="button"
+              [disabled]="showAdvancedMarketView"
               [class.active]="selectedComparisonTimeframe === timeframe"
               (click)="changeComparisonTimeframe(timeframe)">
               {{ timeframe }}
@@ -189,191 +201,111 @@
         </div>
       </div>
 
-      <div class="marketBody">
-        <div class="marketSummary">
-          <div class="pair">
-            <span class="pair__icons" aria-hidden="true">
-              @if (tokenIconFor(fromToken); as fromIcon) {
-                <span
-                  class="pair__iconWrap"
-                  [style.backgroundColor]="fromToken.color">
-                  <img
-                    class="pair__icon"
-                    [src]="fromIcon"
-                    [alt]="tokenSymbolLabel(fromToken)"
-                    loading="lazy"
-                    width="24"
-                    height="24" />
-                </span>
-              } @else {
-                <span class="coin">{{
-                  tokenDisplay(tokenSymbolLabel(fromToken))
-                }}</span>
-              }
-              @if (tokenIconFor(toToken); as toIcon) {
-                <span
-                  class="pair__iconWrap"
-                  [style.backgroundColor]="toToken.color">
-                  <img
-                    class="pair__icon"
-                    [src]="toIcon"
-                    [alt]="tokenSymbolLabel(toToken)"
-                    loading="lazy"
-                    width="24"
-                    height="24" />
-                </span>
-              } @else {
-                <span class="coin near">{{
-                  tokenDisplay(tokenSymbolLabel(toToken))
-                }}</span>
-              }
-            </span>
-            <span class="pair__label"
-              >{{ tokenSymbolLabel(fromToken) }} /
-              {{ tokenSymbolLabel(toToken) }}</span
-            >
+      @if (showAdvancedMarketView) {
+        <div class="marketAdvanced">
+          <app-live-chart
+            [coin]="marketSymbolFor(toToken)"
+            [active]="showAdvancedMarketView" />
+        </div>
+      } @else {
+        <div class="marketBody">
+          <div class="marketSummary">
+            <div class="pair">
+              <span class="pair__icons" aria-hidden="true">
+                @if (tokenIconFor(fromToken); as fromIcon) {
+                  <span
+                    class="pair__iconWrap"
+                    [style.backgroundColor]="fromToken.color">
+                    <img
+                      class="pair__icon"
+                      [src]="fromIcon"
+                      [alt]="tokenSymbolLabel(fromToken)"
+                      loading="lazy"
+                      width="24"
+                      height="24" />
+                  </span>
+                } @else {
+                  <span class="coin">{{
+                    tokenDisplay(tokenSymbolLabel(fromToken))
+                  }}</span>
+                }
+                @if (tokenIconFor(toToken); as toIcon) {
+                  <span
+                    class="pair__iconWrap"
+                    [style.backgroundColor]="toToken.color">
+                    <img
+                      class="pair__icon"
+                      [src]="toIcon"
+                      [alt]="tokenSymbolLabel(toToken)"
+                      loading="lazy"
+                      width="24"
+                      height="24" />
+                  </span>
+                } @else {
+                  <span class="coin near">{{
+                    tokenDisplay(tokenSymbolLabel(toToken))
+                  }}</span>
+                }
+              </span>
+              <span class="pair__label"
+                >{{ tokenSymbolLabel(fromToken) }} /
+                {{ tokenSymbolLabel(toToken) }}</span
+              >
+            </div>
+
+            @if (comparisonLoading) {
+              <div class="market-skeleton" aria-hidden="true">
+                <span></span>
+              </div>
+            } @else {
+              <div class="price">{{ marketPriceDisplay() }}</div>
+              <div
+                class="change"
+                [class.positive]="
+                  (comparison?.quoteToken?.changePercent ?? 0) > 0
+                "
+                [class.negative]="
+                  (comparison?.quoteToken?.changePercent ?? 0) < 0
+                "
+                [class.neutral]="
+                  comparison?.quoteToken?.changePercent === undefined ||
+                  comparison?.quoteToken?.changePercent === 0
+                ">
+                {{ formatPercent(comparison?.quoteToken?.changePercent) }}
+                (24H)
+              </div>
+            }
           </div>
 
           @if (comparisonLoading) {
-            <div class="market-skeleton" aria-hidden="true">
+            <div
+              class="market-skeleton market-skeleton--chart"
+              aria-hidden="true">
               <span></span>
             </div>
           } @else {
-            <div class="price">{{ marketPriceDisplay() }}</div>
-            <div
-              class="change"
-              [class.positive]="
-                (comparison?.quoteToken?.changePercent ?? 0) > 0
-              "
-              [class.negative]="
-                (comparison?.quoteToken?.changePercent ?? 0) < 0
-              "
-              [class.neutral]="
-                comparison?.quoteToken?.changePercent === undefined ||
-                comparison?.quoteToken?.changePercent === 0
-              ">
-              {{ formatPercent(comparison?.quoteToken?.changePercent) }} (24H)
+            <div class="chart">
+              @if (comparisonError) {
+                <p class="chart__empty">{{ comparisonError }}</p>
+              } @else {
+                <app-market-overview-chart
+                  [series]="comparisonChartSeries"
+                  [timeframe]="selectedComparisonTimeframe"
+                  [ariaLabel]="comparisonChartAriaLabel()">
+                </app-market-overview-chart>
+              }
             </div>
           }
         </div>
-
-        @if (comparisonLoading) {
-          <div
-            class="market-skeleton market-skeleton--chart"
-            aria-hidden="true">
-            <span></span>
-          </div>
-        } @else {
-          <div class="chart">
-            @if (comparisonError) {
-              <p class="chart__empty">{{ comparisonError }}</p>
-            } @else {
-              <svg
-                [attr.viewBox]="comparisonViewBox"
-                preserveAspectRatio="none"
-                role="img"
-                [attr.aria-label]="
-                  tokenSymbolLabel(toToken) +
-                  ' minus ' +
-                  tokenSymbolLabel(fromToken) +
-                  ' relative price change'
-                ">
-                <defs>
-                  @for (line of comparisonLines; track line.symbol) {
-                    <linearGradient
-                      [attr.id]="'market-grad-' + line.symbol"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1">
-                      <stop
-                        offset="0%"
-                        [attr.stop-color]="line.color"
-                        stop-opacity="0.12" />
-                      <stop
-                        offset="65%"
-                        [attr.stop-color]="line.color"
-                        stop-opacity="0.03" />
-                      <stop
-                        offset="100%"
-                        [attr.stop-color]="line.color"
-                        stop-opacity="0" />
-                    </linearGradient>
-                  }
-                </defs>
-                @for (line of comparisonGridLines; track line.y) {
-                  <line
-                    class="grid"
-                    [attr.x1]="comparisonPlotLeft"
-                    [attr.y1]="line.y"
-                    [attr.x2]="comparisonPlotRight"
-                    [attr.y2]="line.y" />
-                }
-                @if (comparisonBaselineY) {
-                  <line
-                    class="blueLine"
-                    [attr.x1]="comparisonPlotLeft"
-                    [attr.y1]="comparisonBaselineY"
-                    [attr.x2]="comparisonPlotRight"
-                    [attr.y2]="comparisonBaselineY" />
-                }
-                @for (label of comparisonYLabels; track label.label) {
-                  <text
-                    x="44"
-                    [attr.y]="label.y"
-                    fill="#c9cccd"
-                    font-size="13"
-                    text-anchor="end">
-                    {{ label.label }}
-                  </text>
-                }
-                @if (comparisonAxisStart) {
-                  <text
-                    [attr.x]="comparisonPlotLeft"
-                    [attr.y]="comparisonAxisBottom"
-                    fill="#c9cccd"
-                    font-size="13">
-                    {{ comparisonAxisStart }}
-                  </text>
-                  <text
-                    [attr.x]="comparisonAxisCenterX"
-                    [attr.y]="comparisonAxisBottom"
-                    fill="#c9cccd"
-                    font-size="13"
-                    text-anchor="middle">
-                    {{ comparisonAxisMid }}
-                  </text>
-                  <text
-                    [attr.x]="comparisonPlotRight"
-                    [attr.y]="comparisonAxisBottom"
-                    fill="#c9cccd"
-                    font-size="13"
-                    text-anchor="end">
-                    {{ comparisonAxisEnd }}
-                  </text>
-                }
-                @for (line of comparisonLines; track line.symbol) {
-                  @if (line.fillPath) {
-                    <path
-                      class="fill"
-                      [attr.d]="line.fillPath"
-                      [attr.fill]="'url(#market-grad-' + line.symbol + ')'" />
-                  }
-                  <path
-                    class="line"
-                    [attr.d]="line.path"
-                    [attr.stroke]="line.color" />
-                }
-              </svg>
-            }
-          </div>
-        }
-      </div>
+      }
 
       <div class="marketFooter">
         <div class="note">
-          Line shows {{ tokenSymbolLabel(toToken) }} percentage move minus
-          {{ tokenSymbolLabel(fromToken) }} percentage move
+          {{
+            showAdvancedMarketView
+              ? 'Advanced chart shows live market data for the destination token'
+              : comparisonNoteText()
+          }}
         </div>
         <button
           type="button"
@@ -385,12 +317,6 @@
           &rarr;
         </button>
       </div>
-
-      @if (showAdvancedMarketView) {
-        <app-live-chart
-          [coin]="marketSymbolFor(toToken)"
-          [active]="showAdvancedMarketView" />
-      }
     </div>
   </section>
 

@@ -10,6 +10,7 @@ import { WalletAccountComponent } from '@shared/components/wallet-account/wallet
 import { SideModalComponent } from '@shared/components/side-modal/side-modal.component';
 import { TokenSelectPanelComponent } from '@shared/components/token-select-panel/token-select-panel.component';
 import { LiveChartComponent } from '@shared/components/live-chart/live-chart.component';
+import { MarketOverviewChartComponent } from '@shared/components/market-overview-chart/market-overview-chart.component';
 import { CommonModule } from '@angular/common';
 import { AvatarComponent } from '@shared/components/avatar/avatar.component';
 import { FormsModule } from '@angular/forms';
@@ -34,6 +35,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     SideModalComponent,
     TokenSelectPanelComponent,
     LiveChartComponent,
+    MarketOverviewChartComponent,
   ],
   providers: [],
   exports: [
@@ -45,6 +47,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     SideModalComponent,
     TokenSelectPanelComponent,
     LiveChartComponent,
+    MarketOverviewChartComponent,
     AvatarComponent,
     CommonModule,
     FormsModule,

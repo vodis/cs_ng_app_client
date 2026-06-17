@@ -8,13 +8,21 @@ import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
 import type {
   SwapFlowState,
   SwapPrepareRequest,
+  SwapQuotePreview,
 } from '@domains/exchange/models/swap.models';
 import { environment } from '../../../environments/environment';
 import type { WalletAccount } from '@domains/wallet/models/wallet.models';
+import {
+  changeClass as changePriceClass,
+  formatPercent as formatPricePercent,
+  formatPrice as formatCurrencyPrice,
+} from './home-price.utils';
+import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 
 type TokenSelectorSide = 'from' | 'to';
 
 type ComparisonTimeframe = '1H' | '1D' | '1W';
+type MarketChartMode = 'price' | 'relative';
 type SupportedSwapAuthMethod = SwapPrepareRequest['authMethod'];
 
 interface MarketComparisonToken {
@@ -47,20 +55,9 @@ interface MarketComparisonResponse {
   series: MarketComparisonSeries[];
 }
 
-interface ComparisonChartLine {
+interface ComparisonChartSeries {
   symbol: string;
-  path: string;
-  fillPath: string;
-  color: string;
-}
-
-interface ComparisonYLabel {
-  y: number;
-  label: string;
-}
-
-interface ComparisonGridLine {
-  y: number;
+  points: MarketComparisonPoint[];
 }
 
 interface RecentActivityItem {
@@ -84,14 +81,6 @@ interface RecentActivityItem {
 })
 export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
-  private readonly comparisonWidth = 720;
-  private readonly comparisonHeight = 220;
-  private readonly comparisonPadding = {
-    top: 16,
-    right: 16,
-    bottom: 28,
-    left: 48,
-  };
   private readonly slippageToleranceBps = 35;
   private readonly maxAmountFractionDigits = 6;
   private isAmountInputFocused = false;
@@ -191,31 +180,20 @@ export class HomeComponent {
   public tokenSelectorSide: TokenSelectorSide | null = null;
   public swapFlowState: SwapFlowState = 'idle';
   public quoteError = '';
+  public quotePreview: SwapQuotePreview | undefined;
   public quoteResult: Record<string, unknown> | undefined;
   public intentHash = '';
   public comparison?: MarketComparisonResponse;
-  public comparisonLines: ComparisonChartLine[] = [];
-  public comparisonYLabels: ComparisonYLabel[] = [];
-  public comparisonBaselineY = 0;
-  public comparisonGridLines: ComparisonGridLine[] = [];
+  public comparisonChartSeries: MarketOverviewChartSeries[] = [];
   public comparisonLoading = true;
   public comparisonError = '';
   public selectedComparisonTimeframe: ComparisonTimeframe = '1H';
+  public selectedMarketChartMode: MarketChartMode = 'price';
   public readonly comparisonTimeframes: ComparisonTimeframe[] = [
     '1H',
     '1D',
     '1W',
   ];
-  public readonly comparisonViewBox = `0 0 ${this.comparisonWidth} ${this.comparisonHeight}`;
-  public readonly comparisonPlotLeft = this.comparisonPadding.left;
-  public readonly comparisonPlotRight =
-    this.comparisonWidth - this.comparisonPadding.right;
-  public readonly comparisonAxisBottom = this.comparisonHeight - 6;
-  public readonly comparisonAxisCenterX =
-    (this.comparisonPlotLeft + this.comparisonPlotRight) / 2;
-  public comparisonAxisStart = '';
-  public comparisonAxisMid = '';
-  public comparisonAxisEnd = '';
   public showAdvancedMarketView = false;
   public exchangeAssetsLoading = false;
   public exchangeAssetsError = '';
@@ -237,7 +215,7 @@ export class HomeComponent {
         ) {
           this.walletAddress = nextWalletAddress;
           this.walletChainId = nextWalletChainId;
-          this.resetSwapQuoteState();
+          this.refreshSwapQuotePreview();
         }
       });
 
@@ -250,6 +228,7 @@ export class HomeComponent {
     this.swapFlowFacade.quotePreview$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(preview => {
+        this.quotePreview = preview;
         this.quoteResult = preview?.raw;
       });
 
@@ -286,7 +265,7 @@ export class HomeComponent {
       return;
     }
 
-    const amount = this.toUsdcBaseUnits(this.amount);
+    const amount = this.toBaseUnits(this.amount, this.fromToken.decimals);
 
     if (!amount || /^0+$/.test(amount)) {
       this.quoteError = `Enter a valid ${this.fromToken.symbol} amount.`;
@@ -298,7 +277,7 @@ export class HomeComponent {
       return;
     }
 
-    void this.swapFlowFacade.requestQuotePreview(
+    this.swapFlowFacade.refreshQuotePreview(
       this.buildSwapInput(amount, authMethod)
     );
   }
@@ -367,6 +346,22 @@ export class HomeComponent {
     this.loadMarketComparison();
   }
 
+  public changeMarketChartMode(mode: MarketChartMode): void {
+    if (this.selectedMarketChartMode === mode) {
+      return;
+    }
+
+    this.selectedMarketChartMode = mode;
+    if (this.comparison) {
+      this.buildComparisonChart(this.comparison);
+      this.comparisonError =
+        this.comparison.status === 'unavailable' ||
+        this.comparisonChartSeries.length === 0
+          ? 'Comparison data unavailable'
+          : '';
+    }
+  }
+
   public toggleAdvancedMarketView(): void {
     this.showAdvancedMarketView = !this.showAdvancedMarketView;
   }
@@ -375,7 +370,7 @@ export class HomeComponent {
     const previousFrom = this.fromToken;
     this.fromToken = this.toToken;
     this.toToken = previousFrom;
-    this.resetSwapQuoteState();
+    this.refreshSwapQuotePreview();
     this.loadMarketComparison();
   }
 
@@ -447,12 +442,7 @@ export class HomeComponent {
   }
 
   public toAmountUi(): string {
-    const quoted = this.toAmountDisplay();
-    if (quoted) {
-      return quoted;
-    }
-
-    return this.previewToAmount();
+    return this.toAmountDisplay();
   }
 
   public fromAmountDisplay(): string {
@@ -483,26 +473,30 @@ export class HomeComponent {
   }
 
   public marketPriceDisplay(): string {
-    const price = this.comparison?.quoteToken?.currentPrice;
-    if (price === undefined) {
+    const basePrice = this.comparison?.baseToken?.currentPrice;
+    const quotePrice = this.comparison?.quoteToken?.currentPrice;
+    if (
+      basePrice === undefined ||
+      quotePrice === undefined ||
+      !Number.isFinite(basePrice) ||
+      !Number.isFinite(quotePrice) ||
+      quotePrice <= 0
+    ) {
       return '—';
     }
 
-    return `$${price.toFixed(2)}`;
+    const rate = basePrice / quotePrice;
+    const fractionDigits = this.swapAmountFractionDigits(this.toToken.symbol);
+    return `1 ${this.tokenSymbolLabel(this.fromToken)} = ${rate.toFixed(fractionDigits)} ${this.tokenSymbolLabel(this.toToken)}`;
   }
 
   public toAmountDisplay(): string {
-    const quote = this.quoteResult;
-    const amount =
-      quote?.['amountOut'] ??
-      quote?.['destinationAmount'] ??
-      quote?.['toAmount'];
-
-    if (typeof amount === 'string' || typeof amount === 'number') {
-      return String(amount);
+    const amount = this.rawQuoteAmount();
+    if (!amount) {
+      return '';
     }
 
-    return this.swapFlowFacade.quotePreview?.amountOut ?? '';
+    return this.normalizeQuoteAmount(amount, this.toToken.decimals);
   }
 
   public primaryActionLabel(): string {
@@ -652,6 +646,7 @@ export class HomeComponent {
   public onAmountFocus(event: FocusEvent): void {
     this.isAmountInputFocused = true;
     this.amount = '';
+    this.refreshSwapQuotePreview();
 
     const input = event.target as HTMLInputElement;
     input.value = '';
@@ -663,6 +658,8 @@ export class HomeComponent {
     if (!this.amount.trim() || this.isZeroAmountValue(this.amount)) {
       this.amount = '';
     }
+
+    this.refreshSwapQuotePreview();
 
     const input = event.target as HTMLInputElement;
     input.value = this.fromAmountDisplay();
@@ -710,17 +707,50 @@ export class HomeComponent {
     }
 
     if (sanitized !== previousAmount) {
-      this.resetSwapQuoteState();
+      this.refreshSwapQuotePreview();
     }
 
     this.scrollAmountToEnd(input);
   }
 
-  private resetSwapQuoteState(): void {
-    this.swapFlowFacade.reset();
-    this.quoteResult = undefined;
-    this.quoteError = '';
-    this.intentHash = '';
+  private refreshSwapQuotePreview(): void {
+    const input = this.buildQuotePreviewInput();
+
+    if (!input) {
+      this.swapFlowFacade.watchQuotePreview(undefined);
+      this.quotePreview = undefined;
+      this.quoteResult = undefined;
+      this.quoteError = '';
+      this.intentHash = '';
+      return;
+    }
+
+    this.swapFlowFacade.watchQuotePreview(input);
+  }
+
+  private buildQuotePreviewInput():
+    | Omit<SwapPrepareRequest, 'traceId'>
+    | undefined {
+    if (!this.walletAddress) {
+      return undefined;
+    }
+
+    const authMethod = this.resolveSwapAuthMethod({
+      account: this.walletAddress,
+      chainId: this.walletChainId,
+    });
+
+    if (!authMethod) {
+      return undefined;
+    }
+
+    const amount = this.toBaseUnits(this.amount, this.fromToken.decimals);
+
+    if (!amount || /^0+$/.test(amount)) {
+      return undefined;
+    }
+
+    return this.buildSwapInput(amount, authMethod);
   }
 
   private scrollAmountToEnd(input: HTMLInputElement): void {
@@ -869,25 +899,6 @@ export class HomeComponent {
     return this.maxAmountFractionDigits;
   }
 
-  private numberToAmountString(
-    value: number,
-    maxFractionDigits: number,
-    preferInteger: boolean
-  ): string {
-    if (!Number.isFinite(value)) {
-      return '';
-    }
-
-    if (preferInteger) {
-      const rounded = Math.round(value);
-      if (Math.abs(value - rounded) / Math.max(1, Math.abs(value)) < 1e-9) {
-        return String(rounded);
-      }
-    }
-
-    return value.toFixed(maxFractionDigits).replace(/\.?0+$/, '');
-  }
-
   private restoreCaretAfterDigits(
     input: HTMLInputElement,
     previousValue: string,
@@ -953,7 +964,7 @@ export class HomeComponent {
       this.toToken = selected;
     }
 
-    this.resetSwapQuoteState();
+    this.refreshSwapQuotePreview();
     this.closeTokenSelector();
     this.loadMarketComparison();
   }
@@ -996,53 +1007,15 @@ export class HomeComponent {
   }
 
   public formatPrice(value: number | undefined): string {
-    if (value === undefined) {
-      return 'Unavailable';
-    }
-
-    if (!Number.isFinite(value)) {
-      return '$—';
-    }
-
-    const absValue = Math.abs(value);
-
-    if (absValue >= 1e15) {
-      return `$${value.toExponential(2)}`;
-    }
-
-    if (absValue >= 1e9) {
-      return `$${value.toLocaleString(undefined, {
-        maximumFractionDigits: 2,
-        notation: 'compact',
-        compactDisplay: 'short',
-      })}`;
-    }
-
-    if (absValue >= 1000) {
-      return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-    }
-
-    if (absValue >= 1) {
-      return `$${value.toFixed(2)}`;
-    }
-
-    return `$${value.toFixed(4)}`;
+    return formatCurrencyPrice(value);
   }
 
   public formatPercent(value: number | undefined): string {
-    if (value === undefined) {
-      return '--';
-    }
-
-    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+    return formatPricePercent(value);
   }
 
   public changeClass(value: number | undefined): string {
-    if (value === undefined || value === 0) {
-      return 'neutral';
-    }
-
-    return value > 0 ? 'positive' : 'negative';
+    return changePriceClass(value);
   }
 
   public relativeStrengthText(): string {
@@ -1248,7 +1221,7 @@ export class HomeComponent {
           this.buildComparisonChart(response);
           this.comparisonError =
             response.status === 'unavailable' ||
-            this.comparisonLines.length === 0
+            this.comparisonChartSeries.length === 0
               ? 'Comparison data unavailable'
               : '';
           this.comparisonLoading = false;
@@ -1259,13 +1232,7 @@ export class HomeComponent {
           }
 
           this.comparison = undefined;
-          this.comparisonLines = [];
-          this.comparisonYLabels = [];
-          this.comparisonGridLines = [];
-          this.comparisonBaselineY = 0;
-          this.comparisonAxisStart = '';
-          this.comparisonAxisMid = '';
-          this.comparisonAxisEnd = '';
+          this.clearComparisonChart();
           this.comparisonError = 'Comparison data unavailable';
           this.comparisonLoading = false;
         },
@@ -1304,105 +1271,51 @@ export class HomeComponent {
       return;
     }
 
-    const differencePoints = this.buildComparisonDifferencePoints(
-      baseSeries.points,
-      quoteSeries.points
-    );
+    const chartSeries = (
+      this.selectedMarketChartMode === 'relative'
+        ? [
+            {
+              symbol: `${this.normalizeMarketSymbol(
+                quoteSeries.symbol
+              )}-${this.normalizeMarketSymbol(baseSeries.symbol)}`,
+              points: this.buildComparisonDifferencePoints(
+                baseSeries.points,
+                quoteSeries.points
+              ),
+            },
+          ]
+        : [
+            {
+              symbol: this.normalizeMarketSymbol(baseSeries.symbol),
+              points: this.buildIndexedPriceChangePoints(baseSeries.points),
+            },
+            {
+              symbol: this.normalizeMarketSymbol(quoteSeries.symbol),
+              points: this.buildIndexedPriceChangePoints(quoteSeries.points),
+            },
+          ]
+    ).filter(seriesItem => seriesItem.points.length >= 2);
 
-    if (differencePoints.length < 2) {
+    if (chartSeries.length === 0) {
       this.clearComparisonChart();
       return;
     }
 
-    const timeMin = Math.min(...differencePoints.map(point => point.time));
-    const timeMax = Math.max(...differencePoints.map(point => point.time));
-    const timeRange = Math.max(timeMax - timeMin, 1);
-    const minValue = Math.min(...differencePoints.map(point => point.value));
-    const maxValue = Math.max(...differencePoints.map(point => point.value));
-    const spread = Math.max(maxValue - minValue, 0.5);
-    const yPad = Math.max(spread * 0.15, 0.25);
-    const yMin = Math.min(minValue, 0) - yPad;
-    const yMax = Math.max(maxValue, 0) + yPad;
-    const yRange = Math.max(yMax - yMin, 0.0001);
-    const innerWidth =
-      this.comparisonWidth -
-      this.comparisonPadding.left -
-      this.comparisonPadding.right;
-    const innerHeight =
-      this.comparisonHeight -
-      this.comparisonPadding.top -
-      this.comparisonPadding.bottom;
-
-    const toX = (time: number): number =>
-      this.comparisonPadding.left + ((time - timeMin) / timeRange) * innerWidth;
-
-    const toY = (value: number): number =>
-      this.comparisonPadding.top + ((yMax - value) / yRange) * innerHeight;
-
-    this.comparisonBaselineY = toY(0);
-    this.comparisonGridLines = [0, 1, 2, 3].map(index => ({
-      y: this.comparisonPadding.top + (index / 3) * innerHeight,
-    }));
-
-    const labelValues = [yMax, 0, yMin];
-    this.comparisonYLabels = labelValues.map(value => ({
-      y: toY(value),
-      label: this.formatDifferenceLabel(value),
-    }));
-
-    const bottomY = this.comparisonPadding.top + innerHeight;
-    const path = differencePoints
-      .map((point, index) => {
-        const x = toX(point.time);
-        const y = toY(point.value);
-        return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-      })
-      .join(' ');
-    const firstX = toX(differencePoints[0].time);
-    const lastX = toX(differencePoints[differencePoints.length - 1].time);
-    const fillPath = `${path} L ${lastX.toFixed(2)} ${bottomY.toFixed(2)} L ${firstX.toFixed(2)} ${bottomY.toFixed(2)} Z`;
-
-    this.comparisonLines = [
-      {
-        symbol: `${this.normalizeMarketSymbol(
-          quoteSeries.symbol
-        )}-${this.normalizeMarketSymbol(baseSeries.symbol)}`,
-        path,
-        fillPath,
-        color: this.tokenColor(quoteSeries.symbol),
-      },
-    ];
-
-    this.comparisonAxisStart = this.formatComparisonTime(
-      timeMin,
-      response.timeframe
-    );
-    this.comparisonAxisEnd = this.formatComparisonTime(
-      timeMax,
-      response.timeframe
-    );
-    this.comparisonAxisMid = this.formatComparisonTime(
-      timeMin + Math.floor(timeRange / 2),
-      response.timeframe
+    this.comparisonChartSeries = chartSeries.map((seriesItem, index) =>
+      this.toMarketOverviewChartSeries(seriesItem, index)
     );
   }
 
   private clearComparisonChart(): void {
-    this.comparisonLines = [];
-    this.comparisonYLabels = [];
-    this.comparisonGridLines = [];
-    this.comparisonBaselineY = 0;
-    this.comparisonAxisStart = '';
-    this.comparisonAxisMid = '';
-    this.comparisonAxisEnd = '';
+    this.comparisonChartSeries = [];
   }
 
   private buildComparisonDifferencePoints(
     basePoints: MarketComparisonPoint[],
     quotePoints: MarketComparisonPoint[]
   ): MarketComparisonPoint[] {
-    const sortedBasePoints = this.sortedFiniteComparisonPoints(basePoints);
-    const sortedQuotePoints = this.sortedFiniteComparisonPoints(quotePoints);
+    const sortedBasePoints = this.buildIndexedPriceChangePoints(basePoints);
+    const sortedQuotePoints = this.buildIndexedPriceChangePoints(quotePoints);
     if (sortedBasePoints.length === 0 || sortedQuotePoints.length === 0) {
       return [];
     }
@@ -1425,6 +1338,36 @@ export class HomeComponent {
       .filter((point): point is MarketComparisonPoint => point !== undefined);
   }
 
+  private buildIndexedPriceChangePoints(
+    points: MarketComparisonPoint[]
+  ): MarketComparisonPoint[] {
+    const sortedPoints = this.sortedFiniteComparisonPoints(points);
+    const firstPoint = sortedPoints[0];
+    if (!firstPoint || firstPoint.value <= 0) {
+      return [];
+    }
+
+    return sortedPoints.map(point => ({
+      time: point.time,
+      value: (point.value / firstPoint.value - 1) * 100,
+    }));
+  }
+
+  private toMarketOverviewChartSeries(
+    seriesItem: ComparisonChartSeries,
+    index: number
+  ): MarketOverviewChartSeries {
+    return {
+      id: seriesItem.symbol,
+      label: seriesItem.symbol,
+      points: seriesItem.points,
+      color:
+        index === 0 && this.selectedMarketChartMode !== 'relative'
+          ? this.tokenColor(this.fromToken.symbol)
+          : this.tokenColor(seriesItem.symbol),
+    };
+  }
+
   private sortedFiniteComparisonPoints(
     points: MarketComparisonPoint[]
   ): MarketComparisonPoint[] {
@@ -1440,8 +1383,9 @@ export class HomeComponent {
       }
     }
 
-    return Array.from(uniqueByTime.values())
-      .sort((left, right) => left.time - right.time);
+    return Array.from(uniqueByTime.values()).sort(
+      (left, right) => left.time - right.time
+    );
   }
 
   private normalizeMarketSymbol(symbol: string): string {
@@ -1486,18 +1430,6 @@ export class HomeComponent {
     return undefined;
   }
 
-  private formatDifferenceLabel(value: number): string {
-    const absValue = Math.abs(value);
-    if (absValue < 0.05) {
-      return '0%';
-    }
-
-    return `${value >= 0 ? '+' : ''}${value.toLocaleString(undefined, {
-      maximumFractionDigits: absValue >= 100 ? 0 : 1,
-      minimumFractionDigits: absValue >= 100 ? 0 : 1,
-    })}%`;
-  }
-
   private timeframeLabel(timeframe: ComparisonTimeframe): string {
     if (timeframe === '1H') {
       return 'the last hour';
@@ -1527,36 +1459,6 @@ export class HomeComponent {
     });
   }
 
-  private previewToAmount(): string {
-    const rawAmount = this.normalizeAmountStorage(this.amount);
-    const rate = this.previewSwapRate();
-
-    if (!rawAmount || this.isZeroAmountValue(rawAmount) || rate === undefined) {
-      return '';
-    }
-
-    const amountIn = this.parseAmount(rawAmount);
-    if (!Number.isFinite(amountIn) || amountIn <= 0) {
-      return '';
-    }
-
-    const product = amountIn * rate;
-    if (!Number.isFinite(product)) {
-      return '';
-    }
-
-    const maxFractionDigits = this.swapAmountFractionDigits(
-      this.toToken.symbol
-    );
-    const inputHasFraction = rawAmount.includes('.');
-
-    return this.numberToAmountString(
-      product,
-      maxFractionDigits,
-      !inputHasFraction
-    );
-  }
-
   private previewSwapRate(): number | undefined {
     const amountIn = this.parseAmount(this.amount);
     const amountOut = Number.parseFloat(this.toAmountDisplay());
@@ -1573,8 +1475,13 @@ export class HomeComponent {
     const basePrice = this.comparison?.baseToken?.currentPrice;
     const quotePrice = this.comparison?.quoteToken?.currentPrice;
 
-    if (basePrice !== undefined && quotePrice !== undefined && basePrice > 0) {
-      return quotePrice / basePrice;
+    if (
+      basePrice !== undefined &&
+      quotePrice !== undefined &&
+      basePrice > 0 &&
+      quotePrice > 0
+    ) {
+      return basePrice / quotePrice;
     }
 
     if (
@@ -1615,14 +1522,101 @@ export class HomeComponent {
     return undefined;
   }
 
-  private toUsdcBaseUnits(value: string): string {
-    const normalized = this.normalizeAmountStorage(value);
+  public comparisonChartAriaLabel(): string {
+    if (this.selectedMarketChartMode === 'relative') {
+      return (
+        this.tokenSymbolLabel(this.toToken) +
+        ' minus ' +
+        this.tokenSymbolLabel(this.fromToken) +
+        ' relative price change'
+      );
+    }
 
-    if (!/^\d+(\.\d{0,6})?$/.test(normalized)) {
+    return `${this.tokenSymbolLabel(this.fromToken)} and ${this.tokenSymbolLabel(this.toToken)} price change over time`;
+  }
+
+  public comparisonNoteText(): string {
+    if (this.selectedMarketChartMode === 'relative') {
+      return `Line shows ${this.tokenSymbolLabel(this.toToken)} percentage move minus ${this.tokenSymbolLabel(this.fromToken)} percentage move`;
+    }
+
+    return `${this.tokenSymbolLabel(this.fromToken)} and ${this.tokenSymbolLabel(this.toToken)} are normalized to 0% at the start of the selected timeframe`;
+  }
+
+  private rawQuoteAmount(): string {
+    const quote = this.quoteResult;
+    const amount =
+      quote?.['amountOut'] ??
+      quote?.['destinationAmount'] ??
+      quote?.['toAmount'] ??
+      this.quotePreview?.amountOut;
+
+    if (typeof amount === 'number') {
+      return Number.isFinite(amount) ? String(amount) : '';
+    }
+
+    if (typeof amount === 'string') {
+      return amount.trim();
+    }
+
+    return '';
+  }
+
+  private normalizeQuoteAmount(rawAmount: string, decimals?: number): string {
+    const normalized = this.normalizeAmountStorage(rawAmount);
+    if (!normalized) {
+      return '';
+    }
+
+    if (normalized.includes('.')) {
+      return normalized;
+    }
+
+    return this.fromBaseUnits(normalized, this.tokenDecimals(decimals));
+  }
+
+  private toBaseUnits(value: string, decimals?: number): string {
+    const normalized = this.normalizeAmountStorage(value);
+    const precision = this.tokenDecimals(decimals);
+    const decimalPattern = new RegExp(`^\\d+(\\.\\d{0,${precision}})?$`);
+
+    if (!decimalPattern.test(normalized)) {
       return '';
     }
 
     const [whole, fraction = ''] = normalized.split('.');
-    return `${whole}${fraction.padEnd(6, '0')}`.replace(/^0+(?=\d)/, '');
+    const digits = `${whole}${fraction.padEnd(precision, '0')}`.replace(
+      /^0+(?=\d)/,
+      ''
+    );
+    return digits || '0';
+  }
+
+  private fromBaseUnits(value: string, decimals: number): string {
+    const digits = value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
+    if (!digits) {
+      return '0';
+    }
+
+    if (decimals <= 0) {
+      return digits;
+    }
+
+    if (digits.length <= decimals) {
+      const padded = digits.padStart(decimals, '0');
+      return `0.${padded}`.replace(/\.?0+$/, '') || '0';
+    }
+
+    const whole = digits.slice(0, digits.length - decimals);
+    const fraction = digits.slice(digits.length - decimals).replace(/0+$/, '');
+    return fraction ? `${whole}.${fraction}` : whole;
+  }
+
+  private tokenDecimals(value?: number): number {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+      return this.maxAmountFractionDigits;
+    }
+
+    return Math.min(value, 18);
   }
 }
