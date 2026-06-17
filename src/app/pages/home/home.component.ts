@@ -17,6 +17,13 @@ import {
   formatPercent as formatPricePercent,
   formatPrice as formatCurrencyPrice,
 } from './home-price.utils';
+import {
+  AMOUNT_DECIMAL_SEPARATOR,
+  formatSwapAmountDisplay,
+  displayHasDecimalSeparator,
+  normalizeAmountInputChars,
+  normalizeAmountStorage as normalizeSwapAmountStorage,
+} from './home-amount.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 
 type TokenSelectorSide = 'from' | 'to';
@@ -82,8 +89,7 @@ interface RecentActivityItem {
 export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly slippageToleranceBps = 35;
-  private readonly maxAmountFractionDigits = 6;
-  private isAmountInputFocused = false;
+  private readonly maxAmountFractionDigits = 18;
   private readonly tokenIconUrls: Record<string, string> = {
     BTC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1.png',
     ETH: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1027.png',
@@ -171,7 +177,7 @@ export class HomeComponent {
     },
   ];
 
-  public amount = '100.00';
+  public amount = '';
   public walletAddress = '';
   public walletChainId: number | null = null;
   public fromToken = this.exchangeTokens[0];
@@ -452,7 +458,7 @@ export class HomeComponent {
 
     return this.formatSwapAmount(
       this.amount,
-      this.swapAmountFractionDigits(this.fromToken.symbol),
+      this.maxAmountFractionDigits,
       true
     );
   }
@@ -463,7 +469,7 @@ export class HomeComponent {
       !raw.trim() ||
       this.isZeroAmountValue(this.normalizeAmountStorage(raw))
     ) {
-      return '0.00';
+      return '0,00';
     }
 
     return this.formatSwapAmount(
@@ -611,16 +617,22 @@ export class HomeComponent {
       return;
     }
 
-    if (event.key === '.') {
-      const storage = this.normalizeAmountStorage(
-        (event.target as HTMLInputElement).value
-      );
-      if (!storage.includes('.')) {
-        return;
-      }
+    const input = event.target as HTMLInputElement;
+
+    if (this.isDecimalSeparatorKey(event)) {
+      event.preventDefault();
+      this.insertDecimalSeparator(input);
+      return;
     }
 
-    event.preventDefault();
+    if (['e', 'E', '+', '-'].includes(event.key)) {
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key.length === 1) {
+      event.preventDefault();
+    }
   }
 
   public onAmountInput(event: Event): void {
@@ -644,17 +656,12 @@ export class HomeComponent {
   }
 
   public onAmountFocus(event: FocusEvent): void {
-    this.isAmountInputFocused = true;
-    this.amount = '';
-    this.refreshSwapQuotePreview();
-
     const input = event.target as HTMLInputElement;
-    input.value = '';
+    input.value = this.fromAmountDisplay();
+    this.scrollAmountToEnd(input);
   }
 
   public onAmountBlur(event: FocusEvent): void {
-    this.isAmountInputFocused = false;
-
     if (!this.amount.trim() || this.isZeroAmountValue(this.amount)) {
       this.amount = '';
     }
@@ -684,6 +691,31 @@ export class HomeComponent {
     return this.isZeroAmountValue(normalized);
   }
 
+  private isDecimalSeparatorKey(event: KeyboardEvent): boolean {
+    return (
+      event.code === 'Comma' ||
+      event.code === 'Period' ||
+      event.code === 'NumpadDecimal' ||
+      event.key === ',' ||
+      event.key === '.'
+    );
+  }
+
+  private insertDecimalSeparator(input: HTMLInputElement): void {
+    if (displayHasDecimalSeparator(input.value, this.maxAmountFractionDigits)) {
+      return;
+    }
+
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const nextValue =
+      input.value.slice(0, start) +
+      AMOUNT_DECIMAL_SEPARATOR +
+      input.value.slice(end);
+
+    this.applySanitizedAmount(nextValue, input);
+  }
+
   private applySanitizedAmount(value: string, input?: HTMLInputElement): void {
     const caret = input?.selectionStart ?? null;
     const previousValue = input?.value ?? value;
@@ -697,12 +729,18 @@ export class HomeComponent {
 
     const display = this.formatSwapAmount(
       sanitized,
-      this.swapAmountFractionDigits(this.fromToken.symbol),
+      this.maxAmountFractionDigits,
       true
     );
 
-    if (input.value !== display) {
-      input.value = display;
+    input.value = display;
+
+    if (sanitized.endsWith('.')) {
+      const commaIndex = display.lastIndexOf(AMOUNT_DECIMAL_SEPARATOR);
+      if (commaIndex !== -1) {
+        input.setSelectionRange(commaIndex + 1, commaIndex + 1);
+      }
+    } else if (previousValue !== display) {
       this.restoreCaretAfterDigits(input, previousValue, caret, display);
     }
 
@@ -710,7 +748,9 @@ export class HomeComponent {
       this.refreshSwapQuotePreview();
     }
 
-    this.scrollAmountToEnd(input);
+    if (display.length > previousValue.length) {
+      this.scrollAmountToEnd(input);
+    }
   }
 
   private refreshSwapQuotePreview(): void {
@@ -760,87 +800,12 @@ export class HomeComponent {
   }
 
   private sanitizeAmountInput(value: string): string {
-    const cleaned = value.replace(/[^\d.]/g, '');
-    if (!cleaned) {
-      return '';
-    }
-
-    if (cleaned.endsWith('.')) {
-      const { whole } = this.parseDisplayedAmount(cleaned.slice(0, -1));
-      return whole ? `${whole}.` : '.';
-    }
-
-    const { whole, fraction } = this.parseDisplayedAmount(cleaned);
-    if (!whole && !fraction) {
-      return '';
-    }
-
-    return fraction ? `${whole}.${fraction}` : whole;
+    const cleaned = normalizeAmountInputChars(value);
+    return this.normalizeAmountStorage(cleaned);
   }
 
   private normalizeAmountStorage(value: string): string {
-    const cleaned = value.replace(/\s/g, '').trim();
-    if (!cleaned) {
-      return '';
-    }
-
-    if (cleaned.endsWith('.')) {
-      const { whole } = this.parseDisplayedAmount(cleaned.slice(0, -1));
-      return whole ? `${whole}.` : '.';
-    }
-
-    const { whole, fraction } = this.parseDisplayedAmount(cleaned);
-    if (!whole && !fraction) {
-      return '';
-    }
-
-    return fraction ? `${whole}.${fraction}` : whole;
-  }
-
-  private parseDisplayedAmount(value: string): {
-    whole: string;
-    fraction: string;
-  } {
-    const cleaned = value.replace(/[^\d.]/g, '');
-    if (!cleaned) {
-      return { whole: '', fraction: '' };
-    }
-
-    if (!cleaned.includes('.')) {
-      return {
-        whole: cleaned.replace(/^0+(?=\d)/, ''),
-        fraction: '',
-      };
-    }
-
-    const lastDot = cleaned.lastIndexOf('.');
-    const tail = cleaned.slice(lastDot + 1).replace(/\./g, '');
-    const head = cleaned.slice(0, lastDot);
-    const tailIsDecimal =
-      tail.length > 0 &&
-      tail.length <= this.maxAmountFractionDigits &&
-      tail.length < 3;
-
-    if (tailIsDecimal) {
-      return {
-        whole: (head.replace(/\./g, '') || '0').replace(/^0+(?=\d)/, ''),
-        fraction: tail,
-      };
-    }
-
-    return {
-      whole: cleaned.replace(/\./g, '').replace(/^0+(?=\d)/, ''),
-      fraction: '',
-    };
-  }
-
-  private formatWholeWithDots(whole: string): string {
-    const digits = whole.replace(/\D/g, '');
-    if (!digits) {
-      return '0';
-    }
-
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return normalizeSwapAmountStorage(value, this.maxAmountFractionDigits);
   }
 
   private parseAmount(value: string): number {
@@ -857,34 +822,7 @@ export class HomeComponent {
     maxFractionDigits: number,
     allowEmpty = false
   ): string {
-    const normalized = value.trim();
-    if (!normalized) {
-      return allowEmpty ? '' : '0.00';
-    }
-
-    if (normalized === '.') {
-      return '0.';
-    }
-
-    if (normalized.endsWith('.')) {
-      const wholePart = normalized.slice(0, -1);
-      return `${this.formatWholeWithDots(wholePart || '0')}.`;
-    }
-
-    const dotIndex = normalized.indexOf('.');
-    const wholePart =
-      dotIndex === -1 ? normalized : normalized.slice(0, dotIndex);
-    const fractionPart =
-      dotIndex === -1
-        ? ''
-        : normalized.slice(dotIndex + 1).slice(0, maxFractionDigits);
-    const whole = this.formatWholeWithDots(wholePart || '0');
-
-    if (!fractionPart) {
-      return whole;
-    }
-
-    return `${whole}.${fractionPart}`;
+    return formatSwapAmountDisplay(value, maxFractionDigits, allowEmpty);
   }
 
   private swapAmountFractionDigits(symbol: string): number {
