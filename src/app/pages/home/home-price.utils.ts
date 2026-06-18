@@ -1,4 +1,4 @@
-import { formatEuropeanNumber } from './home-amount.utils';
+import { formatNumberForAmountDisplay } from '@shared/utils/amount-format.utils';
 
 const FIAT_COMPACT_TIERS = [
   { threshold: 1e12, suffix: 'T' },
@@ -7,14 +7,17 @@ const FIAT_COMPACT_TIERS = [
   { threshold: 1e3, suffix: 'K' },
 ] as const;
 
-function formatEuropeanCompact(value: number): string {
+function formatCompactAmountDisplay(value: number): string {
   const absValue = Math.abs(value);
   const sign = value < 0 ? '-' : '';
 
   for (const tier of FIAT_COMPACT_TIERS) {
     if (absValue >= tier.threshold) {
       const scaled = absValue / tier.threshold;
-      const formatted = formatEuropeanNumber(scaled, 2).replace(/,00$/, '');
+      const formatted = formatNumberForAmountDisplay(scaled, 2).replace(
+        /,00$/,
+        ''
+      );
       return `${sign}$${formatted}${tier.suffix}`;
     }
   }
@@ -75,21 +78,21 @@ export function formatSwapFiatEstimate(value: number | undefined): string {
   }
 
   if (absValue >= 1e9) {
-    const compact = formatEuropeanCompact(value);
+    const compact = formatCompactAmountDisplay(value);
     if (compact) {
       return compact;
     }
   }
 
   if (absValue >= 1000) {
-    return `${sign}$${formatEuropeanNumber(absValue, 0)}`;
+    return `${sign}$${formatNumberForAmountDisplay(absValue, 0)}`;
   }
 
   if (absValue >= 1) {
-    return `${sign}$${formatEuropeanNumber(absValue, 2)}`;
+    return `${sign}$${formatNumberForAmountDisplay(absValue, 2)}`;
   }
 
-  return `${sign}$${formatEuropeanNumber(absValue, 4)}`;
+  return `${sign}$${formatNumberForAmountDisplay(absValue, 4)}`;
 }
 
 export function formatPercent(value: number | undefined): string {

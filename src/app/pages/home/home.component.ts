@@ -20,11 +20,12 @@ import {
 } from './home-price.utils';
 import {
   AMOUNT_DECIMAL_SEPARATOR,
-  formatSwapAmountDisplay,
   displayHasDecimalSeparator,
+  formatSwapAmountDisplay,
   normalizeAmountInputChars,
   normalizeAmountStorage as normalizeSwapAmountStorage,
-} from './home-amount.utils';
+  resolveAmountKeydownAction,
+} from '@shared/utils/amount-format.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 
 type TokenSelectorSide = 'from' | 'to';
@@ -592,48 +593,19 @@ export class HomeComponent {
   }
 
   public onAmountKeydown(event: KeyboardEvent): void {
-    const allowedControlKeys = [
-      'Backspace',
-      'Delete',
-      'Tab',
-      'Escape',
-      'Enter',
-      'ArrowLeft',
-      'ArrowRight',
-      'ArrowUp',
-      'ArrowDown',
-      'Home',
-      'End',
-    ];
+    const action = resolveAmountKeydownAction(event);
 
-    if (
-      allowedControlKeys.includes(event.key) ||
-      event.ctrlKey ||
-      event.metaKey
-    ) {
+    if (action === 'allow') {
       return;
     }
 
-    if (/^\d$/.test(event.key)) {
-      return;
-    }
-
-    const input = event.target as HTMLInputElement;
-
-    if (this.isDecimalSeparatorKey(event)) {
+    if (action === 'decimal-separator') {
       event.preventDefault();
-      this.insertDecimalSeparator(input);
+      this.insertDecimalSeparator(event.target as HTMLInputElement);
       return;
     }
 
-    if (['e', 'E', '+', '-'].includes(event.key)) {
-      event.preventDefault();
-      return;
-    }
-
-    if (event.key.length === 1) {
-      event.preventDefault();
-    }
+    event.preventDefault();
   }
 
   public onAmountInput(event: Event): void {
@@ -690,16 +662,6 @@ export class HomeComponent {
     }
 
     return this.isZeroAmountValue(normalized);
-  }
-
-  private isDecimalSeparatorKey(event: KeyboardEvent): boolean {
-    return (
-      event.code === 'Comma' ||
-      event.code === 'Period' ||
-      event.code === 'NumpadDecimal' ||
-      event.key === ',' ||
-      event.key === '.'
-    );
   }
 
   private insertDecimalSeparator(input: HTMLInputElement): void {

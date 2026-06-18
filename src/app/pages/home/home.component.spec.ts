@@ -251,7 +251,7 @@ describe('HomeComponent market overview', () => {
       expect(component.fromAmountDisplay()).toBe('10.000.000.000,1000');
     });
 
-    it('sanitizes european input into dot-decimal storage', () => {
+    it('sanitizes grouped display input into dot-decimal storage', () => {
       const input = document.createElement('input');
       input.value = '1.250,5';
 

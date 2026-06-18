@@ -1,6 +1,80 @@
 export const AMOUNT_DECIMAL_SEPARATOR = ',';
 export const AMOUNT_THOUSAND_SEPARATOR = '.';
 
+const AMOUNT_INPUT_CONTROL_KEYS = [
+  'Backspace',
+  'Delete',
+  'Tab',
+  'Escape',
+  'Enter',
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'ArrowDown',
+  'Home',
+  'End',
+] as const;
+
+const BLOCKED_AMOUNT_INPUT_KEYS = ['e', 'E', '+', '-'] as const;
+
+export type AmountKeydownAction = 'allow' | 'block' | 'decimal-separator';
+
+export function isAmountInputControlKey(event: KeyboardEvent): boolean {
+  return (
+    AMOUNT_INPUT_CONTROL_KEYS.includes(
+      event.key as (typeof AMOUNT_INPUT_CONTROL_KEYS)[number]
+    ) ||
+    event.ctrlKey ||
+    event.metaKey
+  );
+}
+
+export function isAmountDigitKey(key: string): boolean {
+  return /^\d$/.test(key);
+}
+
+export function isDecimalSeparatorInputKey(event: KeyboardEvent): boolean {
+  return (
+    event.code === 'Comma' ||
+    event.code === 'Period' ||
+    event.code === 'NumpadDecimal' ||
+    event.key === ',' ||
+    event.key === '.'
+  );
+}
+
+export function isBlockedScientificNotationKey(key: string): boolean {
+  return BLOCKED_AMOUNT_INPUT_KEYS.includes(
+    key as (typeof BLOCKED_AMOUNT_INPUT_KEYS)[number]
+  );
+}
+
+export function resolveAmountKeydownAction(
+  event: KeyboardEvent
+): AmountKeydownAction {
+  if (isAmountInputControlKey(event)) {
+    return 'allow';
+  }
+
+  if (isAmountDigitKey(event.key)) {
+    return 'allow';
+  }
+
+  if (isDecimalSeparatorInputKey(event)) {
+    return 'decimal-separator';
+  }
+
+  if (isBlockedScientificNotationKey(event.key)) {
+    return 'block';
+  }
+
+  if (event.key.length === 1) {
+    return 'block';
+  }
+
+  return 'allow';
+}
+
 export function normalizeAmountInputChars(value: string): string {
   return value
     .replace(/\s/g, '')
@@ -141,7 +215,7 @@ export function formatSwapAmountDisplay(
   return `${whole}${AMOUNT_DECIMAL_SEPARATOR}${fractionPart}`;
 }
 
-export function formatEuropeanNumber(
+export function formatNumberForAmountDisplay(
   value: number,
   maxFractionDigits: number
 ): string {

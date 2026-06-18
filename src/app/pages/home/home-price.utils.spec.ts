@@ -27,12 +27,12 @@ describe('home-price.utils', () => {
   });
 
   describe('formatSwapFiatEstimate', () => {
-    it('uses european decimal separators for regular values', () => {
+    it('uses comma decimals for regular values', () => {
       expect(formatSwapFiatEstimate(886.71)).toBe('$886,71');
       expect(formatSwapFiatEstimate(0.886767)).toBe('$0,8868');
     });
 
-    it('uses neutral compact suffixes with european decimals', () => {
+    it('uses neutral compact suffixes with comma decimals', () => {
       expect(formatSwapFiatEstimate(9.98e12)).toBe('$9,98T');
       expect(formatSwapFiatEstimate(99_840_000_000)).toBe('$99,84B');
       expect(formatSwapFiatEstimate(9.98e12)).not.toContain('трлн');

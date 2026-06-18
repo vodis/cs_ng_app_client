@@ -1,15 +1,61 @@
 import {
   AMOUNT_DECIMAL_SEPARATOR,
   displayHasDecimalSeparator,
+  formatNumberForAmountDisplay,
   formatSwapAmountDisplay,
   formatWholeWithDots,
   normalizeAmountInputChars,
   normalizeAmountStorage,
   parseDisplayedAmount,
-} from './home-amount.utils';
+  resolveAmountKeydownAction,
+} from './amount-format.utils';
 
-describe('home-amount.utils', () => {
+describe('amount-format.utils', () => {
   const maxFractionDigits = 18;
+
+  describe('resolveAmountKeydownAction', () => {
+    it('allows navigation and digit keys', () => {
+      expect(
+        resolveAmountKeydownAction({ key: '1' } as KeyboardEvent)
+      ).toBe('allow');
+      expect(
+        resolveAmountKeydownAction({ key: 'ArrowLeft' } as KeyboardEvent)
+      ).toBe('allow');
+      expect(
+        resolveAmountKeydownAction({
+          key: 'a',
+          ctrlKey: true,
+        } as KeyboardEvent)
+      ).toBe('allow');
+    });
+
+    it('routes decimal separator keys to dedicated handling', () => {
+      expect(
+        resolveAmountKeydownAction({
+          key: 'б',
+          code: 'Comma',
+        } as KeyboardEvent)
+      ).toBe('decimal-separator');
+    });
+
+    it('blocks scientific notation and other printable characters', () => {
+      expect(resolveAmountKeydownAction({ key: 'e' } as KeyboardEvent)).toBe(
+        'block'
+      );
+      expect(resolveAmountKeydownAction({ key: 'E' } as KeyboardEvent)).toBe(
+        'block'
+      );
+      expect(resolveAmountKeydownAction({ key: '+' } as KeyboardEvent)).toBe(
+        'block'
+      );
+      expect(resolveAmountKeydownAction({ key: '-' } as KeyboardEvent)).toBe(
+        'block'
+      );
+      expect(resolveAmountKeydownAction({ key: 'a' } as KeyboardEvent)).toBe(
+        'block'
+      );
+    });
+  });
 
   describe('normalizeAmountInputChars', () => {
     it('keeps digits and decimal separators only', () => {
@@ -80,7 +126,7 @@ describe('home-amount.utils', () => {
   });
 
   describe('normalizeAmountStorage', () => {
-    it('parses european display format into dot-decimal storage', () => {
+    it('parses grouped display format into dot-decimal storage', () => {
       expect(
         normalizeAmountStorage('10.000.000.000,1000', maxFractionDigits)
       ).toBe('10000000000.1000');
@@ -131,6 +177,13 @@ describe('home-amount.utils', () => {
         whole: '1250',
         fraction: '',
       });
+    });
+  });
+
+  describe('formatNumberForAmountDisplay', () => {
+    it('formats numeric values using amount display separators', () => {
+      expect(formatNumberForAmountDisplay(886.71, 2)).toBe('886,71');
+      expect(formatNumberForAmountDisplay(1_250, 0)).toBe('1.250');
     });
   });
 
