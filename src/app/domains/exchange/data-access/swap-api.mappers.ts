@@ -35,12 +35,12 @@ export function mapQuotePreviewResponse(
     readString(payload, 'amountOutFormatted') ??
     readString(payload, 'destinationAmountFormatted') ??
     readString(payload, 'toAmountFormatted') ??
-    readString(payload, 'amountOut') ??
-    readString(payload, 'destinationAmount') ??
-    readString(payload, 'toAmount') ??
     (quote ? readString(quote, 'amountOutFormatted') : undefined) ??
     (quote ? readString(quote, 'destinationAmountFormatted') : undefined) ??
     (quote ? readString(quote, 'toAmountFormatted') : undefined) ??
+    readString(payload, 'amountOut') ??
+    readString(payload, 'destinationAmount') ??
+    readString(payload, 'toAmount') ??
     (quote ? readString(quote, 'amountOut') : undefined) ??
     (quote ? readString(quote, 'amount_out') : undefined) ??
     '';
