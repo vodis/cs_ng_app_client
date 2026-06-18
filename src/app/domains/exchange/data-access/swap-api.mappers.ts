@@ -32,6 +32,12 @@ export function mapQuotePreviewResponse(
   const payload = unwrapData(envelope);
   const quote = isRecord(payload['quote']) ? payload['quote'] : undefined;
   const amountOut =
+    readString(payload, 'amountOutFormatted') ??
+    readString(payload, 'destinationAmountFormatted') ??
+    readString(payload, 'toAmountFormatted') ??
+    (quote ? readString(quote, 'amountOutFormatted') : undefined) ??
+    (quote ? readString(quote, 'destinationAmountFormatted') : undefined) ??
+    (quote ? readString(quote, 'toAmountFormatted') : undefined) ??
     readString(payload, 'amountOut') ??
     readString(payload, 'destinationAmount') ??
     readString(payload, 'toAmount') ??

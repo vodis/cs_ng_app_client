@@ -16,7 +16,16 @@ import {
   changeClass as changePriceClass,
   formatPercent as formatPricePercent,
   formatPrice as formatCurrencyPrice,
+  formatSwapFiatEstimate,
 } from './home-price.utils';
+import {
+  AMOUNT_DECIMAL_SEPARATOR,
+  displayHasDecimalSeparator,
+  formatSwapAmountDisplay,
+  normalizeAmountInputChars,
+  normalizeAmountStorage as normalizeSwapAmountStorage,
+  resolveAmountKeydownAction,
+} from '@shared/utils/amount-format.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 
 type TokenSelectorSide = 'from' | 'to';
@@ -82,8 +91,7 @@ interface RecentActivityItem {
 export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly slippageToleranceBps = 35;
-  private readonly maxAmountFractionDigits = 6;
-  private isAmountInputFocused = false;
+  private readonly maxAmountFractionDigits = 18;
   private readonly tokenIconUrls: Record<string, string> = {
     BTC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1.png',
     ETH: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1027.png',
@@ -171,7 +179,7 @@ export class HomeComponent {
     },
   ];
 
-  public amount = '100.00';
+  public amount = '';
   public walletAddress = '';
   public walletChainId: number | null = null;
   public fromToken = this.exchangeTokens[0];
@@ -452,7 +460,7 @@ export class HomeComponent {
 
     return this.formatSwapAmount(
       this.amount,
-      this.swapAmountFractionDigits(this.fromToken.symbol),
+      this.maxAmountFractionDigits,
       true
     );
   }
@@ -463,7 +471,7 @@ export class HomeComponent {
       !raw.trim() ||
       this.isZeroAmountValue(this.normalizeAmountStorage(raw))
     ) {
-      return '0.00';
+      return '0,00';
     }
 
     return this.formatSwapAmount(
@@ -533,7 +541,7 @@ export class HomeComponent {
 
   public swapRateLabel(): string {
     const amountIn = this.parseAmount(this.amount);
-    const amountOut = this.parseAmount(this.toAmountUi());
+    const amountOut = this.parseQuoteAmount(this.toAmountUi());
     const rate =
       Number.isFinite(amountIn) && amountIn > 0 && Number.isFinite(amountOut)
         ? amountOut / amountIn
@@ -543,7 +551,7 @@ export class HomeComponent {
       return `1 ${this.fromToken.symbol} ≈ — ${this.toToken.symbol}`;
     }
 
-    return `1 ${this.fromToken.symbol} ≈ ${rate.toFixed(4)} ${this.toToken.symbol}`;
+    return `1 ${this.fromToken.symbol} ≈ ${this.formatSwapRate(rate)} ${this.toToken.symbol}`;
   }
 
   public swapPriceImpactLabel(): string {
@@ -585,39 +593,16 @@ export class HomeComponent {
   }
 
   public onAmountKeydown(event: KeyboardEvent): void {
-    const allowedControlKeys = [
-      'Backspace',
-      'Delete',
-      'Tab',
-      'Escape',
-      'Enter',
-      'ArrowLeft',
-      'ArrowRight',
-      'ArrowUp',
-      'ArrowDown',
-      'Home',
-      'End',
-    ];
+    const action = resolveAmountKeydownAction(event);
 
-    if (
-      allowedControlKeys.includes(event.key) ||
-      event.ctrlKey ||
-      event.metaKey
-    ) {
+    if (action === 'allow') {
       return;
     }
 
-    if (/^\d$/.test(event.key)) {
+    if (action === 'decimal-separator') {
+      event.preventDefault();
+      this.insertDecimalSeparator(event.target as HTMLInputElement);
       return;
-    }
-
-    if (event.key === '.') {
-      const storage = this.normalizeAmountStorage(
-        (event.target as HTMLInputElement).value
-      );
-      if (!storage.includes('.')) {
-        return;
-      }
     }
 
     event.preventDefault();
@@ -644,17 +629,12 @@ export class HomeComponent {
   }
 
   public onAmountFocus(event: FocusEvent): void {
-    this.isAmountInputFocused = true;
-    this.amount = '';
-    this.refreshSwapQuotePreview();
-
     const input = event.target as HTMLInputElement;
-    input.value = '';
+    input.value = this.fromAmountDisplay();
+    this.scrollAmountToEnd(input);
   }
 
   public onAmountBlur(event: FocusEvent): void {
-    this.isAmountInputFocused = false;
-
     if (!this.amount.trim() || this.isZeroAmountValue(this.amount)) {
       this.amount = '';
     }
@@ -684,6 +664,21 @@ export class HomeComponent {
     return this.isZeroAmountValue(normalized);
   }
 
+  private insertDecimalSeparator(input: HTMLInputElement): void {
+    if (displayHasDecimalSeparator(input.value, this.maxAmountFractionDigits)) {
+      return;
+    }
+
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const nextValue =
+      input.value.slice(0, start) +
+      AMOUNT_DECIMAL_SEPARATOR +
+      input.value.slice(end);
+
+    this.applySanitizedAmount(nextValue, input);
+  }
+
   private applySanitizedAmount(value: string, input?: HTMLInputElement): void {
     const caret = input?.selectionStart ?? null;
     const previousValue = input?.value ?? value;
@@ -697,12 +692,18 @@ export class HomeComponent {
 
     const display = this.formatSwapAmount(
       sanitized,
-      this.swapAmountFractionDigits(this.fromToken.symbol),
+      this.maxAmountFractionDigits,
       true
     );
 
-    if (input.value !== display) {
-      input.value = display;
+    input.value = display;
+
+    if (sanitized.endsWith('.')) {
+      const commaIndex = display.lastIndexOf(AMOUNT_DECIMAL_SEPARATOR);
+      if (commaIndex !== -1) {
+        input.setSelectionRange(commaIndex + 1, commaIndex + 1);
+      }
+    } else if (previousValue !== display) {
       this.restoreCaretAfterDigits(input, previousValue, caret, display);
     }
 
@@ -710,7 +711,9 @@ export class HomeComponent {
       this.refreshSwapQuotePreview();
     }
 
-    this.scrollAmountToEnd(input);
+    if (display.length > previousValue.length) {
+      this.scrollAmountToEnd(input);
+    }
   }
 
   private refreshSwapQuotePreview(): void {
@@ -760,91 +763,25 @@ export class HomeComponent {
   }
 
   private sanitizeAmountInput(value: string): string {
-    const cleaned = value.replace(/[^\d.]/g, '');
-    if (!cleaned) {
-      return '';
-    }
-
-    if (cleaned.endsWith('.')) {
-      const { whole } = this.parseDisplayedAmount(cleaned.slice(0, -1));
-      return whole ? `${whole}.` : '.';
-    }
-
-    const { whole, fraction } = this.parseDisplayedAmount(cleaned);
-    if (!whole && !fraction) {
-      return '';
-    }
-
-    return fraction ? `${whole}.${fraction}` : whole;
+    const cleaned = normalizeAmountInputChars(value);
+    return this.normalizeAmountStorage(cleaned);
   }
 
   private normalizeAmountStorage(value: string): string {
-    const cleaned = value.replace(/\s/g, '').trim();
-    if (!cleaned) {
-      return '';
-    }
-
-    if (cleaned.endsWith('.')) {
-      const { whole } = this.parseDisplayedAmount(cleaned.slice(0, -1));
-      return whole ? `${whole}.` : '.';
-    }
-
-    const { whole, fraction } = this.parseDisplayedAmount(cleaned);
-    if (!whole && !fraction) {
-      return '';
-    }
-
-    return fraction ? `${whole}.${fraction}` : whole;
-  }
-
-  private parseDisplayedAmount(value: string): {
-    whole: string;
-    fraction: string;
-  } {
-    const cleaned = value.replace(/[^\d.]/g, '');
-    if (!cleaned) {
-      return { whole: '', fraction: '' };
-    }
-
-    if (!cleaned.includes('.')) {
-      return {
-        whole: cleaned.replace(/^0+(?=\d)/, ''),
-        fraction: '',
-      };
-    }
-
-    const lastDot = cleaned.lastIndexOf('.');
-    const tail = cleaned.slice(lastDot + 1).replace(/\./g, '');
-    const head = cleaned.slice(0, lastDot);
-    const tailIsDecimal =
-      tail.length > 0 &&
-      tail.length <= this.maxAmountFractionDigits &&
-      tail.length < 3;
-
-    if (tailIsDecimal) {
-      return {
-        whole: (head.replace(/\./g, '') || '0').replace(/^0+(?=\d)/, ''),
-        fraction: tail,
-      };
-    }
-
-    return {
-      whole: cleaned.replace(/\./g, '').replace(/^0+(?=\d)/, ''),
-      fraction: '',
-    };
-  }
-
-  private formatWholeWithDots(whole: string): string {
-    const digits = whole.replace(/\D/g, '');
-    if (!digits) {
-      return '0';
-    }
-
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return normalizeSwapAmountStorage(value, this.maxAmountFractionDigits);
   }
 
   private parseAmount(value: string): number {
     const normalized = this.normalizeAmountStorage(value);
+    if (!normalized) {
+      return Number.NaN;
+    }
+
+    return Number.parseFloat(normalized);
+  }
+
+  private parseQuoteAmount(value: string): number {
+    const normalized = value.trim().replace(',', '.');
     if (!normalized) {
       return Number.NaN;
     }
@@ -857,34 +794,11 @@ export class HomeComponent {
     maxFractionDigits: number,
     allowEmpty = false
   ): string {
-    const normalized = value.trim();
-    if (!normalized) {
-      return allowEmpty ? '' : '0.00';
-    }
+    return formatSwapAmountDisplay(value, maxFractionDigits, allowEmpty);
+  }
 
-    if (normalized === '.') {
-      return '0.';
-    }
-
-    if (normalized.endsWith('.')) {
-      const wholePart = normalized.slice(0, -1);
-      return `${this.formatWholeWithDots(wholePart || '0')}.`;
-    }
-
-    const dotIndex = normalized.indexOf('.');
-    const wholePart =
-      dotIndex === -1 ? normalized : normalized.slice(0, dotIndex);
-    const fractionPart =
-      dotIndex === -1
-        ? ''
-        : normalized.slice(dotIndex + 1).slice(0, maxFractionDigits);
-    const whole = this.formatWholeWithDots(wholePart || '0');
-
-    if (!fractionPart) {
-      return whole;
-    }
-
-    return `${whole}.${fractionPart}`;
+  private formatSwapRate(rate: number): string {
+    return this.formatSwapAmount(rate.toFixed(4), 4);
   }
 
   private swapAmountFractionDigits(symbol: string): number {
@@ -1502,7 +1416,7 @@ export class HomeComponent {
       return '$0';
     }
 
-    return this.formatPrice(price * amount);
+    return formatSwapFiatEstimate(price * amount);
   }
 
   private tokenPrice(symbol: string): number | undefined {
@@ -1545,10 +1459,17 @@ export class HomeComponent {
 
   private rawQuoteAmount(): string {
     const quote = this.quoteResult;
+    const quoteBody =
+      quote && typeof quote['quote'] === 'object' && quote['quote'] !== null
+        ? (quote['quote'] as Record<string, unknown>)
+        : quote;
     const amount =
-      quote?.['amountOut'] ??
-      quote?.['destinationAmount'] ??
-      quote?.['toAmount'] ??
+      quoteBody?.['amountOutFormatted'] ??
+      quoteBody?.['destinationAmountFormatted'] ??
+      quoteBody?.['toAmountFormatted'] ??
+      quoteBody?.['amountOut'] ??
+      quoteBody?.['destinationAmount'] ??
+      quoteBody?.['toAmount'] ??
       this.quotePreview?.amountOut;
 
     if (typeof amount === 'number') {
@@ -1617,6 +1538,6 @@ export class HomeComponent {
       return this.maxAmountFractionDigits;
     }
 
-    return Math.min(value, 18);
+    return Math.min(value, 30);
   }
 }
