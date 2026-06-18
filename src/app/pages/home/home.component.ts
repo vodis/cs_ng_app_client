@@ -1446,10 +1446,17 @@ export class HomeComponent {
 
   private rawQuoteAmount(): string {
     const quote = this.quoteResult;
+    const quoteBody =
+      quote && typeof quote['quote'] === 'object' && quote['quote'] !== null
+        ? (quote['quote'] as Record<string, unknown>)
+        : quote;
     const amount =
-      quote?.['amountOut'] ??
-      quote?.['destinationAmount'] ??
-      quote?.['toAmount'] ??
+      quoteBody?.['amountOutFormatted'] ??
+      quoteBody?.['destinationAmountFormatted'] ??
+      quoteBody?.['toAmountFormatted'] ??
+      quoteBody?.['amountOut'] ??
+      quoteBody?.['destinationAmount'] ??
+      quoteBody?.['toAmount'] ??
       this.quotePreview?.amountOut;
 
     if (typeof amount === 'number') {
@@ -1518,6 +1525,6 @@ export class HomeComponent {
       return this.maxAmountFractionDigits;
     }
 
-    return Math.min(value, 18);
+    return Math.min(value, 30);
   }
 }

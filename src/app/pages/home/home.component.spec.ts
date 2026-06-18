@@ -232,6 +232,49 @@ describe('HomeComponent market overview', () => {
     expect(component.toAmountDisplay()).toBe('7.385926');
   });
 
+  it('normalizes NEAR quote raw amount using 24 destination decimals', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.toToken = {
+      ...component.toToken,
+      decimals: 24,
+    };
+    component.quoteResult = {
+      quote: {
+        amountOut: '450318543814579873646208',
+      },
+    };
+
+    expect(component.toAmountDisplay()).toBe('0.450318543814579873646208');
+    expect(component.toAmountFormatted()).toBe('0,4503');
+  });
+
+  it('prefers backend formatted quote amount from nested quote response', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.toToken = {
+      ...component.toToken,
+      decimals: 24,
+    };
+    component.quoteResult = {
+      quote: {
+        amountOut: '450318543814579873646208',
+        amountOutFormatted: '0.450318543814579873646208',
+      },
+    };
+
+    expect(component.toAmountDisplay()).toBe('0.450318543814579873646208');
+    expect(component.swapRateLabel()).toBe('1 USDC ≈ 0,0045 NEAR');
+  });
+
   describe('amount input formatting', () => {
     beforeEach(() => {
       expectComparisonRequest({
