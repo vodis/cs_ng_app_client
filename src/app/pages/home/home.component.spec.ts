@@ -264,6 +264,7 @@ describe('HomeComponent market overview', () => {
       ...component.toToken,
       decimals: 24,
     };
+    component.amount = '100';
     component.quoteResult = {
       quote: {
         amountOut: '450318543814579873646208',

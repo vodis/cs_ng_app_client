@@ -541,7 +541,7 @@ export class HomeComponent {
 
   public swapRateLabel(): string {
     const amountIn = this.parseAmount(this.amount);
-    const amountOut = this.parseAmount(this.toAmountUi());
+    const amountOut = this.parseQuoteAmount(this.toAmountUi());
     const rate =
       Number.isFinite(amountIn) && amountIn > 0 && Number.isFinite(amountOut)
         ? amountOut / amountIn
@@ -551,7 +551,7 @@ export class HomeComponent {
       return `1 ${this.fromToken.symbol} ≈ — ${this.toToken.symbol}`;
     }
 
-    return `1 ${this.fromToken.symbol} ≈ ${rate.toFixed(4)} ${this.toToken.symbol}`;
+    return `1 ${this.fromToken.symbol} ≈ ${this.formatSwapRate(rate)} ${this.toToken.symbol}`;
   }
 
   public swapPriceImpactLabel(): string {
@@ -780,12 +780,25 @@ export class HomeComponent {
     return Number.parseFloat(normalized);
   }
 
+  private parseQuoteAmount(value: string): number {
+    const normalized = value.trim().replace(',', '.');
+    if (!normalized) {
+      return Number.NaN;
+    }
+
+    return Number.parseFloat(normalized);
+  }
+
   private formatSwapAmount(
     value: string,
     maxFractionDigits: number,
     allowEmpty = false
   ): string {
     return formatSwapAmountDisplay(value, maxFractionDigits, allowEmpty);
+  }
+
+  private formatSwapRate(rate: number): string {
+    return this.formatSwapAmount(rate.toFixed(4), 4);
   }
 
   private swapAmountFractionDigits(symbol: string): number {
