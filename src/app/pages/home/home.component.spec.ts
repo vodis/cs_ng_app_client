@@ -232,6 +232,89 @@ describe('HomeComponent market overview', () => {
     expect(component.toAmountDisplay()).toBe('7.385926');
   });
 
+  describe('amount input formatting', () => {
+    beforeEach(() => {
+      expectComparisonRequest({
+        base: 'USDC',
+        quote: 'NEAR',
+        timeframe: '1H',
+      }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    });
+
+    it('formats stored amount for display with comma decimals', () => {
+      component.amount = '0.886767';
+      expect(component.fromAmountDisplay()).toBe('0,886767');
+    });
+
+    it('formats large stored amounts with thousand dots', () => {
+      component.amount = '10000000000.1000';
+      expect(component.fromAmountDisplay()).toBe('10.000.000.000,1000');
+    });
+
+    it('sanitizes grouped display input into dot-decimal storage', () => {
+      const input = document.createElement('input');
+      input.value = '1.250,5';
+
+      component.onAmountInput({ target: input } as unknown as Event);
+
+      expect(component.amount).toBe('1250.5');
+      expect(input.value).toBe('1.250,5');
+    });
+
+    it('supports entering fractional digits beyond six places', () => {
+      component.amount = '0.8867671234';
+      expect(component.fromAmountDisplay()).toBe('0,8867671234');
+    });
+
+    it('keeps the current amount when the input is focused', () => {
+      component.amount = '0.886767';
+      const input = document.createElement('input');
+
+      component.onAmountFocus({ target: input } as unknown as FocusEvent);
+
+      expect(component.amount).toBe('0.886767');
+      expect(input.value).toBe('0,886767');
+    });
+
+    it('inserts comma from physical Comma key regardless of keyboard layout', () => {
+      const input = document.createElement('input');
+      input.value = '0';
+      input.setSelectionRange(1, 1);
+
+      const preventDefault = jasmine.createSpy('preventDefault');
+      component.onAmountKeydown({
+        key: 'б',
+        code: 'Comma',
+        preventDefault,
+        target: input,
+      } as unknown as KeyboardEvent);
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(component.amount).toBe('0.');
+      expect(input.value).toBe('0,');
+      expect(input.selectionStart).toBe(2);
+    });
+
+    it('places caret after comma so 0,1 can be entered', () => {
+      const input = document.createElement('input');
+      input.value = '0';
+      input.setSelectionRange(1, 1);
+
+      component.onAmountKeydown({
+        key: 'б',
+        code: 'Comma',
+        preventDefault: jasmine.createSpy('preventDefault'),
+        target: input,
+      } as unknown as KeyboardEvent);
+
+      input.value = '0,1';
+      component.onAmountInput({ target: input } as unknown as Event);
+
+      expect(component.amount).toBe('0.1');
+      expect(input.value).toBe('0,1');
+    });
+  });
+
   function expectComparisonRequest(expected: {
     base: string;
     quote: string;
