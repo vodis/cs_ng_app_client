@@ -17,28 +17,58 @@ permissions:
   contents: read
   packages: read
 
-jobs:
-  ci:
-    runs-on: ubuntu-latest
-    name: test & build validation
+env:
+  NODE_VERSION: 18.x
+  PNPM_VERSION: 9.15.0
 
-    strategy:
-      matrix:
-        node-version: [18.x]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: TypeScript / ESLint
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 9.15.0
+          version: ${{ env.PNPM_VERSION }}
 
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Configure registry for @vodis (GitHub Packages)
+        run: |
+          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript / ESLint
+        run: pnpm run lint
+
+  angular-tests:
+    runs-on: ubuntu-latest
+    name: Angular tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Configure registry for @vodis (GitHub Packages)
@@ -54,13 +84,37 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y chromium
 
-      - name: TypeScript / ESLint
-        run: pnpm run lint
-
       - name: Angular tests
         run: pnpm exec ng test --no-watch --no-progress --browsers=ChromeHeadlessNoSandbox
         env:
           CHROME_BIN: /usr/bin/chromium
+
+  shell-layout-e2e:
+    runs-on: ubuntu-latest
+    name: Shell layout E2E tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Configure registry for @vodis (GitHub Packages)
+        run: |
+          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
         run: pnpm run e2e:install
@@ -69,6 +123,33 @@ jobs:
         run: pnpm run e2e
         env:
           CI: true
+
+  production-build:
+    runs-on: ubuntu-latest
+    name: Production build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Configure registry for @vodis (GitHub Packages)
+        run: |
+          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Production build (verify only, no deploy)
         run: pnpm run build-prod
