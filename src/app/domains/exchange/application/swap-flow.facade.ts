@@ -15,6 +15,7 @@ import type {
   SwapFlowState,
   SwapQuotePreview,
 } from '@domains/exchange/models/swap.models';
+import { toSwapFlowError } from '@domains/exchange/models/swap-flow-error';
 import { SwapExecutionWorkflow } from './swap-execution.workflow';
 
 export type SwapFormInput = {
@@ -217,31 +218,6 @@ export class SwapFlowFacade {
   }
 
   private toFlowError(step: SwapFlowState, error: unknown): SwapFlowError {
-    if (isSwapFlowError(error)) {
-      return { ...error, step };
-    }
-
-    return {
-      code: 'SWAP_FAILED',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Swap flow failed unexpectedly',
-      retryable: true,
-      step,
-    };
+    return toSwapFlowError(step, error, 'Swap flow failed unexpectedly');
   }
-}
-
-function isSwapFlowError(error: unknown): error is SwapFlowError {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'string' &&
-    'message' in error &&
-    typeof error.message === 'string' &&
-    'retryable' in error &&
-    typeof error.retryable === 'boolean'
-  );
 }
