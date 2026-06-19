@@ -1,3 +1,4 @@
+import type { SwapFlowError } from './swap.models';
 import {
   BaseSwapError,
   SwapFlowException,
@@ -40,7 +41,7 @@ describe('swap flow error utilities', () => {
   });
 
   it('parses serialized swap flow errors', () => {
-    const error = {
+    const error: SwapFlowError = {
       code: 'INTENT_FAILED',
       message: 'Intent relay failed',
       retryable: false,
