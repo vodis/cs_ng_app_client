@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import * as React from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
