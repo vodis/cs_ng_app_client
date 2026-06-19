@@ -36,7 +36,6 @@
     "@angular/platform-browser-dynamic": "^19.2.0",
     "@angular/router": "^19.2.0",
     "@babel/runtime": "^7.28.6",
-    "@privy-io/react-auth": "^3.32.1",
     "@vodis/ui-kit": "^1.0.15",
     "liveline": "^0.0.7",
     "react": "^19.2.7",

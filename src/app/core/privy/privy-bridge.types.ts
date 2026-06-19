@@ -35,5 +35,7 @@ export type CraftscriptPrivyBridge = {
 declare global {
   interface Window {
     craftscriptPrivy?: CraftscriptPrivyBridge;
+    craftscriptPrivySource?: CraftscriptPrivyBridge;
   }
 }
+
