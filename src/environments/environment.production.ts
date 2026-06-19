@@ -3,6 +3,4 @@ export const environment = {
   production: true,
   origin: 'https://craftscript.com/',
   apiUrl: 'https://api.craftscript.com',
-  privyAppId: '',
-  privyClientId: undefined,
 };
