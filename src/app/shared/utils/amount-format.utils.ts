@@ -88,10 +88,7 @@ export function formatWholeWithDots(whole: string): string {
     return '0';
   }
 
-  return digits.replace(
-    /\B(?=(\d{3})+(?!\d))/g,
-    AMOUNT_THOUSAND_SEPARATOR
-  );
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, AMOUNT_THOUSAND_SEPARATOR);
 }
 
 export function parseDisplayedAmount(
@@ -125,13 +122,13 @@ export function parseDisplayedAmount(
       .replace(/\D/g, '');
     const head = cleaned.slice(0, lastDot);
     const tailIsDecimal =
-      tail.length > 0 &&
-      tail.length <= maxFractionDigits &&
-      tail.length < 3;
+      tail.length > 0 && tail.length <= maxFractionDigits && tail.length < 3;
 
     if (tailIsDecimal) {
       return {
-        whole: stripLeadingZeros(stripThousands(head, AMOUNT_THOUSAND_SEPARATOR)),
+        whole: stripLeadingZeros(
+          stripThousands(head, AMOUNT_THOUSAND_SEPARATOR)
+        ),
         fraction: tail,
       };
     }

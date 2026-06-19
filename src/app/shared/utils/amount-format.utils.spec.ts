@@ -15,9 +15,9 @@ describe('amount-format.utils', () => {
 
   describe('resolveAmountKeydownAction', () => {
     it('allows navigation and digit keys', () => {
-      expect(
-        resolveAmountKeydownAction({ key: '1' } as KeyboardEvent)
-      ).toBe('allow');
+      expect(resolveAmountKeydownAction({ key: '1' } as KeyboardEvent)).toBe(
+        'allow'
+      );
       expect(
         resolveAmountKeydownAction({ key: 'ArrowLeft' } as KeyboardEvent)
       ).toBe('allow');
@@ -118,7 +118,9 @@ describe('amount-format.utils', () => {
     });
 
     it('treats dot-only thousands grouping as not having a decimal separator', () => {
-      expect(displayHasDecimalSeparator('1.000', maxFractionDigits)).toBe(false);
+      expect(displayHasDecimalSeparator('1.000', maxFractionDigits)).toBe(
+        false
+      );
       expect(displayHasDecimalSeparator('10.000.000', maxFractionDigits)).toBe(
         false
       );
@@ -139,7 +141,9 @@ describe('amount-format.utils', () => {
     });
 
     it('accepts dot decimal input', () => {
-      expect(normalizeAmountStorage('1250.5', maxFractionDigits)).toBe('1250.5');
+      expect(normalizeAmountStorage('1250.5', maxFractionDigits)).toBe(
+        '1250.5'
+      );
     });
 
     it('caps fractional digits at max precision', () => {
@@ -190,7 +194,9 @@ describe('amount-format.utils', () => {
   describe('typing flow', () => {
     it('supports entering 0,1 step by step', () => {
       let storage = normalizeAmountStorage('0', maxFractionDigits);
-      expect(formatSwapAmountDisplay(storage, maxFractionDigits, true)).toBe('0');
+      expect(formatSwapAmountDisplay(storage, maxFractionDigits, true)).toBe(
+        '0'
+      );
 
       storage = normalizeAmountStorage('0,', maxFractionDigits);
       expect(storage).toBe('0.');

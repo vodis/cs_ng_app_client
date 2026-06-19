@@ -1,8 +1,4 @@
-import {
-  discardPeriodicTasks,
-  fakeAsync,
-  tick,
-} from '@angular/core/testing';
+import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import type { SwapQuotePreview } from '@domains/exchange/models/swap.models';
 import { SwapExecutionWorkflow } from './swap-execution.workflow';
@@ -24,9 +20,11 @@ class SwapExecutionWorkflowStub {
     return response.asObservable();
   }
 
-  public executeSwap = jasmine
-    .createSpy('executeSwap')
-    .and.resolveTo({ traceId: 'trace', preparePackage: {}, intentHash: 'hash' });
+  public executeSwap = jasmine.createSpy('executeSwap').and.resolveTo({
+    traceId: 'trace',
+    preparePackage: {},
+    intentHash: 'hash',
+  });
 }
 
 describe('SwapFlowFacade quote preview refresh', () => {

@@ -39,17 +39,20 @@ function toPrivyUser(value: unknown): PrivyBridgeUser | null {
 }
 
 function toWallets(value: unknown[]): PrivyEmbeddedWallet[] {
-  return value.filter(isObject).map((wallet) => wallet as PrivyEmbeddedWallet);
+  return value.filter(isObject).map(wallet => wallet as PrivyEmbeddedWallet);
 }
 
-function findEmbeddedWallet(wallets: PrivyEmbeddedWallet[]): PrivyEmbeddedWallet | null {
+function findEmbeddedWallet(
+  wallets: PrivyEmbeddedWallet[]
+): PrivyEmbeddedWallet | null {
   return (
     wallets.find(
-      (wallet) =>
+      wallet =>
         typeof wallet.address === 'string' &&
-        (wallet.walletClientType === 'privy' || wallet.walletClientType === 'embedded'),
+        (wallet.walletClientType === 'privy' ||
+          wallet.walletClientType === 'embedded')
     ) ??
-    wallets.find((wallet) => typeof wallet.address === 'string') ??
+    wallets.find(wallet => typeof wallet.address === 'string') ??
     null
   );
 }
@@ -57,7 +60,7 @@ function findEmbeddedWallet(wallets: PrivyEmbeddedWallet[]): PrivyEmbeddedWallet
 function waitFor(
   stateRef: React.MutableRefObject<PrivyState>,
   listenersRef: React.MutableRefObject<Set<() => void>>,
-  predicate: (state: PrivyState) => boolean,
+  predicate: (state: PrivyState) => boolean
 ): Promise<PrivyState> {
   if (predicate(stateRef.current)) {
     return Promise.resolve(stateRef.current);
@@ -103,83 +106,88 @@ function useCraftscriptPrivyBridge(): CraftscriptPrivyBridge {
       user: toPrivyUser(privy.user),
       wallets: toWallets(walletsState.wallets),
     };
-    listenersRef.current.forEach((listener) => listener());
-  }, [privy.ready, privy.authenticated, privy.user, walletsState.ready, walletsState.wallets]);
+    listenersRef.current.forEach(listener => listener());
+  }, [
+    privy.ready,
+    privy.authenticated,
+    privy.user,
+    walletsState.ready,
+    walletsState.wallets,
+  ]);
 
-  return useMemo(
-    () => {
-      const getEmbeddedWallet = async () => {
+  return useMemo(() => {
+    const getEmbeddedWallet = async () => {
+      const state = await waitFor(
+        stateRef,
+        listenersRef,
+        next => next.authenticated && next.walletsReady
+      );
+      return findEmbeddedWallet(state.wallets);
+    };
+
+    return {
+      async login() {
+        await waitFor(stateRef, listenersRef, state => state.privyReady);
+
+        if (!stateRef.current.authenticated) {
+          await privy.login();
+        }
+
         const state = await waitFor(
           stateRef,
           listenersRef,
-          (next) => next.authenticated && next.walletsReady,
+          next => next.authenticated && next.walletsReady
         );
-        return findEmbeddedWallet(state.wallets);
-      };
-
-      return {
-        async login() {
-          await waitFor(stateRef, listenersRef, (state) => state.privyReady);
-
-          if (!stateRef.current.authenticated) {
-            await privy.login();
-          }
-
-          const state = await waitFor(
-            stateRef,
-            listenersRef,
-            (next) => next.authenticated && next.walletsReady,
+        const wallet = findEmbeddedWallet(state.wallets);
+        if (!wallet) {
+          throw new Error(
+            'Privy did not create an embedded wallet for this user.'
           );
-          const wallet = findEmbeddedWallet(state.wallets);
-          if (!wallet) {
-            throw new Error('Privy did not create an embedded wallet for this user.');
-          }
-          return state.user ?? undefined;
-        },
-        async getAccessToken() {
-          await waitFor(stateRef, listenersRef, (state) => state.privyReady);
-          return privy.getAccessToken();
-        },
-        async getUser() {
-          await waitFor(stateRef, listenersRef, (state) => state.privyReady);
-          return stateRef.current.user;
-        },
-        getEmbeddedWallet,
-        async signMessage({ message, address }) {
-          const wallet = await getEmbeddedWallet();
-          if (!wallet?.getEthereumProvider) {
-            throw new Error('Privy embedded wallet provider is unavailable.');
-          }
-          const provider = await wallet.getEthereumProvider();
-          const account = address ?? wallet.address;
-          const signature = await provider.request({
-            method: 'personal_sign',
-            params: [message, account],
-          });
-          if (typeof signature !== 'string') {
-            throw new Error('Privy did not return a message signature.');
-          }
-          return { signature };
-        },
-        async sendTransaction(input: EthereumTransaction) {
-          const wallet = await getEmbeddedWallet();
-          if (!wallet?.getEthereumProvider) {
-            throw new Error('Privy embedded wallet provider is unavailable.');
-          }
-          const provider = await wallet.getEthereumProvider();
-          const hash = await provider.request({
-            method: 'eth_sendTransaction',
-            params: [input],
-          });
-          if (typeof hash !== 'string') {
-            throw new Error('Privy did not return a transaction hash.');
-          }
-          return { hash };
-        },
-      };
-    },
-    [privy],
-  );
+        }
+        return state.user ?? undefined;
+      },
+      async getAccessToken() {
+        await waitFor(stateRef, listenersRef, state => state.privyReady);
+        return privy.getAccessToken();
+      },
+      async getUser() {
+        await waitFor(stateRef, listenersRef, state => state.privyReady);
+        return stateRef.current.user;
+      },
+      getEmbeddedWallet,
+      async signMessage({ message, address }) {
+        const wallet = await getEmbeddedWallet();
+        if (!wallet?.getEthereumProvider) {
+          throw new Error('Privy embedded wallet provider is unavailable.');
+        }
+        const provider = await wallet.getEthereumProvider();
+        const account = address ?? wallet.address;
+        const signature = await provider.request({
+          method: 'personal_sign',
+          params: [message, account],
+        });
+        if (typeof signature !== 'string') {
+          throw new Error('Privy did not return a message signature.');
+        }
+        return { signature };
+      },
+      async sendTransaction(input: EthereumTransaction) {
+        const wallet = await getEmbeddedWallet();
+        if (!wallet?.getEthereumProvider) {
+          throw new Error('Privy embedded wallet provider is unavailable.');
+        }
+        const provider = await wallet.getEthereumProvider();
+        const hash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [input],
+        });
+        if (typeof hash !== 'string') {
+          throw new Error('Privy did not return a transaction hash.');
+        }
+        return { hash };
+      },
+    };
+  }, [privy]);
 }
 
 function PrivyBridgeRegistrar(): null {
@@ -212,13 +220,13 @@ function PrivyBridgeRoot({ appId, clientId }: PrivyHostBridgeOptions) {
         loginMethods: ['email', 'google', 'passkey'],
       },
     },
-    React.createElement(PrivyBridgeRegistrar),
+    React.createElement(PrivyBridgeRegistrar)
   );
 }
 
 export function mountPrivyHostBridge(
   element: HTMLElement,
-  options: PrivyHostBridgeOptions,
+  options: PrivyHostBridgeOptions
 ): Root {
   const root = createRoot(element);
   root.render(React.createElement(PrivyBridgeRoot, options));

@@ -171,7 +171,9 @@ export class SwapFlowFacade {
           }),
           catchError(error => {
             if (requestVersion === this.quoteRequestVersion) {
-              this.errorSubject.next(this.toFlowError('requestingQuote', error));
+              this.errorSubject.next(
+                this.toFlowError('requestingQuote', error)
+              );
               this.setState('idle');
             }
 
