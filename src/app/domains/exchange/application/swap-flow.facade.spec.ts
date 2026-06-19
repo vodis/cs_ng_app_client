@@ -1,14 +1,18 @@
 import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import type {
-  SwapExecutionResult,
+  ApprovedSwapPreparePackage,
   SwapQuotePreview,
 } from '@domains/exchange/models/swap.models';
 import { SwapExecutionWorkflow } from './swap-execution.workflow';
 import { SwapFlowFacade, SwapFormInput } from './swap-flow.facade';
 
 class SwapExecutionWorkflowStub
-  implements Pick<SwapExecutionWorkflow, 'requestQuotePreviewStream' | 'executeSwap'>
+  implements
+    Pick<
+      SwapExecutionWorkflow,
+      'requestQuotePreview' | 'requestQuotePreviewStream' | 'executeSwap'
+    >
 {
   public readonly quoteCalls: Array<{
     input: SwapFormInput;
@@ -25,11 +29,58 @@ class SwapExecutionWorkflowStub
     return response.asObservable();
   }
 
-  public executeSwap = jasmine.createSpy('executeSwap').and.resolveTo({
-    traceId: 'trace',
-    preparePackage: {},
-    intentHash: 'hash',
-  } satisfies SwapExecutionResult);
+  public async requestQuotePreview(
+    input: SwapFormInput,
+    traceId: string
+  ): Promise<{ traceId: string; preview: SwapQuotePreview }> {
+    return {
+      traceId,
+      preview: preview(input.amount),
+    };
+  }
+
+  public async executeSwap(
+    _input: SwapFormInput,
+    traceId: string
+  ): Promise<{
+    traceId: string;
+    preparePackage: ApprovedSwapPreparePackage;
+    intentHash: string;
+  }> {
+    return {
+      traceId,
+      preparePackage: approvedPreparePackage(),
+      intentHash: 'hash',
+    };
+  }
+}
+
+function preview(amountOut: string): SwapQuotePreview {
+  return {
+    amountOut,
+    raw: { amountOut },
+  };
+}
+
+function approvedPreparePackage(): ApprovedSwapPreparePackage {
+  return {
+    protocol: 'near-intents',
+    kind: 'swap',
+    quoteHashes: ['quote-hash'],
+    signerId: '0x0000000000000000000000000000000000000001',
+    authMethod: 'evm',
+    deadlineTimestamp: 1_765_497_600,
+    tokenDeltas: [
+      {
+        assetId: 'nep141:usdc',
+        amount: '-1000000',
+      },
+      {
+        assetId: 'nep141:near',
+        amount: '1000000',
+      },
+    ],
+  };
 }
 
 describe('SwapFlowFacade quote preview refresh', () => {
@@ -121,10 +172,4 @@ describe('SwapFlowFacade quote preview refresh', () => {
     };
   }
 
-  function preview(amountOut: string): SwapQuotePreview {
-    return {
-      amountOut,
-      raw: { amountOut },
-    };
-  }
 });

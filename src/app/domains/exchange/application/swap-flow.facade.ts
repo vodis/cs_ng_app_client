@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable } from '@angular/core';
 import {
   BehaviorSubject,
   EMPTY,
@@ -27,6 +27,11 @@ export type SwapFormInput = {
   authMethod: 'evm' | 'near';
 };
 
+type SwapExecutionWorkflowPort = Pick<
+  SwapExecutionWorkflow,
+  'requestQuotePreview' | 'requestQuotePreviewStream' | 'executeSwap'
+>;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -52,7 +57,10 @@ export class SwapFlowFacade {
   readonly error$ = this.errorSubject.asObservable();
   readonly intentHash$ = this.intentHashSubject.asObservable();
 
-  constructor(private readonly workflow: SwapExecutionWorkflow) {
+  constructor(
+    @Inject(SwapExecutionWorkflow)
+    private readonly workflow: SwapExecutionWorkflowPort
+  ) {
     this.quoteInputSubject
       .pipe(
         distinctUntilChanged(
