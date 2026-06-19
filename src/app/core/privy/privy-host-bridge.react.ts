@@ -35,12 +35,48 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === 'string';
+}
+
+function isPrivyEmbeddedWallet(value: unknown): value is PrivyEmbeddedWallet {
+  if (!isObject(value)) {
+    return false;
+  }
+
+  return (
+    isOptionalString(value['id']) &&
+    isOptionalString(value['address']) &&
+    isOptionalString(value['walletClientType']) &&
+    isOptionalString(value['chainType']) &&
+    (value['getEthereumProvider'] === undefined ||
+      typeof value['getEthereumProvider'] === 'function')
+  );
+}
+
+function isEmailRecord(value: unknown): value is { address?: string } {
+  return isObject(value) && isOptionalString(value['address']);
+}
+
+function isPrivyBridgeUser(value: unknown): value is PrivyBridgeUser {
+  if (!isObject(value)) {
+    return false;
+  }
+
+  return (
+    isOptionalString(value['id']) &&
+    (value['email'] === undefined || isEmailRecord(value['email'])) &&
+    (value['linkedAccounts'] === undefined || Array.isArray(value['linkedAccounts'])) &&
+    (value['wallet'] === undefined || isPrivyEmbeddedWallet(value['wallet']))
+  );
+}
+
 function toPrivyUser(value: unknown): PrivyBridgeUser | null {
-  return isObject(value) ? (value as PrivyBridgeUser) : null;
+  return isPrivyBridgeUser(value) ? value : null;
 }
 
 function toWallets(value: unknown[]): PrivyEmbeddedWallet[] {
-  return value.filter(isObject).map(wallet => wallet as PrivyEmbeddedWallet);
+  return value.filter(isPrivyEmbeddedWallet);
 }
 
 function findEmbeddedWallet(
