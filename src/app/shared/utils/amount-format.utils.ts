@@ -21,9 +21,7 @@ export type AmountKeydownAction = 'allow' | 'block' | 'decimal-separator';
 
 export function isAmountInputControlKey(event: KeyboardEvent): boolean {
   return (
-    AMOUNT_INPUT_CONTROL_KEYS.includes(
-      event.key as (typeof AMOUNT_INPUT_CONTROL_KEYS)[number]
-    ) ||
+    AMOUNT_INPUT_CONTROL_KEYS.some(controlKey => controlKey === event.key) ||
     event.ctrlKey ||
     event.metaKey
   );
@@ -44,9 +42,7 @@ export function isDecimalSeparatorInputKey(event: KeyboardEvent): boolean {
 }
 
 export function isBlockedScientificNotationKey(key: string): boolean {
-  return BLOCKED_AMOUNT_INPUT_KEYS.includes(
-    key as (typeof BLOCKED_AMOUNT_INPUT_KEYS)[number]
-  );
+  return BLOCKED_AMOUNT_INPUT_KEYS.some(blockedKey => blockedKey === key);
 }
 
 export function resolveAmountKeydownAction(

@@ -1,10 +1,15 @@
 import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { Subject } from 'rxjs';
-import type { SwapQuotePreview } from '@domains/exchange/models/swap.models';
+import type {
+  SwapExecutionResult,
+  SwapQuotePreview,
+} from '@domains/exchange/models/swap.models';
 import { SwapExecutionWorkflow } from './swap-execution.workflow';
 import { SwapFlowFacade, SwapFormInput } from './swap-flow.facade';
 
-class SwapExecutionWorkflowStub {
+class SwapExecutionWorkflowStub
+  implements Pick<SwapExecutionWorkflow, 'requestQuotePreviewStream' | 'executeSwap'>
+{
   public readonly quoteCalls: Array<{
     input: SwapFormInput;
     traceId: string;
@@ -24,7 +29,7 @@ class SwapExecutionWorkflowStub {
     traceId: 'trace',
     preparePackage: {},
     intentHash: 'hash',
-  });
+  } satisfies SwapExecutionResult);
 }
 
 describe('SwapFlowFacade quote preview refresh', () => {
@@ -33,7 +38,7 @@ describe('SwapFlowFacade quote preview refresh', () => {
 
   beforeEach(() => {
     workflow = new SwapExecutionWorkflowStub();
-    facade = new SwapFlowFacade(workflow as unknown as SwapExecutionWorkflow);
+    facade = new SwapFlowFacade(workflow);
   });
 
   afterEach(fakeAsync(() => {

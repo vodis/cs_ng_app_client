@@ -12,48 +12,32 @@ import {
 
 describe('amount-format.utils', () => {
   const maxFractionDigits = 18;
+  const keyEvent = (
+    key: string,
+    init: Omit<KeyboardEventInit, 'key'> = {}
+  ): KeyboardEvent => new KeyboardEvent('keydown', { key, ...init });
 
   describe('resolveAmountKeydownAction', () => {
     it('allows navigation and digit keys', () => {
-      expect(resolveAmountKeydownAction({ key: '1' } as KeyboardEvent)).toBe(
+      expect(resolveAmountKeydownAction(keyEvent('1'))).toBe('allow');
+      expect(resolveAmountKeydownAction(keyEvent('ArrowLeft'))).toBe('allow');
+      expect(resolveAmountKeydownAction(keyEvent('a', { ctrlKey: true }))).toBe(
         'allow'
       );
-      expect(
-        resolveAmountKeydownAction({ key: 'ArrowLeft' } as KeyboardEvent)
-      ).toBe('allow');
-      expect(
-        resolveAmountKeydownAction({
-          key: 'a',
-          ctrlKey: true,
-        } as KeyboardEvent)
-      ).toBe('allow');
     });
 
     it('routes decimal separator keys to dedicated handling', () => {
       expect(
-        resolveAmountKeydownAction({
-          key: 'б',
-          code: 'Comma',
-        } as KeyboardEvent)
+        resolveAmountKeydownAction(keyEvent('б', { code: 'Comma' }))
       ).toBe('decimal-separator');
     });
 
     it('blocks scientific notation and other printable characters', () => {
-      expect(resolveAmountKeydownAction({ key: 'e' } as KeyboardEvent)).toBe(
-        'block'
-      );
-      expect(resolveAmountKeydownAction({ key: 'E' } as KeyboardEvent)).toBe(
-        'block'
-      );
-      expect(resolveAmountKeydownAction({ key: '+' } as KeyboardEvent)).toBe(
-        'block'
-      );
-      expect(resolveAmountKeydownAction({ key: '-' } as KeyboardEvent)).toBe(
-        'block'
-      );
-      expect(resolveAmountKeydownAction({ key: 'a' } as KeyboardEvent)).toBe(
-        'block'
-      );
+      expect(resolveAmountKeydownAction(keyEvent('e'))).toBe('block');
+      expect(resolveAmountKeydownAction(keyEvent('E'))).toBe('block');
+      expect(resolveAmountKeydownAction(keyEvent('+'))).toBe('block');
+      expect(resolveAmountKeydownAction(keyEvent('-'))).toBe('block');
+      expect(resolveAmountKeydownAction(keyEvent('a'))).toBe('block');
     });
   });
 
