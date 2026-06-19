@@ -10,10 +10,10 @@ import type {
   SwapQuotePreview,
   SwapQuoteRequest,
 } from '@domains/exchange/models/swap.models';
+import { toSwapFlowError } from '@domains/exchange/models/swap-flow-error';
 import { SwapApiClient } from '@domains/exchange/data-access/swap-api.client';
 import { IntentRelayService } from '@domains/exchange/data-access/intent-relay.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
-import type { WalletExecutionFailure } from '@mfe-contracts/wallet-execution.types';
 
 @Injectable({
   providedIn: 'root',
@@ -109,77 +109,7 @@ export class SwapExecutionWorkflow {
   }
 
   private toFlowError(step: SwapFlowState, error: unknown): SwapFlowError {
-    if (this.isFlowError(error)) {
-      return error;
-    }
-
-    if (this.isWalletExecutionFailure(error)) {
-      return {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-        step,
-      };
-    }
-
-    if (this.isApiError(error)) {
-      return {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-        step,
-        details: error.details,
-      };
-    }
-
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Swap execution failed unexpectedly';
-
-    return {
-      code: 'SWAP_FAILED',
-      message,
-      retryable: true,
-      step,
-    };
-  }
-
-  private isFlowError(error: unknown): error is SwapFlowError {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'step' in error &&
-      'code' in error &&
-      'message' in error
-    );
-  }
-
-  private isWalletExecutionFailure(
-    error: unknown
-  ): error is WalletExecutionFailure {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      'message' in error &&
-      'retryable' in error
-    );
-  }
-
-  private isApiError(error: unknown): error is {
-    code: string;
-    message: string;
-    retryable: boolean;
-    details?: unknown;
-  } {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      'message' in error &&
-      'retryable' in error
-    );
+    return toSwapFlowError(step, error, 'Swap execution failed unexpectedly');
   }
 
   private logTransition(

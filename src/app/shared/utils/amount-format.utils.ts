@@ -21,9 +21,7 @@ export type AmountKeydownAction = 'allow' | 'block' | 'decimal-separator';
 
 export function isAmountInputControlKey(event: KeyboardEvent): boolean {
   return (
-    AMOUNT_INPUT_CONTROL_KEYS.includes(
-      event.key as (typeof AMOUNT_INPUT_CONTROL_KEYS)[number]
-    ) ||
+    AMOUNT_INPUT_CONTROL_KEYS.some(controlKey => controlKey === event.key) ||
     event.ctrlKey ||
     event.metaKey
   );
@@ -44,9 +42,7 @@ export function isDecimalSeparatorInputKey(event: KeyboardEvent): boolean {
 }
 
 export function isBlockedScientificNotationKey(key: string): boolean {
-  return BLOCKED_AMOUNT_INPUT_KEYS.includes(
-    key as (typeof BLOCKED_AMOUNT_INPUT_KEYS)[number]
-  );
+  return BLOCKED_AMOUNT_INPUT_KEYS.some(blockedKey => blockedKey === key);
 }
 
 export function resolveAmountKeydownAction(
@@ -88,10 +84,7 @@ export function formatWholeWithDots(whole: string): string {
     return '0';
   }
 
-  return digits.replace(
-    /\B(?=(\d{3})+(?!\d))/g,
-    AMOUNT_THOUSAND_SEPARATOR
-  );
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, AMOUNT_THOUSAND_SEPARATOR);
 }
 
 export function parseDisplayedAmount(
@@ -125,13 +118,13 @@ export function parseDisplayedAmount(
       .replace(/\D/g, '');
     const head = cleaned.slice(0, lastDot);
     const tailIsDecimal =
-      tail.length > 0 &&
-      tail.length <= maxFractionDigits &&
-      tail.length < 3;
+      tail.length > 0 && tail.length <= maxFractionDigits && tail.length < 3;
 
     if (tailIsDecimal) {
       return {
-        whole: stripLeadingZeros(stripThousands(head, AMOUNT_THOUSAND_SEPARATOR)),
+        whole: stripLeadingZeros(
+          stripThousands(head, AMOUNT_THOUSAND_SEPARATOR)
+        ),
         fraction: tail,
       };
     }

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable } from '@angular/core';
 import {
   BehaviorSubject,
   EMPTY,
@@ -15,6 +15,7 @@ import type {
   SwapFlowState,
   SwapQuotePreview,
 } from '@domains/exchange/models/swap.models';
+import { toSwapFlowError } from '@domains/exchange/models/swap-flow-error';
 import { SwapExecutionWorkflow } from './swap-execution.workflow';
 
 export type SwapFormInput = {
@@ -26,6 +27,11 @@ export type SwapFormInput = {
   deadline: string;
   authMethod: 'evm' | 'near';
 };
+
+type SwapExecutionWorkflowPort = Pick<
+  SwapExecutionWorkflow,
+  'requestQuotePreview' | 'requestQuotePreviewStream' | 'executeSwap'
+>;
 
 @Injectable({
   providedIn: 'root',
@@ -52,7 +58,10 @@ export class SwapFlowFacade {
   readonly error$ = this.errorSubject.asObservable();
   readonly intentHash$ = this.intentHashSubject.asObservable();
 
-  constructor(private readonly workflow: SwapExecutionWorkflow) {
+  constructor(
+    @Inject(SwapExecutionWorkflow)
+    private readonly workflow: SwapExecutionWorkflowPort
+  ) {
     this.quoteInputSubject
       .pipe(
         distinctUntilChanged(
@@ -171,7 +180,9 @@ export class SwapFlowFacade {
           }),
           catchError(error => {
             if (requestVersion === this.quoteRequestVersion) {
-              this.errorSubject.next(this.toFlowError('requestingQuote', error));
+              this.errorSubject.next(
+                this.toFlowError('requestingQuote', error)
+              );
               this.setState('idle');
             }
 
@@ -207,24 +218,6 @@ export class SwapFlowFacade {
   }
 
   private toFlowError(step: SwapFlowState, error: unknown): SwapFlowError {
-    if (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      'message' in error &&
-      'retryable' in error
-    ) {
-      return { ...(error as SwapFlowError), step };
-    }
-
-    return {
-      code: 'SWAP_FAILED',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Swap flow failed unexpectedly',
-      retryable: true,
-      step,
-    };
+    return toSwapFlowError(step, error, 'Swap flow failed unexpectedly');
   }
 }
