@@ -72,9 +72,7 @@ export function formatSwapFiatEstimate(value: number | undefined): string {
   const sign = value < 0 ? '-' : '';
 
   if (absValue >= 1e15) {
-    return `${sign}$${value
-      .toExponential(2)
-      .replace('.', ',')}`;
+    return `${sign}$${value.toExponential(2).replace('.', ',')}`;
   }
 
   if (absValue >= 1e9) {

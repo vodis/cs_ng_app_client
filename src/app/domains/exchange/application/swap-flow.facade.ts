@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable } from '@angular/core';
 import {
   BehaviorSubject,
   EMPTY,
@@ -27,6 +27,11 @@ export type SwapFormInput = {
   authMethod: 'evm' | 'near';
 };
 
+type SwapExecutionWorkflowPort = Pick<
+  SwapExecutionWorkflow,
+  'requestQuotePreview' | 'requestQuotePreviewStream' | 'executeSwap'
+>;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -52,7 +57,10 @@ export class SwapFlowFacade {
   readonly error$ = this.errorSubject.asObservable();
   readonly intentHash$ = this.intentHashSubject.asObservable();
 
-  constructor(private readonly workflow: SwapExecutionWorkflow) {
+  constructor(
+    @Inject(SwapExecutionWorkflow)
+    private readonly workflow: SwapExecutionWorkflowPort
+  ) {
     this.quoteInputSubject
       .pipe(
         distinctUntilChanged(
@@ -171,7 +179,9 @@ export class SwapFlowFacade {
           }),
           catchError(error => {
             if (requestVersion === this.quoteRequestVersion) {
-              this.errorSubject.next(this.toFlowError('requestingQuote', error));
+              this.errorSubject.next(
+                this.toFlowError('requestingQuote', error)
+              );
               this.setState('idle');
             }
 
@@ -207,14 +217,8 @@ export class SwapFlowFacade {
   }
 
   private toFlowError(step: SwapFlowState, error: unknown): SwapFlowError {
-    if (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      'message' in error &&
-      'retryable' in error
-    ) {
-      return { ...(error as SwapFlowError), step };
+    if (isSwapFlowError(error)) {
+      return { ...error, step };
     }
 
     return {
@@ -227,4 +231,17 @@ export class SwapFlowFacade {
       step,
     };
   }
+}
+
+function isSwapFlowError(error: unknown): error is SwapFlowError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string' &&
+    'message' in error &&
+    typeof error.message === 'string' &&
+    'retryable' in error &&
+    typeof error.retryable === 'boolean'
+  );
 }
