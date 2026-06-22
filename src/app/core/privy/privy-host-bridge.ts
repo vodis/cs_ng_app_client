@@ -1,5 +1,7 @@
 import type { CraftscriptPrivyBridge } from './privy-bridge.types';
 
+export const PRIVY_SOURCE_READY_EVENT = 'craftscript:privy-source-ready';
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
