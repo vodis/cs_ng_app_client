@@ -2,6 +2,8 @@ import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { filter, Subscription } from 'rxjs';
+import { AuthSessionService } from '@core/auth/auth-session.service';
+import type { AuthSession } from '@core/auth/auth-session.types';
 
 @Component({
   selector: 'app-header',
@@ -15,10 +17,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
   public originUrl: string = environment.origin;
   public horizontalLineAnimating = true;
   public lineResetKey = 0;
+  public session: AuthSession | null = null;
 
   private routerSubscription?: Subscription;
+  private sessionSubscription?: Subscription;
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    public readonly authSession: AuthSessionService
+  ) {}
 
   public ngOnInit(): void {
     this.isMobileView = this.currentWidth <= 768;
@@ -29,10 +36,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
         this.horizontalLineAnimating = true;
         this.lineResetKey += 1;
       });
+
+    this.sessionSubscription = this.authSession.session$.subscribe(session => {
+      this.session = session;
+    });
   }
 
   public ngOnDestroy(): void {
     this.routerSubscription?.unsubscribe();
+    this.sessionSubscription?.unsubscribe();
   }
 
   @HostListener('window:resize', ['$event'])

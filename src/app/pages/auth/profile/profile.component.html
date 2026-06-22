@@ -1,0 +1,47 @@
+<section class="profile-shell" *ngIf="session as activeSession">
+  <div class="profile-shell__header">
+    <div>
+      <p class="profile-shell__eyebrow">Profile</p>
+      <h1>{{ activeSession.user.email || activeSession.user.privyUserId }}</h1>
+    </div>
+    <button type="button" mat-stroked-button (click)="requestDeletion()">
+      Request deletion
+    </button>
+  </div>
+
+  <div class="profile-shell__grid">
+    <section class="profile-shell__panel">
+      <h2>Account</h2>
+      <dl>
+        <div>
+          <dt>Account ID</dt>
+          <dd>{{ activeSession.user.id }}</dd>
+        </div>
+        <div>
+          <dt>Privy subject</dt>
+          <dd>{{ activeSession.user.privyUserId }}</dd>
+        </div>
+        <div>
+          <dt>Auth method</dt>
+          <dd>{{ activeSession.user.authMethod || 'Privy' }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="profile-shell__panel">
+      <h2>Wallets</h2>
+      <div class="profile-shell__empty" *ngIf="activeSession.wallets.length === 0">
+        No wallet linked.
+      </div>
+      <ul class="profile-shell__wallets" *ngIf="activeSession.wallets.length > 0">
+        <li *ngFor="let wallet of activeSession.wallets">
+          <span>{{ shortAddress(wallet.address) }}</span>
+          <small>{{ wallet.chainType }} / {{ wallet.walletType }}</small>
+        </li>
+      </ul>
+    </section>
+  </div>
+
+  <p class="profile-shell__message" *ngIf="deletionMessage">{{ deletionMessage }}</p>
+  <p class="profile-shell__error" *ngIf="error">{{ error }}</p>
+</section>

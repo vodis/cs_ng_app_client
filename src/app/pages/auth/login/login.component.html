@@ -1,0 +1,29 @@
+<section class="login-shell">
+  <div class="login-shell__panel">
+    <div class="login-shell__heading">
+      <p class="login-shell__eyebrow">CraftScript Account</p>
+      <h1>Sign in</h1>
+    </div>
+
+    <div class="login-shell__status" *ngIf="!authSession.config">
+      Account login is not enabled for this environment.
+    </div>
+
+    <div class="login-shell__status" *ngIf="authSession.config && !authSession.bridgeReady">
+      Account provider is still starting.
+    </div>
+
+    <div class="login-shell__actions" *ngIf="authSession.config">
+      <button
+        *ngFor="let method of loginMethods"
+        type="button"
+        mat-stroked-button
+        [disabled]="!authSession.bridgeReady || (authSession.loading$ | async)"
+        (click)="login(method)">
+        {{ labelFor(method) }}
+      </button>
+    </div>
+
+    <p class="login-shell__error" *ngIf="error">{{ error }}</p>
+  </div>
+</section>
