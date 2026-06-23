@@ -21,6 +21,11 @@ export class SidebarComponent {
       url: '/',
       isActive: true,
     },
+    {
+      name: 'Profile',
+      url: '/profile',
+      isActive: true,
+    },
   ];
 
   public sidebarFinansialLinks = [

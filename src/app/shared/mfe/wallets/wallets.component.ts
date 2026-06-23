@@ -15,6 +15,7 @@ import {
 } from '@mfe-contracts/wallet-mfe.types';
 import { WalletAccountChangedPayload } from '@mfe-contracts/payloads';
 import { AppLoggerService } from '@core/logging/app-logger.service';
+import { AuthSessionService } from '@core/auth/auth-session.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { environment } from '../../../../environments/environment';
 
@@ -35,6 +36,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   constructor(
     private walletsService: WalletsService,
     private walletGatewayBridge: WalletGatewayBridgeService,
+    private authSession: AuthSessionService,
     private logger: AppLoggerService,
     private ngZone: NgZone
   ) {}
@@ -89,6 +91,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
                 account: account.account,
                 chainId: this.walletsService.account.value?.chainId ?? null,
               });
+              this.refreshBackendWallets();
             });
           },
           onCloseRequested: () => {
@@ -149,6 +152,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         account: snapshot.account,
         chainId: snapshot.chainId,
       });
+      this.refreshBackendWallets();
       return;
     }
 
@@ -171,6 +175,20 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
 
   private mfeEnvironment(): 'dev' | 'prod' {
     return environment.production ? 'prod' : 'dev';
+  }
+
+  private refreshBackendWallets(): void {
+    if (!this.authSession.session) {
+      return;
+    }
+
+    void this.authSession.reloadWallets().catch(error => {
+      this.logger.log('warn', 'Wallets MFE: backend wallet refresh failed', {
+        component: 'WalletsComponent',
+        action: 'refreshBackendWallets',
+        errorMessage: this.errorMessage(error),
+      });
+    });
   }
 
   ngOnDestroy(): void {

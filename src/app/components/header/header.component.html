@@ -8,6 +8,12 @@
         src="../../../assets/img/logo/logo.svg" />
     </a>
     <div class="header__content_connect">
+      <a
+        class="header__account-link"
+        [routerLink]="session ? '/profile' : '/login'"
+        routerLinkActive="_active">
+        {{ session ? 'Profile' : 'Sign in' }}
+      </a>
       <app-wallet-bar />
     </div>
   </div>

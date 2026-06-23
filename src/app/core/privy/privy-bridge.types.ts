@@ -32,10 +32,21 @@ export type CraftscriptPrivyBridge = {
   }) => Promise<{ hash: string }>;
 };
 
+export type PublicAuthLoginMethod = 'email' | 'google' | 'apple' | 'passkey';
+
+export type PublicAuthConfig = {
+  privyAppId: string | null;
+  loginMethods: PublicAuthLoginMethod[];
+  walletOnboarding: {
+    embeddedWallet: boolean;
+    externalWalletBinding: boolean;
+  };
+};
+
 declare global {
   interface Window {
     craftscriptPrivy?: CraftscriptPrivyBridge;
     craftscriptPrivySource?: CraftscriptPrivyBridge;
+    craftscriptPrivyConfig?: PublicAuthConfig;
   }
 }
-
