@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import type { PublicAuthConfig } from '@core/privy/privy-bridge.types';
 import {
   AuthSession,
+  BackendBalance,
   BackendUser,
   BackendWallet,
   emailFromPrivyUser,
@@ -24,6 +25,10 @@ type WalletsResponse = {
 
 type WalletResponse = {
   wallet: BackendWallet;
+};
+
+type BalancesResponse = {
+  data: BackendBalance[];
 };
 
 @Injectable({ providedIn: 'root' })
@@ -177,6 +182,21 @@ export class AuthSessionService {
       })
     );
     await this.reloadWallets();
+  }
+
+  async loadBalances(walletId?: string): Promise<BackendBalance[]> {
+    const token = await this.currentAccessToken();
+    if (!token) {
+      throw new Error('No active session');
+    }
+
+    const response = await firstValueFrom(
+      this.httpClient.get<BalancesResponse>(`${environment.apiUrl}/api/v1/balances`, {
+        headers: this.authHeaders(token),
+        params: walletId ? { walletId } : {},
+      })
+    );
+    return response.data ?? [];
   }
 
   clear(): void {

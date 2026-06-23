@@ -20,6 +20,20 @@ export type BackendWallet = {
   deletedAt?: string | null;
 };
 
+export type BackendBalance = {
+  walletId: string;
+  walletAddress: string;
+  chainType: string;
+  assetId: string;
+  symbol: string;
+  decimals: number;
+  balanceRaw: string;
+  balanceDecimal?: string | null;
+  source: string;
+  fetchedAt: string;
+  expiresAt: string;
+};
+
 export type AuthSession = {
   user: BackendUser;
   wallets: BackendWallet[];

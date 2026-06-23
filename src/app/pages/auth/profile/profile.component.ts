@@ -1,7 +1,11 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { AuthSessionService } from '@core/auth/auth-session.service';
-import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
+import type {
+  AuthSession,
+  BackendBalance,
+  BackendWallet,
+} from '@core/auth/auth-session.types';
 
 @Component({
   selector: 'app-profile',
@@ -13,8 +17,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public session: AuthSession | null = null;
   public deletionMessage = '';
   public walletMessage = '';
+  public balanceMessage = '';
   public error = '';
   public busyWalletId = '';
+  public balances: BackendBalance[] = [];
+  public balancesLoading = false;
 
   private subscription?: Subscription;
 
@@ -23,6 +30,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public ngOnInit(): void {
     this.subscription = this.authSession.session$.subscribe(session => {
       this.session = session;
+      if (session) {
+        void this.refreshBalances();
+      } else {
+        this.balances = [];
+      }
     });
   }
 
@@ -40,6 +52,19 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .join(' / ');
   }
 
+  public balanceAmount(balance: BackendBalance): string {
+    const amount = balance.balanceDecimal || this.rawToDecimal(balance.balanceRaw, balance.decimals);
+    return `${amount} ${balance.symbol}`;
+  }
+
+  public balanceMeta(balance: BackendBalance): string {
+    const expiry = new Date(balance.expiresAt);
+    const expiresAt = Number.isNaN(expiry.getTime())
+      ? 'cache'
+      : `cache until ${expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    return `${this.shortAddress(balance.walletAddress)} / ${balance.chainType} / ${expiresAt}`;
+  }
+
   public async refreshWallets(): Promise<void> {
     this.error = '';
     this.walletMessage = '';
@@ -48,6 +73,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.walletMessage = 'Wallets refreshed';
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Wallet refresh failed';
+    }
+  }
+
+  public async refreshBalances(): Promise<void> {
+    this.error = '';
+    this.balanceMessage = '';
+    this.balancesLoading = true;
+    try {
+      this.balances = await this.authSession.loadBalances();
+      this.balanceMessage = this.balances.length > 0 ? 'Balances refreshed' : '';
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Balance refresh failed';
+    } finally {
+      this.balancesLoading = false;
     }
   }
 
@@ -92,5 +131,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Account deletion failed';
     }
+  }
+
+  private rawToDecimal(rawBalance: string, decimals: number): string {
+    if (!/^\d+$/.test(rawBalance) || decimals <= 0) {
+      return rawBalance;
+    }
+
+    const padded = rawBalance.padStart(decimals + 1, '0');
+    const whole = padded.slice(0, -decimals);
+    const fraction = padded.slice(-decimals).replace(/0+$/, '');
+    return fraction ? `${whole}.${fraction}` : whole;
   }
 }
