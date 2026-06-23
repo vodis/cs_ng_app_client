@@ -48,6 +48,10 @@
       font-size: 1rem;
       font-weight: 600;
     }
+
+    &--wide {
+      grid-column: 1 / -1;
+    }
   }
 
   &__panel-header {
@@ -118,6 +122,50 @@
     gap: 0.35rem;
   }
 
+  &__balances {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    gap: 0.65rem;
+
+    li {
+      display: grid;
+      min-width: 0;
+      align-items: center;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 1rem;
+      padding: 0.7rem 0;
+      border-top: 1px solid rgb(255 255 255 / 10%);
+
+      &:first-child {
+        border-top: 0;
+      }
+    }
+  }
+
+  &__balance-asset,
+  &__balance-value {
+    display: grid;
+    min-width: 0;
+    gap: 0.15rem;
+
+    span,
+    small {
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__balance-value {
+    justify-items: end;
+    text-align: right;
+
+    span {
+      color: var(--gray-30);
+      font-weight: 600;
+    }
+  }
+
   &__primary {
     color: var(--success, #7ee787);
     font-size: 0.78rem;
@@ -156,6 +204,16 @@
 
     &__wallet-actions {
       justify-content: flex-start;
+    }
+
+    &__balances li {
+      grid-template-columns: 1fr;
+      gap: 0.35rem;
+    }
+
+    &__balance-value {
+      justify-items: start;
+      text-align: left;
     }
   }
 }

@@ -254,4 +254,57 @@ describe('AuthSessionService', () => {
 
     expect(service.session?.wallets).toEqual([]);
   }));
+
+  it('loads balances using the Privy access token', fakeAsync(() => {
+    window.craftscriptPrivy = bridge();
+    let resolvedBalances: unknown;
+
+    service.loadBalances().then(balances => {
+      resolvedBalances = balances;
+    });
+    flushMicrotasks();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    req.flush({
+      data: [
+        {
+          walletId: 'wallet-1',
+          walletAddress: '0x1111111111111111111111111111111111111111',
+          chainType: 'near',
+          assetId: 'nep141:usdc.near',
+          symbol: 'USDC',
+          decimals: 6,
+          balanceRaw: '1250000',
+          balanceDecimal: '1.25',
+          source: 'postgres_cache',
+          fetchedAt: '2026-06-23T12:00:00.000Z',
+          expiresAt: '2026-06-23T12:01:00.000Z',
+        },
+      ],
+      meta: {
+        source: 'postgres_cache',
+        cached: true,
+        fetchedAt: '2026-06-23T12:00:00.000Z',
+      },
+    });
+    flushMicrotasks();
+
+    expect(resolvedBalances).toEqual([
+      {
+        walletId: 'wallet-1',
+        walletAddress: '0x1111111111111111111111111111111111111111',
+        chainType: 'near',
+        assetId: 'nep141:usdc.near',
+        symbol: 'USDC',
+        decimals: 6,
+        balanceRaw: '1250000',
+        balanceDecimal: '1.25',
+        source: 'postgres_cache',
+        fetchedAt: '2026-06-23T12:00:00.000Z',
+        expiresAt: '2026-06-23T12:01:00.000Z',
+      },
+    ]);
+  }));
 });
