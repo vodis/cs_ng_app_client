@@ -50,6 +50,17 @@
     }
   }
 
+  &__panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+
+    h2 {
+      margin-bottom: 0;
+    }
+  }
+
   dl {
     display: grid;
     margin: 0;
@@ -93,6 +104,26 @@
     }
   }
 
+  &__wallet-main {
+    display: grid;
+    min-width: 0;
+    gap: 0.15rem;
+  }
+
+  &__wallet-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+
+  &__primary {
+    color: var(--success, #7ee787);
+    font-size: 0.78rem;
+    line-height: 1rem;
+  }
+
   &__empty,
   &__message,
   &__error {
@@ -121,6 +152,10 @@
       align-items: flex-start;
       flex-direction: column;
       gap: 0.15rem;
+    }
+
+    &__wallet-actions {
+      justify-content: flex-start;
     }
   }
 }
