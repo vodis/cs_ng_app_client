@@ -14,7 +14,10 @@ export type BackendWallet = {
   address: string;
   chainType: string;
   walletType: string;
+  source?: string;
+  status?: string;
   isPrimary: boolean;
+  deletedAt?: string | null;
 };
 
 export type AuthSession = {
@@ -32,6 +35,7 @@ export type PrivySessionRequest = {
     address: string;
     chainType?: string;
     walletType?: string;
+    source?: string;
     isPrimary?: boolean;
   };
 };
@@ -50,6 +54,7 @@ export function walletFromPrivyWallet(wallet: PrivyEmbeddedWallet | null): Privy
     address: wallet.address,
     chainType: wallet.chainType || 'ethereum',
     walletType: wallet.walletClientType || 'embedded',
+    source: 'privy',
     isPrimary: true,
   };
 }

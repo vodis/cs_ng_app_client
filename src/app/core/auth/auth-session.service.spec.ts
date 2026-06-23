@@ -82,6 +82,7 @@ describe('AuthSessionService', () => {
         address: '0x1111111111111111111111111111111111111111',
         chainType: 'ethereum',
         walletType: 'embedded',
+        source: 'privy',
         isPrimary: true,
       },
     });
@@ -141,5 +142,116 @@ describe('AuthSessionService', () => {
       },
       wallets: [],
     });
+  }));
+
+  it('sets a primary wallet and reloads wallet state', fakeAsync(() => {
+    window.craftscriptPrivy = bridge();
+    service.refresh();
+    flushMicrotasks();
+
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/me`).flush({
+      user: {
+        id: 'account-1',
+        privyUserId: 'did:privy:user-1',
+        sessionId: 'session-1',
+      },
+    });
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`).flush({
+      wallets: [
+        {
+          id: 'wallet-1',
+          privyWalletId: 'wallet-1',
+          address: '0x1111111111111111111111111111111111111111',
+          chainType: 'ethereum',
+          walletType: 'embedded',
+          source: 'privy',
+          status: 'active',
+          isPrimary: false,
+          deletedAt: null,
+        },
+      ],
+    });
+    flushMicrotasks();
+
+    service.setPrimaryWallet('wallet-1');
+    flushMicrotasks();
+
+    const setPrimary = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets/wallet-1/primary`);
+    expect(setPrimary.request.method).toBe('PATCH');
+    expect(setPrimary.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    setPrimary.flush({
+      wallet: {
+        id: 'wallet-1',
+        privyWalletId: 'wallet-1',
+        address: '0x1111111111111111111111111111111111111111',
+        chainType: 'ethereum',
+        walletType: 'embedded',
+        source: 'privy',
+        status: 'active',
+        isPrimary: true,
+        deletedAt: null,
+      },
+    });
+    flushMicrotasks();
+    const reload = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`);
+    reload.flush({
+      wallets: [
+        {
+          id: 'wallet-1',
+          privyWalletId: 'wallet-1',
+          address: '0x1111111111111111111111111111111111111111',
+          chainType: 'ethereum',
+          walletType: 'embedded',
+          source: 'privy',
+          status: 'active',
+          isPrimary: true,
+          deletedAt: null,
+        },
+      ],
+    });
+    flushMicrotasks();
+
+    expect(service.session?.wallets[0].isPrimary).toBeTrue();
+  }));
+
+  it('deletes a wallet and reloads wallet state', fakeAsync(() => {
+    window.craftscriptPrivy = bridge();
+    service.refresh();
+    flushMicrotasks();
+
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/me`).flush({
+      user: {
+        id: 'account-1',
+        privyUserId: 'did:privy:user-1',
+        sessionId: 'session-1',
+      },
+    });
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`).flush({
+      wallets: [
+        {
+          id: 'wallet-1',
+          privyWalletId: 'wallet-1',
+          address: '0x1111111111111111111111111111111111111111',
+          chainType: 'ethereum',
+          walletType: 'embedded',
+          isPrimary: true,
+        },
+      ],
+    });
+    flushMicrotasks();
+
+    service.deleteWallet('wallet-1');
+    flushMicrotasks();
+
+    const deleted = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets/wallet-1`);
+    expect(deleted.request.method).toBe('DELETE');
+    expect(deleted.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    deleted.flush({});
+    flushMicrotasks();
+    const reload = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`);
+    reload.flush({ wallets: [] });
+    flushMicrotasks();
+
+    expect(service.session?.wallets).toEqual([]);
   }));
 });

@@ -29,19 +29,46 @@
     </section>
 
     <section class="profile-shell__panel">
-      <h2>Wallets</h2>
+      <div class="profile-shell__panel-header">
+        <h2>Wallets</h2>
+        <button type="button" mat-button (click)="refreshWallets()">
+          Refresh
+        </button>
+      </div>
+      <app-wallet-bar />
       <div class="profile-shell__empty" *ngIf="activeSession.wallets.length === 0">
         No wallet linked.
       </div>
       <ul class="profile-shell__wallets" *ngIf="activeSession.wallets.length > 0">
         <li *ngFor="let wallet of activeSession.wallets">
-          <span>{{ shortAddress(wallet.address) }}</span>
-          <small>{{ wallet.chainType }} / {{ wallet.walletType }}</small>
+          <div class="profile-shell__wallet-main">
+            <span>{{ shortAddress(wallet.address) }}</span>
+            <small>{{ walletMeta(wallet) }}</small>
+          </div>
+          <div class="profile-shell__wallet-actions">
+            <span class="profile-shell__primary" *ngIf="wallet.isPrimary">Active</span>
+            <button
+              type="button"
+              mat-button
+              *ngIf="!wallet.isPrimary"
+              [disabled]="busyWalletId === wallet.id"
+              (click)="setPrimaryWallet(wallet)">
+              Make active
+            </button>
+            <button
+              type="button"
+              mat-button
+              [disabled]="busyWalletId === wallet.id"
+              (click)="deleteWallet(wallet)">
+              Remove
+            </button>
+          </div>
         </li>
       </ul>
     </section>
   </div>
 
+  <p class="profile-shell__message" *ngIf="walletMessage">{{ walletMessage }}</p>
   <p class="profile-shell__message" *ngIf="deletionMessage">{{ deletionMessage }}</p>
   <p class="profile-shell__error" *ngIf="error">{{ error }}</p>
 </section>

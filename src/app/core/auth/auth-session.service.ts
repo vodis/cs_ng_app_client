@@ -22,6 +22,10 @@ type WalletsResponse = {
   wallets: BackendWallet[];
 };
 
+type WalletResponse = {
+  wallet: BackendWallet;
+};
+
 @Injectable({ providedIn: 'root' })
 export class AuthSessionService {
   private readonly sessionSubject = new BehaviorSubject<AuthSession | null>(null);
@@ -129,9 +133,63 @@ export class AuthSessionService {
     return response.deletionAvailableAt;
   }
 
+  async reloadWallets(): Promise<BackendWallet[]> {
+    const token = await this.currentAccessToken();
+    if (!token) {
+      throw new Error('No active session');
+    }
+
+    const response = await firstValueFrom(
+      this.httpClient.get<WalletsResponse>(`${environment.apiUrl}/api/v1/wallets`, {
+        headers: this.authHeaders(token),
+      })
+    );
+    this.updateWallets(response.wallets);
+    return response.wallets;
+  }
+
+  async setPrimaryWallet(walletId: string): Promise<BackendWallet> {
+    const token = await this.currentAccessToken();
+    if (!token) {
+      throw new Error('No active session');
+    }
+
+    const response = await firstValueFrom(
+      this.httpClient.patch<WalletResponse>(
+        `${environment.apiUrl}/api/v1/wallets/${walletId}/primary`,
+        {},
+        { headers: this.authHeaders(token) }
+      )
+    );
+    await this.reloadWallets();
+    return response.wallet;
+  }
+
+  async deleteWallet(walletId: string): Promise<void> {
+    const token = await this.currentAccessToken();
+    if (!token) {
+      throw new Error('No active session');
+    }
+
+    await firstValueFrom(
+      this.httpClient.delete(`${environment.apiUrl}/api/v1/wallets/${walletId}`, {
+        headers: this.authHeaders(token),
+      })
+    );
+    await this.reloadWallets();
+  }
+
   clear(): void {
     this.accessToken = null;
     this.sessionSubject.next(null);
+  }
+
+  private updateWallets(wallets: BackendWallet[]): void {
+    const session = this.sessionSubject.value;
+    if (!session) {
+      return;
+    }
+    this.sessionSubject.next({ ...session, wallets });
   }
 
   private async currentAccessToken(): Promise<string | null> {
