@@ -13,13 +13,12 @@ export interface TokenEquivalentLabel {
   title: string;
 }
 
-export function tokenEquivalentFractionDigits(_symbol: string): number {
+export function tokenEquivalentFractionDigits(): number {
   return TOKEN_EQUIVALENT_MAX_FRACTION_DIGITS;
 }
 
 export function formatTokenEquivalentRate(
   rate: number,
-  _fractionDigits: number,
   minDisplayRate = TOKEN_EQUIVALENT_MIN_DISPLAY_RATE
 ): TokenEquivalentRateFormat {
   if (!Number.isFinite(rate) || rate <= 0) {
@@ -48,10 +47,9 @@ export function formatTokenEquivalentRate(
 export function formatTokenEquivalentLabel(
   fromSymbol: string,
   toSymbol: string,
-  rate: number,
-  fractionDigits: number
+  rate: number
 ): TokenEquivalentLabel {
-  const formatted = formatTokenEquivalentRate(rate, fractionDigits);
+  const formatted = formatTokenEquivalentRate(rate);
   const display = `1 ${fromSymbol} = ${formatted.displayRate} ${toSymbol}`;
 
   return {

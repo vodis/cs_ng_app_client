@@ -26,10 +26,7 @@ import {
   normalizeAmountStorage as normalizeSwapAmountStorage,
   resolveAmountKeydownAction,
 } from '@shared/utils/amount-format.utils';
-import {
-  formatTokenEquivalentLabel,
-  tokenEquivalentFractionDigits,
-} from '@shared/utils/token-equivalent-format.utils';
+import { formatTokenEquivalentLabel } from '@shared/utils/token-equivalent-format.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 
 type TokenSelectorSide = 'from' | 'to';
@@ -579,8 +576,7 @@ export class HomeComponent {
     return formatTokenEquivalentLabel(
       this.tokenSymbolLabel(this.fromToken),
       this.tokenSymbolLabel(this.toToken),
-      rate,
-      tokenEquivalentFractionDigits(this.toToken.symbol)
+      rate
     );
   }
 

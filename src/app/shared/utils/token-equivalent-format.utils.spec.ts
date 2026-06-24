@@ -7,15 +7,13 @@ import {
 describe('token-equivalent-format.utils', () => {
   describe('tokenEquivalentFractionDigits', () => {
     it('uses the maximum display precision', () => {
-      expect(tokenEquivalentFractionDigits('wNEAR')).toBe(4);
-      expect(tokenEquivalentFractionDigits('wBTC')).toBe(4);
-      expect(tokenEquivalentFractionDigits('USDC')).toBe(4);
+      expect(tokenEquivalentFractionDigits()).toBe(4);
     });
   });
 
   describe('formatTokenEquivalentRate', () => {
     it('keeps short fractional rates without padding zeros', () => {
-      expect(formatTokenEquivalentRate(0.518, 4)).toEqual({
+      expect(formatTokenEquivalentRate(0.518)).toEqual({
         displayRate: '0.518',
         fullRate: '0.518',
         usesCompactDisplay: false,
@@ -23,7 +21,7 @@ describe('token-equivalent-format.utils', () => {
     });
 
     it('truncates extra precision to four decimals without rounding', () => {
-      expect(formatTokenEquivalentRate(0.51599, 18)).toEqual({
+      expect(formatTokenEquivalentRate(0.51599)).toEqual({
         displayRate: '0.5159',
         fullRate: '0.5159',
         usesCompactDisplay: false,
@@ -31,7 +29,7 @@ describe('token-equivalent-format.utils', () => {
     });
 
     it('uses a floor label for tiny rates', () => {
-      const result = formatTokenEquivalentRate(0.00001428, 4);
+      const result = formatTokenEquivalentRate(0.00001428);
 
       expect(result.displayRate).toBe('>0.0001');
       expect(result.usesCompactDisplay).toBe(true);
@@ -39,7 +37,7 @@ describe('token-equivalent-format.utils', () => {
     });
 
     it('keeps naturally shorter whole-number rates as-is', () => {
-      expect(formatTokenEquivalentRate(45.61, 4)).toEqual({
+      expect(formatTokenEquivalentRate(45.61)).toEqual({
         displayRate: '45.61',
         fullRate: '45.61',
         usesCompactDisplay: false,
@@ -47,7 +45,7 @@ describe('token-equivalent-format.utils', () => {
     });
 
     it('does not round long rates down to four decimals', () => {
-      const result = formatTokenEquivalentRate(123.456789, 4);
+      const result = formatTokenEquivalentRate(123.456789);
 
       expect(result.displayRate).toBe('123.4567');
       expect(result.fullRate).toBe('123.4567');
@@ -56,14 +54,14 @@ describe('token-equivalent-format.utils', () => {
 
   describe('formatTokenEquivalentLabel', () => {
     it('builds the chart label and hover title for tiny rates', () => {
-      const label = formatTokenEquivalentLabel('USDC', 'BTC', 0.00001428, 4);
+      const label = formatTokenEquivalentLabel('USDC', 'BTC', 0.00001428);
 
       expect(label.display).toBe('1 USDC = >0.0001 BTC');
       expect(label.title).toBe('1 USDC = 0.00001428 BTC');
     });
 
     it('keeps shorter rates in the label without padding zeros', () => {
-      const label = formatTokenEquivalentLabel('USDC', 'NEAR', 0.518, 4);
+      const label = formatTokenEquivalentLabel('USDC', 'NEAR', 0.518);
 
       expect(label.display).toBe('1 USDC = 0.518 NEAR');
       expect(label.title).toBe('');
