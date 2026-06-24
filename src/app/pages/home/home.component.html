@@ -257,21 +257,21 @@
                 <span></span>
               </div>
             } @else {
-              <div class="price">{{ marketPriceDisplay() }}</div>
+              <div
+                class="price"
+                [class.price--with-tooltip]="marketSummaryHeadlineTitle()"
+                [attr.title]="marketSummaryHeadlineTitle() || null">
+                {{ marketSummaryHeadline() }}
+              </div>
               <div
                 class="change"
-                [class.positive]="
-                  (comparison?.quoteToken?.changePercent ?? 0) > 0
-                "
-                [class.negative]="
-                  (comparison?.quoteToken?.changePercent ?? 0) < 0
-                "
+                [class.positive]="(marketSummaryChangePercent() ?? 0) > 0"
+                [class.negative]="(marketSummaryChangePercent() ?? 0) < 0"
                 [class.neutral]="
-                  comparison?.quoteToken?.changePercent === undefined ||
-                  comparison?.quoteToken?.changePercent === 0
+                  marketSummaryChangePercent() === undefined ||
+                  marketSummaryChangePercent() === 0
                 ">
-                {{ formatPercent(comparison?.quoteToken?.changePercent) }}
-                (24H)
+                {{ marketSummaryChangeText() }}
               </div>
             }
           </div>

@@ -671,6 +671,10 @@
     margin-top: 14px;
     font-size: 32px;
     line-height: 1;
+
+    &--with-tooltip {
+      cursor: help;
+    }
   }
 
   .change {

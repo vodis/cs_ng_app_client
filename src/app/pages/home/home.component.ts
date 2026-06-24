@@ -26,6 +26,10 @@ import {
   normalizeAmountStorage as normalizeSwapAmountStorage,
   resolveAmountKeydownAction,
 } from '@shared/utils/amount-format.utils';
+import {
+  formatTokenEquivalentLabel,
+  tokenEquivalentFractionDigits,
+} from '@shared/utils/token-equivalent-format.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 
 type TokenSelectorSide = 'from' | 'to';
@@ -481,6 +485,83 @@ export class HomeComponent {
   }
 
   public marketPriceDisplay(): string {
+    return this.marketPriceLabel().display;
+  }
+
+  public marketPriceTitle(): string {
+    return this.marketPriceLabel().title;
+  }
+
+  public marketSummaryHeadline(): string {
+    if (this.selectedMarketChartMode === 'relative') {
+      return this.marketRelativeHeadline();
+    }
+
+    return this.marketPriceDisplay();
+  }
+
+  public marketSummaryHeadlineTitle(): string {
+    if (this.selectedMarketChartMode === 'relative') {
+      return '';
+    }
+
+    return this.marketPriceTitle();
+  }
+
+  public marketSummaryChangePercent(): number | undefined {
+    if (this.selectedMarketChartMode === 'relative') {
+      return this.marketRelativeStrength();
+    }
+
+    return this.comparison?.quoteToken?.changePercent;
+  }
+
+  public marketSummaryChangeText(): string {
+    const suffix = `(${this.selectedComparisonTimeframe})`;
+
+    if (this.selectedMarketChartMode === 'relative') {
+      const comparison = this.comparison;
+      if (!comparison) {
+        return `— ${suffix}`;
+      }
+
+      return `${this.tokenSymbolLabel(this.fromToken)} ${this.formatPercent(
+        comparison.baseToken.changePercent
+      )} · ${this.tokenSymbolLabel(this.toToken)} ${this.formatPercent(
+        comparison.quoteToken.changePercent
+      )} ${suffix}`;
+    }
+
+    return `${this.formatPercent(this.comparison?.quoteToken?.changePercent)} ${suffix}`;
+  }
+
+  private marketRelativeHeadline(): string {
+    const relative = this.marketRelativeStrength();
+    if (relative === undefined) {
+      return '—';
+    }
+
+    return `${this.tokenSymbolLabel(this.toToken)} ${this.formatPercent(
+      relative
+    )} vs ${this.tokenSymbolLabel(this.fromToken)}`;
+  }
+
+  private marketRelativeStrength(): number | undefined {
+    const comparison = this.comparison;
+    if (!comparison) {
+      return undefined;
+    }
+
+    const fromChange = comparison.baseToken.changePercent;
+    const toChange = comparison.quoteToken.changePercent;
+    if (fromChange !== undefined && toChange !== undefined) {
+      return toChange - fromChange;
+    }
+
+    return comparison.relativeStrength;
+  }
+
+  public marketPriceLabel() {
     const basePrice = this.comparison?.baseToken?.currentPrice;
     const quotePrice = this.comparison?.quoteToken?.currentPrice;
     if (
@@ -490,12 +571,17 @@ export class HomeComponent {
       !Number.isFinite(quotePrice) ||
       quotePrice <= 0
     ) {
-      return '—';
+      return { display: '—', title: '' };
     }
 
     const rate = basePrice / quotePrice;
-    const fractionDigits = this.swapAmountFractionDigits(this.toToken.symbol);
-    return `1 ${this.tokenSymbolLabel(this.fromToken)} = ${rate.toFixed(fractionDigits)} ${this.tokenSymbolLabel(this.toToken)}`;
+
+    return formatTokenEquivalentLabel(
+      this.tokenSymbolLabel(this.fromToken),
+      this.tokenSymbolLabel(this.toToken),
+      rate,
+      tokenEquivalentFractionDigits(this.toToken.symbol)
+    );
   }
 
   public toAmountDisplay(): string {
