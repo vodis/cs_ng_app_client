@@ -208,74 +208,6 @@
         </div>
       } @else {
         <div class="marketBody">
-          <div class="marketSummary">
-            <div class="pair">
-              <span class="pair__icons" aria-hidden="true">
-                @if (tokenIconFor(fromToken); as fromIcon) {
-                  <span
-                    class="pair__iconWrap"
-                    [style.backgroundColor]="fromToken.color">
-                    <img
-                      class="pair__icon"
-                      [src]="fromIcon"
-                      [alt]="tokenSymbolLabel(fromToken)"
-                      loading="lazy"
-                      width="24"
-                      height="24" />
-                  </span>
-                } @else {
-                  <span class="coin">{{
-                    tokenDisplay(tokenSymbolLabel(fromToken))
-                  }}</span>
-                }
-                @if (tokenIconFor(toToken); as toIcon) {
-                  <span
-                    class="pair__iconWrap"
-                    [style.backgroundColor]="toToken.color">
-                    <img
-                      class="pair__icon"
-                      [src]="toIcon"
-                      [alt]="tokenSymbolLabel(toToken)"
-                      loading="lazy"
-                      width="24"
-                      height="24" />
-                  </span>
-                } @else {
-                  <span class="coin near">{{
-                    tokenDisplay(tokenSymbolLabel(toToken))
-                  }}</span>
-                }
-              </span>
-              <span class="pair__label"
-                >{{ tokenSymbolLabel(fromToken) }} /
-                {{ tokenSymbolLabel(toToken) }}</span
-              >
-            </div>
-
-            @if (comparisonLoading) {
-              <div class="market-skeleton" aria-hidden="true">
-                <span></span>
-              </div>
-            } @else {
-              <div
-                class="price"
-                [class.price--with-tooltip]="marketSummaryHeadlineTitle()"
-                [attr.title]="marketSummaryHeadlineTitle() || null">
-                {{ marketSummaryHeadline() }}
-              </div>
-              <div
-                class="change"
-                [class.positive]="(marketSummaryChangePercent() ?? 0) > 0"
-                [class.negative]="(marketSummaryChangePercent() ?? 0) < 0"
-                [class.neutral]="
-                  marketSummaryChangePercent() === undefined ||
-                  marketSummaryChangePercent() === 0
-                ">
-                {{ marketSummaryChangeText() }}
-              </div>
-            }
-          </div>
-
           @if (comparisonLoading) {
             <div
               class="market-skeleton market-skeleton--chart"
@@ -295,27 +227,102 @@
               }
             </div>
           }
+
+          <div class="marketBelow">
+            <div class="marketSummary">
+              <div class="pair">
+                <span class="pair__icons" aria-hidden="true">
+                  @if (tokenIconFor(fromToken); as fromIcon) {
+                    <span
+                      class="pair__iconWrap"
+                      [style.backgroundColor]="fromToken.color">
+                      <img
+                        class="pair__icon"
+                        [src]="fromIcon"
+                        [alt]="tokenSymbolLabel(fromToken)"
+                        loading="lazy"
+                      width="28"
+                      height="28" />
+                    </span>
+                  } @else {
+                    <span class="coin">{{
+                      tokenDisplay(tokenSymbolLabel(fromToken))
+                    }}</span>
+                  }
+                  @if (tokenIconFor(toToken); as toIcon) {
+                    <span
+                      class="pair__iconWrap"
+                      [style.backgroundColor]="toToken.color">
+                      <img
+                        class="pair__icon"
+                        [src]="toIcon"
+                        [alt]="tokenSymbolLabel(toToken)"
+                        loading="lazy"
+                      width="28"
+                      height="28" />
+                    </span>
+                  } @else {
+                    <span class="coin near">{{
+                      tokenDisplay(tokenSymbolLabel(toToken))
+                    }}</span>
+                  }
+                </span>
+                <span class="pair__label"
+                  >{{ tokenSymbolLabel(fromToken) }} /
+                  {{ tokenSymbolLabel(toToken) }}</span
+                >
+              </div>
+
+              @if (comparisonLoading) {
+                <div class="market-skeleton" aria-hidden="true">
+                  <span></span>
+                </div>
+              } @else {
+                <div
+                  class="price"
+                  [class.price--with-tooltip]="marketSummaryHeadlineTitle()"
+                  [attr.title]="marketSummaryHeadlineTitle() || null">
+                  {{ marketSummaryHeadline() }}
+                </div>
+                <div
+                  class="change"
+                  [class.positive]="(marketSummaryChangePercent() ?? 0) > 0"
+                  [class.negative]="(marketSummaryChangePercent() ?? 0) < 0"
+                  [class.neutral]="
+                    marketSummaryChangePercent() === undefined ||
+                    marketSummaryChangePercent() === 0
+                  ">
+                  {{ marketSummaryChangeText() }}
+                </div>
+              }
+            </div>
+
+            <div class="marketFooter">
+              <div class="note">{{ comparisonNoteText() }}</div>
+              <button
+                type="button"
+                class="advanced"
+                (click)="toggleAdvancedMarketView()">
+                Advanced Chart &rarr;
+              </button>
+            </div>
+          </div>
         </div>
       }
 
-      <div class="marketFooter">
-        <div class="note">
-          {{
-            showAdvancedMarketView
-              ? 'Advanced chart shows live market data for the destination token'
-              : comparisonNoteText()
-          }}
+      @if (showAdvancedMarketView) {
+        <div class="marketFooter marketFooter--advanced">
+          <div class="note">
+            Advanced chart shows live market data for the destination token
+          </div>
+          <button
+            type="button"
+            class="advanced"
+            (click)="toggleAdvancedMarketView()">
+            Hide Advanced Chart &rarr;
+          </button>
         </div>
-        <button
-          type="button"
-          class="advanced"
-          (click)="toggleAdvancedMarketView()">
-          {{
-            showAdvancedMarketView ? 'Hide Advanced Chart' : 'Advanced Chart'
-          }}
-          &rarr;
-        </button>
-      </div>
+      }
     </div>
   </section>
 
