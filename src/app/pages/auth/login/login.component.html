@@ -5,14 +5,14 @@
       <h1>Sign in</h1>
     </div>
 
-    <div class="login-shell__status" *ngIf="!authSession.config">
+    <div class="login-shell__status" *ngIf="!authSession.providerEnabled">
       Account login is not enabled for this environment.
     </div>
 
     <div
       class="login-shell__status"
       *ngIf="
-        authSession.config &&
+        authSession.providerEnabled &&
         !authSession.bridgeReady &&
         !authSession.providerError
       ">
@@ -23,7 +23,7 @@
       {{ authSession.providerError }}
     </div>
 
-    <div class="login-shell__actions" *ngIf="authSession.config">
+    <div class="login-shell__actions" *ngIf="authSession.providerEnabled">
       <button
         *ngFor="let method of loginMethods"
         type="button"

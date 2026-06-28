@@ -2,9 +2,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "moduleResolution": "bundler",
-    "noEmit": true,
     "skipLibCheck": true,
-    "types": ["node", "react", "react-dom"]
+    "types": ["node"]
   },
-  "files": ["src/app/core/privy/privy-react-runtime.ts"]
+  "include": ["runtime-assets/**/*.ts"],
+  "exclude": []
 }

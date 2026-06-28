@@ -3,16 +3,16 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import type { PublicAuthConfig } from '@core/privy/privy-bridge.types';
+import { AuthProviderGateway } from './auth-provider.gateway';
 import {
   AuthSession,
   BackendBalance,
   BackendUser,
   BackendWallet,
-  emailFromPrivyUser,
+  emailFromAuthProviderUser,
   LoginMethod,
   PrivySessionRequest,
-  walletFromPrivyWallet,
+  walletFromAuthProvider,
 } from './auth-session.types';
 
 type MeResponse = {
@@ -44,27 +44,28 @@ export class AuthSessionService {
 
   constructor(
     private readonly httpClient: HttpClient,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly authProvider: AuthProviderGateway
   ) {}
 
   get session(): AuthSession | null {
     return this.sessionSubject.value;
   }
 
-  get config(): PublicAuthConfig | undefined {
-    return window.craftscriptPrivyConfig;
+  get providerEnabled(): boolean {
+    return this.authProvider.state.status !== 'disabled';
   }
 
   get bridgeReady(): boolean {
-    return Boolean(window.craftscriptPrivy);
+    return this.authProvider.state.status === 'ready';
   }
 
   get providerError(): string | undefined {
-    return window.craftscriptPrivyError;
+    return this.authProvider.state.error;
   }
 
   get enabledLoginMethods(): LoginMethod[] {
-    const methods = this.config?.loginMethods ?? [];
+    const methods = this.authProvider.state.loginMethods;
     return methods.length > 0 ? methods : ['email'];
   }
 
@@ -100,28 +101,23 @@ export class AuthSessionService {
   }
 
   async login(authMethod: LoginMethod): Promise<AuthSession> {
-    const bridge = window.craftscriptPrivy;
-    if (!bridge) {
-      throw new Error('Privy bridge is not available');
-    }
-
     this.loadingSubject.next(true);
     try {
-      const loginUser = await bridge.login(authMethod);
-      const token = await bridge.getAccessToken();
+      const loginUser = await this.authProvider.login(authMethod);
+      const token = await this.authProvider.getAccessToken();
       if (!token) {
-        throw new Error('Privy access token is unavailable');
+        throw new Error('Account provider access token is unavailable');
       }
       this.accessToken = token;
 
       const [currentUser, embeddedWallet] = await Promise.all([
-        bridge.getUser().catch(() => null),
-        bridge.getEmbeddedWallet().catch(() => null),
+        this.authProvider.getUser().catch(() => null),
+        this.authProvider.getEmbeddedWallet().catch(() => null),
       ]);
       const body: PrivySessionRequest = {
-        email: emailFromPrivyUser(currentUser || loginUser),
+        email: emailFromAuthProviderUser(currentUser || loginUser),
         authMethod,
-        wallet: walletFromPrivyWallet(embeddedWallet),
+        wallet: walletFromAuthProvider(embeddedWallet),
       };
 
       const session = await firstValueFrom(
@@ -245,9 +241,7 @@ export class AuthSessionService {
       return this.accessToken;
     }
 
-    const token = await window.craftscriptPrivy
-      ?.getAccessToken()
-      .catch(() => null);
+    const token = await this.authProvider.getAccessToken().catch(() => null);
     this.accessToken = token ?? null;
     return this.accessToken;
   }

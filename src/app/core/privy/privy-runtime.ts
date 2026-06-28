@@ -11,7 +11,7 @@ export type PrivyRuntimeMounter = (
   onReady: (bridge: CraftscriptPrivyBridge) => void
 ) => Promise<PrivyRuntimeHandle>;
 
-const PRIVY_RUNTIME_SCRIPT_URL = '/assets/privy-runtime.js';
+const PRIVY_RUNTIME_SCRIPT_URL = '/assets/auth-provider-runtime.js';
 let runtimeFactoryPromise: Promise<PrivyRuntimeFactory> | undefined;
 
 function loadPrivyRuntimeFactory(): Promise<PrivyRuntimeFactory> {

@@ -6,37 +6,52 @@ import { fakeAsync, flushMicrotasks, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AuthSessionService } from './auth-session.service';
 import { environment } from '../../../environments/environment';
-import type { CraftscriptPrivyBridge } from '@core/privy/privy-bridge.types';
+import { of } from 'rxjs';
+import {
+  AuthProviderGateway,
+  type AuthProviderState,
+} from './auth-provider.gateway';
 
-function bridge(): CraftscriptPrivyBridge {
-  return {
-    login: async () => ({ email: { address: 'user@example.com' } }),
-    getAccessToken: async () => 'privy-token',
-    getUser: async () => ({ email: { address: 'user@example.com' } }),
-    getEmbeddedWallet: async () => ({
-      id: 'wallet-1',
-      address: '0x1111111111111111111111111111111111111111',
-      chainType: 'ethereum',
-      walletClientType: 'embedded',
-    }),
-    signMessage: async () => ({ signature: '0xsig' }),
-    sendTransaction: async () => ({ hash: '0xhash' }),
-  };
+const readyState: AuthProviderState = {
+  status: 'ready',
+  loginMethods: ['email', 'google', 'apple', 'passkey'],
+};
+
+function configureReadyProvider(
+  provider: jasmine.SpyObj<AuthProviderGateway>
+): void {
+  provider.login.and.resolveTo({ email: { address: 'user@example.com' } });
+  provider.getAccessToken.and.resolveTo('privy-token');
+  provider.getUser.and.resolveTo({ email: { address: 'user@example.com' } });
+  provider.getEmbeddedWallet.and.resolveTo({
+    id: 'wallet-1',
+    address: '0x1111111111111111111111111111111111111111',
+    chainType: 'ethereum',
+    walletClientType: 'embedded',
+  });
 }
 
 describe('AuthSessionService', () => {
   let service: AuthSessionService;
   let httpMock: HttpTestingController;
   let router: { navigateByUrl: jasmine.Spy };
+  let authProvider: jasmine.SpyObj<AuthProviderGateway>;
 
   beforeEach(() => {
-    delete window.craftscriptPrivy;
-    delete window.craftscriptPrivyConfig;
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
+    authProvider = jasmine.createSpyObj<AuthProviderGateway>(
+      'AuthProviderGateway',
+      ['initialize', 'login', 'getAccessToken', 'getUser', 'getEmbeddedWallet'],
+      { state: readyState, state$: of(readyState) }
+    );
+    configureReadyProvider(authProvider);
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [{ provide: Router, useValue: router }],
+      providers: [
+        { provide: Router, useValue: router },
+        { provide: AuthProviderGateway, useValue: authProvider },
+      ],
     });
 
     service = TestBed.inject(AuthSessionService);
@@ -45,34 +60,25 @@ describe('AuthSessionService', () => {
 
   afterEach(() => {
     httpMock.verify();
-    delete window.craftscriptPrivy;
-    delete window.craftscriptPrivyConfig;
   });
 
   it('uses runtime auth config login methods', () => {
-    window.craftscriptPrivyConfig = {
-      privyAppId: 'privy-app-id',
+    const state: AuthProviderState = {
+      status: 'ready',
       loginMethods: ['email', 'passkey'],
-      walletOnboarding: {
-        embeddedWallet: true,
-        externalWalletBinding: true,
-      },
     };
+    Object.defineProperty(authProvider, 'state', { get: () => state });
 
     expect(service.enabledLoginMethods).toEqual(['email', 'passkey']);
   });
 
   it('forwards each selected login method to the Privy bridge', fakeAsync(() => {
-    const source = bridge();
-    const login = spyOn(source, 'login').and.callThrough();
-    window.craftscriptPrivy = source;
-
     const methods = ['email', 'google', 'apple', 'passkey'] as const;
     for (const method of methods) {
       service.login(method);
       flushMicrotasks();
 
-      expect(login).toHaveBeenCalledWith(method);
+      expect(authProvider.login).toHaveBeenCalledWith(method);
       httpMock
         .expectOne(`${environment.apiUrl}/api/v1/auth/privy/session`)
         .flush({
@@ -89,9 +95,6 @@ describe('AuthSessionService', () => {
   }));
 
   it('logs in through the Privy bridge and creates a backend session', fakeAsync(() => {
-    const source = bridge();
-    const login = spyOn(source, 'login').and.callThrough();
-    window.craftscriptPrivy = source;
     let resolvedSession: unknown;
 
     service.login('email').then(session => {
@@ -99,7 +102,7 @@ describe('AuthSessionService', () => {
     });
     flushMicrotasks();
 
-    expect(login).toHaveBeenCalledWith('email');
+    expect(authProvider.login).toHaveBeenCalledWith('email');
 
     const req = httpMock.expectOne(
       `${environment.apiUrl}/api/v1/auth/privy/session`
@@ -144,7 +147,6 @@ describe('AuthSessionService', () => {
   }));
 
   it('refreshes session and wallets using the Privy access token', fakeAsync(() => {
-    window.craftscriptPrivy = bridge();
     let resolvedSession: unknown;
 
     service.refresh().then(session => {
@@ -179,7 +181,6 @@ describe('AuthSessionService', () => {
   }));
 
   it('sets a primary wallet and reloads wallet state', fakeAsync(() => {
-    window.craftscriptPrivy = bridge();
     service.refresh();
     flushMicrotasks();
 
@@ -253,7 +254,6 @@ describe('AuthSessionService', () => {
   }));
 
   it('deletes a wallet and reloads wallet state', fakeAsync(() => {
-    window.craftscriptPrivy = bridge();
     service.refresh();
     flushMicrotasks();
 
@@ -298,7 +298,6 @@ describe('AuthSessionService', () => {
   }));
 
   it('loads balances using the Privy access token', fakeAsync(() => {
-    window.craftscriptPrivy = bridge();
     let resolvedBalances: unknown;
 
     service.loadBalances().then(balances => {

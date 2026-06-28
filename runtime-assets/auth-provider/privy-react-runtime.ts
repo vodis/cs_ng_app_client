@@ -1,3 +1,4 @@
+// This adapter is compiled as an isolated browser asset, not as Angular source.
 import {
   createElement,
   useEffect,
@@ -23,7 +24,7 @@ import type {
   PublicAuthConfig,
   PublicAuthLoginMethod,
   PrivyRuntimeHandle,
-} from './privy-bridge.types';
+} from '../../src/app/core/privy/privy-bridge.types';
 
 type PendingLogin = {
   resolve: (user: PrivyBridgeUser | void) => void;

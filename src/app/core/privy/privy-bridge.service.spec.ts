@@ -35,8 +35,6 @@ describe('PrivyBridgeService', () => {
   beforeEach(() => {
     delete window.craftscriptPrivy;
     delete window.craftscriptPrivySource;
-    delete window.craftscriptPrivyConfig;
-    delete window.craftscriptPrivyError;
 
     destroyRuntime = jasmine.createSpy('destroyRuntime');
     mountRuntime = jasmine.createSpy<PrivyRuntimeMounter>('mountRuntime');
@@ -56,8 +54,6 @@ describe('PrivyBridgeService', () => {
     httpMock.verify();
     delete window.craftscriptPrivy;
     delete window.craftscriptPrivySource;
-    delete window.craftscriptPrivyConfig;
-    delete window.craftscriptPrivyError;
   });
 
   it('fetches and exposes enabled public Privy config', async () => {
@@ -78,7 +74,8 @@ describe('PrivyBridgeService', () => {
 
     await initialized;
 
-    expect(window.craftscriptPrivyConfig).toEqual(enabledConfig);
+    expect(service.state.loginMethods).toEqual(enabledConfig.loginMethods);
+    expect(service.state.status).toBe('loading');
     expect(mountRuntime).toHaveBeenCalledWith(
       enabledConfig,
       jasmine.any(Function)
@@ -102,7 +99,7 @@ describe('PrivyBridgeService', () => {
 
     await initialized;
 
-    expect(window.craftscriptPrivyConfig).toBeUndefined();
+    expect(service.state).toEqual({ status: 'disabled', loginMethods: [] });
     expect(mountRuntime).not.toHaveBeenCalled();
   });
 
@@ -125,6 +122,7 @@ describe('PrivyBridgeService', () => {
     await initialized;
 
     expect(window.craftscriptPrivy).toBe(source);
+    expect(service.state.status).toBe('ready');
     expect(mountRuntime).not.toHaveBeenCalled();
   });
 
@@ -148,6 +146,38 @@ describe('PrivyBridgeService', () => {
     window.dispatchEvent(new Event(PRIVY_SOURCE_READY_EVENT));
 
     expect(window.craftscriptPrivy).toBe(source);
+    expect(service.state.status).toBe('ready');
+  });
+
+  it('keeps a ready external bridge when the local runtime later fails', async () => {
+    let rejectRuntime: ((error: Error) => void) | undefined;
+    mountRuntime.and.returnValue(
+      new Promise((_resolve, reject) => {
+        rejectRuntime = reject;
+      })
+    );
+
+    const initialized = service.initialize();
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/public/auth-config`)
+      .flush({
+        privyAppId: 'privy-app-id',
+        loginMethods: ['passkey'],
+        walletOnboarding: {
+          embeddedWallet: true,
+          externalWalletBinding: true,
+        },
+      });
+
+    const source = bridge();
+    window.craftscriptPrivySource = source;
+    window.dispatchEvent(new Event(PRIVY_SOURCE_READY_EVENT));
+    rejectRuntime?.(new Error('Local runtime failed'));
+    await initialized;
+
+    expect(window.craftscriptPrivy).toBe(source);
+    expect(service.state.status).toBe('ready');
+    expect(service.state.error).toBeUndefined();
   });
 
   it('publishes the bridge produced by the Privy runtime', async () => {
@@ -177,7 +207,8 @@ describe('PrivyBridgeService', () => {
 
     expect(window.craftscriptPrivySource).toBe(source);
     expect(window.craftscriptPrivy).toBe(source);
-    expect(window.craftscriptPrivyError).toBeUndefined();
+    expect(service.state.status).toBe('ready');
+    expect(service.state.error).toBeUndefined();
   });
 
   it('exposes an actionable status when the Privy runtime fails', async () => {
@@ -197,8 +228,26 @@ describe('PrivyBridgeService', () => {
 
     await initialized;
 
-    expect(window.craftscriptPrivyError).toBe(
-      'Account provider failed to start.'
-    );
+    expect(service.state).toEqual({
+      status: 'failed',
+      loginMethods: ['email'],
+      error: 'Account provider failed to start.',
+    });
+  });
+
+  it('fails provider startup without blocking the host when config is unavailable', async () => {
+    const initialized = service.initialize();
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/public/auth-config`)
+      .flush('unavailable', { status: 503, statusText: 'Unavailable' });
+
+    await initialized;
+
+    expect(service.state).toEqual({
+      status: 'failed',
+      loginMethods: ['email'],
+      error: 'Account login configuration is unavailable.',
+    });
+    expect(mountRuntime).not.toHaveBeenCalled();
   });
 });

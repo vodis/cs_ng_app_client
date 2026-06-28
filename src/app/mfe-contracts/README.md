@@ -154,3 +154,44 @@ If/when extracting typed contracts into code, place them under:
 - `src/app/mfe-contracts/api-envelope.ts`
 
 Keep this README updated alongside those files.
+
+## 8) Auth provider compatibility bridge
+
+The Angular host owns authentication-provider initialization and publishes a
+compatibility bridge for `mfe-wallets` at `window.craftscriptPrivy`.
+
+Current contract version: `1` (additive changes only).
+
+```ts
+interface CraftscriptAuthProviderBridgeV1 {
+  login(method?: 'email' | 'google' | 'apple' | 'passkey'): Promise<unknown>;
+  getAccessToken(): Promise<string | null>;
+  getUser(): Promise<unknown | null>;
+  getEmbeddedWallet(): Promise<unknown | null>;
+  signMessage(input: {
+    message: string;
+    address?: string;
+  }): Promise<{ signature: string }>;
+  sendTransaction(input: {
+    from: string;
+    to: string;
+    value?: string;
+    data?: string;
+  }): Promise<{ hash: string }>;
+}
+```
+
+Lifecycle:
+
+- The host may publish the bridge after Angular renders; consumers must treat a
+  missing bridge as provider loading/unavailable rather than constructing their
+  own provider instance.
+- The host dispatches `craftscript:privy-source-ready` after publishing a newly
+  initialized source.
+- `mfe-wallets` currently consumes `window.craftscriptPrivy` for passkey
+  onboarding, access-token retrieval, embedded-wallet lookup, signing, and
+  transaction submission.
+- Provider configuration, loading state, and errors are host-internal and are
+  not part of this MFE contract.
+- Breaking changes require a new versioned property/event and a coordinated
+  host plus wallet-MFE migration.

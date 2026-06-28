@@ -1,19 +1,15 @@
-export type PrivyEmbeddedWallet = {
-  id?: string;
-  address?: string;
-  walletClientType?: string;
-  chainType?: string;
+import type {
+  AuthProviderUser,
+  AuthProviderWallet,
+} from '@core/auth/auth-provider.gateway';
+
+export type PrivyEmbeddedWallet = AuthProviderWallet & {
   getEthereumProvider?: () => Promise<{
     request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   }>;
 };
 
-export type PrivyBridgeUser = {
-  id?: string;
-  email?: { address?: string };
-  linkedAccounts?: Array<Record<string, unknown>>;
-  wallet?: PrivyEmbeddedWallet;
-};
+export type PrivyBridgeUser = AuthProviderUser;
 
 export type PublicAuthLoginMethod = 'email' | 'google' | 'apple' | 'passkey';
 
@@ -35,6 +31,9 @@ export type CraftscriptPrivyBridge = {
 };
 
 export type PublicAuthConfig = {
+  version?: 1;
+  enabled?: boolean;
+  provider?: 'privy';
   privyAppId: string | null;
   loginMethods: PublicAuthLoginMethod[];
   walletOnboarding: {
@@ -56,8 +55,6 @@ declare global {
   interface Window {
     craftscriptPrivy?: CraftscriptPrivyBridge;
     craftscriptPrivySource?: CraftscriptPrivyBridge;
-    craftscriptPrivyConfig?: PublicAuthConfig;
-    craftscriptPrivyError?: string;
     mountCraftscriptPrivyRuntime?: PrivyRuntimeFactory;
   }
 }
