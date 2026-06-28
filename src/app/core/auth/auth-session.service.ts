@@ -33,7 +33,9 @@ type BalancesResponse = {
 
 @Injectable({ providedIn: 'root' })
 export class AuthSessionService {
-  private readonly sessionSubject = new BehaviorSubject<AuthSession | null>(null);
+  private readonly sessionSubject = new BehaviorSubject<AuthSession | null>(
+    null
+  );
   private readonly loadingSubject = new BehaviorSubject<boolean>(false);
   private accessToken: string | null = null;
 
@@ -57,6 +59,10 @@ export class AuthSessionService {
     return Boolean(window.craftscriptPrivy);
   }
 
+  get providerError(): string | undefined {
+    return window.craftscriptPrivyError;
+  }
+
   get enabledLoginMethods(): LoginMethod[] {
     const methods = this.config?.loginMethods ?? [];
     return methods.length > 0 ? methods : ['email'];
@@ -72,8 +78,17 @@ export class AuthSessionService {
     try {
       const headers = this.authHeaders(token);
       const [me, wallets] = await Promise.all([
-        firstValueFrom(this.httpClient.get<MeResponse>(`${environment.apiUrl}/api/v1/me`, { headers })),
-        firstValueFrom(this.httpClient.get<WalletsResponse>(`${environment.apiUrl}/api/v1/wallets`, { headers })),
+        firstValueFrom(
+          this.httpClient.get<MeResponse>(`${environment.apiUrl}/api/v1/me`, {
+            headers,
+          })
+        ),
+        firstValueFrom(
+          this.httpClient.get<WalletsResponse>(
+            `${environment.apiUrl}/api/v1/wallets`,
+            { headers }
+          )
+        ),
       ]);
       const session = { user: me.user, wallets: wallets.wallets };
       this.sessionSubject.next(session);
@@ -92,7 +107,7 @@ export class AuthSessionService {
 
     this.loadingSubject.next(true);
     try {
-      const loginUser = await bridge.login();
+      const loginUser = await bridge.login(authMethod);
       const token = await bridge.getAccessToken();
       if (!token) {
         throw new Error('Privy access token is unavailable');
@@ -110,9 +125,13 @@ export class AuthSessionService {
       };
 
       const session = await firstValueFrom(
-        this.httpClient.post<AuthSession>(`${environment.apiUrl}/api/v1/auth/privy/session`, body, {
-          headers: this.authHeaders(token),
-        })
+        this.httpClient.post<AuthSession>(
+          `${environment.apiUrl}/api/v1/auth/privy/session`,
+          body,
+          {
+            headers: this.authHeaders(token),
+          }
+        )
       );
       this.sessionSubject.next(session);
       return session;
@@ -145,9 +164,12 @@ export class AuthSessionService {
     }
 
     const response = await firstValueFrom(
-      this.httpClient.get<WalletsResponse>(`${environment.apiUrl}/api/v1/wallets`, {
-        headers: this.authHeaders(token),
-      })
+      this.httpClient.get<WalletsResponse>(
+        `${environment.apiUrl}/api/v1/wallets`,
+        {
+          headers: this.authHeaders(token),
+        }
+      )
     );
     this.updateWallets(response.wallets);
     return response.wallets;
@@ -177,9 +199,12 @@ export class AuthSessionService {
     }
 
     await firstValueFrom(
-      this.httpClient.delete(`${environment.apiUrl}/api/v1/wallets/${walletId}`, {
-        headers: this.authHeaders(token),
-      })
+      this.httpClient.delete(
+        `${environment.apiUrl}/api/v1/wallets/${walletId}`,
+        {
+          headers: this.authHeaders(token),
+        }
+      )
     );
     await this.reloadWallets();
   }
@@ -191,10 +216,13 @@ export class AuthSessionService {
     }
 
     const response = await firstValueFrom(
-      this.httpClient.get<BalancesResponse>(`${environment.apiUrl}/api/v1/balances`, {
-        headers: this.authHeaders(token),
-        params: walletId ? { walletId } : {},
-      })
+      this.httpClient.get<BalancesResponse>(
+        `${environment.apiUrl}/api/v1/balances`,
+        {
+          headers: this.authHeaders(token),
+          params: walletId ? { walletId } : {},
+        }
+      )
     );
     return response.data ?? [];
   }
@@ -217,7 +245,9 @@ export class AuthSessionService {
       return this.accessToken;
     }
 
-    const token = await window.craftscriptPrivy?.getAccessToken().catch(() => null);
+    const token = await window.craftscriptPrivy
+      ?.getAccessToken()
+      .catch(() => null);
     this.accessToken = token ?? null;
     return this.accessToken;
   }

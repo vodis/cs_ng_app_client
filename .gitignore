@@ -2,6 +2,7 @@
 
 # Compiled output
 /dist
+/src/assets/privy-runtime.js
 /tmp
 /out-tsc
 /bazel-out

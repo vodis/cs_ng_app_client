@@ -5,8 +5,15 @@ import {
 } from '@angular/common/http/testing';
 import { PrivyBridgeService } from './privy-bridge.service';
 import { environment } from '../../../environments/environment';
-import type { CraftscriptPrivyBridge } from './privy-bridge.types';
+import type {
+  CraftscriptPrivyBridge,
+  PublicAuthConfig,
+} from './privy-bridge.types';
 import { PRIVY_SOURCE_READY_EVENT } from './privy-host-bridge';
+import {
+  PRIVY_RUNTIME_MOUNTER,
+  type PrivyRuntimeMounter,
+} from './privy-runtime';
 
 function bridge(): CraftscriptPrivyBridge {
   return {
@@ -22,14 +29,22 @@ function bridge(): CraftscriptPrivyBridge {
 describe('PrivyBridgeService', () => {
   let service: PrivyBridgeService;
   let httpMock: HttpTestingController;
+  let mountRuntime: jasmine.Spy<PrivyRuntimeMounter>;
+  let destroyRuntime: jasmine.Spy;
 
   beforeEach(() => {
     delete window.craftscriptPrivy;
     delete window.craftscriptPrivySource;
     delete window.craftscriptPrivyConfig;
+    delete window.craftscriptPrivyError;
+
+    destroyRuntime = jasmine.createSpy('destroyRuntime');
+    mountRuntime = jasmine.createSpy<PrivyRuntimeMounter>('mountRuntime');
+    mountRuntime.and.resolveTo({ destroy: destroyRuntime });
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
+      providers: [{ provide: PRIVY_RUNTIME_MOUNTER, useValue: mountRuntime }],
     });
 
     service = TestBed.inject(PrivyBridgeService);
@@ -42,33 +57,32 @@ describe('PrivyBridgeService', () => {
     delete window.craftscriptPrivy;
     delete window.craftscriptPrivySource;
     delete window.craftscriptPrivyConfig;
+    delete window.craftscriptPrivyError;
   });
 
   it('fetches and exposes enabled public Privy config', async () => {
+    const enabledConfig: PublicAuthConfig = {
+      privyAppId: 'privy-app-id',
+      loginMethods: ['email', 'google', 'passkey'],
+      walletOnboarding: {
+        embeddedWallet: true,
+        externalWalletBinding: true,
+      },
+    };
     const initialized = service.initialize();
 
     const req = httpMock.expectOne(
       `${environment.apiUrl}/api/v1/public/auth-config`
     );
-    req.flush({
-      privyAppId: 'privy-app-id',
-      loginMethods: ['email', 'google', 'passkey'],
-      walletOnboarding: {
-        embeddedWallet: true,
-        externalWalletBinding: true,
-      },
-    });
+    req.flush(enabledConfig);
 
     await initialized;
 
-    expect(window.craftscriptPrivyConfig).toEqual({
-      privyAppId: 'privy-app-id',
-      loginMethods: ['email', 'google', 'passkey'],
-      walletOnboarding: {
-        embeddedWallet: true,
-        externalWalletBinding: true,
-      },
-    });
+    expect(window.craftscriptPrivyConfig).toEqual(enabledConfig);
+    expect(mountRuntime).toHaveBeenCalledWith(
+      enabledConfig,
+      jasmine.any(Function)
+    );
   });
 
   it('does not expose disabled public Privy config', async () => {
@@ -89,6 +103,7 @@ describe('PrivyBridgeService', () => {
     await initialized;
 
     expect(window.craftscriptPrivyConfig).toBeUndefined();
+    expect(mountRuntime).not.toHaveBeenCalled();
   });
 
   it('adopts an existing Privy bridge source', async () => {
@@ -110,6 +125,7 @@ describe('PrivyBridgeService', () => {
     await initialized;
 
     expect(window.craftscriptPrivy).toBe(source);
+    expect(mountRuntime).not.toHaveBeenCalled();
   });
 
   it('adopts a Privy bridge source that becomes ready after startup', async () => {
@@ -132,5 +148,57 @@ describe('PrivyBridgeService', () => {
     window.dispatchEvent(new Event(PRIVY_SOURCE_READY_EVENT));
 
     expect(window.craftscriptPrivy).toBe(source);
+  });
+
+  it('publishes the bridge produced by the Privy runtime', async () => {
+    let publishBridge: ((source: CraftscriptPrivyBridge) => void) | undefined;
+    mountRuntime.and.callFake(async (_config, onReady) => {
+      publishBridge = onReady;
+      return { destroy: destroyRuntime };
+    });
+
+    const initialized = service.initialize();
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/public/auth-config`)
+      .flush({
+        privyAppId: 'privy-app-id',
+        loginMethods: ['google'],
+        walletOnboarding: {
+          embeddedWallet: true,
+          externalWalletBinding: true,
+        },
+      });
+
+    await initialized;
+
+    const source = bridge();
+    expect(publishBridge).toBeDefined();
+    publishBridge?.(source);
+
+    expect(window.craftscriptPrivySource).toBe(source);
+    expect(window.craftscriptPrivy).toBe(source);
+    expect(window.craftscriptPrivyError).toBeUndefined();
+  });
+
+  it('exposes an actionable status when the Privy runtime fails', async () => {
+    mountRuntime.and.rejectWith(new Error('SDK initialization failed'));
+
+    const initialized = service.initialize();
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/public/auth-config`)
+      .flush({
+        privyAppId: 'privy-app-id',
+        loginMethods: ['email'],
+        walletOnboarding: {
+          embeddedWallet: true,
+          externalWalletBinding: true,
+        },
+      });
+
+    await initialized;
+
+    expect(window.craftscriptPrivyError).toBe(
+      'Account provider failed to start.'
+    );
   });
 });

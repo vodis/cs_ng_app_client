@@ -15,8 +15,10 @@ export type PrivyBridgeUser = {
   wallet?: PrivyEmbeddedWallet;
 };
 
+export type PublicAuthLoginMethod = 'email' | 'google' | 'apple' | 'passkey';
+
 export type CraftscriptPrivyBridge = {
-  login: () => Promise<PrivyBridgeUser | void>;
+  login: (method?: PublicAuthLoginMethod) => Promise<PrivyBridgeUser | void>;
   getAccessToken: () => Promise<string | null>;
   getUser: () => Promise<PrivyBridgeUser | null>;
   getEmbeddedWallet: () => Promise<PrivyEmbeddedWallet | null>;
@@ -32,8 +34,6 @@ export type CraftscriptPrivyBridge = {
   }) => Promise<{ hash: string }>;
 };
 
-export type PublicAuthLoginMethod = 'email' | 'google' | 'apple' | 'passkey';
-
 export type PublicAuthConfig = {
   privyAppId: string | null;
   loginMethods: PublicAuthLoginMethod[];
@@ -43,10 +43,21 @@ export type PublicAuthConfig = {
   };
 };
 
+export type PrivyRuntimeHandle = {
+  destroy: () => void;
+};
+
+export type PrivyRuntimeFactory = (
+  config: PublicAuthConfig,
+  onReady: (bridge: CraftscriptPrivyBridge) => void
+) => PrivyRuntimeHandle;
+
 declare global {
   interface Window {
     craftscriptPrivy?: CraftscriptPrivyBridge;
     craftscriptPrivySource?: CraftscriptPrivyBridge;
     craftscriptPrivyConfig?: PublicAuthConfig;
+    craftscriptPrivyError?: string;
+    mountCraftscriptPrivyRuntime?: PrivyRuntimeFactory;
   }
 }

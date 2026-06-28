@@ -9,8 +9,18 @@
       Account login is not enabled for this environment.
     </div>
 
-    <div class="login-shell__status" *ngIf="authSession.config && !authSession.bridgeReady">
+    <div
+      class="login-shell__status"
+      *ngIf="
+        authSession.config &&
+        !authSession.bridgeReady &&
+        !authSession.providerError
+      ">
       Account provider is still starting.
+    </div>
+
+    <div class="login-shell__status" *ngIf="authSession.providerError">
+      {{ authSession.providerError }}
     </div>
 
     <div class="login-shell__actions" *ngIf="authSession.config">
