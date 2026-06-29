@@ -9,6 +9,20 @@ Use this as the source of truth for runtime communication in the Angular app.
 - Host app: `cs_ng_app_client`
 - Wallet MFE source: `../mfe-wallets`
 - Wallet MFE remote: `git@github.com:vodis/cs_mfe-wallets.git`
+
+## Account provider contract
+
+The canonical, open runtime contract is
+`cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. This host keeps only
+the structural consumer copy in `auth-provider.types.ts` and validates contract
+version `1.0.0` before mounting `mfe-wallets/auth-provider`.
+
+The NestJS `GET /api/v1/public/auth-config` response is the single source of
+truth for enabled login methods and public provider configuration. The host owns
+application session bootstrap and guarded navigation. `mfe-wallets` owns the
+browser provider instance and all wallet discovery/signing operations. No
+provider bridge is published on `window`.
+
 - Runtime manifest: `src/config/mf.manifest.json`
 
 ## 1) Runtime Channel: Host <-> MFE

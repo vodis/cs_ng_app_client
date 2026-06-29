@@ -173,6 +173,7 @@ CI (`/.github/workflows/build-dev.yml`) runs `pnpm run e2e` against a production
 - Architecture style: Angular host shell + domain MFEs + NestJS BFF.
 - Host responsibility: shell layout, top-level routing, session bootstrap, telemetry, shared UX policies.
 - MFE responsibility (`mfe-wallets`): wallet domain pages, wallet domain workflows, wallet-specific state.
+- `mfe-wallets` also owns the browser account-provider instance because that instance performs passkey wallet discovery and wallet signing. The host consumes only the versioned session-facing API in `src/app/mfe-contracts/auth-provider.types.ts`.
 - Backend responsibility (NestJS): typed BFF APIs, aggregation/orchestration, normalized error model, observability boundaries.
 - Key rule: communication happens only through documented contracts (route/mount, typed data, versioned events).
 
@@ -202,6 +203,12 @@ Production host rules:
   changes reviewable in git and coordinated with `cs_mfe-wallets`.
 
 Any contract change in wallets (routes, exposed modules, events, required inputs) must be mirrored in this host.
+
+The canonical auth-provider runtime contract is open in
+`cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. The backend public
+auth-config endpoint is the single source of truth for browser capabilities.
+Never duplicate that configuration in Angular environment files or publish a
+provider bridge through `window` globals.
 
 ## Angular dApp Architecture Guardrails
 

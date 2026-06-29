@@ -35,12 +35,19 @@ production-ready state.
 - `mfe-wallets` owns:
   - wallet domain pages and internal workflows
   - wallet-specific domain state and UI behavior
+  - browser account-provider lifecycle and provider wallet operations
 - NestJS backend owns:
   - BFF/API orchestration and aggregation
   - integration with external providers
   - normalized API contract and observability outputs
 
 Rule: no hidden coupling across boundaries. Only documented contracts are allowed.
+
+The NestJS public auth-config API is authoritative for login capabilities.
+Angular starts the federated provider without blocking public shell routes, and
+auth guards await a terminal provider state before restoring a protected
+session. The canonical provider contract lives in the open `cs_mfe-wallets`
+repository; Angular keeps a structural, runtime-version-checked consumer copy.
 
 ## 4. Angular Layering Model
 
