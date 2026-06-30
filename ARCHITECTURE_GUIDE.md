@@ -35,12 +35,42 @@ production-ready state.
 - `mfe-wallets` owns:
   - wallet domain pages and internal workflows
   - wallet-specific domain state and UI behavior
+  - browser account-provider lifecycle and provider wallet operations
 - NestJS backend owns:
   - BFF/API orchestration and aggregation
   - integration with external providers
   - normalized API contract and observability outputs
 
 Rule: no hidden coupling across boundaries. Only documented contracts are allowed.
+
+The wallet MFE loads the authoritative NestJS public auth configuration and
+owns provider session coordination. Angular starts the federated provider
+without blocking public shell routes, consumes only normalized sessions, and
+auth guards await a terminal provider state before restoring a protected
+session. The canonical provider contract lives in the open `cs_mfe-wallets`
+repository; Angular keeps a structural, runtime-version-checked consumer copy.
+
+### Provider ownership decision
+
+The cross-repository decision and deployment order are canonical in
+[`cs_orchestrator/docs/architecture/privy-wallet-ownership.md`](https://github.com/vodis/cs_orchestrator/blob/main/docs/architecture/privy-wallet-ownership.md).
+The browser contract is canonical in
+[`cs_mfe-wallets/src/contracts/auth-provider-contract.ts`](https://github.com/vodis/cs_mfe-wallets/blob/main/src/contracts/auth-provider-contract.ts).
+
+`PrivyProvider -> PrivyConnector -> WalletIdentity -> PrivySessionCoordinator -> WalletGateway -> generic host event`
+
+Angular begins only at the final boundary. It:
+
+- mounts `./auth-provider` with the generic backend `apiBaseUrl`;
+- consumes versioned provider-neutral snapshots and normalized sessions;
+- may use generic bearer tokens for backend API access;
+- must not import the Privy SDK, parse Privy configuration, register wallets,
+  interpret Privy linked accounts, or expose Privy-specific fields in UI/domain
+  models.
+
+Any change that would move those responsibilities into Angular is an
+architecture change, not a local implementation shortcut, and requires updates
+to the MFE contract, backend contract, and the canonical orchestrator decision.
 
 ## 4. Angular Layering Model
 

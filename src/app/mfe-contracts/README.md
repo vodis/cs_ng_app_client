@@ -1,5 +1,10 @@
 # MFE Contracts
 
+Cross-repository provider ownership is documented in
+[`cs_orchestrator/docs/architecture/privy-wallet-ownership.md`](https://github.com/vodis/cs_orchestrator/blob/main/docs/architecture/privy-wallet-ownership.md).
+This directory is a provider-neutral consumer copy; the canonical browser
+contract is `cs_mfe-wallets/src/contracts/auth-provider-contract.ts`.
+
 This document defines implementation-level contracts for host `<->` `mfe-wallets` communication and host `<->` NestJS BFF interactions.
 
 Use this as the source of truth for runtime communication in the Angular app.
@@ -9,6 +14,21 @@ Use this as the source of truth for runtime communication in the Angular app.
 - Host app: `cs_ng_app_client`
 - Wallet MFE source: `../mfe-wallets`
 - Wallet MFE remote: `git@github.com:vodis/cs_mfe-wallets.git`
+
+## Account provider contract
+
+The canonical, open runtime contract is
+`cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. This host keeps only
+the structural consumer copy in `auth-provider.types.ts` and validates contract
+version `2.0.0` before mounting `mfe-wallets/auth-provider`.
+
+The NestJS `GET /api/v1/public/auth-config` response is the single source of
+truth for enabled login methods and public provider configuration. `mfe-wallets`
+loads that configuration, owns browser provider lifecycle, registers normalized
+sessions and embedded wallets with the backend, and exposes only generic
+session/wallet results. The host owns guarded navigation and contains no
+provider-specific SDK, DTO, endpoint, or global bridge.
+
 - Runtime manifest: `src/config/mf.manifest.json`
 
 ## 1) Runtime Channel: Host <-> MFE

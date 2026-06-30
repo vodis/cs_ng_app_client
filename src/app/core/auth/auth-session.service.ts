@@ -3,16 +3,13 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import type { PublicAuthConfig } from '@core/privy/privy-bridge.types';
+import { AuthProviderService } from './auth-provider.service';
 import {
   AuthSession,
   BackendBalance,
   BackendUser,
   BackendWallet,
-  emailFromPrivyUser,
   LoginMethod,
-  PrivySessionRequest,
-  walletFromPrivyWallet,
 } from './auth-session.types';
 
 type MeResponse = {
@@ -33,32 +30,28 @@ type BalancesResponse = {
 
 @Injectable({ providedIn: 'root' })
 export class AuthSessionService {
-  private readonly sessionSubject = new BehaviorSubject<AuthSession | null>(null);
+  private readonly sessionSubject = new BehaviorSubject<AuthSession | null>(
+    null
+  );
   private readonly loadingSubject = new BehaviorSubject<boolean>(false);
   private accessToken: string | null = null;
 
   readonly session$ = this.sessionSubject.asObservable();
   readonly loading$ = this.loadingSubject.asObservable();
+  readonly providerSnapshot$ = this.authProvider.snapshot$;
 
   constructor(
     private readonly httpClient: HttpClient,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly authProvider: AuthProviderService
   ) {}
 
   get session(): AuthSession | null {
     return this.sessionSubject.value;
   }
 
-  get config(): PublicAuthConfig | undefined {
-    return window.craftscriptPrivyConfig;
-  }
-
-  get bridgeReady(): boolean {
-    return Boolean(window.craftscriptPrivy);
-  }
-
   get enabledLoginMethods(): LoginMethod[] {
-    const methods = this.config?.loginMethods ?? [];
+    const methods = this.authProvider.snapshot.loginMethods;
     return methods.length > 0 ? methods : ['email'];
   }
 
@@ -72,8 +65,17 @@ export class AuthSessionService {
     try {
       const headers = this.authHeaders(token);
       const [me, wallets] = await Promise.all([
-        firstValueFrom(this.httpClient.get<MeResponse>(`${environment.apiUrl}/api/v1/me`, { headers })),
-        firstValueFrom(this.httpClient.get<WalletsResponse>(`${environment.apiUrl}/api/v1/wallets`, { headers })),
+        firstValueFrom(
+          this.httpClient.get<MeResponse>(`${environment.apiUrl}/api/v1/me`, {
+            headers,
+          })
+        ),
+        firstValueFrom(
+          this.httpClient.get<WalletsResponse>(
+            `${environment.apiUrl}/api/v1/wallets`,
+            { headers }
+          )
+        ),
       ]);
       const session = { user: me.user, wallets: wallets.wallets };
       this.sessionSubject.next(session);
@@ -85,35 +87,14 @@ export class AuthSessionService {
   }
 
   async login(authMethod: LoginMethod): Promise<AuthSession> {
-    const bridge = window.craftscriptPrivy;
-    if (!bridge) {
-      throw new Error('Privy bridge is not available');
-    }
-
     this.loadingSubject.next(true);
     try {
-      const loginUser = await bridge.login();
-      const token = await bridge.getAccessToken();
+      const session = await this.authProvider.login(authMethod);
+      const token = await this.authProvider.getAccessToken();
       if (!token) {
-        throw new Error('Privy access token is unavailable');
+        throw new Error('Account provider access token is unavailable');
       }
       this.accessToken = token;
-
-      const [currentUser, embeddedWallet] = await Promise.all([
-        bridge.getUser().catch(() => null),
-        bridge.getEmbeddedWallet().catch(() => null),
-      ]);
-      const body: PrivySessionRequest = {
-        email: emailFromPrivyUser(currentUser || loginUser),
-        authMethod,
-        wallet: walletFromPrivyWallet(embeddedWallet),
-      };
-
-      const session = await firstValueFrom(
-        this.httpClient.post<AuthSession>(`${environment.apiUrl}/api/v1/auth/privy/session`, body, {
-          headers: this.authHeaders(token),
-        })
-      );
       this.sessionSubject.next(session);
       return session;
     } finally {
@@ -145,9 +126,12 @@ export class AuthSessionService {
     }
 
     const response = await firstValueFrom(
-      this.httpClient.get<WalletsResponse>(`${environment.apiUrl}/api/v1/wallets`, {
-        headers: this.authHeaders(token),
-      })
+      this.httpClient.get<WalletsResponse>(
+        `${environment.apiUrl}/api/v1/wallets`,
+        {
+          headers: this.authHeaders(token),
+        }
+      )
     );
     this.updateWallets(response.wallets);
     return response.wallets;
@@ -177,9 +161,12 @@ export class AuthSessionService {
     }
 
     await firstValueFrom(
-      this.httpClient.delete(`${environment.apiUrl}/api/v1/wallets/${walletId}`, {
-        headers: this.authHeaders(token),
-      })
+      this.httpClient.delete(
+        `${environment.apiUrl}/api/v1/wallets/${walletId}`,
+        {
+          headers: this.authHeaders(token),
+        }
+      )
     );
     await this.reloadWallets();
   }
@@ -191,10 +178,13 @@ export class AuthSessionService {
     }
 
     const response = await firstValueFrom(
-      this.httpClient.get<BalancesResponse>(`${environment.apiUrl}/api/v1/balances`, {
-        headers: this.authHeaders(token),
-        params: walletId ? { walletId } : {},
-      })
+      this.httpClient.get<BalancesResponse>(
+        `${environment.apiUrl}/api/v1/balances`,
+        {
+          headers: this.authHeaders(token),
+          params: walletId ? { walletId } : {},
+        }
+      )
     );
     return response.data ?? [];
   }
@@ -217,7 +207,7 @@ export class AuthSessionService {
       return this.accessToken;
     }
 
-    const token = await window.craftscriptPrivy?.getAccessToken().catch(() => null);
+    const token = await this.authProvider.getAccessToken().catch(() => null);
     this.accessToken = token ?? null;
     return this.accessToken;
   }
