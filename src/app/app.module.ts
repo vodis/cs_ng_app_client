@@ -8,10 +8,12 @@ import { SidebarComponent } from '@components/sidebar/sidebar.component';
 import { SharedModule } from '@shared/shared.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { PrivyBridgeService } from '@core/privy/privy-bridge.service';
+import { AuthProviderService } from '@core/auth/auth-provider.service';
 
-function initializePrivyBridge(privyBridgeService: PrivyBridgeService) {
-  return () => privyBridgeService.initialize();
+function initializeAuthProvider(authProvider: AuthProviderService) {
+  return () => {
+    void authProvider.initialize();
+  };
 }
 
 @NgModule({
@@ -31,8 +33,8 @@ function initializePrivyBridge(privyBridgeService: PrivyBridgeService) {
     provideAnimationsAsync(),
     {
       provide: APP_INITIALIZER,
-      useFactory: initializePrivyBridge,
-      deps: [PrivyBridgeService],
+      useFactory: initializeAuthProvider,
+      deps: [AuthProviderService],
       multi: true,
     },
   ],

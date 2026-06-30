@@ -6,37 +6,45 @@ import { fakeAsync, flushMicrotasks, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AuthSessionService } from './auth-session.service';
 import { environment } from '../../../environments/environment';
-import type { CraftscriptPrivyBridge } from '@core/privy/privy-bridge.types';
-
-function bridge(): CraftscriptPrivyBridge {
-  return {
-    login: async () => ({ email: { address: 'user@example.com' } }),
-    getAccessToken: async () => 'privy-token',
-    getUser: async () => ({ email: { address: 'user@example.com' } }),
-    getEmbeddedWallet: async () => ({
-      id: 'wallet-1',
-      address: '0x1111111111111111111111111111111111111111',
-      chainType: 'ethereum',
-      walletClientType: 'embedded',
-    }),
-    signMessage: async () => ({ signature: '0xsig' }),
-    sendTransaction: async () => ({ hash: '0xhash' }),
-  };
-}
+import { AuthProviderService } from './auth-provider.service';
 
 describe('AuthSessionService', () => {
   let service: AuthSessionService;
   let httpMock: HttpTestingController;
   let router: { navigateByUrl: jasmine.Spy };
+  let authProvider: jasmine.SpyObj<AuthProviderService>;
 
   beforeEach(() => {
-    delete window.craftscriptPrivy;
-    delete window.craftscriptPrivyConfig;
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
+    authProvider = jasmine.createSpyObj<AuthProviderService>(
+      'AuthProviderService',
+      ['login', 'getAccessToken'],
+      {
+        snapshot: {
+          status: 'ready',
+          loginMethods: ['email', 'passkey'],
+          embeddedWalletEnabled: true,
+        },
+      }
+    );
+    authProvider.login.and.resolveTo({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        email: 'user@example.com',
+        authMethod: 'email',
+      },
+      wallets: [],
+    });
+    authProvider.getAccessToken.and.resolveTo('provider-token');
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [{ provide: Router, useValue: router }],
+      providers: [
+        { provide: Router, useValue: router },
+        { provide: AuthProviderService, useValue: authProvider },
+      ],
     });
 
     service = TestBed.inject(AuthSessionService);
@@ -45,25 +53,13 @@ describe('AuthSessionService', () => {
 
   afterEach(() => {
     httpMock.verify();
-    delete window.craftscriptPrivy;
-    delete window.craftscriptPrivyConfig;
   });
 
   it('uses runtime auth config login methods', () => {
-    window.craftscriptPrivyConfig = {
-      privyAppId: 'privy-app-id',
-      loginMethods: ['email', 'passkey'],
-      walletOnboarding: {
-        embeddedWallet: true,
-        externalWalletBinding: true,
-      },
-    };
-
     expect(service.enabledLoginMethods).toEqual(['email', 'passkey']);
   });
 
-  it('logs in through the Privy bridge and creates a backend session', fakeAsync(() => {
-    window.craftscriptPrivy = bridge();
+  it('logs in through the account provider without provider-specific host calls', fakeAsync(() => {
     let resolvedSession: unknown;
 
     service.login('email').then(session => {
@@ -71,37 +67,10 @@ describe('AuthSessionService', () => {
     });
     flushMicrotasks();
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/api/v1/auth/privy/session`);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.headers.get('Authorization')).toBe('Bearer privy-token');
-    expect(req.request.body).toEqual({
-      email: 'user@example.com',
-      authMethod: 'email',
-      wallet: {
-        privyWalletId: 'wallet-1',
-        address: '0x1111111111111111111111111111111111111111',
-        chainType: 'ethereum',
-        walletType: 'embedded',
-        source: 'privy',
-        isPrimary: true,
-      },
-    });
-    req.flush({
-      user: {
-        id: 'account-1',
-        privyUserId: 'did:privy:user-1',
-        sessionId: 'session-1',
-        email: 'user@example.com',
-        authMethod: 'email',
-      },
-      wallets: [],
-    });
-    flushMicrotasks();
-
     expect(resolvedSession).toEqual({
       user: {
         id: 'account-1',
-        privyUserId: 'did:privy:user-1',
+        providerUserId: 'provider-user-1',
         sessionId: 'session-1',
         email: 'user@example.com',
         authMethod: 'email',
@@ -111,8 +80,7 @@ describe('AuthSessionService', () => {
     expect(service.session?.user.id).toBe('account-1');
   }));
 
-  it('refreshes session and wallets using the Privy access token', fakeAsync(() => {
-    window.craftscriptPrivy = bridge();
+  it('refreshes session and wallets using the provider access token', fakeAsync(() => {
     let resolvedSession: unknown;
 
     service.refresh().then(session => {
@@ -122,12 +90,16 @@ describe('AuthSessionService', () => {
 
     const me = httpMock.expectOne(`${environment.apiUrl}/api/v1/me`);
     const wallets = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`);
-    expect(me.request.headers.get('Authorization')).toBe('Bearer privy-token');
-    expect(wallets.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    expect(me.request.headers.get('Authorization')).toBe(
+      'Bearer provider-token'
+    );
+    expect(wallets.request.headers.get('Authorization')).toBe(
+      'Bearer provider-token'
+    );
     me.flush({
       user: {
         id: 'account-1',
-        privyUserId: 'did:privy:user-1',
+        providerUserId: 'provider-user-1',
         sessionId: 'session-1',
       },
     });
@@ -137,7 +109,7 @@ describe('AuthSessionService', () => {
     expect(resolvedSession).toEqual({
       user: {
         id: 'account-1',
-        privyUserId: 'did:privy:user-1',
+        providerUserId: 'provider-user-1',
         sessionId: 'session-1',
       },
       wallets: [],
@@ -145,14 +117,13 @@ describe('AuthSessionService', () => {
   }));
 
   it('sets a primary wallet and reloads wallet state', fakeAsync(() => {
-    window.craftscriptPrivy = bridge();
     service.refresh();
     flushMicrotasks();
 
     httpMock.expectOne(`${environment.apiUrl}/api/v1/me`).flush({
       user: {
         id: 'account-1',
-        privyUserId: 'did:privy:user-1',
+        providerUserId: 'provider-user-1',
         sessionId: 'session-1',
       },
     });
@@ -160,11 +131,11 @@ describe('AuthSessionService', () => {
       wallets: [
         {
           id: 'wallet-1',
-          privyWalletId: 'wallet-1',
+          providerWalletId: 'wallet-1',
           address: '0x1111111111111111111111111111111111111111',
           chainType: 'ethereum',
           walletType: 'embedded',
-          source: 'privy',
+          source: 'provider',
           status: 'active',
           isPrimary: false,
           deletedAt: null,
@@ -176,17 +147,21 @@ describe('AuthSessionService', () => {
     service.setPrimaryWallet('wallet-1');
     flushMicrotasks();
 
-    const setPrimary = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets/wallet-1/primary`);
+    const setPrimary = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/wallets/wallet-1/primary`
+    );
     expect(setPrimary.request.method).toBe('PATCH');
-    expect(setPrimary.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    expect(setPrimary.request.headers.get('Authorization')).toBe(
+      'Bearer provider-token'
+    );
     setPrimary.flush({
       wallet: {
         id: 'wallet-1',
-        privyWalletId: 'wallet-1',
+        providerWalletId: 'wallet-1',
         address: '0x1111111111111111111111111111111111111111',
         chainType: 'ethereum',
         walletType: 'embedded',
-        source: 'privy',
+        source: 'provider',
         status: 'active',
         isPrimary: true,
         deletedAt: null,
@@ -198,11 +173,11 @@ describe('AuthSessionService', () => {
       wallets: [
         {
           id: 'wallet-1',
-          privyWalletId: 'wallet-1',
+          providerWalletId: 'wallet-1',
           address: '0x1111111111111111111111111111111111111111',
           chainType: 'ethereum',
           walletType: 'embedded',
-          source: 'privy',
+          source: 'provider',
           status: 'active',
           isPrimary: true,
           deletedAt: null,
@@ -215,14 +190,13 @@ describe('AuthSessionService', () => {
   }));
 
   it('deletes a wallet and reloads wallet state', fakeAsync(() => {
-    window.craftscriptPrivy = bridge();
     service.refresh();
     flushMicrotasks();
 
     httpMock.expectOne(`${environment.apiUrl}/api/v1/me`).flush({
       user: {
         id: 'account-1',
-        privyUserId: 'did:privy:user-1',
+        providerUserId: 'provider-user-1',
         sessionId: 'session-1',
       },
     });
@@ -230,7 +204,7 @@ describe('AuthSessionService', () => {
       wallets: [
         {
           id: 'wallet-1',
-          privyWalletId: 'wallet-1',
+          providerWalletId: 'wallet-1',
           address: '0x1111111111111111111111111111111111111111',
           chainType: 'ethereum',
           walletType: 'embedded',
@@ -243,9 +217,13 @@ describe('AuthSessionService', () => {
     service.deleteWallet('wallet-1');
     flushMicrotasks();
 
-    const deleted = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets/wallet-1`);
+    const deleted = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/wallets/wallet-1`
+    );
     expect(deleted.request.method).toBe('DELETE');
-    expect(deleted.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    expect(deleted.request.headers.get('Authorization')).toBe(
+      'Bearer provider-token'
+    );
     deleted.flush({});
     flushMicrotasks();
     const reload = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`);
@@ -255,8 +233,7 @@ describe('AuthSessionService', () => {
     expect(service.session?.wallets).toEqual([]);
   }));
 
-  it('loads balances using the Privy access token', fakeAsync(() => {
-    window.craftscriptPrivy = bridge();
+  it('loads balances using the provider access token', fakeAsync(() => {
     let resolvedBalances: unknown;
 
     service.loadBalances().then(balances => {
@@ -266,7 +243,9 @@ describe('AuthSessionService', () => {
 
     const req = httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`);
     expect(req.request.method).toBe('GET');
-    expect(req.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    expect(req.request.headers.get('Authorization')).toBe(
+      'Bearer provider-token'
+    );
     req.flush({
       data: [
         {
