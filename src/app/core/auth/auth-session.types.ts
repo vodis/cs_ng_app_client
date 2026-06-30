@@ -1,8 +1,6 @@
-import type { AuthProviderUser } from '@mfe-contracts/auth-provider.types';
-
 export type BackendUser = {
   id: string;
-  privyUserId: string;
+  providerUserId: string;
   sessionId: string;
   email?: string | null;
   authMethod?: string | null;
@@ -10,7 +8,7 @@ export type BackendUser = {
 
 export type BackendWallet = {
   id: string;
-  privyWalletId: string;
+  providerWalletId: string;
   address: string;
   chainType: string;
   walletType: string;
@@ -40,22 +38,3 @@ export type AuthSession = {
 };
 
 export type LoginMethod = 'email' | 'google' | 'apple' | 'passkey';
-
-export type PrivySessionRequest = {
-  email?: string;
-  authMethod?: string;
-  wallet?: {
-    privyWalletId?: string;
-    address: string;
-    chainType?: string;
-    walletType?: string;
-    source?: string;
-    isPrimary?: boolean;
-  };
-};
-
-export function emailFromAuthProviderUser(
-  user: AuthProviderUser | null | void
-): string | undefined {
-  return user?.email?.address || undefined;
-}

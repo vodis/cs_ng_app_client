@@ -4,15 +4,12 @@ import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AuthProviderService } from './auth-provider.service';
-import type { PublicAuthConfig } from '@mfe-contracts/auth-provider.types';
 import {
   AuthSession,
   BackendBalance,
   BackendUser,
   BackendWallet,
-  emailFromAuthProviderUser,
   LoginMethod,
-  PrivySessionRequest,
 } from './auth-session.types';
 
 type MeResponse = {
@@ -53,12 +50,8 @@ export class AuthSessionService {
     return this.sessionSubject.value;
   }
 
-  get config(): PublicAuthConfig | undefined {
-    return this.authProvider.config;
-  }
-
   get enabledLoginMethods(): LoginMethod[] {
-    const methods = this.config?.loginMethods ?? [];
+    const methods = this.authProvider.snapshot.loginMethods;
     return methods.length > 0 ? methods : ['email'];
   }
 
@@ -96,28 +89,12 @@ export class AuthSessionService {
   async login(authMethod: LoginMethod): Promise<AuthSession> {
     this.loadingSubject.next(true);
     try {
-      const loginUser = await this.authProvider.login(authMethod);
+      const session = await this.authProvider.login(authMethod);
       const token = await this.authProvider.getAccessToken();
       if (!token) {
         throw new Error('Account provider access token is unavailable');
       }
       this.accessToken = token;
-
-      const currentUser = await this.authProvider.getUser().catch(() => null);
-      const body: PrivySessionRequest = {
-        email: emailFromAuthProviderUser(currentUser || loginUser),
-        authMethod,
-      };
-
-      const session = await firstValueFrom(
-        this.httpClient.post<AuthSession>(
-          `${environment.apiUrl}/api/v1/auth/privy/session`,
-          body,
-          {
-            headers: this.authHeaders(token),
-          }
-        )
-      );
       this.sessionSubject.next(session);
       return session;
     } finally {

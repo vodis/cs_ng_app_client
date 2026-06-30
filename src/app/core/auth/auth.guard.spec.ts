@@ -29,13 +29,17 @@ describe('AuthGuard', () => {
     authProvider.whenSettled.and.returnValue(
       new Promise(resolve => {
         settleProvider = () =>
-          resolve({ status: 'ready', loginMethods: ['email'] });
+          resolve({
+            status: 'ready',
+            loginMethods: ['email'],
+            embeddedWalletEnabled: true,
+          });
       })
     );
     authSession.refresh.and.resolveTo({
       user: {
         id: 'account-1',
-        privyUserId: 'did:privy:user-1',
+        providerUserId: 'provider-user-1',
         sessionId: 'session-1',
       },
       wallets: [],
@@ -53,6 +57,7 @@ describe('AuthGuard', () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'disabled',
       loginMethods: [],
+      embeddedWalletEnabled: false,
     });
 
     await guard.canActivate();

@@ -43,8 +43,9 @@ production-ready state.
 
 Rule: no hidden coupling across boundaries. Only documented contracts are allowed.
 
-The NestJS public auth-config API is authoritative for login capabilities.
-Angular starts the federated provider without blocking public shell routes, and
+The wallet MFE loads the authoritative NestJS public auth configuration and
+owns provider session coordination. Angular starts the federated provider
+without blocking public shell routes, consumes only normalized sessions, and
 auth guards await a terminal provider state before restoring a protected
 session. The canonical provider contract lives in the open `cs_mfe-wallets`
 repository; Angular keeps a structural, runtime-version-checked consumer copy.

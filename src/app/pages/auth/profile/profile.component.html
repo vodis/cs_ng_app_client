@@ -2,7 +2,9 @@
   <div class="profile-shell__header">
     <div>
       <p class="profile-shell__eyebrow">Profile</p>
-      <h1>{{ activeSession.user.email || activeSession.user.privyUserId }}</h1>
+      <h1>
+        {{ activeSession.user.email || activeSession.user.providerUserId }}
+      </h1>
     </div>
     <button type="button" mat-stroked-button (click)="requestDeletion()">
       Request deletion
@@ -18,12 +20,12 @@
           <dd>{{ activeSession.user.id }}</dd>
         </div>
         <div>
-          <dt>Privy subject</dt>
-          <dd>{{ activeSession.user.privyUserId }}</dd>
+          <dt>Identity provider subject</dt>
+          <dd>{{ activeSession.user.providerUserId }}</dd>
         </div>
         <div>
           <dt>Auth method</dt>
-          <dd>{{ activeSession.user.authMethod || 'Privy' }}</dd>
+          <dd>{{ activeSession.user.authMethod || 'Provider account' }}</dd>
         </div>
       </dl>
     </section>
@@ -36,17 +38,23 @@
         </button>
       </div>
       <app-wallet-bar />
-      <div class="profile-shell__empty" *ngIf="activeSession.wallets.length === 0">
+      <div
+        class="profile-shell__empty"
+        *ngIf="activeSession.wallets.length === 0">
         No wallet linked.
       </div>
-      <ul class="profile-shell__wallets" *ngIf="activeSession.wallets.length > 0">
+      <ul
+        class="profile-shell__wallets"
+        *ngIf="activeSession.wallets.length > 0">
         <li *ngFor="let wallet of activeSession.wallets">
           <div class="profile-shell__wallet-main">
             <span>{{ shortAddress(wallet.address) }}</span>
             <small>{{ walletMeta(wallet) }}</small>
           </div>
           <div class="profile-shell__wallet-actions">
-            <span class="profile-shell__primary" *ngIf="wallet.isPrimary">Active</span>
+            <span class="profile-shell__primary" *ngIf="wallet.isPrimary"
+              >Active</span
+            >
             <button
               type="button"
               mat-button
@@ -81,10 +89,14 @@
       <div class="profile-shell__empty" *ngIf="balancesLoading">
         Loading balances...
       </div>
-      <div class="profile-shell__empty" *ngIf="!balancesLoading && balances.length === 0">
+      <div
+        class="profile-shell__empty"
+        *ngIf="!balancesLoading && balances.length === 0">
         No cached balances yet.
       </div>
-      <ul class="profile-shell__balances" *ngIf="!balancesLoading && balances.length > 0">
+      <ul
+        class="profile-shell__balances"
+        *ngIf="!balancesLoading && balances.length > 0">
         <li *ngFor="let balance of balances">
           <div class="profile-shell__balance-asset">
             <span>{{ balance.symbol }}</span>
@@ -99,8 +111,14 @@
     </section>
   </div>
 
-  <p class="profile-shell__message" *ngIf="walletMessage">{{ walletMessage }}</p>
-  <p class="profile-shell__message" *ngIf="balanceMessage">{{ balanceMessage }}</p>
-  <p class="profile-shell__message" *ngIf="deletionMessage">{{ deletionMessage }}</p>
+  <p class="profile-shell__message" *ngIf="walletMessage">
+    {{ walletMessage }}
+  </p>
+  <p class="profile-shell__message" *ngIf="balanceMessage">
+    {{ balanceMessage }}
+  </p>
+  <p class="profile-shell__message" *ngIf="deletionMessage">
+    {{ deletionMessage }}
+  </p>
   <p class="profile-shell__error" *ngIf="error">{{ error }}</p>
 </section>

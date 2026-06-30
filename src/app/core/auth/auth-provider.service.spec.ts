@@ -1,7 +1,3 @@
-import {
-  HttpClientTestingModule,
-  HttpTestingController,
-} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
 import {
@@ -21,7 +17,7 @@ function mountApi(
   onSubscribe?: (listener: AuthProviderListener) => void
 ): AuthProviderMountApi {
   return {
-    contractVersion: '1.0.0',
+    contractVersion: '2.0.0',
     unmount: jasmine.createSpy('unmount'),
     subscribe: listener => {
       onSubscribe?.(listener);
@@ -29,15 +25,20 @@ function mountApi(
       return jasmine.createSpy('unsubscribe');
     },
     getSnapshot: () => initialSnapshot,
-    login: async () => ({ id: 'did:privy:user-1' }),
-    getAccessToken: async () => 'privy-token',
-    getUser: async () => ({ id: 'did:privy:user-1' }),
+    login: async () => ({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+      },
+      wallets: [],
+    }),
+    getAccessToken: async () => 'provider-token',
   };
 }
 
 describe('AuthProviderService', () => {
   let service: AuthProviderService;
-  let httpMock: HttpTestingController;
   let loader: jasmine.Spy<AuthProviderRemoteLoader>;
   let logger: jasmine.SpyObj<AppLoggerService>;
 
@@ -47,46 +48,33 @@ describe('AuthProviderService', () => {
       'log',
     ]);
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
       providers: [
         { provide: AUTH_PROVIDER_REMOTE_LOADER, useValue: loader },
         { provide: AppLoggerService, useValue: logger },
       ],
     });
     service = TestBed.inject(AuthProviderService);
-    httpMock = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => {
     service.ngOnDestroy();
-    httpMock.verify();
   });
 
-  it('loads enabled config and resolves when the provider is ready', async () => {
+  it('mounts the provider remote with only the generic backend location', async () => {
     const api = mountApi({
       status: 'ready',
       loginMethods: ['email', 'passkey'],
+      embeddedWalletEnabled: true,
     });
-    loader.and.resolveTo({ mountAuthProvider: () => api });
+    const mountAuthProvider = jasmine
+      .createSpy('mountAuthProvider')
+      .and.returnValue(api);
+    loader.and.resolveTo({ mountAuthProvider });
 
-    const initialized = service.initialize();
-    httpMock
-      .expectOne(`${environment.apiUrl}/api/v1/public/auth-config`)
-      .flush({
-        version: 1,
-        enabled: true,
-        provider: 'privy',
-        privyAppId: 'privy-app-id',
-        loginMethods: ['email', 'passkey'],
-        walletOnboarding: {
-          embeddedWallet: true,
-          externalWalletBinding: true,
-        },
-      });
-
-    expect((await initialized).status).toBe('ready');
-    expect(service.snapshot.status).toBe('ready');
-    expect(loader).toHaveBeenCalledTimes(1);
+    expect((await service.initialize()).status).toBe('ready');
+    expect(mountAuthProvider).toHaveBeenCalledWith(jasmine.any(HTMLElement), {
+      apiBaseUrl: environment.apiUrl,
+    });
   });
 
   it('keeps late provider readiness observable', async () => {
@@ -96,7 +84,7 @@ describe('AuthProviderService', () => {
       notifySubscribed = resolve;
     });
     const api = mountApi(
-      { status: 'loading', loginMethods: ['passkey'] },
+      { status: 'loading', loginMethods: [], embeddedWalletEnabled: false },
       listener => {
         providerListener = listener;
         notifySubscribed?.();
@@ -105,60 +93,35 @@ describe('AuthProviderService', () => {
     loader.and.resolveTo({ mountAuthProvider: () => api });
 
     const initialized = service.initialize();
-    httpMock
-      .expectOne(`${environment.apiUrl}/api/v1/public/auth-config`)
-      .flush({
-        privyAppId: 'privy-app-id',
-        loginMethods: ['passkey'],
-        walletOnboarding: {
-          embeddedWallet: true,
-          externalWalletBinding: true,
-        },
-      });
     await subscribed;
 
     expect(service.snapshot.status).toBe('loading');
-    providerListener?.({ status: 'ready', loginMethods: ['passkey'] });
+    providerListener?.({
+      status: 'ready',
+      loginMethods: ['passkey'],
+      embeddedWalletEnabled: true,
+    });
     expect((await initialized).status).toBe('ready');
   });
 
-  it('does not load the remote when auth is disabled', async () => {
-    const initialized = service.initialize();
-    httpMock
-      .expectOne(`${environment.apiUrl}/api/v1/public/auth-config`)
-      .flush({
-        version: 1,
-        enabled: false,
-        provider: 'privy',
-        privyAppId: null,
-        loginMethods: [],
-        walletOnboarding: {
-          embeddedWallet: false,
-          externalWalletBinding: false,
-        },
-      });
+  it('accepts a disabled state decided inside the MFE', async () => {
+    const api = mountApi({
+      status: 'disabled',
+      loginMethods: [],
+      embeddedWalletEnabled: false,
+    });
+    loader.and.resolveTo({ mountAuthProvider: () => api });
 
-    expect((await initialized).status).toBe('disabled');
-    expect(loader).not.toHaveBeenCalled();
+    expect((await service.initialize()).status).toBe('disabled');
+    expect(loader).toHaveBeenCalledTimes(1);
   });
 
   it('fails closed for an unsupported remote contract', async () => {
     loader.and.resolveTo({
-      mountAuthProvider: () => ({ contractVersion: '2.0.0' }),
+      mountAuthProvider: () => ({ contractVersion: '1.0.0' }),
     });
-    const initialized = service.initialize();
-    httpMock
-      .expectOne(`${environment.apiUrl}/api/v1/public/auth-config`)
-      .flush({
-        privyAppId: 'privy-app-id',
-        loginMethods: ['email'],
-        walletOnboarding: {
-          embeddedWallet: true,
-          externalWalletBinding: true,
-        },
-      });
 
-    expect((await initialized).status).toBe('failed');
+    expect((await service.initialize()).status).toBe('failed');
     expect(service.snapshot.error).toContain('unsupported');
   });
 });

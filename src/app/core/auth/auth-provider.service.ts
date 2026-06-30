@@ -1,15 +1,13 @@
-import { HttpClient } from '@angular/common/http';
 import { Inject, Injectable, InjectionToken, OnDestroy } from '@angular/core';
 import { loadRemoteModule } from '@angular-architects/module-federation';
-import { BehaviorSubject, firstValueFrom, timeout } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import {
   AUTH_PROVIDER_CONTRACT_VERSION,
   AuthProviderLoginMethod,
   AuthProviderMountApi,
   AuthProviderRemoteModule,
+  AuthProviderSession,
   AuthProviderSnapshot,
-  AuthProviderUser,
-  PublicAuthConfig,
 } from '@mfe-contracts/auth-provider.types';
 import { environment } from '../../../environments/environment';
 import { AppLoggerService } from '@core/logging/app-logger.service';
@@ -19,6 +17,7 @@ const REMOTE_LOAD_TIMEOUT_MS = 15_000;
 const INITIAL_SNAPSHOT: AuthProviderSnapshot = {
   status: 'loading',
   loginMethods: [],
+  embeddedWalletEnabled: false,
 };
 
 export type AuthProviderRemoteLoader = () => Promise<unknown>;
@@ -43,12 +42,10 @@ export class AuthProviderService implements OnDestroy {
   private mountApi: AuthProviderMountApi | undefined;
   private unsubscribe: (() => void) | undefined;
   private container: HTMLElement | undefined;
-  private publicConfig: PublicAuthConfig | undefined;
 
   readonly snapshot$ = this.snapshotSubject.asObservable();
 
   constructor(
-    private readonly httpClient: HttpClient,
     @Inject(AUTH_PROVIDER_REMOTE_LOADER)
     private readonly loadRemote: AuthProviderRemoteLoader,
     private readonly logger: AppLoggerService
@@ -56,10 +53,6 @@ export class AuthProviderService implements OnDestroy {
 
   get snapshot(): AuthProviderSnapshot {
     return this.snapshotSubject.value;
-  }
-
-  get config(): PublicAuthConfig | undefined {
-    return this.publicConfig;
   }
 
   initialize(): Promise<AuthProviderSnapshot> {
@@ -71,16 +64,12 @@ export class AuthProviderService implements OnDestroy {
     return this.initialize();
   }
 
-  login(method: AuthProviderLoginMethod): Promise<AuthProviderUser | void> {
+  login(method: AuthProviderLoginMethod): Promise<AuthProviderSession> {
     return this.requireReadyProvider().login(method);
   }
 
   getAccessToken(): Promise<string | null> {
     return this.mountApi?.getAccessToken() ?? Promise.resolve(null);
-  }
-
-  getUser(): Promise<AuthProviderUser | null> {
-    return this.mountApi?.getUser() ?? Promise.resolve(null);
   }
 
   ngOnDestroy(): void {
@@ -94,15 +83,6 @@ export class AuthProviderService implements OnDestroy {
 
   private async start(): Promise<AuthProviderSnapshot> {
     try {
-      const config = await this.fetchPublicAuthConfig();
-      this.publicConfig = config;
-      if (!this.isEnabled(config)) {
-        return this.publish({
-          status: 'disabled',
-          loginMethods: config.loginMethods,
-        });
-      }
-
       const loadedModule = await this.withTimeout(
         this.loadRemote(),
         REMOTE_LOAD_TIMEOUT_MS,
@@ -116,7 +96,9 @@ export class AuthProviderService implements OnDestroy {
       this.container.setAttribute('data-auth-provider-root', '');
       document.body.appendChild(this.container);
 
-      const api = loadedModule.mountAuthProvider(this.container, { config });
+      const api = loadedModule.mountAuthProvider(this.container, {
+        apiBaseUrl: environment.apiUrl,
+      });
       if (!this.isMountApi(api)) {
         throw new Error(
           'Account provider contract version or shape is unsupported.'
@@ -152,58 +134,11 @@ export class AuthProviderService implements OnDestroy {
       });
       return this.publish({
         status: 'failed',
-        loginMethods: this.publicConfig?.loginMethods ?? [],
+        loginMethods: [],
+        embeddedWalletEnabled: false,
         error: errorMessage,
       });
     }
-  }
-
-  private async fetchPublicAuthConfig(): Promise<PublicAuthConfig> {
-    const config = await firstValueFrom(
-      this.httpClient
-        .get<unknown>(`${environment.apiUrl}/api/v1/public/auth-config`)
-        .pipe(timeout(3000))
-    );
-    if (!this.isPublicAuthConfig(config)) {
-      throw new Error('Public auth configuration is invalid.');
-    }
-    return config;
-  }
-
-  private isEnabled(config: PublicAuthConfig): boolean {
-    return Boolean(config.enabled !== false && config.privyAppId?.trim());
-  }
-
-  private isPublicAuthConfig(value: unknown): value is PublicAuthConfig {
-    if (typeof value !== 'object' || value === null) {
-      return false;
-    }
-    if (
-      ('version' in value &&
-        value.version !== undefined &&
-        value.version !== 1) ||
-      ('enabled' in value &&
-        value.enabled !== undefined &&
-        typeof value.enabled !== 'boolean') ||
-      ('provider' in value &&
-        value.provider !== undefined &&
-        value.provider !== 'privy') ||
-      !('privyAppId' in value) ||
-      (value.privyAppId !== null && typeof value.privyAppId !== 'string') ||
-      !('loginMethods' in value) ||
-      !Array.isArray(value.loginMethods) ||
-      !value.loginMethods.every(method => this.isLoginMethod(method)) ||
-      !('walletOnboarding' in value) ||
-      typeof value.walletOnboarding !== 'object' ||
-      value.walletOnboarding === null ||
-      !('embeddedWallet' in value.walletOnboarding) ||
-      typeof value.walletOnboarding.embeddedWallet !== 'boolean' ||
-      !('externalWalletBinding' in value.walletOnboarding) ||
-      typeof value.walletOnboarding.externalWalletBinding !== 'boolean'
-    ) {
-      return false;
-    }
-    return true;
   }
 
   private normalizeSnapshot(value: unknown): AuthProviderSnapshot {
@@ -215,6 +150,8 @@ export class AuthProviderService implements OnDestroy {
       'loginMethods' in value &&
       Array.isArray(value.loginMethods) &&
       value.loginMethods.every(method => this.isLoginMethod(method)) &&
+      'embeddedWalletEnabled' in value &&
+      typeof value.embeddedWalletEnabled === 'boolean' &&
       (!('error' in value) ||
         value.error === undefined ||
         typeof value.error === 'string')
@@ -222,6 +159,7 @@ export class AuthProviderService implements OnDestroy {
       return {
         status: value.status,
         loginMethods: value.loginMethods,
+        embeddedWalletEnabled: value.embeddedWalletEnabled,
         ...('error' in value && typeof value.error === 'string'
           ? { error: value.error }
           : {}),
@@ -230,7 +168,8 @@ export class AuthProviderService implements OnDestroy {
 
     return {
       status: 'failed',
-      loginMethods: this.publicConfig?.loginMethods ?? [],
+      loginMethods: [],
+      embeddedWalletEnabled: false,
       error: 'Account provider returned an invalid state.',
     };
   }
@@ -275,9 +214,7 @@ export class AuthProviderService implements OnDestroy {
       'login' in value &&
       typeof value.login === 'function' &&
       'getAccessToken' in value &&
-      typeof value.getAccessToken === 'function' &&
-      'getUser' in value &&
-      typeof value.getUser === 'function'
+      typeof value.getAccessToken === 'function'
     );
   }
 

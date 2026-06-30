@@ -15,13 +15,14 @@ Use this as the source of truth for runtime communication in the Angular app.
 The canonical, open runtime contract is
 `cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. This host keeps only
 the structural consumer copy in `auth-provider.types.ts` and validates contract
-version `1.0.0` before mounting `mfe-wallets/auth-provider`.
+version `2.0.0` before mounting `mfe-wallets/auth-provider`.
 
 The NestJS `GET /api/v1/public/auth-config` response is the single source of
-truth for enabled login methods and public provider configuration. The host owns
-application session bootstrap and guarded navigation. `mfe-wallets` owns the
-browser provider instance and all wallet discovery/signing operations. No
-provider bridge is published on `window`.
+truth for enabled login methods and public provider configuration. `mfe-wallets`
+loads that configuration, owns browser provider lifecycle, registers normalized
+sessions and embedded wallets with the backend, and exposes only generic
+session/wallet results. The host owns guarded navigation and contains no
+provider-specific SDK, DTO, endpoint, or global bridge.
 
 - Runtime manifest: `src/config/mf.manifest.json`
 

@@ -205,10 +205,11 @@ Production host rules:
 Any contract change in wallets (routes, exposed modules, events, required inputs) must be mirrored in this host.
 
 The canonical auth-provider runtime contract is open in
-`cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. The backend public
-auth-config endpoint is the single source of truth for browser capabilities.
-Never duplicate that configuration in Angular environment files or publish a
-provider bridge through `window` globals.
+`cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. The MFE loads backend
+public auth configuration and coordinates provider session registration.
+Angular supplies only its generic API base URL and consumes normalized session
+and wallet contracts. Never add provider-specific SDKs, configuration, DTOs,
+endpoints, or globals to the host.
 
 ## Angular dApp Architecture Guardrails
 
