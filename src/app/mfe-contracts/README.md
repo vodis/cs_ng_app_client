@@ -1,5 +1,10 @@
 # MFE Contracts
 
+Cross-repository provider ownership is documented in
+[`cs_orchestrator/docs/architecture/privy-wallet-ownership.md`](https://github.com/vodis/cs_orchestrator/blob/main/docs/architecture/privy-wallet-ownership.md).
+This directory is a provider-neutral consumer copy; the canonical browser
+contract is `cs_mfe-wallets/src/contracts/auth-provider-contract.ts`.
+
 This document defines implementation-level contracts for host `<->` `mfe-wallets` communication and host `<->` NestJS BFF interactions.
 
 Use this as the source of truth for runtime communication in the Angular app.
