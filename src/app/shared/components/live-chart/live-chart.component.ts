@@ -171,6 +171,7 @@ export class LiveChartComponent implements AfterViewInit, OnChanges, OnDestroy {
         fill: model.mode === 'line',
         scrub: true,
         pulse: true,
+        padding: { top: 12, right: 80, bottom: 40, left: 12 },
         lerpSpeed: 0.08,
         formatValue: formatChartPrice,
         formatTime: (time: number) => formatChartTime(time, model.windowSecs),
