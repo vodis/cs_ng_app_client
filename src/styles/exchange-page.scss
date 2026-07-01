@@ -583,6 +583,10 @@
     grid-template-rows: minmax(0, 1fr) auto;
   }
 
+  .marketPanel > .marketAdvanced:first-child {
+    margin-top: 0;
+  }
+
   .marketAdvanced {
     overflow: hidden;
     min-height: 0;
