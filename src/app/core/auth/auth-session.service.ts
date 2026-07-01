@@ -206,7 +206,6 @@ export class AuthSessionService {
     if (this.accessToken) {
       return this.accessToken;
     }
-
     const token = await this.authProvider.getAccessToken().catch(() => null);
     this.accessToken = token ?? null;
     return this.accessToken;

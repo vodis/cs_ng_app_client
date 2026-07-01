@@ -53,7 +53,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public balanceAmount(balance: BackendBalance): string {
-    const amount = balance.balanceDecimal || this.rawToDecimal(balance.balanceRaw, balance.decimals);
+    const amount =
+      balance.balanceDecimal ||
+      this.rawToDecimal(balance.balanceRaw, balance.decimals);
     return `${amount} ${balance.symbol}`;
   }
 
@@ -72,7 +74,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       await this.authSession.reloadWallets();
       this.walletMessage = 'Wallets refreshed';
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Wallet refresh failed';
+      this.error =
+        error instanceof Error ? error.message : 'Wallet refresh failed';
     }
   }
 
@@ -82,9 +85,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.balancesLoading = true;
     try {
       this.balances = await this.authSession.loadBalances();
-      this.balanceMessage = this.balances.length > 0 ? 'Balances refreshed' : '';
+      this.balanceMessage =
+        this.balances.length > 0 ? 'Balances refreshed' : '';
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Balance refresh failed';
+      this.error =
+        error instanceof Error ? error.message : 'Balance refresh failed';
     } finally {
       this.balancesLoading = false;
     }
@@ -102,7 +107,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       await this.authSession.setPrimaryWallet(wallet.id);
       this.walletMessage = `${this.shortAddress(wallet.address)} is now active`;
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Wallet activation failed';
+      this.error =
+        error instanceof Error ? error.message : 'Wallet activation failed';
     } finally {
       this.busyWalletId = '';
     }
@@ -116,7 +122,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       await this.authSession.deleteWallet(wallet.id);
       this.walletMessage = `${this.shortAddress(wallet.address)} removed`;
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Wallet removal failed';
+      this.error =
+        error instanceof Error ? error.message : 'Wallet removal failed';
     } finally {
       this.busyWalletId = '';
     }
@@ -129,7 +136,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const deletionAvailableAt = await this.authSession.requestDeletion();
       this.deletionMessage = `Deletion available ${new Date(deletionAvailableAt).toLocaleDateString()}`;
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Account deletion failed';
+      this.error =
+        error instanceof Error ? error.message : 'Account deletion failed';
     }
   }
 

@@ -177,12 +177,19 @@ describe('HomeComponent market overview', () => {
       timeframe: '1H',
     }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
 
+    expect(component.marketSummaryHeadline()).toContain('1 USDC =');
+    expect(component.marketSummaryChangeText()).toBe('+3.40% (1H)');
+
     component.changeMarketChartMode('relative');
 
     expect(component.selectedMarketChartMode).toBe('relative');
     expect(component.comparisonChartSeries.length).toBe(1);
     expect(component.comparisonChartSeries[0].id).toBe('NEAR-USDC');
     expect(component.comparisonChartSeries[0].points[0].value).toBe(0);
+    expect(component.marketSummaryHeadline()).toBe('NEAR +2.20% vs USDC');
+    expect(component.marketSummaryChangeText()).toBe(
+      'USDC +1.20% · NEAR +3.40% (1H)'
+    );
   });
 
   it('uses base/quote direction for fallback swap rate', () => {
