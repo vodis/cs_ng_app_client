@@ -27,9 +27,9 @@ describe('amount-format.utils', () => {
     });
 
     it('routes decimal separator keys to dedicated handling', () => {
-      expect(
-        resolveAmountKeydownAction(keyEvent('б', { code: 'Comma' }))
-      ).toBe('decimal-separator');
+      expect(resolveAmountKeydownAction(keyEvent('б', { code: 'Comma' }))).toBe(
+        'decimal-separator'
+      );
     });
 
     it('blocks scientific notation and other printable characters', () => {

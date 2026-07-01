@@ -28,10 +28,10 @@ describe('token-equivalent-format.utils', () => {
       });
     });
 
-    it('uses a floor label for tiny rates', () => {
+    it('uses a ceiling label for tiny rates below the display threshold', () => {
       const result = formatTokenEquivalentRate(0.00001428);
 
-      expect(result.displayRate).toBe('>0.0001');
+      expect(result.displayRate).toBe('<0.0001');
       expect(result.usesCompactDisplay).toBe(true);
       expect(result.fullRate).toBe('0.00001428');
     });
@@ -56,7 +56,7 @@ describe('token-equivalent-format.utils', () => {
     it('builds the chart label and hover title for tiny rates', () => {
       const label = formatTokenEquivalentLabel('USDC', 'BTC', 0.00001428);
 
-      expect(label.display).toBe('1 USDC = >0.0001 BTC');
+      expect(label.display).toBe('1 USDC = <0.0001 BTC');
       expect(label.title).toBe('1 USDC = 0.00001428 BTC');
     });
 

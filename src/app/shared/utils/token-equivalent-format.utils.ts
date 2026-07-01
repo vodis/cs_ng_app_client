@@ -31,7 +31,7 @@ export function formatTokenEquivalentRate(
     const fullRate = trimFloatNoise(rate);
 
     return {
-      displayRate: `>${formatFloorLabel(minDisplayRate)}`,
+      displayRate: `<${formatFloorLabel(minDisplayRate)}`,
       fullRate,
       usesCompactDisplay: hasMeaningfulFullRate(fullRate),
     };

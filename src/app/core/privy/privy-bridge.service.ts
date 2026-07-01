@@ -35,9 +35,11 @@ export class PrivyBridgeService implements OnDestroy {
   private async fetchPublicAuthConfig(): Promise<PublicAuthConfig | null> {
     try {
       return await firstValueFrom(
-        this.httpClient.get<PublicAuthConfig>(
-          `${environment.apiUrl}/api/v1/public/auth-config`
-        ).pipe(timeout(3000))
+        this.httpClient
+          .get<PublicAuthConfig>(
+            `${environment.apiUrl}/api/v1/public/auth-config`
+          )
+          .pipe(timeout(3000))
       );
     } catch {
       return null;

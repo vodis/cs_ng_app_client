@@ -1,4 +1,7 @@
-import type { PrivyBridgeUser, PrivyEmbeddedWallet } from '@core/privy/privy-bridge.types';
+import type {
+  PrivyBridgeUser,
+  PrivyEmbeddedWallet,
+} from '@core/privy/privy-bridge.types';
 
 export type BackendUser = {
   id: string;
@@ -54,11 +57,15 @@ export type PrivySessionRequest = {
   };
 };
 
-export function emailFromPrivyUser(user: PrivyBridgeUser | null | void): string | undefined {
+export function emailFromPrivyUser(
+  user: PrivyBridgeUser | null | void
+): string | undefined {
   return user?.email?.address || undefined;
 }
 
-export function walletFromPrivyWallet(wallet: PrivyEmbeddedWallet | null): PrivySessionRequest['wallet'] {
+export function walletFromPrivyWallet(
+  wallet: PrivyEmbeddedWallet | null
+): PrivySessionRequest['wallet'] {
   if (!wallet?.address) {
     return undefined;
   }

@@ -71,7 +71,9 @@ describe('AuthSessionService', () => {
     });
     flushMicrotasks();
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/api/v1/auth/privy/session`);
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/auth/privy/session`
+    );
     expect(req.request.method).toBe('POST');
     expect(req.request.headers.get('Authorization')).toBe('Bearer privy-token');
     expect(req.request.body).toEqual({
@@ -123,7 +125,9 @@ describe('AuthSessionService', () => {
     const me = httpMock.expectOne(`${environment.apiUrl}/api/v1/me`);
     const wallets = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`);
     expect(me.request.headers.get('Authorization')).toBe('Bearer privy-token');
-    expect(wallets.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    expect(wallets.request.headers.get('Authorization')).toBe(
+      'Bearer privy-token'
+    );
     me.flush({
       user: {
         id: 'account-1',
@@ -176,9 +180,13 @@ describe('AuthSessionService', () => {
     service.setPrimaryWallet('wallet-1');
     flushMicrotasks();
 
-    const setPrimary = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets/wallet-1/primary`);
+    const setPrimary = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/wallets/wallet-1/primary`
+    );
     expect(setPrimary.request.method).toBe('PATCH');
-    expect(setPrimary.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    expect(setPrimary.request.headers.get('Authorization')).toBe(
+      'Bearer privy-token'
+    );
     setPrimary.flush({
       wallet: {
         id: 'wallet-1',
@@ -243,9 +251,13 @@ describe('AuthSessionService', () => {
     service.deleteWallet('wallet-1');
     flushMicrotasks();
 
-    const deleted = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets/wallet-1`);
+    const deleted = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/wallets/wallet-1`
+    );
     expect(deleted.request.method).toBe('DELETE');
-    expect(deleted.request.headers.get('Authorization')).toBe('Bearer privy-token');
+    expect(deleted.request.headers.get('Authorization')).toBe(
+      'Bearer privy-token'
+    );
     deleted.flush({});
     flushMicrotasks();
     const reload = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`);
