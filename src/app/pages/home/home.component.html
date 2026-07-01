@@ -166,7 +166,9 @@
       </form>
     </div>
 
-    <div class="panel marketPanel">
+    <div
+      class="panel marketPanel"
+      [class.marketPanel--advanced]="showAdvancedMarketView">
       @if (!showAdvancedMarketView) {
         <div class="marketHead">
           <div>
@@ -204,6 +206,17 @@
           <app-live-chart
             [coin]="marketSymbolFor(toToken)"
             [active]="showAdvancedMarketView" />
+          <div class="marketFooter marketFooter--advanced">
+            <div class="note">
+              Advanced chart shows live market data for the destination token
+            </div>
+            <button
+              type="button"
+              class="advanced"
+              (click)="toggleAdvancedMarketView()">
+              Hide Advanced Chart &rarr;
+            </button>
+          </div>
         </div>
       } @else {
         <div class="marketBody">
@@ -306,20 +319,6 @@
               </button>
             </div>
           </div>
-        </div>
-      }
-
-      @if (showAdvancedMarketView) {
-        <div class="marketFooter marketFooter--advanced">
-          <div class="note">
-            Advanced chart shows live market data for the destination token
-          </div>
-          <button
-            type="button"
-            class="advanced"
-            (click)="toggleAdvancedMarketView()">
-            Hide Advanced Chart &rarr;
-          </button>
         </div>
       }
     </div>
