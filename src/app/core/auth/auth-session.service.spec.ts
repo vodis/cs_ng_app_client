@@ -66,7 +66,6 @@ describe('AuthSessionService', () => {
       resolvedSession = session;
     });
     flushMicrotasks();
-
     expect(resolvedSession).toEqual({
       user: {
         id: 'account-1',

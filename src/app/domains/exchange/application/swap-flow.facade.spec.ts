@@ -7,13 +7,10 @@ import type {
 import { SwapExecutionWorkflow } from './swap-execution.workflow';
 import { SwapFlowFacade, SwapFormInput } from './swap-flow.facade';
 
-class SwapExecutionWorkflowStub
-  implements
-    Pick<
-      SwapExecutionWorkflow,
-      'requestQuotePreview' | 'requestQuotePreviewStream' | 'executeSwap'
-    >
-{
+class SwapExecutionWorkflowStub implements Pick<
+  SwapExecutionWorkflow,
+  'requestQuotePreview' | 'requestQuotePreviewStream' | 'executeSwap'
+> {
   public readonly quoteCalls: Array<{
     input: SwapFormInput;
     traceId: string;
@@ -171,5 +168,4 @@ describe('SwapFlowFacade quote preview refresh', () => {
       ...overrides,
     };
   }
-
 });
