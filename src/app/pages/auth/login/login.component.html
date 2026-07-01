@@ -5,26 +5,29 @@
       <h1>Sign in</h1>
     </div>
 
-    <div class="login-shell__status" *ngIf="!authSession.config">
-      Account login is not enabled for this environment.
-    </div>
+    <ng-container *ngIf="authSession.providerSnapshot$ | async as provider">
+      <div class="login-shell__status" *ngIf="provider.status === 'disabled'">
+        Account login is not enabled for this environment.
+      </div>
+      <div class="login-shell__status" *ngIf="provider.status === 'loading'">
+        Account provider is still starting.
+      </div>
 
-    <div
-      class="login-shell__status"
-      *ngIf="authSession.config && !authSession.bridgeReady">
-      Account provider is still starting.
-    </div>
+      <div class="login-shell__status" *ngIf="provider.status === 'failed'">
+        Account login is temporarily unavailable.
+      </div>
 
-    <div class="login-shell__actions" *ngIf="authSession.config">
-      <button
-        *ngFor="let method of loginMethods"
-        type="button"
-        mat-stroked-button
-        [disabled]="!authSession.bridgeReady || (authSession.loading$ | async)"
-        (click)="login(method)">
-        {{ labelFor(method) }}
-      </button>
-    </div>
+      <div class="login-shell__actions" *ngIf="provider.status === 'ready'">
+        <button
+          *ngFor="let method of loginMethods"
+          type="button"
+          mat-stroked-button
+          [disabled]="authSession.loading$ | async"
+          (click)="login(method)">
+          {{ labelFor(method) }}
+        </button>
+      </div>
+    </ng-container>
 
     <p class="login-shell__error" *ngIf="error">{{ error }}</p>
   </div>

@@ -1,11 +1,6 @@
-import type {
-  PrivyBridgeUser,
-  PrivyEmbeddedWallet,
-} from '@core/privy/privy-bridge.types';
-
 export type BackendUser = {
   id: string;
-  privyUserId: string;
+  providerUserId: string;
   sessionId: string;
   email?: string | null;
   authMethod?: string | null;
@@ -13,7 +8,7 @@ export type BackendUser = {
 
 export type BackendWallet = {
   id: string;
-  privyWalletId: string;
+  providerWalletId: string;
   address: string;
   chainType: string;
   walletType: string;
@@ -43,39 +38,3 @@ export type AuthSession = {
 };
 
 export type LoginMethod = 'email' | 'google' | 'apple' | 'passkey';
-
-export type PrivySessionRequest = {
-  email?: string;
-  authMethod?: string;
-  wallet?: {
-    privyWalletId?: string;
-    address: string;
-    chainType?: string;
-    walletType?: string;
-    source?: string;
-    isPrimary?: boolean;
-  };
-};
-
-export function emailFromPrivyUser(
-  user: PrivyBridgeUser | null | void
-): string | undefined {
-  return user?.email?.address || undefined;
-}
-
-export function walletFromPrivyWallet(
-  wallet: PrivyEmbeddedWallet | null
-): PrivySessionRequest['wallet'] {
-  if (!wallet?.address) {
-    return undefined;
-  }
-
-  return {
-    privyWalletId: wallet.id,
-    address: wallet.address,
-    chainType: wallet.chainType || 'ethereum',
-    walletType: wallet.walletClientType || 'embedded',
-    source: 'privy',
-    isPrimary: true,
-  };
-}

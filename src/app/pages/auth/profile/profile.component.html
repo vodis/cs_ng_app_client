@@ -2,7 +2,9 @@
   <div class="profile-shell__header">
     <div>
       <p class="profile-shell__eyebrow">Profile</p>
-      <h1>{{ activeSession.user.email || activeSession.user.privyUserId }}</h1>
+      <h1>
+        {{ activeSession.user.email || activeSession.user.providerUserId }}
+      </h1>
     </div>
     <button type="button" mat-stroked-button (click)="requestDeletion()">
       Request deletion
@@ -18,12 +20,12 @@
           <dd>{{ activeSession.user.id }}</dd>
         </div>
         <div>
-          <dt>Privy subject</dt>
-          <dd>{{ activeSession.user.privyUserId }}</dd>
+          <dt>Identity provider subject</dt>
+          <dd>{{ activeSession.user.providerUserId }}</dd>
         </div>
         <div>
           <dt>Auth method</dt>
-          <dd>{{ activeSession.user.authMethod || 'Privy' }}</dd>
+          <dd>{{ activeSession.user.authMethod || 'Provider account' }}</dd>
         </div>
       </dl>
     </section>
