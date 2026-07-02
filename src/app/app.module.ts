@@ -9,6 +9,11 @@ import { SharedModule } from '@shared/shared.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { AuthProviderService } from '@core/auth/auth-provider.service';
+import {
+  NgxGoogleAnalyticsModule,
+  provideGoogleAnalytics,
+  provideGoogleAnalyticsRouter,
+} from '@hakimio/ngx-google-analytics';
 
 function initializeAuthProvider(authProvider: AuthProviderService) {
   return () => {
@@ -28,9 +33,12 @@ function initializeAuthProvider(authProvider: AuthProviderService) {
     BrowserAnimationsModule,
     AppRoutingModule,
     SharedModule,
+    NgxGoogleAnalyticsModule,
   ],
   providers: [
     provideAnimationsAsync(),
+    provideGoogleAnalytics('G-XL80CN2QPP'),
+    provideGoogleAnalyticsRouter(),
     {
       provide: APP_INITIALIZER,
       useFactory: initializeAuthProvider,
