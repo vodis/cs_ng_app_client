@@ -12,7 +12,6 @@ import { AuthProviderService } from '@core/auth/auth-provider.service';
 import {
   NgxGoogleAnalyticsModule,
   provideGoogleAnalytics,
-  provideGoogleAnalyticsRouter,
 } from '@hakimio/ngx-google-analytics';
 
 function initializeAuthProvider(authProvider: AuthProviderService) {
@@ -38,7 +37,6 @@ function initializeAuthProvider(authProvider: AuthProviderService) {
   providers: [
     provideAnimationsAsync(),
     provideGoogleAnalytics('G-XL80CN2QPP'),
-    provideGoogleAnalyticsRouter(),
     {
       provide: APP_INITIALIZER,
       useFactory: initializeAuthProvider,
