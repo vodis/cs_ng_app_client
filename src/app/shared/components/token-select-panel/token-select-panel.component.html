@@ -18,38 +18,56 @@
         {{ viewModel.statusMessage }}
       </p>
     } @else {
-      <ul
-        class="token-select-panel__list"
-        role="listbox"
-        [attr.aria-label]="title">
-        @for (token of availableTokens; track token.assetId) {
-          <li role="presentation">
-            <button
-              type="button"
-              class="token-select-panel__item"
-              role="option"
-              [attr.aria-selected]="token.symbol === selectedSymbol"
-              [class.token-select-panel__item--selected]="
-                token.symbol === selectedSymbol
-              "
-              (click)="handleSelect(token)">
-              <span
-                class="token-select-panel__icon"
-                [style.backgroundColor]="token.color">
-                @if (token.icon) {
-                  <img [src]="token.icon" [alt]="token.symbol" />
-                } @else {
-                  {{ token.symbol[0] }}
-                }
-              </span>
-              <span class="token-select-panel__meta">
-                <strong>{{ token.displaySymbol || token.symbol }}</strong>
-                <span>{{ token.name }}</span>
-              </span>
-            </button>
-          </li>
-        }
-      </ul>
+      <label class="token-select-panel__search">
+        <span class="token-select-panel__search-label"
+          >Search by name or symbol</span
+        >
+        <input
+          type="search"
+          class="token-select-panel__search-input"
+          placeholder="Search tokens"
+          autocomplete="off"
+          spellcheck="false"
+          [(ngModel)]="filterQuery"
+          (keydown.escape)="handleClose()" />
+      </label>
+
+      @if (filteredTokens.length === 0) {
+        <p class="token-select-panel__status">No matching tokens.</p>
+      } @else {
+        <ul
+          class="token-select-panel__list"
+          role="listbox"
+          [attr.aria-label]="title">
+          @for (token of filteredTokens; track token.assetId) {
+            <li role="presentation">
+              <button
+                type="button"
+                class="token-select-panel__item"
+                role="option"
+                [attr.aria-selected]="token.symbol === selectedSymbol"
+                [class.token-select-panel__item--selected]="
+                  token.symbol === selectedSymbol
+                "
+                (click)="handleSelect(token)">
+                <span
+                  class="token-select-panel__icon"
+                  [style.backgroundColor]="token.color">
+                  @if (token.icon) {
+                    <img [src]="token.icon" [alt]="token.symbol" />
+                  } @else {
+                    {{ token.symbol[0] }}
+                  }
+                </span>
+                <span class="token-select-panel__meta">
+                  <strong>{{ token.displaySymbol || token.symbol }}</strong>
+                  <span>{{ token.name }}</span>
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
     }
   </div>
 </div>

@@ -398,6 +398,7 @@
       [loadError]="exchangeAssetsError"
       [selectedSymbol]="tokenSelectorSelectedSymbol()"
       [excludedSymbol]="tokenSelectorExcludedSymbol()"
+      [isOpen]="isTokenSelectorOpen"
       (tokenSelected)="handleTokenSelected($event)"
       (closeRequested)="closeTokenSelector()" />
   </app-side-modal>
