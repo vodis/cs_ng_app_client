@@ -22,6 +22,7 @@ import { HomeComponent } from './home.component';
 
 class WalletsServiceStub {
   public account = new BehaviorSubject<WalletAccount | undefined>(undefined);
+  public requestOpen = jasmine.createSpy('requestOpen');
 }
 
 class SwapFlowFacadeStub {
@@ -425,4 +426,21 @@ describe('HomeComponent market overview', () => {
       ],
     };
   }
+
+  it('opens wallet connector when connect wallet is submitted without a session', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+
+    component.submitQuote();
+
+    expect(walletsService.requestOpen).toHaveBeenCalled();
+    expect(component.quoteError).toBe('');
+  });
 });

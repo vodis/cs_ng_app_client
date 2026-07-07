@@ -34,6 +34,15 @@ export class WalletBarComponent {
           this.walletsService.clearCloseRequest();
         }
       });
+
+    this.walletsService.openRequested
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(openRequested => {
+        if (openRequested) {
+          this.isOpenWalletConnectMenu = true;
+          this.walletsService.clearOpenRequest();
+        }
+      });
   }
 
   public handleOpenWalletMenu(): void {
