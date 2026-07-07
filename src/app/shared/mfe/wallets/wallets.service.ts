@@ -9,6 +9,7 @@ export class WalletsService {
   public provider = new BehaviorSubject<unknown | undefined>(undefined);
   public account = new BehaviorSubject<WalletAccount | undefined>(undefined);
   public closeRequested = new BehaviorSubject<boolean>(false);
+  public openRequested = new BehaviorSubject<boolean>(false);
 
   setAccount(account: WalletAccount | undefined): void {
     this.account.next(account);
@@ -20,5 +21,13 @@ export class WalletsService {
 
   clearCloseRequest(): void {
     this.closeRequested.next(false);
+  }
+
+  requestOpen(): void {
+    this.openRequested.next(true);
+  }
+
+  clearOpenRequest(): void {
+    this.openRequested.next(false);
   }
 }
