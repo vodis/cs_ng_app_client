@@ -22,4 +22,15 @@ describe('SidebarComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('does not expose profile in sidebar navigation', () => {
+    const sidebarUrls = [
+      ...component.sidebarBoardLinks,
+      ...component.sidebarFinansialLinks,
+      ...component.sidebarWorkProposalLinks,
+      ...component.sidebarMobile,
+    ].map(link => link.url);
+
+    expect(sidebarUrls).not.toContain('/profile');
+  });
 });
