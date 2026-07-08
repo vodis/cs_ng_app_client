@@ -1,0 +1,76 @@
+<section class="register-shell">
+  <div class="register-shell__content">
+    <section class="register-shell__info">
+      <p class="register-shell__kicker">Welcome to CraftScript</p>
+      <h1>Trade smarter with a secure account.</h1>
+      <p class="register-shell__subtitle">
+        Access swaps, portfolio insights, and cross-chain tools in one place.
+      </p>
+
+      <ul class="register-shell__points">
+        <li>Secure account system and wallet connection</li>
+        <li>Fast token exchange and market overview</li>
+        <li>Built for DeFi workflows in the CraftScript ecosystem</li>
+      </ul>
+    </section>
+
+    <section class="register-shell__panel">
+      <h2>Create CraftScript Account</h2>
+
+      <form
+        class="register-shell__form"
+        (ngSubmit)="registerWithEmail()"
+        novalidate>
+        <label for="register-email">Email</label>
+        <input
+          id="register-email"
+          name="email"
+          type="email"
+          placeholder="Email"
+          [(ngModel)]="email" />
+
+        <label class="register-shell__policy">
+          <input type="checkbox" name="policy" [(ngModel)]="agreedToPolicy" />
+          <span>
+            By creating an account, I agree to CraftScript's
+            <a href="/policy">Policy</a>.
+          </span>
+        </label>
+
+        <button type="submit" [disabled]="loading">Register</button>
+      </form>
+
+      <div class="register-shell__divider">
+        <span>or</span>
+      </div>
+
+      <div class="register-shell__socials">
+        <button
+          type="button"
+          [disabled]="loading"
+          (click)="continueWith('google')">
+          Continue with Google
+        </button>
+        <button
+          type="button"
+          [disabled]="loading"
+          (click)="continueWith('apple')">
+          Continue with Apple
+        </button>
+        <button
+          type="button"
+          [disabled]="loading"
+          (click)="continueWith('telegram')">
+          Continue with Telegram
+        </button>
+      </div>
+
+      <p class="register-shell__error" *ngIf="error">{{ error }}</p>
+      <p class="register-shell__info-note" *ngIf="info">{{ info }}</p>
+
+      <p class="register-shell__login-link">
+        Already have an account? <a routerLink="/login">Log in</a>
+      </p>
+    </section>
+  </div>
+</section>

@@ -28,6 +28,7 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   public verticalLineAnimating = true;
   public contentHeight: number | null = null;
   public lineResetKey = 0;
+  public hideShell = false;
 
   private resizeObserver?: ResizeObserver;
   private routerSubscription?: Subscription;
@@ -39,10 +40,12 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public ngOnInit(): void {
     this.isMobileView = this.currentWidth <= 768;
+    this.updateShellVisibility(this.router.url);
 
     this.routerSubscription = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe(() => {
+      .subscribe(event => {
+        this.updateShellVisibility(event.urlAfterRedirects);
         this.verticalLineAnimating = true;
         this.lineResetKey += 1;
         this.updateContentHeight();
@@ -96,5 +99,9 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.contentHeight = this.contentRouter.nativeElement.offsetHeight;
+  }
+
+  private updateShellVisibility(url: string): void {
+    this.hideShell = url.startsWith('/register');
   }
 }

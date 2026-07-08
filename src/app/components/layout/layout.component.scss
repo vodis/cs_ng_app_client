@@ -4,6 +4,10 @@
   .main-layout {
     min-height: 100vh;
 
+    &__auth {
+      min-height: 100vh;
+    }
+
     &__content {
       display: grid;
       min-height: calc(100vh - var(--shell-header-height));
