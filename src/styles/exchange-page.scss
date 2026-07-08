@@ -1082,6 +1082,14 @@
 
 @media (width <= 1100px) {
   .exchange-page {
+    padding: 0 1rem 1rem;
+
+    .intro {
+      height: auto;
+      padding: 16px 20px;
+      margin-top: 8px;
+    }
+
     .gridTop {
       grid-template-columns: 1fr;
     }
@@ -1089,6 +1097,15 @@
     .marketPanel,
     .swapPanel {
       height: auto;
+    }
+
+    .swapPanel {
+      height: auto;
+      padding: 20px 16px;
+    }
+
+    .marketPanel {
+      padding: 20px 16px;
     }
 
     .marketPanel--advanced {
@@ -1109,6 +1126,25 @@
     .marketBody {
       margin-top: 16px;
       gap: 12px;
+      grid-template-rows: auto auto;
+    }
+
+    .chart {
+      height: 13.5rem;
+      min-height: 13.5rem;
+      max-height: 13.5rem;
+    }
+
+    .market-skeleton--chart {
+      height: 13.5rem;
+      min-height: 13.5rem;
+      max-height: 13.5rem;
+    }
+
+    .activity {
+      height: auto;
+      min-height: 0;
+      padding: 20px 16px;
     }
 
     .marketBelow {
