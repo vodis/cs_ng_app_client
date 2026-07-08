@@ -4,6 +4,10 @@
   .main-layout {
     min-height: 100vh;
 
+    &__auth {
+      min-height: 100vh;
+    }
+
     &__content {
       display: grid;
       min-height: calc(100vh - var(--shell-header-height));
@@ -51,13 +55,24 @@
       }
 
       &.mobile {
-        display: grid;
+        display: flex;
         min-height: calc(100vh - var(--shell-header-height));
-        grid-template-columns: none;
-        grid-template-rows: 1fr var(--shell-header-height);
+        flex-direction: column;
 
-        &_mobile {
-          min-height: calc(100vh - var(--shell-header-height));
+        > .main-layout__content_mobile {
+          flex: 0 1 auto;
+          width: 100%;
+          min-width: 0;
+          overflow-x: hidden;
+        }
+
+        app-sidebar {
+          width: 100%;
+          flex: 0 0 var(--shell-header-height);
+          align-self: stretch;
+          margin-top: auto;
+          grid-column: auto;
+          grid-row: auto;
         }
       }
     }

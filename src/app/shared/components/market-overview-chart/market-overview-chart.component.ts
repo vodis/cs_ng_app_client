@@ -92,7 +92,8 @@ export class MarketOverviewChartComponent
         fill: false,
         badge: false,
         momentum: false,
-        referenceLine: { value: 0, label: '0%' },
+        exaggerate: false,
+        referenceLine: this.referenceLineForSeries(series),
         seriesToggleCompact: true,
         window: windowSecs,
         lineWidth: 2,
@@ -118,6 +119,34 @@ export class MarketOverviewChartComponent
         value: item.points[item.points.length - 1]?.value ?? 0,
       }))
       .filter(item => item.data.length >= 2);
+  }
+
+  private referenceLineForSeries(
+    series: LivelineSeries[]
+  ): { value: number; label: string } | undefined {
+    const values = series.flatMap(item =>
+      item.data.map(point => point.value).filter(Number.isFinite)
+    );
+
+    if (values.length === 0) {
+      return undefined;
+    }
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    if (min <= 0 && max >= 0) {
+      return { value: 0, label: '0%' };
+    }
+
+    const span = Math.max(max - min, 0.01);
+    const distanceToZero = min >= 0 ? min : Math.abs(max);
+
+    if (distanceToZero <= span * 0.35) {
+      return { value: 0, label: '0%' };
+    }
+
+    return undefined;
   }
 
   private minimumWindowSecs(): number {
