@@ -259,7 +259,8 @@ export class HomeComponent {
 
   public submitQuote(): void {
     if (!this.walletAddress) {
-      this.quoteError = 'Connect wallet first.';
+      this.quoteError = '';
+      this.walletsService.requestOpen();
       return;
     }
 

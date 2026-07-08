@@ -1,5 +1,6 @@
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormsModule } from '@angular/forms';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { TokenSelectPanelComponent } from './token-select-panel.component';
 
@@ -24,6 +25,7 @@ describe('TokenSelectPanelComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
+      imports: [FormsModule],
       declarations: [TokenSelectPanelComponent],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
@@ -144,5 +146,47 @@ describe('TokenSelectPanelComponent', () => {
     );
 
     expect(status?.textContent?.trim()).toBe('No assets available.');
+  });
+
+  it('should filter tokens by name or symbol', () => {
+    component.filterQuery = 'near';
+    fixture.detectChanges();
+
+    expect(component.filteredTokens).toEqual([tokens[1]]);
+
+    const options = fixture.nativeElement.querySelectorAll(
+      '.token-select-panel__item'
+    );
+    expect(options.length).toBe(1);
+    expect(options[0].textContent).toContain('NEAR');
+  });
+
+  it('should show no matching tokens message when filter has no results', () => {
+    component.filterQuery = 'btc';
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector(
+      '.token-select-panel__status'
+    );
+
+    expect(status?.textContent?.trim()).toBe('No matching tokens.');
+    expect(
+      fixture.nativeElement.querySelector('.token-select-panel__item')
+    ).toBeNull();
+  });
+
+  it('should reset filter when panel opens', () => {
+    component.filterQuery = 'near';
+    component.isOpen = true;
+    component.ngOnChanges({
+      isOpen: {
+        currentValue: true,
+        previousValue: false,
+        firstChange: false,
+        isFirstChange: () => false,
+      },
+    });
+
+    expect(component.filterQuery).toBe('');
   });
 });

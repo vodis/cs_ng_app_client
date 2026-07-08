@@ -45,6 +45,43 @@
     flex: 1;
   }
 
+  &__search {
+    display: block;
+    padding: 0.75rem 1rem 0.5rem;
+  }
+
+  &__search-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: rgb(255 255 255 / 56%);
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    line-height: 1rem;
+    text-transform: uppercase;
+  }
+
+  &__search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 0;
+    background: rgb(255 255 255 / 4%);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline: none;
+
+    &::placeholder {
+      color: rgb(255 255 255 / 36%);
+    }
+
+    &:focus {
+      border-color: rgb(254 108 0 / 40%);
+    }
+  }
+
   &__status {
     padding: 1.5rem 1rem;
     margin: 0;
