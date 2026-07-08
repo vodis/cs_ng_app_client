@@ -18,9 +18,9 @@
 
     &__logo {
       display: flex;
+      width: 100%;
       align-items: center;
-      justify-content: flex-start;
-      padding-left: 1rem;
+      justify-content: center;
       grid-column: 1;
 
       img {
