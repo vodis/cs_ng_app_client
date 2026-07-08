@@ -24,9 +24,12 @@
         <span>CraftScript</span>
       </div>
 
-      <h2>Welcome to CraftScript</h2>
+      <h2>
+        {{ step === 'account' ? 'Welcome to CraftScript' : 'Set up wallet' }}
+      </h2>
 
       <form
+        *ngIf="step === 'account'"
         class="register-shell__form"
         (ngSubmit)="registerWithEmail()"
         novalidate>
@@ -49,11 +52,11 @@
         <button type="submit" [disabled]="loading">Register</button>
       </form>
 
-      <div class="register-shell__divider">
+      <div class="register-shell__divider" *ngIf="step === 'account'">
         <span>or</span>
       </div>
 
-      <div class="register-shell__socials">
+      <div class="register-shell__socials" *ngIf="step === 'account'">
         <button
           class="register-shell__social register-shell__social--google"
           type="button"
@@ -91,19 +94,34 @@
           </span>
           Continue with Apple
         </button>
+      </div>
+
+      <div class="register-shell__wallet-step" *ngIf="step === 'wallet'">
+        <p>
+          Link a wallet before entering the dApp. You can connect an existing
+          wallet or create an embedded wallet secured by your account.
+        </p>
+
         <button
-          class="register-shell__social register-shell__social--telegram"
+          class="register-shell__wallet-action"
           type="button"
-          [disabled]="loading"
-          (click)="continueWith('telegram')">
-          <span class="register-shell__social-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path
-                fill="currentColor"
-                d="M9.04 15.5 8.66 20.9c.54 0 .77-.23 1.06-.5l2.55-2.43 5.28 3.87c.97.54 1.65.26 1.91-.9l3.46-16.2h0c.31-1.45-.52-2.02-1.47-1.66L1.14 10.92c-1.38.54-1.36 1.31-.24 1.65l5.2 1.62L18.2 6.56c.57-.35 1.08-.16.66.2" />
-            </svg>
-          </span>
-          Continue with Telegram
+          [disabled]="walletLoading"
+          (click)="connectExistingWallet()">
+          Connect existing wallet
+        </button>
+        <button
+          class="register-shell__wallet-action register-shell__wallet-action--primary"
+          type="button"
+          [disabled]="walletLoading"
+          (click)="generateWallet()">
+          Generate wallet
+        </button>
+        <button
+          class="register-shell__wallet-refresh"
+          type="button"
+          [disabled]="walletLoading"
+          (click)="finishAfterWalletLinked()">
+          Continue after wallet is connected
         </button>
       </div>
 
@@ -113,6 +131,12 @@
       <p class="register-shell__login-link">
         Already have an account? <a routerLink="/login">Log in</a>
       </p>
+
+      <app-side-modal
+        [isOpen]="isOpenWalletConnectMenu"
+        (closeRequested)="closeWalletConnectMenu()">
+        <app-wallets />
+      </app-side-modal>
     </section>
   </div>
 </section>

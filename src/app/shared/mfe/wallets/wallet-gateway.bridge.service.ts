@@ -14,6 +14,7 @@ import type {
 } from '@mfe-contracts/wallet-execution.types';
 import type {
   WalletConnectionSnapshot,
+  WalletOnboardingResult,
   WalletsMfeMountApi,
 } from '@mfe-contracts/wallet-mfe.types';
 import { AppLoggerService } from '@core/logging/app-logger.service';
@@ -153,6 +154,19 @@ export class WalletGatewayBridgeService {
       message: 'Swap signing aborted',
       retryable: true,
     });
+  }
+
+  async createEmbeddedWallet(): Promise<WalletOnboardingResult> {
+    const createEmbeddedWallet = this.mountApi?.createEmbeddedWallet;
+    if (!createEmbeddedWallet) {
+      throw this.executionFailure(
+        'GATEWAY_UNAVAILABLE',
+        'Embedded wallet creation is not available',
+        true
+      );
+    }
+
+    return createEmbeddedWallet();
   }
 
   private canSendGatewayEvent(): boolean {

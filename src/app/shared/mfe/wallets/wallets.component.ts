@@ -82,6 +82,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       const mountResult = mfeModule.mount(container, {
         context: {
           contractVersion: '2.0.0',
+          apiBaseUrl: environment.apiUrl,
           environment: this.mfeEnvironment(),
         },
         callbacks: {
