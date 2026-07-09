@@ -6,9 +6,22 @@
         {{ activeSession.user.email || activeSession.user.providerUserId }}
       </h1>
     </div>
-    <button type="button" mat-stroked-button (click)="requestDeletion()">
-      Request deletion
-    </button>
+    <div class="profile-shell__header-actions">
+      <button
+        type="button"
+        mat-stroked-button
+        [disabled]="authSession.loading$ | async"
+        (click)="logout()">
+        Logout
+      </button>
+      <button
+        type="button"
+        mat-stroked-button
+        [disabled]="authSession.loading$ | async"
+        (click)="requestDeletion()">
+        Request deletion
+      </button>
+    </div>
   </div>
 
   <div class="profile-shell__grid">

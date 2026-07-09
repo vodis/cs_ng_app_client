@@ -9,10 +9,13 @@ import {
   AuthProviderSession,
   AuthProviderSnapshot,
 } from '@mfe-contracts/auth-provider.types';
+import {
+  WALLET_REMOTE_EXPOSED_MODULES,
+  WALLET_REMOTE_NAME,
+} from '@mfe-contracts/wallet-remote-entrypoints';
 import { environment } from '../../../environments/environment';
 import { AppLoggerService } from '@core/logging/app-logger.service';
 
-const REMOTE_NAME = 'mfe-wallets';
 const REMOTE_LOAD_TIMEOUT_MS = 15_000;
 const INITIAL_SNAPSHOT: AuthProviderSnapshot = {
   status: 'loading',
@@ -28,8 +31,8 @@ export const AUTH_PROVIDER_REMOTE_LOADER =
     factory: () => () =>
       loadRemoteModule({
         type: 'manifest',
-        remoteName: REMOTE_NAME,
-        exposedModule: './auth-provider',
+        remoteName: WALLET_REMOTE_NAME,
+        exposedModule: WALLET_REMOTE_EXPOSED_MODULES.authProvider,
       }),
   });
 
@@ -66,6 +69,10 @@ export class AuthProviderService implements OnDestroy {
 
   login(method: AuthProviderLoginMethod): Promise<AuthProviderSession> {
     return this.requireReadyProvider().login(method);
+  }
+
+  logout(): Promise<void> {
+    return this.mountApi?.logout() ?? Promise.resolve();
   }
 
   getAccessToken(): Promise<string | null> {
@@ -213,6 +220,8 @@ export class AuthProviderService implements OnDestroy {
       typeof value.getSnapshot === 'function' &&
       'login' in value &&
       typeof value.login === 'function' &&
+      'logout' in value &&
+      typeof value.logout === 'function' &&
       'getAccessToken' in value &&
       typeof value.getAccessToken === 'function'
     );

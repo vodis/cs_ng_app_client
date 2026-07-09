@@ -23,6 +23,13 @@ export type WalletConnectionSnapshot = {
   errorMessage?: string;
 };
 
+export type WalletOnboardingResult = {
+  account: string;
+  chainId: number | null;
+  walletType: 'embedded' | 'external';
+  source: string;
+};
+
 export type WalletsMfeEvent =
   | {
       type: 'connection.state.changed';
@@ -39,6 +46,7 @@ export type WalletsMfeEvent =
 
 export type WalletsMfeContext = {
   contractVersion?: '2.0.0';
+  apiBaseUrl?: string;
   sessionId?: string;
   locale?: string;
   theme?: 'light' | 'dark';
@@ -71,6 +79,8 @@ export type WalletsMfeMountApi = {
   subscribe: (listener: (event: WalletsMfeEvent) => void) => () => void;
   getSnapshot: () => WalletConnectionSnapshot;
   sendGatewayEvent: (event: WalletGatewayEvent) => void;
+  createEmbeddedWallet?: () => Promise<WalletOnboardingResult>;
+  disconnectWallet?: () => void;
 };
 
 export type WalletsMfeModule = {

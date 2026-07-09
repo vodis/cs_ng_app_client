@@ -174,6 +174,10 @@ CI (`/.github/workflows/build-dev.yml`) runs `pnpm run e2e` against a production
 - Host responsibility: shell layout, top-level routing, session bootstrap, telemetry, shared UX policies.
 - MFE responsibility (`mfe-wallets`): wallet domain pages, wallet domain workflows, wallet-specific state.
 - `mfe-wallets` also owns the browser account-provider instance because that instance performs passkey wallet discovery and wallet signing. The host consumes only the versioned session-facing API in `src/app/mfe-contracts/auth-provider.types.ts`.
+- The wallet remote is atomized. Angular loads `./mount` and `./auth-provider`;
+  `./providers/privy` remains a wallet-MFE-owned provider atom loaded by the
+  MFE only when Privy auth, embedded-wallet creation, or passkey signing needs
+  it.
 - Backend responsibility (NestJS): typed BFF APIs, aggregation/orchestration, normalized error model, observability boundaries.
 - Key rule: communication happens only through documented contracts (route/mount, typed data, versioned events).
 

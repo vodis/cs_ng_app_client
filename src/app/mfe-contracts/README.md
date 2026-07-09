@@ -22,6 +22,17 @@ The canonical, open runtime contract is
 the structural consumer copy in `auth-provider.types.ts` and validates contract
 version `2.0.0` before mounting `mfe-wallets/auth-provider`.
 
+The wallet remote exposes atomized entrypoints:
+
+- `./mount` for the generic wallet UI/runtime.
+- `./auth-provider` for the thin auth-provider bootstrap consumed by Angular.
+- `./providers/privy` for the Privy implementation atom owned and loaded by
+  `cs_mfe-wallets`.
+
+Angular should continue to load only `./mount` and `./auth-provider`. It must
+not load `./providers/privy` directly unless provider ownership is intentionally
+moved into the host by a future contract change.
+
 The NestJS `GET /api/v1/public/auth-config` response is the single source of
 truth for enabled login methods and public provider configuration. `mfe-wallets`
 loads that configuration, owns browser provider lifecycle, registers normalized
