@@ -13,6 +13,10 @@ import {
   WalletsMfeModule,
   WalletsMfeMountApi,
 } from '@mfe-contracts/wallet-mfe.types';
+import {
+  WALLET_REMOTE_EXPOSED_MODULES,
+  WALLET_REMOTE_NAME,
+} from '@mfe-contracts/wallet-remote-entrypoints';
 import { WalletAccountChangedPayload } from '@mfe-contracts/payloads';
 import { AppLoggerService } from '@core/logging/app-logger.service';
 import { AuthSessionService } from '@core/auth/auth-session.service';
@@ -31,7 +35,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   private unmountMfe: (() => void) | undefined;
   private unsubscribeEvents: (() => void) | undefined;
   private isDestroyed = false;
-  private readonly remoteName = 'mfe-wallets';
+  private readonly remoteName = WALLET_REMOTE_NAME;
 
   constructor(
     private walletsService: WalletsService,
@@ -60,7 +64,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       const mfeModule = (await loadRemoteModule({
         type: 'manifest',
         remoteName: this.remoteName,
-        exposedModule: './mount',
+        exposedModule: WALLET_REMOTE_EXPOSED_MODULES.mount,
       })) as WalletsMfeModule;
       this.logger.log('info', 'Wallets MFE: remote module loaded', {
         component: 'WalletsComponent',
