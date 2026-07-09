@@ -25,7 +25,7 @@ export class RegisterComponent {
   public info = '';
 
   constructor(
-    private readonly authSession: AuthSessionService,
+    public readonly authSession: AuthSessionService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly walletsService: WalletsService,
@@ -66,7 +66,7 @@ export class RegisterComponent {
     this.loading = true;
     try {
       const session = await this.authSession.login(method as LoginMethod);
-      if (session.wallets.length > 0) {
+      if (await this.hasLinkedWallets(session.wallets.length)) {
         await this.navigateToReturnUrl();
         return;
       }
@@ -136,6 +136,15 @@ export class RegisterComponent {
 
   private isEmail(value: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  }
+
+  private async hasLinkedWallets(initialCount: number): Promise<boolean> {
+    if (initialCount > 0) {
+      return true;
+    }
+
+    const wallets = await this.authSession.reloadWallets();
+    return wallets.length > 0;
   }
 
   private navigateToReturnUrl(): Promise<boolean> {

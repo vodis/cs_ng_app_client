@@ -45,9 +45,12 @@ describe('AuthGuard', () => {
       wallets: [],
     });
 
-    const activation = guard.canActivate({} as never, {
-      url: '/profile',
-    } as never);
+    const activation = guard.canActivate(
+      {} as never,
+      {
+        url: '/profile',
+      } as never
+    );
     expect(authSession.refresh).not.toHaveBeenCalled();
     settleProvider?.('ready');
 

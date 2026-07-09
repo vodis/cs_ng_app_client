@@ -4,6 +4,8 @@ import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AuthProviderService } from './auth-provider.service';
+import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import {
   AuthSession,
   BackendBalance,
@@ -43,7 +45,9 @@ export class AuthSessionService {
   constructor(
     private readonly httpClient: HttpClient,
     private readonly router: Router,
-    private readonly authProvider: AuthProviderService
+    private readonly authProvider: AuthProviderService,
+    private readonly walletGatewayBridge: WalletGatewayBridgeService,
+    private readonly walletsService: WalletsService
   ) {}
 
   get session(): AuthSession | null {
@@ -97,6 +101,19 @@ export class AuthSessionService {
       this.accessToken = token;
       this.sessionSubject.next(session);
       return session;
+    } finally {
+      this.loadingSubject.next(false);
+    }
+  }
+
+  async logout(): Promise<void> {
+    this.loadingSubject.next(true);
+    try {
+      await this.authProvider.logout().catch(() => undefined);
+      this.walletGatewayBridge.disconnectWallet();
+      this.walletsService.setAccount(undefined);
+      this.clear();
+      await this.router.navigateByUrl('/register');
     } finally {
       this.loadingSubject.next(false);
     }

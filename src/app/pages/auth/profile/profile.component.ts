@@ -141,6 +141,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
   }
 
+  public async logout(): Promise<void> {
+    this.error = '';
+    this.walletMessage = '';
+    this.balanceMessage = '';
+    this.deletionMessage = '';
+    try {
+      await this.authSession.logout();
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Logout failed';
+    }
+  }
+
   private rawToDecimal(rawBalance: string, decimals: number): string {
     if (!/^\d+$/.test(rawBalance) || decimals <= 0) {
       return rawBalance;

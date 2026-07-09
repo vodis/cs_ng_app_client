@@ -68,6 +68,10 @@ export class AuthProviderService implements OnDestroy {
     return this.requireReadyProvider().login(method);
   }
 
+  logout(): Promise<void> {
+    return this.mountApi?.logout() ?? Promise.resolve();
+  }
+
   getAccessToken(): Promise<string | null> {
     return this.mountApi?.getAccessToken() ?? Promise.resolve(null);
   }
@@ -213,6 +217,8 @@ export class AuthProviderService implements OnDestroy {
       typeof value.getSnapshot === 'function' &&
       'login' in value &&
       typeof value.login === 'function' &&
+      'logout' in value &&
+      typeof value.logout === 'function' &&
       'getAccessToken' in value &&
       typeof value.getAccessToken === 'function'
     );

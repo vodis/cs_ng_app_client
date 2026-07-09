@@ -18,7 +18,7 @@ describe('AuthSessionService', () => {
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
     authProvider = jasmine.createSpyObj<AuthProviderService>(
       'AuthProviderService',
-      ['login', 'getAccessToken'],
+      ['login', 'logout', 'getAccessToken'],
       {
         snapshot: {
           status: 'ready',
@@ -38,12 +38,23 @@ describe('AuthSessionService', () => {
       wallets: [],
     });
     authProvider.getAccessToken.and.resolveTo('provider-token');
+    authProvider.logout.and.resolveTo();
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
         { provide: Router, useValue: router },
         { provide: AuthProviderService, useValue: authProvider },
+        {
+          provide: WalletGatewayBridgeService,
+          useValue: jasmine.createSpyObj('WalletGatewayBridgeService', [
+            'disconnectWallet',
+          ]),
+        },
+        {
+          provide: WalletsService,
+          useValue: jasmine.createSpyObj('WalletsService', ['setAccount']),
+        },
       ],
     });
 

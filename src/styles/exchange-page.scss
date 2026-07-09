@@ -514,67 +514,6 @@
     box-sizing: border-box;
     flex-direction: column;
     padding: 24px 28px;
-
-    &--advanced {
-      .marketAdvanced {
-        display: flex;
-        min-height: 0;
-        flex: 1 1 auto;
-        flex-direction: column;
-        justify-content: flex-start;
-        margin-top: 0;
-
-        app-live-chart {
-          display: flex;
-          overflow: hidden;
-          min-height: 0;
-          flex: 0 0 auto;
-          flex-direction: column;
-          height: calc(486px - 48px - 44px);
-        }
-      }
-
-      .marketFooter--advanced {
-        flex-shrink: 0;
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 10px;
-        gap: 16px;
-
-        .note {
-          min-width: 0;
-          flex: 1 1 auto;
-          text-align: left;
-          white-space: nowrap;
-        }
-
-        .advanced {
-          flex-shrink: 0;
-        }
-      }
-
-      ::ng-deep .live-chart {
-        height: 100%;
-        min-height: 0;
-        padding-top: 0;
-      }
-
-      ::ng-deep .live-chart__header {
-        margin-bottom: 0.5rem;
-      }
-
-      ::ng-deep .live-chart__panel {
-        min-height: 0;
-        flex: 1 1 0;
-      }
-
-      ::ng-deep .live-chart__canvas {
-        min-height: 0;
-        flex: 1 1 0;
-        height: 100%;
-      }
-    }
   }
 
   .marketHead {
@@ -644,10 +583,6 @@
     grid-template-rows: minmax(0, 1fr) auto;
   }
 
-  .marketPanel > .marketAdvanced:first-child {
-    margin-top: 0;
-  }
-
   .marketAdvanced {
     overflow: hidden;
     min-height: 0;
@@ -677,69 +612,10 @@
     }
 
     ::ng-deep .live-chart__canvas {
+      height: 100%;
       min-height: 0;
       flex: 1 1 0;
-      height: 100%;
       aspect-ratio: auto;
-    }
-  }
-
-  .marketSummary {
-    min-width: 0;
-    flex: 0 1 auto;
-
-    .market-skeleton {
-      margin-top: 8px;
-    }
-  }
-
-  .marketBelow {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto auto auto;
-    align-items: center;
-    column-gap: 24px;
-    row-gap: 0;
-    grid-row: 2;
-
-    .marketSummary,
-    .marketFooter {
-      display: contents;
-    }
-
-    .pair {
-      grid-column: 1;
-      grid-row: 1;
-      align-self: center;
-    }
-
-    .note {
-      grid-column: 2;
-      grid-row: 1;
-      align-self: start;
-      white-space: nowrap;
-    }
-
-    .price {
-      grid-column: 1;
-      grid-row: 2;
-    }
-
-    .marketSummary .market-skeleton {
-      grid-column: 1;
-      grid-row: 2;
-    }
-
-    .change {
-      grid-column: 1;
-      grid-row: 3;
-    }
-
-    .advanced {
-      grid-column: 2;
-      grid-row: 2;
-      align-self: center;
-      justify-self: end;
     }
   }
 
@@ -789,11 +665,11 @@
   }
 
   .price {
+    overflow: hidden;
+    max-width: 100%;
     margin-top: 10px;
     font-size: 26px;
     line-height: 1.1;
-    overflow: hidden;
-    max-width: 100%;
     text-overflow: ellipsis;
     white-space: nowrap;
 
@@ -847,6 +723,15 @@
         height: 100%;
         min-height: 0;
       }
+    }
+  }
+
+  .marketSummary {
+    min-width: 0;
+    flex: 0 1 auto;
+
+    .market-skeleton {
+      margin-top: 8px;
     }
   }
 
@@ -910,6 +795,119 @@
     line-height: 1.2;
     text-transform: uppercase;
     white-space: nowrap;
+  }
+
+  .marketBelow {
+    display: grid;
+    align-items: center;
+    gap: 0 24px;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
+
+    .marketSummary,
+    .marketFooter {
+      display: contents;
+    }
+
+    .pair {
+      align-self: center;
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .note {
+      align-self: start;
+      grid-column: 2;
+      grid-row: 1;
+      white-space: nowrap;
+    }
+
+    .price {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .marketSummary .market-skeleton {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .change {
+      grid-column: 1;
+      grid-row: 3;
+    }
+
+    .advanced {
+      grid-column: 2;
+      grid-row: 2;
+      place-self: center end;
+    }
+  }
+
+  .marketPanel--advanced {
+    .marketAdvanced {
+      display: flex;
+      min-height: 0;
+      flex: 1 1 auto;
+      flex-direction: column;
+      justify-content: flex-start;
+      margin-top: 0;
+
+      app-live-chart {
+        display: flex;
+        overflow: hidden;
+        height: calc(486px - 48px - 44px);
+        min-height: 0;
+        flex: 0 0 auto;
+        flex-direction: column;
+      }
+    }
+
+    .marketFooter--advanced {
+      flex-direction: row;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      gap: 16px;
+
+      .note {
+        min-width: 0;
+        flex: 1 1 auto;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .advanced {
+        flex-shrink: 0;
+      }
+    }
+
+    ::ng-deep .live-chart {
+      height: 100%;
+      min-height: 0;
+      padding-top: 0;
+    }
+
+    ::ng-deep .live-chart__header {
+      margin-bottom: 0.5rem;
+    }
+
+    ::ng-deep .live-chart__panel {
+      min-height: 0;
+      flex: 1 1 0;
+    }
+
+    ::ng-deep .live-chart__canvas {
+      height: 100%;
+      min-height: 0;
+      flex: 1 1 0;
+    }
+  }
+
+  .marketPanel > .marketAdvanced:first-child {
+    margin-top: 0;
   }
 
   .activity {
@@ -1108,21 +1106,6 @@
       padding: 20px 16px;
     }
 
-    .marketPanel--advanced {
-      .marketAdvanced app-live-chart {
-        height: 22rem;
-      }
-
-      .marketFooter--advanced {
-        flex-direction: column;
-        align-items: flex-start;
-
-        .note {
-          white-space: normal;
-        }
-      }
-    }
-
     .marketBody {
       margin-top: 16px;
       gap: 12px;
@@ -1147,6 +1130,15 @@
       padding: 20px 16px;
     }
 
+    .marketFooter {
+      flex: 0 0 auto;
+      align-items: flex-start;
+    }
+
+    .note {
+      text-align: left;
+    }
+
     .marketBelow {
       display: flex;
       flex-direction: column;
@@ -1167,8 +1159,7 @@
       .marketSummary .market-skeleton {
         grid-column: auto;
         grid-row: auto;
-        align-self: auto;
-        justify-self: auto;
+        place-self: auto auto;
       }
 
       .note {
@@ -1176,13 +1167,19 @@
       }
     }
 
-    .marketFooter {
-      flex: 0 0 auto;
-      align-items: flex-start;
-    }
+    .marketPanel--advanced {
+      .marketAdvanced app-live-chart {
+        height: 22rem;
+      }
 
-    .note {
-      text-align: left;
+      .marketFooter--advanced {
+        flex-direction: column;
+        align-items: flex-start;
+
+        .note {
+          white-space: normal;
+        }
+      }
     }
   }
 }

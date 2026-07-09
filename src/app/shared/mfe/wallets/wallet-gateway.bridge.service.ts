@@ -21,6 +21,18 @@ import { AppLoggerService } from '@core/logging/app-logger.service';
 
 const SIGNATURE_WAIT_MS = 120_000;
 
+const WALLET_SESSION_STORAGE_KEY = 'mfe-wallets.session.v1';
+
+const DISCONNECTED_SNAPSHOT: WalletConnectionSnapshot = {
+  status: 'disconnected',
+  account: null,
+  chainId: null,
+  isVerified: false,
+  safetyStatus: null,
+  isBypassed: false,
+  executionState: 'operating.idle',
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -154,6 +166,17 @@ export class WalletGatewayBridgeService {
       message: 'Swap signing aborted',
       retryable: true,
     });
+  }
+
+  disconnectWallet(): void {
+    const disconnect = this.mountApi?.disconnectWallet;
+    if (disconnect) {
+      disconnect();
+    } else {
+      window.localStorage.removeItem(WALLET_SESSION_STORAGE_KEY);
+    }
+
+    this.snapshotSubject.next(DISCONNECTED_SNAPSHOT);
   }
 
   async createEmbeddedWallet(): Promise<WalletOnboardingResult> {

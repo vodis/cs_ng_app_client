@@ -34,6 +34,7 @@ function mountApi(
       wallets: [],
     }),
     getAccessToken: async () => 'provider-token',
+    logout: async () => undefined,
   };
 }
 
