@@ -7,6 +7,8 @@ import { Router } from '@angular/router';
 import { AuthSessionService } from './auth-session.service';
 import { environment } from '../../../environments/environment';
 import { AuthProviderService } from './auth-provider.service';
+import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 
 describe('AuthSessionService', () => {
   let service: AuthSessionService;
