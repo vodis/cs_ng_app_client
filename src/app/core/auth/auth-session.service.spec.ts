@@ -7,18 +7,22 @@ import { Router } from '@angular/router';
 import { AuthSessionService } from './auth-session.service';
 import { environment } from '../../../environments/environment';
 import { AuthProviderService } from './auth-provider.service';
+import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 
 describe('AuthSessionService', () => {
   let service: AuthSessionService;
   let httpMock: HttpTestingController;
   let router: { navigateByUrl: jasmine.Spy };
   let authProvider: jasmine.SpyObj<AuthProviderService>;
+  let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
+  let walletsService: jasmine.SpyObj<WalletsService>;
 
   beforeEach(() => {
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
     authProvider = jasmine.createSpyObj<AuthProviderService>(
       'AuthProviderService',
-      ['login', 'getAccessToken'],
+      ['login', 'logout', 'getAccessToken'],
       {
         snapshot: {
           status: 'ready',
@@ -38,12 +42,22 @@ describe('AuthSessionService', () => {
       wallets: [],
     });
     authProvider.getAccessToken.and.resolveTo('provider-token');
+    authProvider.logout.and.resolveTo();
+    walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
+      'WalletGatewayBridgeService',
+      ['disconnectWallet']
+    );
+    walletsService = jasmine.createSpyObj<WalletsService>('WalletsService', [
+      'setAccount',
+    ]);
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
         { provide: Router, useValue: router },
         { provide: AuthProviderService, useValue: authProvider },
+        { provide: WalletGatewayBridgeService, useValue: walletGatewayBridge },
+        { provide: WalletsService, useValue: walletsService },
       ],
     });
 
@@ -77,6 +91,21 @@ describe('AuthSessionService', () => {
       wallets: [],
     });
     expect(service.session?.user.id).toBe('account-1');
+  }));
+
+  it('logs out through the provider and clears host wallet state', fakeAsync(() => {
+    service.login('email');
+    flushMicrotasks();
+    expect(service.session?.user.id).toBe('account-1');
+
+    service.logout();
+    flushMicrotasks();
+
+    expect(authProvider.logout).toHaveBeenCalledTimes(1);
+    expect(walletGatewayBridge.disconnectWallet).toHaveBeenCalledTimes(1);
+    expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
+    expect(service.session).toBeNull();
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/register');
   }));
 
   it('refreshes session and wallets using the provider access token', fakeAsync(() => {

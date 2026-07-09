@@ -54,6 +54,7 @@ export type AuthProviderMountApi = {
   subscribe: (listener: AuthProviderListener) => () => void;
   getSnapshot: () => AuthProviderSnapshot;
   login: (method: AuthProviderLoginMethod) => Promise<AuthProviderSession>;
+  logout: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
 };
 

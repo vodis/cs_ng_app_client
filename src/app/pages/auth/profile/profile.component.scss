@@ -16,12 +16,19 @@
     gap: 1rem;
 
     h1 {
-      overflow-wrap: anywhere;
       margin: 0.25rem 0 0;
       font-size: 1.35rem;
       font-weight: 600;
       line-height: 1.25;
+      overflow-wrap: anywhere;
     }
+  }
+
+  &__header-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   &__eyebrow {
@@ -32,8 +39,8 @@
 
   &__grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   &__panel {
@@ -85,19 +92,19 @@
   }
 
   dd {
-    overflow-wrap: anywhere;
     margin: 0;
     color: var(--gray-30);
     font-size: 0.92rem;
     line-height: 1.3;
+    overflow-wrap: anywhere;
   }
 
   &__wallets {
     display: grid;
-    margin: 0;
     padding: 0;
-    list-style: none;
+    margin: 0;
     gap: 0.65rem;
+    list-style: none;
 
     li {
       display: flex;
@@ -124,19 +131,19 @@
 
   &__balances {
     display: grid;
-    margin: 0;
     padding: 0;
-    list-style: none;
+    margin: 0;
     gap: 0.65rem;
+    list-style: none;
 
     li {
       display: grid;
       min-width: 0;
       align-items: center;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-      gap: 1rem;
       padding: 0.7rem 0;
       border-top: 1px solid rgb(255 255 255 / 10%);
+      gap: 1rem;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
 
       &:first-child {
         border-top: 0;
@@ -188,8 +195,8 @@
 @media (width <= 720px) {
   .profile-shell {
     &__header {
-      align-items: stretch;
       flex-direction: column;
+      align-items: stretch;
     }
 
     &__grid {
@@ -197,8 +204,8 @@
     }
 
     &__wallets li {
-      align-items: flex-start;
       flex-direction: column;
+      align-items: flex-start;
       gap: 0.15rem;
     }
 
@@ -207,8 +214,8 @@
     }
 
     &__balances li {
-      grid-template-columns: 1fr;
       gap: 0.35rem;
+      grid-template-columns: 1fr;
     }
 
     &__balance-value {

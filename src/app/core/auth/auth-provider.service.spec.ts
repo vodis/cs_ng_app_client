@@ -11,6 +11,9 @@ import {
   AuthProviderService,
 } from './auth-provider.service';
 import { AppLoggerService } from '@core/logging/app-logger.service';
+import {
+  WALLET_REMOTE_EXPOSED_MODULES,
+} from '@mfe-contracts/wallet-remote-entrypoints';
 
 function mountApi(
   initialSnapshot: AuthProviderSnapshot,
@@ -34,6 +37,7 @@ function mountApi(
       wallets: [],
     }),
     getAccessToken: async () => 'provider-token',
+    logout: async () => undefined,
   };
 }
 
@@ -75,6 +79,13 @@ describe('AuthProviderService', () => {
     expect(mountAuthProvider).toHaveBeenCalledWith(jasmine.any(HTMLElement), {
       apiBaseUrl: environment.apiUrl,
     });
+  });
+
+  it('keeps the host on the thin auth-provider atom', () => {
+    expect(WALLET_REMOTE_EXPOSED_MODULES.authProvider).toBe('./auth-provider');
+    expect(WALLET_REMOTE_EXPOSED_MODULES.privyProvider).toBe(
+      './providers/privy'
+    );
   });
 
   it('keeps late provider readiness observable', async () => {
