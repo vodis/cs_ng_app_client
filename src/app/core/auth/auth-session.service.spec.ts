@@ -15,6 +15,8 @@ describe('AuthSessionService', () => {
   let httpMock: HttpTestingController;
   let router: { navigateByUrl: jasmine.Spy };
   let authProvider: jasmine.SpyObj<AuthProviderService>;
+  let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
+  let walletsService: jasmine.SpyObj<WalletsService>;
 
   beforeEach(() => {
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
@@ -41,22 +43,21 @@ describe('AuthSessionService', () => {
     });
     authProvider.getAccessToken.and.resolveTo('provider-token');
     authProvider.logout.and.resolveTo();
+    walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
+      'WalletGatewayBridgeService',
+      ['disconnectWallet']
+    );
+    walletsService = jasmine.createSpyObj<WalletsService>('WalletsService', [
+      'setAccount',
+    ]);
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
         { provide: Router, useValue: router },
         { provide: AuthProviderService, useValue: authProvider },
-        {
-          provide: WalletGatewayBridgeService,
-          useValue: jasmine.createSpyObj('WalletGatewayBridgeService', [
-            'disconnectWallet',
-          ]),
-        },
-        {
-          provide: WalletsService,
-          useValue: jasmine.createSpyObj('WalletsService', ['setAccount']),
-        },
+        { provide: WalletGatewayBridgeService, useValue: walletGatewayBridge },
+        { provide: WalletsService, useValue: walletsService },
       ],
     });
 
@@ -90,6 +91,21 @@ describe('AuthSessionService', () => {
       wallets: [],
     });
     expect(service.session?.user.id).toBe('account-1');
+  }));
+
+  it('logs out through the provider and clears host wallet state', fakeAsync(() => {
+    service.login('email');
+    flushMicrotasks();
+    expect(service.session?.user.id).toBe('account-1');
+
+    service.logout();
+    flushMicrotasks();
+
+    expect(authProvider.logout).toHaveBeenCalledTimes(1);
+    expect(walletGatewayBridge.disconnectWallet).toHaveBeenCalledTimes(1);
+    expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
+    expect(service.session).toBeNull();
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/register');
   }));
 
   it('refreshes session and wallets using the provider access token', fakeAsync(() => {
