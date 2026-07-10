@@ -122,6 +122,63 @@
     }
   }
 
+  &__code-form {
+    display: grid;
+    min-height: 100%;
+    align-content: start;
+    padding: clamp(1.25rem, 4vw, 2rem);
+    gap: 0.9rem;
+
+    h3 {
+      margin: 0;
+      color: var(--main-text-color);
+      font-size: 1.45rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    p {
+      margin: 0;
+      color: rgb(255 255 255 / 68%);
+      font-size: 0.95rem;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
+    label {
+      color: rgb(255 255 255 / 84%);
+      font-size: 0.95rem;
+    }
+
+    input {
+      width: 100%;
+      height: 3.2rem;
+      padding: 0 1rem;
+      border: 1px solid rgb(212 212 211 / 20%);
+      border-radius: 0.5rem;
+      background: rgb(23 29 33 / 90%);
+      color: var(--main-text-color);
+      font-size: 1.05rem;
+    }
+
+    button {
+      min-height: 3.2rem;
+      border: 0;
+      border-radius: 0.5rem;
+      background: var(--primary-text-color);
+      color: var(--main-text-color);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+  }
+
+  &__code-link {
+    min-height: auto !important;
+    background: transparent !important;
+    color: var(--primary-text-color) !important;
+    font-size: 0.95rem !important;
+  }
+
   &__form {
     display: grid;
     gap: 1rem;
@@ -352,6 +409,7 @@
     color: #9ad1ff;
     font-size: 0.85rem;
   }
+
 }
 
 @media (width <= 960px) {

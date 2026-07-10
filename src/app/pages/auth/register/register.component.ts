@@ -22,6 +22,9 @@ export class RegisterComponent {
   public loading = false;
   public walletLoading = false;
   public isOpenWalletConnectMenu = false;
+  public isOpenEmailCodeModal = false;
+  public emailCode = '';
+  public codeEmail = '';
   public step: RegisterStep = 'account';
   public error = '';
   public info = '';
@@ -53,7 +56,71 @@ export class RegisterComponent {
       return;
     }
 
-    await this.continueWith('email');
+    this.loading = true;
+    try {
+      this.codeEmail = this.email.trim();
+      await this.authSession.sendEmailCode(this.codeEmail);
+      this.emailCode = '';
+      this.isOpenEmailCodeModal = true;
+      this.info = `Enter the verification code sent to ${this.codeEmail}.`;
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Verification code failed';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  public async verifyEmailCode(): Promise<void> {
+    this.error = '';
+    this.info = '';
+
+    if (!this.emailCode.trim()) {
+      this.error = 'Verification code is required.';
+      return;
+    }
+
+    this.loading = true;
+    try {
+      const session = await this.authSession.verifyEmailCode(
+        this.codeEmail,
+        this.emailCode.trim()
+      );
+      this.isOpenEmailCodeModal = false;
+      this.emailCode = '';
+      if (await this.hasLinkedWallets(session.wallets.length)) {
+        await this.navigateToReturnUrl();
+        return;
+      }
+
+      this.step = 'wallet';
+      this.info = 'Choose how you want to secure your wallet access.';
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Verification failed';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  public async resendEmailCode(): Promise<void> {
+    this.error = '';
+    this.info = '';
+    this.loading = true;
+    try {
+      await this.authSession.sendEmailCode(this.codeEmail);
+      this.info = `We sent a new code to ${this.codeEmail}.`;
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Verification code failed';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  public closeEmailCodeModal(): void {
+    this.isOpenEmailCodeModal = false;
+    this.emailCode = '';
   }
 
   public async continueWithSocial(method: AuthSocialMethod): Promise<void> {

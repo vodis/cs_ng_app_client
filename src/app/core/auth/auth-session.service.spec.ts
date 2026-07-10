@@ -22,7 +22,13 @@ describe('AuthSessionService', () => {
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
     authProvider = jasmine.createSpyObj<AuthProviderService>(
       'AuthProviderService',
-      ['login', 'logout', 'getAccessToken'],
+      [
+        'login',
+        'sendEmailCode',
+        'verifyEmailCode',
+        'logout',
+        'getAccessToken',
+      ],
       {
         snapshot: {
           status: 'ready',
@@ -42,6 +48,17 @@ describe('AuthSessionService', () => {
       wallets: [],
     });
     authProvider.getAccessToken.and.resolveTo('provider-token');
+    authProvider.sendEmailCode.and.resolveTo();
+    authProvider.verifyEmailCode.and.resolveTo({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        email: 'user@example.com',
+        authMethod: 'email',
+      },
+      wallets: [],
+    });
     authProvider.logout.and.resolveTo();
     walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
       'WalletGatewayBridgeService',
@@ -91,6 +108,35 @@ describe('AuthSessionService', () => {
       wallets: [],
     });
     expect(service.session?.user.id).toBe('account-1');
+  }));
+
+  it('sends and verifies an email code through the account provider', fakeAsync(() => {
+    let resolvedSession: unknown;
+
+    service.sendEmailCode('user@example.com');
+    service.verifyEmailCode('user@example.com', '123456').then(session => {
+      resolvedSession = session;
+    });
+    flushMicrotasks();
+
+    expect(authProvider.sendEmailCode).toHaveBeenCalledOnceWith(
+      'user@example.com'
+    );
+    expect(authProvider.verifyEmailCode).toHaveBeenCalledOnceWith({
+      email: 'user@example.com',
+      code: '123456',
+    });
+    expect(resolvedSession).toEqual({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        email: 'user@example.com',
+        authMethod: 'email',
+      },
+      wallets: [],
+    });
+    expect(service.session?.user.authMethod).toBe('email');
   }));
 
   it('logs out through the provider and clears host wallet state', fakeAsync(() => {

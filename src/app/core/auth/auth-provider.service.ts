@@ -71,6 +71,17 @@ export class AuthProviderService implements OnDestroy {
     return this.requireReadyProvider().login(method);
   }
 
+  sendEmailCode(email: string): Promise<void> {
+    return this.requireReadyProvider().sendEmailCode(email);
+  }
+
+  verifyEmailCode(input: {
+    email: string;
+    code: string;
+  }): Promise<AuthProviderSession> {
+    return this.requireReadyProvider().verifyEmailCode(input);
+  }
+
   logout(): Promise<void> {
     return this.mountApi?.logout() ?? Promise.resolve();
   }
@@ -220,6 +231,10 @@ export class AuthProviderService implements OnDestroy {
       typeof value.getSnapshot === 'function' &&
       'login' in value &&
       typeof value.login === 'function' &&
+      'sendEmailCode' in value &&
+      typeof value.sendEmailCode === 'function' &&
+      'verifyEmailCode' in value &&
+      typeof value.verifyEmailCode === 'function' &&
       'logout' in value &&
       typeof value.logout === 'function' &&
       'getAccessToken' in value &&
