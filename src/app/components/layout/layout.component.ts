@@ -102,6 +102,6 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private updateShellVisibility(url: string): void {
-    this.hideShell = url.startsWith('/register');
+    this.hideShell = url.startsWith('/register') || url.startsWith('/login');
   }
 }

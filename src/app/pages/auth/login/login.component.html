@@ -1,34 +1,65 @@
-<section class="login-shell">
-  <div class="login-shell__panel">
-    <div class="login-shell__heading">
-      <p class="login-shell__eyebrow">CraftScript Account</p>
-      <h1>Sign in</h1>
-    </div>
-
-    <ng-container *ngIf="authSession.providerSnapshot$ | async as provider">
-      <div class="login-shell__status" *ngIf="provider.status === 'disabled'">
-        Account login is not enabled for this environment.
-      </div>
-      <div class="login-shell__status" *ngIf="provider.status === 'loading'">
-        Account provider is still starting.
+<section class="register-shell register-shell--centered">
+  <div class="register-shell__content">
+    <section class="register-shell__panel">
+      <div class="register-shell__brand">
+        <img
+          src="../../../assets/img/logo/logo.svg"
+          alt="CraftScript"
+          width="40"
+          height="40" />
+        <span>CraftScript</span>
       </div>
 
-      <div class="login-shell__status" *ngIf="provider.status === 'failed'">
-        Account login is temporarily unavailable.
-      </div>
+      <h2>Log in</h2>
 
-      <div class="login-shell__actions" *ngIf="provider.status === 'ready'">
-        <button
-          *ngFor="let method of loginMethods"
-          type="button"
-          mat-stroked-button
-          [disabled]="authSession.loading$ | async"
-          (click)="login(method)">
-          {{ labelFor(method) }}
-        </button>
-      </div>
-    </ng-container>
+      <ng-container *ngIf="authSession.providerSnapshot$ | async as provider">
+        <p class="register-shell__status" *ngIf="provider.status === 'loading'">
+          Account provider is still starting.
+        </p>
+        <p
+          class="register-shell__status"
+          *ngIf="provider.status === 'disabled'">
+          Account login is not enabled for this environment.
+        </p>
+        <p class="register-shell__status" *ngIf="provider.status === 'failed'">
+          {{ provider.error || 'Account login is temporarily unavailable.' }}
+        </p>
 
-    <p class="login-shell__error" *ngIf="error">{{ error }}</p>
+        <ng-container *ngIf="provider.status === 'ready'">
+          <form
+            class="register-shell__form"
+            (ngSubmit)="loginWithEmail()"
+            novalidate>
+            <label for="login-email">Email</label>
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              placeholder="name@example.com"
+              [(ngModel)]="email" />
+
+            <button type="submit" [disabled]="loading">Log in</button>
+          </form>
+
+          <div class="register-shell__divider">
+            <span>or</span>
+          </div>
+
+          <app-auth-social-buttons
+            [disabled]="loading"
+            [methods]="socialMethods"
+            (methodSelected)="
+              continueWithSocial($event)
+            "></app-auth-social-buttons>
+        </ng-container>
+      </ng-container>
+
+      <p class="register-shell__error" *ngIf="error">{{ error }}</p>
+      <p class="register-shell__info-note" *ngIf="info">{{ info }}</p>
+
+      <p class="register-shell__login-link">
+        Don't have an account? <a routerLink="/register">Register</a>
+      </p>
+    </section>
   </div>
 </section>
