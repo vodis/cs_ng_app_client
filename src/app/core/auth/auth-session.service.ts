@@ -106,6 +106,31 @@ export class AuthSessionService {
     }
   }
 
+  async sendEmailCode(email: string): Promise<void> {
+    this.loadingSubject.next(true);
+    try {
+      await this.authProvider.sendEmailCode(email);
+    } finally {
+      this.loadingSubject.next(false);
+    }
+  }
+
+  async verifyEmailCode(email: string, code: string): Promise<AuthSession> {
+    this.loadingSubject.next(true);
+    try {
+      const session = await this.authProvider.verifyEmailCode({ email, code });
+      const token = await this.authProvider.getAccessToken();
+      if (!token) {
+        throw new Error('Account provider access token is unavailable');
+      }
+      this.accessToken = token;
+      this.sessionSubject.next(session);
+      return session;
+    } finally {
+      this.loadingSubject.next(false);
+    }
+  }
+
   async logout(): Promise<void> {
     this.loadingSubject.next(true);
     try {

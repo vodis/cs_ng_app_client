@@ -2,12 +2,22 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export const SHELL_HEADER_HEIGHT_PX = 64;
 export const DESKTOP_GRID_COLUMNS = 7;
+const SHELL_READY_TIMEOUT_MS = 30_000;
+
+export function exchangeIntroHeading(page: Page): Locator {
+  return page.getByRole('heading', { name: 'Token Exchange' });
+}
 
 export async function gotoExchangePage(page: Page): Promise<void> {
   await page.goto('/');
-  await expect(page.locator('.exchange-page .intro h1')).toHaveText(
-    'Token Exchange'
-  );
+
+  // Shell renders on bootstrap; home route is lazy-loaded in CI production builds.
+  await expect(page.locator('app-header')).toBeVisible({
+    timeout: SHELL_READY_TIMEOUT_MS,
+  });
+  await expect(exchangeIntroHeading(page)).toBeVisible({
+    timeout: SHELL_READY_TIMEOUT_MS,
+  });
 }
 
 export async function waitForStaticVerticalDivider(
