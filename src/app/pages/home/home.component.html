@@ -33,9 +33,9 @@
                     } @else {
                       <span
                         class="coin"
-                        [style.backgroundColor]="fromToken.color">{{
-                        tokenDisplay(tokenSymbolLabel(fromToken))
-                      }}</span>
+                        [style.backgroundColor]="fromToken.color"
+                        >{{ tokenDisplay(tokenSymbolLabel(fromToken)) }}</span
+                      >
                     }
                     <span class="select__symbol">{{
                       tokenSymbolLabel(fromToken)
@@ -109,9 +109,9 @@
                     } @else {
                       <span
                         class="coin"
-                        [style.backgroundColor]="toToken.color">{{
-                        tokenDisplay(tokenSymbolLabel(toToken))
-                      }}</span>
+                        [style.backgroundColor]="toToken.color"
+                        >{{ tokenDisplay(tokenSymbolLabel(toToken)) }}</span
+                      >
                     }
                     <span class="select__symbol">{{
                       tokenSymbolLabel(toToken)

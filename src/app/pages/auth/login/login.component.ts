@@ -21,7 +21,10 @@ const LOGIN_SOCIAL_METHODS: AuthSocialMethod[] = [
 })
 export class LoginComponent {
   public email = '';
+  public emailCode = '';
+  public codeEmail = '';
   public loading = false;
+  public isOpenEmailCodeModal = false;
   public error = '';
   public info = '';
 
@@ -35,6 +38,7 @@ export class LoginComponent {
 
   public async loginWithEmail(): Promise<void> {
     this.error = '';
+    this.info = '';
 
     if (!this.email.trim()) {
       this.error = 'Email is required.';
@@ -46,7 +50,19 @@ export class LoginComponent {
       return;
     }
 
-    await this.continueWith('email');
+    this.loading = true;
+    try {
+      this.codeEmail = this.email.trim();
+      await this.authSession.sendEmailCode(this.codeEmail);
+      this.emailCode = '';
+      this.isOpenEmailCodeModal = true;
+      this.info = `Enter the verification code sent to ${this.codeEmail}.`;
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Verification code failed';
+    } finally {
+      this.loading = false;
+    }
   }
 
   public async continueWithSocial(method: AuthSocialMethod): Promise<void> {
@@ -74,6 +90,52 @@ export class LoginComponent {
     } finally {
       this.loading = false;
     }
+  }
+
+  public async verifyEmailCode(): Promise<void> {
+    this.error = '';
+    this.info = '';
+
+    if (!this.emailCode.trim()) {
+      this.error = 'Verification code is required.';
+      return;
+    }
+
+    this.loading = true;
+    try {
+      await this.authSession.verifyEmailCode(
+        this.codeEmail,
+        this.emailCode.trim()
+      );
+      this.isOpenEmailCodeModal = false;
+      this.emailCode = '';
+      await this.router.navigateByUrl(this.returnUrl());
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Verification failed';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  public async resendEmailCode(): Promise<void> {
+    this.error = '';
+    this.info = '';
+    this.loading = true;
+    try {
+      await this.authSession.sendEmailCode(this.codeEmail);
+      this.info = `We sent a new code to ${this.codeEmail}.`;
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Verification code failed';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  public closeEmailCodeModal(): void {
+    this.isOpenEmailCodeModal = false;
+    this.emailCode = '';
   }
 
   private isEmail(value: string): boolean {

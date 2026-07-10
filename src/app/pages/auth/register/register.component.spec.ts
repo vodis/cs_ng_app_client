@@ -16,7 +16,7 @@ describe('RegisterComponent', () => {
   beforeEach(() => {
     authSession = jasmine.createSpyObj<AuthSessionService>(
       'AuthSessionService',
-      ['login', 'reloadWallets'],
+      ['login', 'sendEmailCode', 'verifyEmailCode', 'reloadWallets'],
       {
         providerSnapshot$: of({
           status: 'ready' as const,
@@ -25,6 +25,17 @@ describe('RegisterComponent', () => {
         }),
       }
     );
+    authSession.sendEmailCode.and.resolveTo();
+    authSession.verifyEmailCode.and.resolveTo({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        email: 'user@example.com',
+        authMethod: 'email',
+      },
+      wallets: [],
+    });
     router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
     walletsService = jasmine.createSpyObj<WalletsService>('WalletsService', [
       'requestOpen',
@@ -49,19 +60,47 @@ describe('RegisterComponent', () => {
     await component.registerWithEmail();
 
     expect(component.error).toBe('Email is required.');
-    expect(authSession.login).not.toHaveBeenCalled();
+    expect(authSession.sendEmailCode).not.toHaveBeenCalled();
 
     component.email = 'not-an-email';
     await component.registerWithEmail();
 
     expect(component.error).toBe('Enter a valid email address.');
-    expect(authSession.login).not.toHaveBeenCalled();
+    expect(authSession.sendEmailCode).not.toHaveBeenCalled();
 
     component.email = 'user@example.com';
     await component.registerWithEmail();
 
     expect(component.error).toBe('Please accept the policy to continue.');
-    expect(authSession.login).not.toHaveBeenCalled();
+    expect(authSession.sendEmailCode).not.toHaveBeenCalled();
+  });
+
+  it('sends an email code and opens the verification modal', async () => {
+    component.email = 'user@example.com';
+    component.agreedToPolicy = true;
+
+    await component.registerWithEmail();
+
+    expect(authSession.sendEmailCode).toHaveBeenCalledOnceWith(
+      'user@example.com'
+    );
+    expect(component.codeEmail).toBe('user@example.com');
+    expect(component.isOpenEmailCodeModal).toBeTrue();
+  });
+
+  it('verifies email code and moves to wallet setup when no wallets exist', async () => {
+    component.codeEmail = 'user@example.com';
+    component.emailCode = '123456';
+    authSession.reloadWallets.and.resolveTo([]);
+
+    await component.verifyEmailCode();
+
+    expect(authSession.verifyEmailCode).toHaveBeenCalledOnceWith(
+      'user@example.com',
+      '123456'
+    );
+    expect(component.isOpenEmailCodeModal).toBeFalse();
+    expect(component.step).toBe('wallet');
   });
 
   it('navigates to a safe return URL when login already has wallets', async () => {
