@@ -31,7 +31,9 @@
                           height="34" />
                       </span>
                     } @else {
-                      <span class="coin">{{
+                      <span
+                        class="coin"
+                        [style.backgroundColor]="fromToken.color">{{
                         tokenDisplay(tokenSymbolLabel(fromToken))
                       }}</span>
                     }
@@ -105,7 +107,9 @@
                           height="34" />
                       </span>
                     } @else {
-                      <span class="coin">{{
+                      <span
+                        class="coin"
+                        [style.backgroundColor]="toToken.color">{{
                         tokenDisplay(tokenSymbolLabel(toToken))
                       }}</span>
                     }

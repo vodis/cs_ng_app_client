@@ -4,8 +4,9 @@ import { AuthSessionService } from '@core/auth/auth-session.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import type { LoginMethod } from '@core/auth/auth-session.types';
+import type { AuthSocialMethod } from '../shared/auth-social-buttons.component';
+import { authPageTransition } from '../shared/auth-page.animations';
 
-type RegistrationMethod = 'email' | 'google' | 'apple';
 type RegisterStep = 'account' | 'wallet';
 
 @Component({
@@ -13,6 +14,7 @@ type RegisterStep = 'account' | 'wallet';
   standalone: false,
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss'],
+  animations: [authPageTransition],
 })
 export class RegisterComponent {
   public email = '';
@@ -54,7 +56,24 @@ export class RegisterComponent {
     await this.continueWith('email');
   }
 
-  public async continueWith(method: RegistrationMethod): Promise<void> {
+  public async continueWithSocial(method: AuthSocialMethod): Promise<void> {
+    this.error = '';
+    this.info = '';
+
+    if (!this.agreedToPolicy) {
+      this.error = 'Please accept the policy to continue.';
+      return;
+    }
+
+    if (method === 'telegram') {
+      this.info = 'Telegram registration is coming soon.';
+      return;
+    }
+
+    await this.continueWith(method);
+  }
+
+  public async continueWith(method: LoginMethod): Promise<void> {
     this.error = '';
     this.info = '';
 
@@ -65,7 +84,7 @@ export class RegisterComponent {
 
     this.loading = true;
     try {
-      const session = await this.authSession.login(method as LoginMethod);
+      const session = await this.authSession.login(method);
       if (await this.hasLinkedWallets(session.wallets.length)) {
         await this.navigateToReturnUrl();
         return;

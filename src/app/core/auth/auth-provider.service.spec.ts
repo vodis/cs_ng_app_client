@@ -11,9 +11,7 @@ import {
   AuthProviderService,
 } from './auth-provider.service';
 import { AppLoggerService } from '@core/logging/app-logger.service';
-import {
-  WALLET_REMOTE_EXPOSED_MODULES,
-} from '@mfe-contracts/wallet-remote-entrypoints';
+import { WALLET_REMOTE_EXPOSED_MODULES } from '@mfe-contracts/wallet-remote-entrypoints';
 
 function mountApi(
   initialSnapshot: AuthProviderSnapshot,
