@@ -8,6 +8,11 @@ import {
 } from '@angular/core';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import {
+  resolveExchangeTokenIconUrl,
+  tokenAvatarFallback,
+  tokenAvatarLabel,
+} from '@shared/utils/token-avatar.utils';
+import {
   filterTokensByQuery,
   resolveTokenSelectPanelViewModel,
   TokenSelectPanelViewModel,
@@ -63,5 +68,13 @@ export class TokenSelectPanelComponent implements OnChanges {
   public handleClose(): void {
     this.filterQuery = '';
     this.closeRequested.emit();
+  }
+
+  public resolveTokenIcon(token: ExchangeToken): string {
+    return resolveExchangeTokenIconUrl(token);
+  }
+
+  public avatarFallback(token: ExchangeToken): string {
+    return tokenAvatarFallback(tokenAvatarLabel(token));
   }
 }

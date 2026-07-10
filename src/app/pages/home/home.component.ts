@@ -27,6 +27,13 @@ import {
   resolveAmountKeydownAction,
 } from '@shared/utils/amount-format.utils';
 import { formatTokenEquivalentLabel } from '@shared/utils/token-equivalent-format.utils';
+import {
+  EXCHANGE_TOKEN_ICON_URLS,
+  enrichExchangeToken,
+  resolveExchangeTokenIconUrl,
+  tokenAvatarFallback,
+  tokenAvatarLabel,
+} from '@shared/utils/token-avatar.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 
 type TokenSelectorSide = 'from' | 'to';
@@ -93,14 +100,6 @@ export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly slippageToleranceBps = 35;
   private readonly maxAmountFractionDigits = 18;
-  private readonly tokenIconUrls: Record<string, string> = {
-    BTC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1.png',
-    ETH: 'https://s2.coinmarketcap.com/static/img/coins/128x128/1027.png',
-    NEAR: 'https://s2.coinmarketcap.com/static/img/coins/128x128/6535.png',
-    SOL: 'https://s2.coinmarketcap.com/static/img/coins/128x128/5426.png',
-    USDC: 'https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png',
-    USDT: 'https://s2.coinmarketcap.com/static/img/coins/128x128/825.png',
-  };
 
   public readonly recentActivity: RecentActivityItem[] = [
     {
@@ -385,7 +384,7 @@ export class HomeComponent {
   }
 
   public tokenSymbolLabel(token: ExchangeToken): string {
-    return token.displaySymbol?.trim() || token.symbol;
+    return tokenAvatarLabel(token);
   }
 
   public marketSymbolFor(token: ExchangeToken): string {
@@ -393,7 +392,7 @@ export class HomeComponent {
   }
 
   public resolveTokenIcon(token: ExchangeToken): string {
-    const directIcon = token.icon?.trim();
+    const directIcon = resolveExchangeTokenIconUrl(token);
     if (directIcon) {
       return directIcon;
     }
@@ -426,8 +425,8 @@ export class HomeComponent {
     }
 
     return (
-      this.tokenIconUrls[symbol] ??
-      this.tokenIconUrls[symbol.replace(/^w/i, '')]
+      EXCHANGE_TOKEN_ICON_URLS[symbol] ??
+      EXCHANGE_TOKEN_ICON_URLS[symbol.replace(/^w/i, '')]
     );
   }
 
@@ -603,11 +602,7 @@ export class HomeComponent {
   }
 
   public tokenDisplay(symbol: string): string {
-    if (symbol === 'USDC') {
-      return '$';
-    }
-
-    return symbol[0] ?? '?';
+    return tokenAvatarFallback(symbol);
   }
 
   public balanceLabel(symbol: string): string {
@@ -1080,7 +1075,7 @@ export class HomeComponent {
 
     this.exchangeAssetsService.loadAssets().subscribe({
       next: tokens => {
-        this.exchangeTokens = tokens;
+        this.exchangeTokens = tokens.map(token => this.enrichToken(token));
         this.exchangeAssetsLoading = false;
 
         if (tokens.length === 0) {
@@ -1132,15 +1127,12 @@ export class HomeComponent {
   }
 
   private enrichToken(token: ExchangeToken): ExchangeToken {
-    const icon =
-      token.icon?.trim() ||
-      this.tokenIconUrls[token.symbol] ||
-      this.tokenIconUrls[token.symbol.replace(/^w/i, '')];
+    const enriched = enrichExchangeToken(token);
 
     return {
-      ...token,
-      displaySymbol: token.displaySymbol ?? this.displaySymbolFor(token.symbol),
-      icon: icon || token.icon,
+      ...enriched,
+      displaySymbol:
+        enriched.displaySymbol ?? this.displaySymbolFor(enriched.symbol),
     };
   }
 

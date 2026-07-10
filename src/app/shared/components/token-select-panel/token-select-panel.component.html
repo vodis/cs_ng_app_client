@@ -53,10 +53,10 @@
                 <span
                   class="token-select-panel__icon"
                   [style.backgroundColor]="token.color">
-                  @if (token.icon) {
-                    <img [src]="token.icon" [alt]="token.symbol" />
+                  @if (resolveTokenIcon(token); as icon) {
+                    <img [src]="icon" [alt]="token.symbol" />
                   } @else {
-                    {{ token.symbol[0] }}
+                    {{ avatarFallback(token) }}
                   }
                 </span>
                 <span class="token-select-panel__meta">
