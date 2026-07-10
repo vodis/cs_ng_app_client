@@ -22,13 +22,7 @@ describe('AuthSessionService', () => {
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
     authProvider = jasmine.createSpyObj<AuthProviderService>(
       'AuthProviderService',
-      [
-        'login',
-        'sendEmailCode',
-        'verifyEmailCode',
-        'logout',
-        'getAccessToken',
-      ],
+      ['login', 'sendEmailCode', 'verifyEmailCode', 'logout', 'getAccessToken'],
       {
         snapshot: {
           status: 'ready',
