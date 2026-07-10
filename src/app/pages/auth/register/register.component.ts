@@ -5,6 +5,7 @@ import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.b
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import type { LoginMethod } from '@core/auth/auth-session.types';
 import type { AuthSocialMethod } from '../shared/auth-social-buttons.component';
+import { authPageTransition } from '../shared/auth-page.animations';
 
 type RegisterStep = 'account' | 'wallet';
 
@@ -13,6 +14,7 @@ type RegisterStep = 'account' | 'wallet';
   standalone: false,
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss'],
+  animations: [authPageTransition],
 })
 export class RegisterComponent {
   public email = '';

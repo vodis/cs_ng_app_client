@@ -112,6 +112,16 @@
     }
   }
 
+  &__form-block {
+    display: grid;
+    gap: 1.35rem;
+    transition: opacity 0.2s ease;
+
+    &--pending {
+      opacity: 0.72;
+    }
+  }
+
   &__form {
     display: grid;
     gap: 1rem;

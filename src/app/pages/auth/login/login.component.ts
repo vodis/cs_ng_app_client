@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { LoginMethod } from '@core/auth/auth-session.types';
 import type { AuthSocialMethod } from '../shared/auth-social-buttons.component';
+import { authPageTransition } from '../shared/auth-page.animations';
 
 const LOGIN_SOCIAL_METHODS: AuthSocialMethod[] = [
   'passkey',
@@ -16,6 +17,7 @@ const LOGIN_SOCIAL_METHODS: AuthSocialMethod[] = [
   standalone: false,
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
+  animations: [authPageTransition],
 })
 export class LoginComponent {
   public email = '';

@@ -28,7 +28,7 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   public verticalLineAnimating = true;
   public contentHeight: number | null = null;
   public lineResetKey = 0;
-  public hideShell = false;
+  public hideShell = LayoutComponent.shouldHideShell(window.location.pathname);
 
   private resizeObserver?: ResizeObserver;
   private routerSubscription?: Subscription;
@@ -40,7 +40,7 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public ngOnInit(): void {
     this.isMobileView = this.currentWidth <= 768;
-    this.updateShellVisibility(this.router.url);
+    LayoutComponent.syncAuthShellRouteClass(this.hideShell);
 
     this.routerSubscription = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
@@ -102,6 +102,16 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private updateShellVisibility(url: string): void {
-    this.hideShell = url.startsWith('/register') || url.startsWith('/login');
+    this.hideShell = LayoutComponent.shouldHideShell(url);
+    LayoutComponent.syncAuthShellRouteClass(this.hideShell);
+  }
+
+  private static syncAuthShellRouteClass(hideShell: boolean): void {
+    document.documentElement.classList.toggle('auth-shell-route', hideShell);
+  }
+
+  private static shouldHideShell(url: string): boolean {
+    const path = url.split('?')[0].split('#')[0];
+    return path.startsWith('/register') || path.startsWith('/login');
   }
 }

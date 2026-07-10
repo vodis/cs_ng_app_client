@@ -3,6 +3,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { LayoutComponent } from './layout.component';
 
+type LayoutComponentTestHarness = LayoutComponent & {
+  updateShellVisibility(url: string): void;
+};
+
 describe('LayoutComponent', () => {
   let component: LayoutComponent;
   let fixture: ComponentFixture<LayoutComponent>;
@@ -17,7 +21,19 @@ describe('LayoutComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('hides shell on auth routes before router navigation settles', () => {
+    const layout = component as LayoutComponentTestHarness;
+
+    layout.updateShellVisibility('/login');
+    expect(component.hideShell).toBeTrue();
+    expect(
+      document.documentElement.classList.contains('auth-shell-route')
+    ).toBeTrue();
+
+    layout.updateShellVisibility('/');
+    expect(component.hideShell).toBeFalse();
+    expect(
+      document.documentElement.classList.contains('auth-shell-route')
+    ).toBeFalse();
   });
 });

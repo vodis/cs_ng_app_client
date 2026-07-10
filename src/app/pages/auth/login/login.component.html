@@ -1,4 +1,4 @@
-<section class="register-shell register-shell--centered">
+<section class="register-shell register-shell--centered" @authPageTransition>
   <div class="register-shell__content">
     <section class="register-shell__panel">
       <div class="register-shell__brand">
@@ -13,9 +13,6 @@
       <h2>Log in</h2>
 
       <ng-container *ngIf="authSession.providerSnapshot$ | async as provider">
-        <p class="register-shell__status" *ngIf="provider.status === 'loading'">
-          Account provider is still starting.
-        </p>
         <p
           class="register-shell__status"
           *ngIf="provider.status === 'disabled'">
@@ -25,32 +22,44 @@
           {{ provider.error || 'Account login is temporarily unavailable.' }}
         </p>
 
-        <ng-container *ngIf="provider.status === 'ready'">
-          <form
-            class="register-shell__form"
-            (ngSubmit)="loginWithEmail()"
-            novalidate>
-            <label for="login-email">Email</label>
-            <input
-              id="login-email"
-              name="email"
-              type="email"
-              placeholder="name@example.com"
-              [(ngModel)]="email" />
+        <ng-container
+          *ngIf="provider.status === 'loading' || provider.status === 'ready'">
+          <div
+            class="register-shell__form-block"
+            [class.register-shell__form-block--pending]="
+              provider.status !== 'ready' || loading
+            ">
+            <form
+              class="register-shell__form"
+              (ngSubmit)="loginWithEmail()"
+              novalidate>
+              <label for="login-email">Email</label>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                placeholder="name@example.com"
+                [(ngModel)]="email"
+                [disabled]="provider.status !== 'ready' || loading" />
 
-            <button type="submit" [disabled]="loading">Log in</button>
-          </form>
+              <button
+                type="submit"
+                [disabled]="provider.status !== 'ready' || loading">
+                Log in
+              </button>
+            </form>
 
-          <div class="register-shell__divider">
-            <span>or</span>
+            <div class="register-shell__divider">
+              <span>or</span>
+            </div>
+
+            <app-auth-social-buttons
+              [disabled]="provider.status !== 'ready' || loading"
+              [methods]="socialMethods"
+              (methodSelected)="
+                continueWithSocial($event)
+              "></app-auth-social-buttons>
           </div>
-
-          <app-auth-social-buttons
-            [disabled]="loading"
-            [methods]="socialMethods"
-            (methodSelected)="
-              continueWithSocial($event)
-            "></app-auth-social-buttons>
         </ng-container>
       </ng-container>
 
