@@ -11,6 +11,9 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? 'github' : 'list',
   timeout: 60_000,
+  expect: {
+    timeout: process.env.CI ? 15_000 : 5_000,
+  },
   use: {
     baseURL: BASE_URL,
     trace: 'on-first-retry',
