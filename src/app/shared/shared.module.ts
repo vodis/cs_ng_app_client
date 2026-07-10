@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatButtonModule } from '@angular/material/button';
 import { AnimateLineComponent } from './components/animate-line/animate-line.component';
+import { AnimateTitleComponent } from './components/animate-title/animate-title.component';
 import { MatIconModule } from '@angular/material/icon';
 import { WalletsComponent } from '@shared/mfe/wallets/wallets.component';
 import { WalletBarComponent } from '@shared/components/wallet-bar/wallet-bar.component';
@@ -30,6 +31,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
   ],
   declarations: [
     AnimateLineComponent,
+    AnimateTitleComponent,
     WalletsComponent,
     WalletBarComponent,
     SideModalComponent,
@@ -40,6 +42,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
   providers: [],
   exports: [
     AnimateLineComponent,
+    AnimateTitleComponent,
     WalletsComponent,
     WalletBarComponent,
     WalletMenuComponent,
