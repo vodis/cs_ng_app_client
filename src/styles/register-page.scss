@@ -39,12 +39,9 @@
   }
 
   &__kicker {
+    display: block;
+    max-width: 100%;
     margin: 0 0 1rem;
-    color: var(--primary-text-color);
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
 
   h1 {
@@ -374,7 +371,6 @@
 
     &__kicker {
       margin-bottom: 0.5rem;
-      font-size: 0.75rem;
     }
 
     h1 {
