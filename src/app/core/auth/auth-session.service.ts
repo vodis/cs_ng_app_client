@@ -131,6 +131,22 @@ export class AuthSessionService {
     }
   }
 
+  async enablePasskey(): Promise<AuthSession> {
+    this.loadingSubject.next(true);
+    try {
+      const session = await this.authProvider.linkPasskey();
+      const token = await this.authProvider.getAccessToken();
+      if (!token) {
+        throw new Error('Account provider access token is unavailable');
+      }
+      this.accessToken = token;
+      this.sessionSubject.next(session);
+      return session;
+    } finally {
+      this.loadingSubject.next(false);
+    }
+  }
+
   async logout(): Promise<void> {
     this.loadingSubject.next(true);
     try {

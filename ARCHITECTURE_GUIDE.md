@@ -64,9 +64,11 @@ Angular begins only at the final boundary. It:
 - mounts `./auth-provider` with the generic backend `apiBaseUrl`;
 - consumes versioned provider-neutral snapshots and normalized sessions;
 - may use generic bearer tokens for backend API access;
+- may call provider-neutral account actions such as `linkPasskey()` and render
+  normalized session fields such as `passkeyEnabled`;
 - must not import the Privy SDK, parse Privy configuration, register wallets,
-  interpret Privy linked accounts, or expose Privy-specific fields in UI/domain
-  models.
+  interpret Privy linked accounts, store passkey credential IDs, or expose
+  Privy-specific fields in UI/domain models.
 
 Any change that would move those responsibilities into Angular is an
 architecture change, not a local implementation shortcut, and requires updates

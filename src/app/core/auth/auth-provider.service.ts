@@ -82,6 +82,10 @@ export class AuthProviderService implements OnDestroy {
     return this.requireReadyProvider().verifyEmailCode(input);
   }
 
+  linkPasskey(): Promise<AuthProviderSession> {
+    return this.requireReadyProvider().linkPasskey();
+  }
+
   logout(): Promise<void> {
     return this.mountApi?.logout() ?? Promise.resolve();
   }
@@ -235,6 +239,8 @@ export class AuthProviderService implements OnDestroy {
       typeof value.sendEmailCode === 'function' &&
       'verifyEmailCode' in value &&
       typeof value.verifyEmailCode === 'function' &&
+      'linkPasskey' in value &&
+      typeof value.linkPasskey === 'function' &&
       'logout' in value &&
       typeof value.logout === 'function' &&
       'getAccessToken' in value &&

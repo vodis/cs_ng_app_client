@@ -18,7 +18,7 @@ function mountApi(
   onSubscribe?: (listener: AuthProviderListener) => void
 ): AuthProviderMountApi {
   return {
-    contractVersion: '2.1.0',
+    contractVersion: '2.2.0',
     unmount: jasmine.createSpy('unmount'),
     subscribe: listener => {
       onSubscribe?.(listener);
@@ -40,6 +40,15 @@ function mountApi(
         id: 'account-1',
         providerUserId: 'provider-user-1',
         sessionId: 'session-1',
+      },
+      wallets: [],
+    }),
+    linkPasskey: async () => ({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        passkeyEnabled: true,
       },
       wallets: [],
     }),
