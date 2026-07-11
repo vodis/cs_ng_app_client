@@ -20,7 +20,7 @@ Use this as the source of truth for runtime communication in the Angular app.
 The canonical, open runtime contract is
 `cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. This host keeps only
 the structural consumer copy in `auth-provider.types.ts` and validates contract
-version `2.1.0` before mounting `mfe-wallets/auth-provider`.
+version `2.2.0` before mounting `mfe-wallets/auth-provider`.
 
 The wallet remote exposes atomized entrypoints:
 
@@ -32,6 +32,10 @@ The wallet remote exposes atomized entrypoints:
 Angular should continue to load only `./mount` and `./auth-provider`. It must
 not load `./providers/privy` directly unless provider ownership is intentionally
 moved into the host by a future contract change.
+
+Passkey enablement is consumed through the provider-neutral `linkPasskey()`
+contract method and the normalized `passkeyEnabled` user field. Angular must
+not inspect provider linked-account payloads or passkey credential IDs.
 
 The NestJS `GET /api/v1/public/auth-config` response is the single source of
 truth for enabled login methods and public provider configuration. `mfe-wallets`

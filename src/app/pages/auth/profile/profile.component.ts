@@ -18,8 +18,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public deletionMessage = '';
   public walletMessage = '';
   public balanceMessage = '';
+  public passkeyMessage = '';
   public error = '';
   public busyWalletId = '';
+  public passkeyLoading = false;
   public balances: BackendBalance[] = [];
   public balancesLoading = false;
 
@@ -65,6 +67,25 @@ export class ProfileComponent implements OnInit, OnDestroy {
       ? 'cache'
       : `cache until ${expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     return `${this.shortAddress(balance.walletAddress)} / ${balance.chainType} / ${expiresAt}`;
+  }
+
+  public canEnablePasskey(): boolean {
+    return this.authSession.enabledLoginMethods.includes('passkey');
+  }
+
+  public async enablePasskey(): Promise<void> {
+    this.error = '';
+    this.passkeyMessage = '';
+    this.passkeyLoading = true;
+    try {
+      await this.authSession.enablePasskey();
+      this.passkeyMessage = 'Passkey authentication enabled';
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Passkey enablement failed';
+    } finally {
+      this.passkeyLoading = false;
+    }
   }
 
   public async refreshWallets(): Promise<void> {
@@ -146,6 +167,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.walletMessage = '';
     this.balanceMessage = '';
     this.deletionMessage = '';
+    this.passkeyMessage = '';
     try {
       await this.authSession.logout();
     } catch (error) {
