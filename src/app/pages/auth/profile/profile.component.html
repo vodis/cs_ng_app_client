@@ -45,6 +45,33 @@
 
     <section class="profile-shell__panel">
       <div class="profile-shell__panel-header">
+        <h2>Security</h2>
+        <span
+          class="profile-shell__primary"
+          *ngIf="activeSession.user.passkeyEnabled">
+          Passkey enabled
+        </span>
+      </div>
+      <p class="profile-shell__empty" *ngIf="activeSession.user.passkeyEnabled">
+        Use passkey authentication on your next sign in. Email code remains
+        available as a fallback.
+      </p>
+      <ng-container *ngIf="!activeSession.user.passkeyEnabled">
+        <p class="profile-shell__empty">
+          Enable passkey authentication for faster sign in.
+        </p>
+        <button
+          type="button"
+          mat-stroked-button
+          [disabled]="passkeyLoading || !canEnablePasskey()"
+          (click)="enablePasskey()">
+          Enable passkey
+        </button>
+      </ng-container>
+    </section>
+
+    <section class="profile-shell__panel">
+      <div class="profile-shell__panel-header">
         <h2>Wallets</h2>
         <button type="button" mat-button (click)="refreshWallets()">
           Refresh
@@ -129,6 +156,9 @@
   </p>
   <p class="profile-shell__message" *ngIf="balanceMessage">
     {{ balanceMessage }}
+  </p>
+  <p class="profile-shell__message" *ngIf="passkeyMessage">
+    {{ passkeyMessage }}
   </p>
   <p class="profile-shell__message" *ngIf="deletionMessage">
     {{ deletionMessage }}

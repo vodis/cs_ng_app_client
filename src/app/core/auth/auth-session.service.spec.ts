@@ -22,7 +22,14 @@ describe('AuthSessionService', () => {
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
     authProvider = jasmine.createSpyObj<AuthProviderService>(
       'AuthProviderService',
-      ['login', 'sendEmailCode', 'verifyEmailCode', 'logout', 'getAccessToken'],
+      [
+        'login',
+        'sendEmailCode',
+        'verifyEmailCode',
+        'linkPasskey',
+        'logout',
+        'getAccessToken',
+      ],
       {
         snapshot: {
           status: 'ready',
@@ -50,6 +57,17 @@ describe('AuthSessionService', () => {
         sessionId: 'session-1',
         email: 'user@example.com',
         authMethod: 'email',
+      },
+      wallets: [],
+    });
+    authProvider.linkPasskey.and.resolveTo({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        email: 'user@example.com',
+        authMethod: 'email',
+        passkeyEnabled: true,
       },
       wallets: [],
     });
@@ -131,6 +149,29 @@ describe('AuthSessionService', () => {
       wallets: [],
     });
     expect(service.session?.user.authMethod).toBe('email');
+  }));
+
+  it('enables passkey through the account provider and updates the session', fakeAsync(() => {
+    let resolvedSession: unknown;
+
+    service.enablePasskey().then(session => {
+      resolvedSession = session;
+    });
+    flushMicrotasks();
+
+    expect(authProvider.linkPasskey).toHaveBeenCalledTimes(1);
+    expect(resolvedSession).toEqual({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        email: 'user@example.com',
+        authMethod: 'email',
+        passkeyEnabled: true,
+      },
+      wallets: [],
+    });
+    expect(service.session?.user.passkeyEnabled).toBeTrue();
   }));
 
   it('logs out through the provider and clears host wallet state', fakeAsync(() => {
