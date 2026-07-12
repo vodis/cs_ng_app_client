@@ -9,6 +9,7 @@ import { environment } from '../../../environments/environment';
 import { AuthProviderService } from './auth-provider.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { ProductEventsService } from '@core/product-events/product-events.service';
 
 describe('AuthSessionService', () => {
   let service: AuthSessionService;
@@ -17,6 +18,7 @@ describe('AuthSessionService', () => {
   let authProvider: jasmine.SpyObj<AuthProviderService>;
   let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
   let walletsService: jasmine.SpyObj<WalletsService>;
+  let productEvents: jasmine.SpyObj<ProductEventsService>;
 
   beforeEach(() => {
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
@@ -79,6 +81,14 @@ describe('AuthSessionService', () => {
     walletsService = jasmine.createSpyObj<WalletsService>('WalletsService', [
       'setAccount',
     ]);
+    productEvents = jasmine.createSpyObj<ProductEventsService>(
+      'ProductEventsService',
+      ['record', 'reason', 'message']
+    );
+    productEvents.reason.and.returnValue('test_error');
+    productEvents.message.and.callFake((error: unknown) =>
+      error instanceof Error ? error.message : undefined
+    );
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
@@ -87,6 +97,7 @@ describe('AuthSessionService', () => {
         { provide: AuthProviderService, useValue: authProvider },
         { provide: WalletGatewayBridgeService, useValue: walletGatewayBridge },
         { provide: WalletsService, useValue: walletsService },
+        { provide: ProductEventsService, useValue: productEvents },
       ],
     });
 
