@@ -18,6 +18,8 @@ const ANONYMOUS_ID_KEY = 'cs_product_events_anonymous_id';
 
 @Injectable({ providedIn: 'root' })
 export class ProductEventsService {
+  private fallbackAnonymousId?: string;
+
   constructor(private readonly httpClient: HttpClient) {}
 
   record(input: ProductEventInput): void {
@@ -47,16 +49,23 @@ export class ProductEventsService {
   }
 
   private anonymousId(): string {
-    const existing = window.localStorage.getItem(ANONYMOUS_ID_KEY);
-    if (existing) {
-      return existing;
+    try {
+      const existing = window.localStorage.getItem(ANONYMOUS_ID_KEY);
+      if (existing) {
+        return existing;
+      }
+      const generated = this.generateAnonymousId();
+      window.localStorage.setItem(ANONYMOUS_ID_KEY, generated);
+      return generated;
+    } catch {
+      return (this.fallbackAnonymousId ??= this.generateAnonymousId());
     }
-    const generated =
-      typeof window.crypto?.randomUUID === 'function'
-        ? window.crypto.randomUUID()
-        : `anon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    window.localStorage.setItem(ANONYMOUS_ID_KEY, generated);
-    return generated;
+  }
+
+  private generateAnonymousId(): string {
+    return typeof window.crypto?.randomUUID === 'function'
+      ? window.crypto.randomUUID()
+      : `anon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
   private sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
