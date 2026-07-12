@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { AuthProviderService } from './auth-provider.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { ProductEventsService } from '@core/product-events/product-events.service';
 import {
   AuthSession,
   BackendBalance,
@@ -47,7 +48,8 @@ export class AuthSessionService {
     private readonly router: Router,
     private readonly authProvider: AuthProviderService,
     private readonly walletGatewayBridge: WalletGatewayBridgeService,
-    private readonly walletsService: WalletsService
+    private readonly walletsService: WalletsService,
+    private readonly productEvents: ProductEventsService
   ) {}
 
   get session(): AuthSession | null {
@@ -92,6 +94,11 @@ export class AuthSessionService {
 
   async login(authMethod: LoginMethod): Promise<AuthSession> {
     this.loadingSubject.next(true);
+    this.productEvents.record({
+      eventName: 'auth.login',
+      status: 'attempted',
+      metadata: { authMethod },
+    });
     try {
       const session = await this.authProvider.login(authMethod);
       const token = await this.authProvider.getAccessToken();
@@ -100,7 +107,21 @@ export class AuthSessionService {
       }
       this.accessToken = token;
       this.sessionSubject.next(session);
+      this.productEvents.record({
+        eventName: 'auth.login',
+        status: 'succeeded',
+        userId: session.user.id,
+        metadata: { authMethod },
+      });
       return session;
+    } catch (error) {
+      this.productEvents.record({
+        eventName: 'auth.login',
+        status: 'failed',
+        reasonCode: this.productEvents.reason(error),
+        metadata: { authMethod, message: this.productEvents.message(error) },
+      });
+      throw error;
     } finally {
       this.loadingSubject.next(false);
     }
