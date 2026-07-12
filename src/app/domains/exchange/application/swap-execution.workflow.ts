@@ -14,6 +14,7 @@ import { toSwapFlowError } from '@domains/exchange/models/swap-flow-error';
 import { SwapApiClient } from '@domains/exchange/data-access/swap-api.client';
 import { IntentRelayService } from '@domains/exchange/data-access/intent-relay.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import { ProductEventsService } from '@core/product-events/product-events.service';
 
 @Injectable({
   providedIn: 'root',
@@ -23,7 +24,8 @@ export class SwapExecutionWorkflow {
     private readonly swapApiClient: SwapApiClient,
     private readonly intentRelayService: IntentRelayService,
     private readonly walletGatewayBridge: WalletGatewayBridgeService,
-    private readonly logger: AppLoggerService
+    private readonly logger: AppLoggerService,
+    private readonly productEvents: ProductEventsService
   ) {}
 
   async requestQuotePreview(
@@ -60,6 +62,16 @@ export class SwapExecutionWorkflow {
   }> {
     const startedAt = Date.now();
     let step: SwapFlowState = 'validating';
+    this.productEvents.record({
+      eventName: 'swap.confirmed',
+      status: 'attempted',
+      requestId: traceId,
+      metadata: {
+        authMethod: request.authMethod,
+        originAsset: request.originAsset,
+        destinationAsset: request.destinationAsset,
+      },
+    });
 
     try {
       this.logTransition(traceId, step, 'started');
@@ -98,11 +110,33 @@ export class SwapExecutionWorkflow {
       this.logTransition(traceId, step, 'success', Date.now() - startedAt, {
         intentHash,
       });
+      this.productEvents.record({
+        eventName: 'swap.confirmed',
+        status: 'succeeded',
+        requestId: traceId,
+        metadata: {
+          authMethod: request.authMethod,
+          intentHash,
+          durationMs: Date.now() - startedAt,
+        },
+      });
 
       return { traceId, preparePackage, intentHash };
     } catch (error) {
       this.logTransition(traceId, step, 'failed', Date.now() - startedAt, {
         error,
+      });
+      this.productEvents.record({
+        eventName: 'swap.confirmed',
+        status: 'failed',
+        requestId: traceId,
+        reasonCode: this.productEvents.reason(error),
+        metadata: {
+          authMethod: request.authMethod,
+          step,
+          message: this.productEvents.message(error),
+          durationMs: Date.now() - startedAt,
+        },
       });
       throw this.toFlowError(step, error);
     }
