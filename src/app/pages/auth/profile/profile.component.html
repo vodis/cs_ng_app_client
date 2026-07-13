@@ -77,7 +77,9 @@
           Refresh
         </button>
       </div>
-      <app-wallet-bar />
+      <div class="profile-shell__wallet-connect">
+        <app-wallet-bar />
+      </div>
       <div
         class="profile-shell__empty"
         *ngIf="activeSession.wallets.length === 0">
