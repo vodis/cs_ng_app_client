@@ -24,6 +24,8 @@ describe('LoginComponent', () => {
           passkeyLinkEnabled: true,
           embeddedWalletEnabled: true,
         }),
+        enabledLoginMethods: ['email', 'passkey', 'google', 'apple'],
+        passkeyLoginEnabled: true,
       }
     );
     router = jasmine.createSpyObj('Router', ['navigateByUrl']);
@@ -75,6 +77,15 @@ describe('LoginComponent', () => {
       'apple',
       'telegram',
     ]);
+  });
+
+  it('hides passkey when passkey login is disabled', () => {
+    Object.defineProperty(authSession, 'passkeyLoginEnabled', {
+      configurable: true,
+      get: () => false,
+    });
+
+    expect(component.socialMethods).toEqual(['google', 'apple', 'telegram']);
   });
 
   it('shows a coming soon message for telegram login', async () => {
