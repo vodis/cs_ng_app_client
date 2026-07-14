@@ -1,3 +1,5 @@
+/// <reference types="jasmine" />
+
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,6 +18,7 @@ describe('HeaderComponent', () => {
     user: {
       id: 'account-1',
       providerUserId: 'provider-1',
+      sessionId: 'session-1',
       email: 'user@example.com',
       authMethod: 'email',
       passkeyEnabled: false,
