@@ -36,8 +36,6 @@ describe('ProfileComponent', () => {
       'AuthSessionService',
       [
         'enablePasskey',
-        'disablePasskey',
-        'canDisablePasskey',
         'reloadWallets',
         'loadBalances',
         'setPrimaryWallet',
@@ -48,12 +46,10 @@ describe('ProfileComponent', () => {
       {
         session$: sessionSubject.asObservable(),
         loading$: of(false),
-        enabledLoginMethods: ['email', 'passkey'],
+        passkeyLinkEnabled: true,
       }
     );
     authSession.enablePasskey.and.resolveTo(enabledSession);
-    authSession.disablePasskey.and.resolveTo(disabledSession);
-    authSession.canDisablePasskey.and.returnValue(true);
     authSession.loadBalances.and.resolveTo([]);
 
     component = new ProfileComponent(authSession);
@@ -69,21 +65,12 @@ describe('ProfileComponent', () => {
     expect(component.passkeyMessage).toBe('Passkey authentication enabled');
   });
 
-  it('allows disabling passkey when it is enabled', async () => {
-    sessionSubject.next(enabledSession);
-    expect(component.canDisablePasskey()).toBeTrue();
+  it('hides passkey enablement when linking is disabled', () => {
+    Object.defineProperty(authSession, 'passkeyLinkEnabled', {
+      configurable: true,
+      get: () => false,
+    });
 
-    await component.disablePasskey();
-
-    expect(authSession.disablePasskey).toHaveBeenCalledTimes(1);
-    expect(component.passkeyMessage).toBe('Passkey authentication disabled');
-  });
-
-  it('surfaces passkey disable failures', async () => {
-    authSession.disablePasskey.and.rejectWith(new Error('Provider rejected'));
-
-    await component.disablePasskey();
-
-    expect(component.error).toBe('Provider rejected');
+    expect(component.canEnablePasskey()).toBeFalse();
   });
 });

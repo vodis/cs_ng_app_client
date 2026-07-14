@@ -17,6 +17,9 @@ export type AuthProviderStatus = 'loading' | 'ready' | 'disabled' | 'failed';
 export type AuthProviderSnapshot = {
   status: AuthProviderStatus;
   loginMethods: AuthProviderLoginMethod[];
+  passkeyLoginEnabled: boolean;
+  passkeySignupEnabled: boolean;
+  passkeyLinkEnabled: boolean;
   embeddedWalletEnabled: boolean;
   error?: string;
 };
@@ -65,7 +68,6 @@ export type AuthProviderMountApi = {
     input: AuthProviderEmailCodeInput
   ) => Promise<AuthProviderSession>;
   linkPasskey: () => Promise<AuthProviderSession>;
-  unlinkPasskey?: () => Promise<AuthProviderSession>;
   logout: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
 };

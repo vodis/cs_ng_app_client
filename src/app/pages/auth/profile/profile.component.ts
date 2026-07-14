@@ -70,11 +70,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public canEnablePasskey(): boolean {
-    return this.authSession.enabledLoginMethods.includes('passkey');
-  }
-
-  public canDisablePasskey(): boolean {
-    return this.authSession.canDisablePasskey();
+    return this.authSession.passkeyLinkEnabled;
   }
 
   public async enablePasskey(): Promise<void> {
@@ -87,21 +83,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.error =
         error instanceof Error ? error.message : 'Passkey enablement failed';
-    } finally {
-      this.passkeyLoading = false;
-    }
-  }
-
-  public async disablePasskey(): Promise<void> {
-    this.error = '';
-    this.passkeyMessage = '';
-    this.passkeyLoading = true;
-    try {
-      await this.authSession.disablePasskey();
-      this.passkeyMessage = 'Passkey authentication disabled';
-    } catch (error) {
-      this.error =
-        error instanceof Error ? error.message : 'Passkey disable failed';
     } finally {
       this.passkeyLoading = false;
     }

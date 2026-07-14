@@ -19,6 +19,9 @@ describe('LoginComponent', () => {
         providerSnapshot$: of({
           status: 'ready' as const,
           loginMethods: ['email', 'passkey', 'google', 'apple'],
+          passkeyLoginEnabled: true,
+          passkeySignupEnabled: false,
+          passkeyLinkEnabled: true,
           embeddedWalletEnabled: true,
         }),
       }

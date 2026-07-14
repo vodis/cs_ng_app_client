@@ -84,6 +84,9 @@ describe('AuthProviderService', () => {
     const api = mountApi({
       status: 'ready',
       loginMethods: ['email', 'passkey'],
+      passkeyLoginEnabled: true,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: true,
       embeddedWalletEnabled: true,
     });
     const mountAuthProvider = jasmine
@@ -111,7 +114,14 @@ describe('AuthProviderService', () => {
       notifySubscribed = resolve;
     });
     const api = mountApi(
-      { status: 'loading', loginMethods: [], embeddedWalletEnabled: false },
+      {
+        status: 'loading',
+        loginMethods: [],
+        passkeyLoginEnabled: false,
+        passkeySignupEnabled: false,
+        passkeyLinkEnabled: false,
+        embeddedWalletEnabled: false,
+      },
       listener => {
         providerListener = listener;
         notifySubscribed?.();
@@ -126,6 +136,9 @@ describe('AuthProviderService', () => {
     providerListener?.({
       status: 'ready',
       loginMethods: ['passkey'],
+      passkeyLoginEnabled: true,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: true,
       embeddedWalletEnabled: true,
     });
     expect((await initialized).status).toBe('ready');
@@ -135,6 +148,9 @@ describe('AuthProviderService', () => {
     const api = mountApi({
       status: 'disabled',
       loginMethods: [],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
       embeddedWalletEnabled: false,
     });
     loader.and.resolveTo({ mountAuthProvider: () => api });

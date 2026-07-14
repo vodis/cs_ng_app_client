@@ -71,13 +71,6 @@
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          mat-stroked-button
-          [disabled]="passkeyLoading || !canDisablePasskey()"
-          (click)="disablePasskey()">
-          Disable passkey
-        </button>
       </div>
 
       <ng-template #passkeyDisabled>

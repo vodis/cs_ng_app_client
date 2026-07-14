@@ -61,6 +61,10 @@ export class AuthSessionService {
     return methods.length > 0 ? methods : ['email'];
   }
 
+  get passkeyLinkEnabled(): boolean {
+    return this.authProvider.snapshot.passkeyLinkEnabled;
+  }
+
   async refresh(): Promise<AuthSession | null> {
     const token = await this.currentAccessToken();
     if (!token) {
@@ -156,26 +160,6 @@ export class AuthSessionService {
     this.loadingSubject.next(true);
     try {
       const session = await this.authProvider.linkPasskey();
-      const token = await this.authProvider.getAccessToken();
-      if (!token) {
-        throw new Error('Account provider access token is unavailable');
-      }
-      this.accessToken = token;
-      this.sessionSubject.next(session);
-      return session;
-    } finally {
-      this.loadingSubject.next(false);
-    }
-  }
-
-  canDisablePasskey(): boolean {
-    return this.authProvider.supportsUnlinkPasskey();
-  }
-
-  async disablePasskey(): Promise<AuthSession> {
-    this.loadingSubject.next(true);
-    try {
-      const session = await this.authProvider.unlinkPasskey();
       const token = await this.authProvider.getAccessToken();
       if (!token) {
         throw new Error('Account provider access token is unavailable');
