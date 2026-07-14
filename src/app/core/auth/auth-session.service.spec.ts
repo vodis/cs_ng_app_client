@@ -29,8 +29,10 @@ describe('AuthSessionService', () => {
         'sendEmailCode',
         'verifyEmailCode',
         'linkPasskey',
+        'unlinkPasskey',
         'logout',
         'getAccessToken',
+        'supportsUnlinkPasskey',
       ],
       {
         snapshot: {
@@ -73,6 +75,18 @@ describe('AuthSessionService', () => {
       },
       wallets: [],
     });
+    authProvider.unlinkPasskey.and.resolveTo({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        email: 'user@example.com',
+        authMethod: 'email',
+        passkeyEnabled: false,
+      },
+      wallets: [],
+    });
+    authProvider.supportsUnlinkPasskey.and.returnValue(true);
     authProvider.logout.and.resolveTo();
     walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
       'WalletGatewayBridgeService',
@@ -184,6 +198,33 @@ describe('AuthSessionService', () => {
     });
     expect(service.session?.user.passkeyEnabled).toBeTrue();
   }));
+
+  it('disables passkey through the account provider and updates the session', fakeAsync(() => {
+    let resolvedSession: unknown;
+
+    service.disablePasskey().then(session => {
+      resolvedSession = session;
+    });
+    flushMicrotasks();
+
+    expect(authProvider.unlinkPasskey).toHaveBeenCalledTimes(1);
+    expect(resolvedSession).toEqual({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        email: 'user@example.com',
+        authMethod: 'email',
+        passkeyEnabled: false,
+      },
+      wallets: [],
+    });
+    expect(service.session?.user.passkeyEnabled).toBeFalse();
+  }));
+
+  it('reports whether passkey removal is supported by the provider', () => {
+    expect(service.canDisablePasskey()).toBeTrue();
+  });
 
   it('logs out through the provider and clears host wallet state', fakeAsync(() => {
     service.login('email');

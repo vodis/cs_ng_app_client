@@ -65,6 +65,7 @@ export type AuthProviderMountApi = {
     input: AuthProviderEmailCodeInput
   ) => Promise<AuthProviderSession>;
   linkPasskey: () => Promise<AuthProviderSession>;
+  unlinkPasskey?: () => Promise<AuthProviderSession>;
   logout: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
 };

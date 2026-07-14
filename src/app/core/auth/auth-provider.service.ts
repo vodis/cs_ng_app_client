@@ -86,6 +86,20 @@ export class AuthProviderService implements OnDestroy {
     return this.requireReadyProvider().linkPasskey();
   }
 
+  unlinkPasskey(): Promise<AuthProviderSession> {
+    const provider = this.requireReadyProvider();
+    if (typeof provider.unlinkPasskey !== 'function') {
+      throw new Error(
+        'Passkey removal is not supported by the account provider.'
+      );
+    }
+    return provider.unlinkPasskey();
+  }
+
+  supportsUnlinkPasskey(): boolean {
+    return typeof this.mountApi?.unlinkPasskey === 'function';
+  }
+
   logout(): Promise<void> {
     return this.mountApi?.logout() ?? Promise.resolve();
   }

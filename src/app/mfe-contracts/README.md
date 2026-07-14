@@ -34,8 +34,10 @@ not load `./providers/privy` directly unless provider ownership is intentionally
 moved into the host by a future contract change.
 
 Passkey enablement is consumed through the provider-neutral `linkPasskey()`
-contract method and the normalized `passkeyEnabled` user field. Angular must
-not inspect provider linked-account payloads or passkey credential IDs.
+contract method and the normalized `passkeyEnabled` user field. Passkey removal
+uses the optional `unlinkPasskey()` contract method when the mounted provider
+supports it. Angular must not inspect provider linked-account payloads or
+passkey credential IDs.
 
 The NestJS `GET /api/v1/public/auth-config` response is the single source of
 truth for enabled login methods and public provider configuration. `mfe-wallets`
