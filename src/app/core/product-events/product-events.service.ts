@@ -23,14 +23,21 @@ export class ProductEventsService {
   constructor(private readonly httpClient: HttpClient) {}
 
   record(input: ProductEventInput): void {
+    const url = `${environment.apiUrl}/api/v1/product-events`;
     this.httpClient
-      .post(`${environment.apiUrl}/api/v1/product-events`, {
+      .post(url, {
         ...input,
         source: 'app-client',
         anonymousId: this.anonymousId(),
         metadata: this.sanitizeMetadata(input.metadata ?? {}),
       })
-      .subscribe({ error: () => undefined });
+      .subscribe({
+        error: error => {
+          if (this.needsDeliveryVisibility(input)) {
+            this.warnTelemetryDelivery(url, this.errorStatus(error));
+          }
+        },
+      });
   }
 
   reason(error: unknown): string {
@@ -75,5 +82,32 @@ export class ProductEventsService {
         .filter(([key]) => !denied.some(deniedKey => key.toLowerCase().includes(deniedKey)))
         .slice(0, 40)
     );
+  }
+
+  private needsDeliveryVisibility(input: ProductEventInput): boolean {
+    return (
+      (input.status === 'failed' || input.status === 'cancelled') &&
+      input.eventName === 'auth.login'
+    );
+  }
+
+  private errorStatus(error: unknown): number | 'network_error' {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'status' in error &&
+      typeof error.status === 'number' &&
+      error.status > 0
+    ) {
+      return error.status;
+    }
+    return 'network_error';
+  }
+
+  private warnTelemetryDelivery(
+    url: string,
+    status: number | 'network_error'
+  ): void {
+    console.warn(`product telemetry delivery failed url=${url} status=${status}`);
   }
 }
