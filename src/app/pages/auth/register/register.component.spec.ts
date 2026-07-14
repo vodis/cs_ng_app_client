@@ -21,6 +21,9 @@ describe('RegisterComponent', () => {
         providerSnapshot$: of({
           status: 'ready' as const,
           loginMethods: ['email' as const],
+          passkeyLoginEnabled: false,
+          passkeySignupEnabled: false,
+          passkeyLinkEnabled: true,
           embeddedWalletEnabled: true,
         }),
       }
