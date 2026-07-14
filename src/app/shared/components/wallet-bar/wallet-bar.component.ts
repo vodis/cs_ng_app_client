@@ -1,8 +1,7 @@
-import { Component } from '@angular/core';
-import { WalletsService } from '@shared/mfe/wallets/wallets.service';
-import { WalletAccount } from '@domains/wallet/models/wallet.models';
+import { Component, DestroyRef, inject, Input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DestroyRef, inject } from '@angular/core';
+import { WalletAccount } from '@domains/wallet/models/wallet.models';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 
 @Component({
   selector: 'app-wallet-bar',
@@ -11,17 +10,21 @@ import { DestroyRef, inject } from '@angular/core';
   styleUrls: [],
 })
 export class WalletBarComponent {
+  @Input() showTrigger = true;
+  @Input() hostModal = false;
+
   private readonly destroyRef = inject(DestroyRef);
+  private readonly walletsService = inject(WalletsService);
   public isOpenWalletConnectMenu = false;
   public account: WalletAccount | undefined;
 
-  constructor(private walletsService: WalletsService) {
+  constructor() {
     this.walletsService.account
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(account => {
         const hadAccount = Boolean(this.account?.account);
         this.account = account;
-        if (account && !hadAccount) {
+        if (this.hostModal && account && !hadAccount) {
           this.isOpenWalletConnectMenu = false;
         }
       });
@@ -29,7 +32,7 @@ export class WalletBarComponent {
     this.walletsService.closeRequested
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(closeRequested => {
-        if (closeRequested) {
+        if (this.hostModal && closeRequested) {
           this.isOpenWalletConnectMenu = false;
           this.walletsService.clearCloseRequest();
         }
@@ -38,7 +41,7 @@ export class WalletBarComponent {
     this.walletsService.openRequested
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(openRequested => {
-        if (openRequested) {
+        if (this.hostModal && openRequested) {
           this.isOpenWalletConnectMenu = true;
           this.walletsService.clearOpenRequest();
         }
@@ -46,7 +49,12 @@ export class WalletBarComponent {
   }
 
   public handleOpenWalletMenu(): void {
-    this.isOpenWalletConnectMenu = true;
+    if (this.hostModal) {
+      this.isOpenWalletConnectMenu = true;
+      return;
+    }
+
+    this.walletsService.requestOpen();
   }
 
   public handleCloseWalletMenu(): void {

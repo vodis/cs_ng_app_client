@@ -87,9 +87,11 @@ test.describe('Shell layout (desktop)', () => {
     expect(dividerBox.x).toBeLessThanOrEqual(sidebar.x + sidebar.width + 2);
   });
 
-  test('connect wallet control is visible in header', async ({ page }) => {
+  test('connect wallet control is not visible in header', async ({ page }) => {
     await expect(
-      page.getByRole('button', { name: /connect wallet/i }).first()
-    ).toBeVisible();
+      page
+        .locator('app-header')
+        .getByRole('button', { name: /connect wallet/i })
+    ).toHaveCount(0);
   });
 });

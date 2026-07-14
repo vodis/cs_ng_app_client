@@ -1,21 +1,25 @@
 <div class="wallet-bar">
-  @if (!account) {
-    <button
-      (click)="handleOpenWalletMenu()"
-      mat-stroked-button
-      color="primary"
-      class="btn-lg">
-      Connect wallet
-    </button>
-  } @else {
-    <app-wallet-menu
-      [account]="account"
-      (accountClick)="handleOpenWalletMenu()" />
+  @if (showTrigger) {
+    @if (!account) {
+      <button
+        (click)="handleOpenWalletMenu()"
+        mat-stroked-button
+        color="primary"
+        class="btn-lg">
+        Connect wallet
+      </button>
+    } @else {
+      <app-wallet-menu
+        [account]="account"
+        (accountClick)="handleOpenWalletMenu()" />
+    }
   }
 
-  <app-side-modal
-    [isOpen]="isOpenWalletConnectMenu"
-    (closeRequested)="handleCloseWalletMenu()">
-    <app-wallets />
-  </app-side-modal>
+  @if (hostModal) {
+    <app-side-modal
+      [isOpen]="isOpenWalletConnectMenu"
+      (closeRequested)="handleCloseWalletMenu()">
+      <app-wallets />
+    </app-side-modal>
+  }
 </div>
