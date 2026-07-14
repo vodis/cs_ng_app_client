@@ -61,6 +61,17 @@ export class AuthSessionService {
     return methods.length > 0 ? methods : ['email'];
   }
 
+  get passkeyLoginEnabled(): boolean {
+    const snapshot = this.authProvider.snapshot;
+    return (
+      snapshot.passkeyLoginEnabled && snapshot.loginMethods.includes('passkey')
+    );
+  }
+
+  get passkeyLinkEnabled(): boolean {
+    return this.authProvider.snapshot.passkeyLinkEnabled;
+  }
+
   async refresh(): Promise<AuthSession | null> {
     const token = await this.currentAccessToken();
     if (!token) {

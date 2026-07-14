@@ -20,6 +20,9 @@ const REMOTE_LOAD_TIMEOUT_MS = 15_000;
 const INITIAL_SNAPSHOT: AuthProviderSnapshot = {
   status: 'loading',
   loginMethods: [],
+  passkeyLoginEnabled: false,
+  passkeySignupEnabled: false,
+  passkeyLinkEnabled: false,
   embeddedWalletEnabled: false,
 };
 
@@ -157,6 +160,9 @@ export class AuthProviderService implements OnDestroy {
       return this.publish({
         status: 'failed',
         loginMethods: [],
+        passkeyLoginEnabled: false,
+        passkeySignupEnabled: false,
+        passkeyLinkEnabled: false,
         embeddedWalletEnabled: false,
         error: errorMessage,
       });
@@ -178,9 +184,23 @@ export class AuthProviderService implements OnDestroy {
         value.error === undefined ||
         typeof value.error === 'string')
     ) {
+      const passkeyLoginEnabled = this.optionalBoolean(
+        value,
+        'passkeyLoginEnabled',
+        value.loginMethods.includes('passkey')
+      );
+      const passkeyLinkEnabled = this.optionalBoolean(
+        value,
+        'passkeyLinkEnabled',
+        value.loginMethods.includes('passkey')
+      );
+
       return {
         status: value.status,
         loginMethods: value.loginMethods,
+        passkeyLoginEnabled,
+        passkeySignupEnabled: false,
+        passkeyLinkEnabled,
         embeddedWalletEnabled: value.embeddedWalletEnabled,
         ...('error' in value && typeof value.error === 'string'
           ? { error: value.error }
@@ -191,9 +211,24 @@ export class AuthProviderService implements OnDestroy {
     return {
       status: 'failed',
       loginMethods: [],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
       embeddedWalletEnabled: false,
       error: 'Account provider returned an invalid state.',
     };
+  }
+
+  private optionalBoolean(
+    value: object,
+    key: 'passkeyLoginEnabled' | 'passkeyLinkEnabled',
+    fallback: boolean
+  ): boolean {
+    const record = value as Record<string, unknown>;
+    if (!(key in value)) {
+      return fallback;
+    }
+    return typeof record[key] === 'boolean' ? record[key] : fallback;
   }
 
   private isProviderStatus(

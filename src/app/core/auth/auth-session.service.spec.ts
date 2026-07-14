@@ -36,6 +36,9 @@ describe('AuthSessionService', () => {
         snapshot: {
           status: 'ready',
           loginMethods: ['email', 'passkey'],
+          passkeyLoginEnabled: true,
+          passkeySignupEnabled: false,
+          passkeyLinkEnabled: true,
           embeddedWalletEnabled: true,
         },
       }
@@ -111,6 +114,10 @@ describe('AuthSessionService', () => {
 
   it('uses runtime auth config login methods', () => {
     expect(service.enabledLoginMethods).toEqual(['email', 'passkey']);
+  });
+
+  it('uses runtime passkey linking capability', () => {
+    expect(service.passkeyLinkEnabled).toBeTrue();
   });
 
   it('logs in through the account provider without provider-specific host calls', fakeAsync(() => {

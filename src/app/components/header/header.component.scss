@@ -1,18 +1,23 @@
 @import '@vodis/ui-kit/styles/breakpoints';
 
 :host {
+  display: block;
+  height: var(--shell-header-height);
+
   .header {
     position: relative;
     display: flex;
-    height: var(--shell-header-height);
+    height: 100%;
     box-sizing: border-box;
     flex-direction: column;
 
     &__content {
       display: grid;
+      height: 100%;
       min-height: 0;
-      flex: 1;
+      box-sizing: border-box;
       align-items: center;
+      padding-bottom: 1px;
       grid-template-columns: repeat(7, minmax(0, 1fr));
     }
 
@@ -31,26 +36,45 @@
 
     &__content_connect {
       display: flex;
+      height: 100%;
       align-items: center;
       justify-content: flex-end;
       gap: 0.75rem;
-      padding-top: 6px;
-      padding-right: 1rem;
-      grid-column: 6 / 8;
+      padding-right: 1.5rem;
+      grid-column: 2 / 8;
     }
 
     &__account-link {
       display: inline-flex;
-      min-height: 2.25rem;
+      height: 2.25rem;
+      box-sizing: border-box;
       align-items: center;
+      justify-content: center;
       padding: 0 0.85rem;
       border: 1px solid rgb(255 255 255 / 18%);
       border-radius: 8px;
       color: var(--main-text-color);
       font-size: 0.85rem;
-      line-height: 1;
+      font-weight: 500;
+      line-height: 1.2;
       text-decoration: none;
       white-space: nowrap;
+
+      &--icon {
+        width: 2.25rem;
+        min-width: 2.25rem;
+        height: 2.25rem;
+        min-height: 2.25rem;
+        padding: 0;
+        border-radius: 999px;
+      }
+
+      mat-icon {
+        width: 1.25rem;
+        height: 1.25rem;
+        font-size: 1.25rem;
+        line-height: 1.25rem;
+      }
 
       &._active {
         border-color: var(--primary-text-color);
@@ -78,14 +102,34 @@
     }
 
     &__content_connect {
-      justify-content: center;
-      padding-top: 6px;
+      height: 100%;
+      justify-content: flex-end;
+      padding-right: 1rem;
       grid-column: 3 / 5;
     }
 
     &__account-link {
-      padding: 0 0.65rem;
-      font-size: 0.78rem;
+      height: 2rem;
+
+      &--icon {
+        width: 2rem;
+        min-width: 2rem;
+        height: 2rem;
+        min-height: 2rem;
+        padding: 0;
+      }
+
+      &:not(&--icon) {
+        padding: 0 0.65rem;
+        font-size: 0.78rem;
+      }
+
+      mat-icon {
+        width: 1.125rem;
+        height: 1.125rem;
+        font-size: 1.125rem;
+        line-height: 1.125rem;
+      }
     }
   }
 }
