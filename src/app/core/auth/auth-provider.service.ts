@@ -189,7 +189,6 @@ export class AuthProviderService implements OnDestroy {
         'passkeyLoginEnabled',
         value.loginMethods.includes('passkey')
       );
-      const passkeySignupEnabled = false;
       const passkeyLinkEnabled = this.optionalBoolean(
         value,
         'passkeyLinkEnabled',
@@ -200,7 +199,7 @@ export class AuthProviderService implements OnDestroy {
         status: value.status,
         loginMethods: value.loginMethods,
         passkeyLoginEnabled,
-        passkeySignupEnabled,
+        passkeySignupEnabled: false,
         passkeyLinkEnabled,
         embeddedWalletEnabled: value.embeddedWalletEnabled,
         ...('error' in value && typeof value.error === 'string'
@@ -222,7 +221,7 @@ export class AuthProviderService implements OnDestroy {
 
   private optionalBoolean(
     value: object,
-    key: 'passkeyLoginEnabled' | 'passkeySignupEnabled' | 'passkeyLinkEnabled',
+    key: 'passkeyLoginEnabled' | 'passkeyLinkEnabled',
     fallback: boolean
   ): boolean {
     const record = value as Record<string, unknown>;

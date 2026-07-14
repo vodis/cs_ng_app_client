@@ -116,6 +116,10 @@ describe('AuthSessionService', () => {
     expect(service.enabledLoginMethods).toEqual(['email', 'passkey']);
   });
 
+  it('uses runtime passkey linking capability', () => {
+    expect(service.passkeyLinkEnabled).toBeTrue();
+  });
+
   it('logs in through the account provider without provider-specific host calls', fakeAsync(() => {
     let resolvedSession: unknown;
 
