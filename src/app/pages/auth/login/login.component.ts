@@ -28,7 +28,18 @@ export class LoginComponent {
   public error = '';
   public info = '';
 
-  public readonly socialMethods = LOGIN_SOCIAL_METHODS;
+  public get socialMethods(): AuthSocialMethod[] {
+    const loginMethods = new Set(this.authSession.enabledLoginMethods);
+    return LOGIN_SOCIAL_METHODS.filter(method => {
+      if (method === 'telegram') {
+        return true;
+      }
+      if (method === 'passkey') {
+        return this.authSession.passkeyLoginEnabled;
+      }
+      return loginMethods.has(method);
+    });
+  }
 
   constructor(
     public readonly authSession: AuthSessionService,

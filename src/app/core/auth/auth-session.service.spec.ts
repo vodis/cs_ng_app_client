@@ -36,6 +36,9 @@ describe('AuthSessionService', () => {
         snapshot: {
           status: 'ready',
           loginMethods: ['email', 'passkey'],
+          passkeyLoginEnabled: true,
+          passkeySignupEnabled: false,
+          passkeyLinkEnabled: true,
           embeddedWalletEnabled: true,
         },
       }

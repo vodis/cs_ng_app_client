@@ -70,7 +70,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public canEnablePasskey(): boolean {
-    return this.authSession.enabledLoginMethods.includes('passkey');
+    return this.authSession.passkeyLinkEnabled;
   }
 
   public async enablePasskey(): Promise<void> {

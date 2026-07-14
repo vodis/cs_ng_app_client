@@ -17,6 +17,9 @@ export type AuthProviderStatus = 'loading' | 'ready' | 'disabled' | 'failed';
 export type AuthProviderSnapshot = {
   status: AuthProviderStatus;
   loginMethods: AuthProviderLoginMethod[];
+  passkeyLoginEnabled: boolean;
+  passkeySignupEnabled: boolean;
+  passkeyLinkEnabled: boolean;
   embeddedWalletEnabled: boolean;
   error?: string;
 };

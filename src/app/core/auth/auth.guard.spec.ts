@@ -32,6 +32,9 @@ describe('AuthGuard', () => {
           resolve({
             status: 'ready',
             loginMethods: ['email'],
+            passkeyLoginEnabled: false,
+            passkeySignupEnabled: false,
+            passkeyLinkEnabled: true,
             embeddedWalletEnabled: true,
           });
       })
@@ -62,6 +65,9 @@ describe('AuthGuard', () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'disabled',
       loginMethods: [],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
       embeddedWalletEnabled: false,
     });
 
@@ -77,6 +83,9 @@ describe('AuthGuard', () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'failed',
       loginMethods: [],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
       embeddedWalletEnabled: false,
     });
 
