@@ -189,11 +189,7 @@ export class AuthProviderService implements OnDestroy {
         'passkeyLoginEnabled',
         value.loginMethods.includes('passkey')
       );
-      const passkeySignupEnabled = this.optionalBoolean(
-        value,
-        'passkeySignupEnabled',
-        false
-      );
+      const passkeySignupEnabled = false;
       const passkeyLinkEnabled = this.optionalBoolean(
         value,
         'passkeyLinkEnabled',
