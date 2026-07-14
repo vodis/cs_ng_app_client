@@ -2,6 +2,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "baseUrl": "./",
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -11,19 +12,20 @@
     "noFallthroughCasesInSwitch": true,
     "sourceMap": true,
     "declaration": false,
+    "downlevelIteration": true,
     "experimentalDecorators": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "importHelpers": true,
     "target": "ES2022",
     "module": "ES2022",
     "useDefineForClassFields": false,
     "lib": ["ES2022", "dom"],
     "paths": {
-      "@components/*": ["./src/app/components/*"],
-      "@shared/*": ["./src/app/shared/*"],
-      "@core/*": ["./src/app/core/*"],
-      "@domains/*": ["./src/app/domains/*"],
-      "@mfe-contracts/*": ["./src/app/mfe-contracts/*"]
+      "@components/*": ["src/app/components/*"],
+      "@shared/*": ["src/app/shared/*"],
+      "@core/*": ["src/app/core/*"],
+      "@domains/*": ["src/app/domains/*"],
+      "@mfe-contracts/*": ["src/app/mfe-contracts/*"]
     }
   },
   "angularCompilerOptions": {
