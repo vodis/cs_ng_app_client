@@ -37,7 +37,12 @@ export class LoginComponent {
   public error = '';
   public info = '';
 
-  public readonly socialMethods = LOGIN_SOCIAL_METHODS;
+  public get socialMethods(): AuthSocialMethod[] {
+    const loginMethods = new Set(this.authSession.enabledLoginMethods);
+    return LOGIN_SOCIAL_METHODS.filter(
+      method => method === 'telegram' || loginMethods.has(method)
+    );
+  }
 
   public disabledSocialMethods(
     providerPasskeyLoginEnabled: boolean

@@ -113,6 +113,15 @@ describe('LoginComponent', () => {
     ]);
   });
 
+  it('hides provider-backed social options when they are not enabled', () => {
+    Object.defineProperty(authSession, 'enabledLoginMethods', {
+      configurable: true,
+      get: () => ['email'],
+    });
+
+    expect(component.socialMethods).toEqual(['telegram']);
+  });
+
   it('shows a helpful message when passkey is not enabled on the account', async () => {
     authSession.login.and.rejectWith(new Error('No passkey credentials found'));
 
