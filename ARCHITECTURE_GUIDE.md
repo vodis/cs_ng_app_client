@@ -304,10 +304,10 @@ provider login, passkey linking, and wallet modal workflows.
 
 ### Public routes
 
-| Route | Purpose |
-| --- | --- |
-| `/login` | Returning-user sign in |
-| `/register` | New account creation |
+| Route       | Purpose                |
+| ----------- | ---------------------- |
+| `/login`    | Returning-user sign in |
+| `/register` | New account creation   |
 
 Both routes render outside the main shell (no header/sidebar). Route prefixes are
 owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
@@ -315,10 +315,10 @@ owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 
 ### Protected routes
 
-| Route | Guard | Purpose |
-| --- | --- | --- |
-| `/profile` | `AuthGuard` | Account settings, passkey enablement, wallet list |
-| `/generate-wallet` | `AuthGuard` | First-time wallet onboarding after auth |
+| Route              | Guard       | Purpose                                           |
+| ------------------ | ----------- | ------------------------------------------------- |
+| `/profile`         | `AuthGuard` | Account settings, passkey enablement, wallet list |
+| `/generate-wallet` | `AuthGuard` | First-time wallet onboarding after auth           |
 
 ### Login methods on `/login`
 

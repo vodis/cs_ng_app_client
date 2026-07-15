@@ -47,6 +47,7 @@ describe('ProfileComponent', () => {
         session$: sessionSubject.asObservable(),
         loading$: of(false),
         passkeyLinkEnabled: true,
+        passkeyLoginEnabled: true,
       }
     );
     authSession.enablePasskey.and.resolveTo(enabledSession);
@@ -72,5 +73,16 @@ describe('ProfileComponent', () => {
     });
 
     expect(component.canEnablePasskey()).toBeFalse();
+  });
+
+  it('shows linked-only messaging when passkey login is unavailable', () => {
+    sessionSubject.next(enabledSession);
+    Object.defineProperty(authSession, 'passkeyLoginEnabled', {
+      configurable: true,
+      get: () => false,
+    });
+
+    expect(component.isPasskeyLinked()).toBeTrue();
+    expect(component.isPasskeyLoginAvailable()).toBeFalse();
   });
 });

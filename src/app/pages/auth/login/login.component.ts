@@ -8,7 +8,11 @@ import {
   hasLinkedWallets,
   readReturnUrl,
 } from '../shared/auth-navigation.helper';
-import { resolveLoginError } from '../shared/auth-login-messages.helper';
+import {
+  resolveLoginError,
+  PASSKEY_LOGIN_UNAVAILABLE_MESSAGE,
+} from '../shared/auth-login-messages.helper';
+import { ProductEventsService } from '@core/product-events/product-events.service';
 
 const LOGIN_SOCIAL_METHODS: AuthSocialMethod[] = [
   'passkey',
@@ -35,10 +39,25 @@ export class LoginComponent {
 
   public readonly socialMethods = LOGIN_SOCIAL_METHODS;
 
+  public disabledSocialMethods(
+    providerPasskeyLoginEnabled: boolean
+  ): AuthSocialMethod[] {
+    return providerPasskeyLoginEnabled ? [] : ['passkey'];
+  }
+
+  public showPasskeyLoginUnavailableNote(
+    providerPasskeyLoginEnabled: boolean
+  ): boolean {
+    return !providerPasskeyLoginEnabled;
+  }
+
+  public passkeyLoginUnavailableNote = PASSKEY_LOGIN_UNAVAILABLE_MESSAGE;
+
   constructor(
     public readonly authSession: AuthSessionService,
     private readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly productEvents: ProductEventsService
   ) {}
 
   public async loginWithEmail(): Promise<void> {
@@ -79,6 +98,11 @@ export class LoginComponent {
       return;
     }
 
+    if (method === 'passkey' && !this.authSession.passkeyLoginEnabled) {
+      this.info = PASSKEY_LOGIN_UNAVAILABLE_MESSAGE;
+      return;
+    }
+
     await this.continueWith(method);
   }
 
@@ -91,7 +115,9 @@ export class LoginComponent {
       const session = await this.authSession.login(method);
       await this.navigateAfterAuth(session.wallets.length);
     } catch (error) {
-      this.error = resolveLoginError(method, error);
+      this.error = resolveLoginError(method, error, {
+        reasonCode: this.productEvents.reason(error),
+      });
     } finally {
       this.loading = false;
     }

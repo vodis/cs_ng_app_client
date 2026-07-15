@@ -197,12 +197,12 @@ Update this guide and `AGENT_GUIDE.md` whenever one of the following changes:
 
 Host auth routes live under `src/app/pages/auth/`.
 
-| Route | Access | Notes |
-| --- | --- | --- |
-| `/login` | Public | Passkey, Google, Apple, Telegram always shown; email code fallback |
-| `/register` | Public | Account creation only; wallet setup is separate |
-| `/generate-wallet` | `AuthGuard` | First wallet onboarding after auth |
-| `/profile` | `AuthGuard` | Passkey enablement + Connect wallet button |
+| Route              | Access      | Notes                                                              |
+| ------------------ | ----------- | ------------------------------------------------------------------ |
+| `/login`           | Public      | Passkey, Google, Apple, Telegram always shown; email code fallback |
+| `/register`        | Public      | Account creation only; wallet setup is separate                    |
+| `/generate-wallet` | `AuthGuard` | First wallet onboarding after auth                                 |
+| `/profile`         | `AuthGuard` | Passkey enablement + Connect wallet button                         |
 
 ### Login expectations
 

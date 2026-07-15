@@ -1,12 +1,17 @@
 import { convertToParamMap, ParamMap } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
+import { ProductEventsService } from '@core/product-events/product-events.service';
 import { of } from 'rxjs';
-import { PASSKEY_SETUP_REQUIRED_MESSAGE } from '../shared/auth-login-messages.helper';
+import {
+  PASSKEY_LOGIN_UNAVAILABLE_MESSAGE,
+  PASSKEY_SETUP_REQUIRED_MESSAGE,
+} from '../shared/auth-login-messages.helper';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
+  let productEvents: jasmine.SpyObj<ProductEventsService>;
   let router: jasmine.SpyObj<{
     navigateByUrl: (url: string) => Promise<boolean>;
     navigate: (
@@ -55,11 +60,24 @@ describe('LoginComponent', () => {
       ],
     });
     authSession.reloadWallets.and.resolveTo([]);
+    productEvents = jasmine.createSpyObj<ProductEventsService>(
+      'ProductEventsService',
+      ['reason']
+    );
+    productEvents.reason.and.callFake((error: unknown) =>
+      error instanceof Error
+        ? error.message
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+        : 'unknown'
+    );
 
     component = new LoginComponent(
       authSession,
       router as never,
-      { snapshot: { queryParamMap } } as never
+      { snapshot: { queryParamMap } } as never,
+      productEvents
     );
   });
 
@@ -105,6 +123,25 @@ describe('LoginComponent', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
+  it('shows an availability message when passkey login is disabled', async () => {
+    Object.defineProperty(authSession, 'passkeyLoginEnabled', {
+      configurable: true,
+      get: () => false,
+    });
+    component = createComponent();
+
+    await component.continueWithSocial('passkey');
+
+    expect(component.info).toBe(PASSKEY_LOGIN_UNAVAILABLE_MESSAGE);
+    expect(authSession.login).not.toHaveBeenCalled();
+  });
+
+  it('disables passkey when provider login capability is off', () => {
+    expect(component.disabledSocialMethods(false)).toEqual(['passkey']);
+    expect(component.disabledSocialMethods(true)).toEqual([]);
+    expect(component.showPasskeyLoginUnavailableNote(false)).toBeTrue();
+  });
+
   it('routes wallet-less logins to generate-wallet', async () => {
     authSession.login.and.resolveTo({
       user: {
@@ -134,7 +171,8 @@ describe('LoginComponent', () => {
     return new LoginComponent(
       authSession,
       router as never,
-      { snapshot: { queryParamMap } } as never
+      { snapshot: { queryParamMap } } as never,
+      productEvents
     );
   }
 });
