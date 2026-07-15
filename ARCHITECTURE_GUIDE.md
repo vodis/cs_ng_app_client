@@ -296,3 +296,71 @@ For every new feature, answer:
 7. Which communication channel(s) are touched and what version changes are needed?
 
 If these answers are not explicit, implementation should not start.
+
+## 15. Authentication and Session Flow
+
+The host owns top-level auth routing and session restoration. The wallet MFE owns
+provider login, passkey linking, and wallet modal workflows.
+
+### Public routes
+
+| Route | Purpose |
+| --- | --- |
+| `/login` | Returning-user sign in |
+| `/register` | New account creation |
+
+Both routes render outside the main shell (no header/sidebar). Route prefixes are
+owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
+`LayoutComponent` via `*ngIf` — do not duplicate them in `index.html`.
+
+### Protected routes
+
+| Route | Guard | Purpose |
+| --- | --- | --- |
+| `/profile` | `AuthGuard` | Account settings, passkey enablement, wallet list |
+| `/generate-wallet` | `AuthGuard` | First-time wallet onboarding after auth |
+
+### Login methods on `/login`
+
+The login page always offers these social entry points:
+
+- Passkey
+- Google
+- Apple
+- Telegram
+
+Email code login remains available as a fallback form.
+
+Passkey UX rule:
+
+- Passkey is always visible on `/login`.
+- If the user has not enabled passkey in profile yet, the host maps provider
+  errors to a friendly message that directs them to sign in with Google, Apple,
+  or Telegram first, then enable passkey from `/profile`.
+
+### Session policy
+
+`AuthGuard` behavior:
+
+1. Allow navigation when `AuthSessionService.session` is already populated.
+2. Otherwise wait for the auth provider to reach a terminal state.
+3. Attempt `AuthSessionService.refresh()` when the provider is `ready`.
+4. Redirect to `/login?returnUrl=<safe-path>` when there is no valid session and
+   refresh cannot restore one.
+
+Logout clears host session state and navigates to `/login`.
+
+### Post-auth wallet onboarding
+
+Account creation or login without linked wallets does not enter the dApp
+immediately. The host routes to `/generate-wallet?returnUrl=<safe-path>`.
+
+`/generate-wallet` owns first-time wallet setup:
+
+- Connect existing wallet (opens wallets MFE modal)
+- Generate embedded wallet (host bridge into wallets MFE)
+- Continue after wallet is connected
+
+`/profile` does not duplicate generate-wallet UI. It renders a Connect wallet
+button that opens the wallets MFE modal, which already contains generate/link
+flows for returning users.

@@ -204,7 +204,7 @@ describe('AuthSessionService', () => {
     expect(walletGatewayBridge.disconnectWallet).toHaveBeenCalledTimes(1);
     expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
     expect(service.session).toBeNull();
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/register');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/login');
   }));
 
   it('refreshes session and wallets using the provider access token', fakeAsync(() => {

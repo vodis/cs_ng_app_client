@@ -12,7 +12,6 @@ describe('LayoutComponent', () => {
 
   beforeEach(() => {
     routerEvents = new Subject();
-    document.documentElement.classList.remove('auth-shell-route');
 
     TestBed.configureTestingModule({
       declarations: [LayoutComponent],
@@ -32,23 +31,19 @@ describe('LayoutComponent', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => {
-    document.documentElement.classList.remove('auth-shell-route');
-  });
-
   it('hides shell on auth routes when navigation completes', () => {
     routerEvents.next(new NavigationEnd(1, '/login', '/login'));
 
     expect(component.hideShell).toBeTrue();
-    expect(
-      document.documentElement.classList.contains('auth-shell-route')
-    ).toBeTrue();
 
-    routerEvents.next(new NavigationEnd(2, '/', '/'));
+    routerEvents.next(
+      new NavigationEnd(2, '/generate-wallet', '/generate-wallet')
+    );
+
+    expect(component.hideShell).toBeTrue();
+
+    routerEvents.next(new NavigationEnd(3, '/', '/'));
 
     expect(component.hideShell).toBeFalse();
-    expect(
-      document.documentElement.classList.contains('auth-shell-route')
-    ).toBeFalse();
   });
 });

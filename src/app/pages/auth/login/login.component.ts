@@ -4,6 +4,11 @@ import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { LoginMethod } from '@core/auth/auth-session.types';
 import type { AuthSocialMethod } from '../shared/auth-social-buttons.component';
 import { authPageTransition } from '../shared/auth-page.animations';
+import {
+  hasLinkedWallets,
+  readReturnUrl,
+} from '../shared/auth-navigation.helper';
+import { resolveLoginError } from '../shared/auth-login-messages.helper';
 
 const LOGIN_SOCIAL_METHODS: AuthSocialMethod[] = [
   'passkey',
@@ -28,18 +33,7 @@ export class LoginComponent {
   public error = '';
   public info = '';
 
-  public get socialMethods(): AuthSocialMethod[] {
-    const loginMethods = new Set(this.authSession.enabledLoginMethods);
-    return LOGIN_SOCIAL_METHODS.filter(method => {
-      if (method === 'telegram') {
-        return true;
-      }
-      if (method === 'passkey') {
-        return this.authSession.passkeyLoginEnabled;
-      }
-      return loginMethods.has(method);
-    });
-  }
+  public readonly socialMethods = LOGIN_SOCIAL_METHODS;
 
   constructor(
     public readonly authSession: AuthSessionService,
@@ -94,10 +88,10 @@ export class LoginComponent {
     this.loading = true;
 
     try {
-      await this.authSession.login(method);
-      await this.router.navigateByUrl(this.returnUrl());
+      const session = await this.authSession.login(method);
+      await this.navigateAfterAuth(session.wallets.length);
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Login failed';
+      this.error = resolveLoginError(method, error);
     } finally {
       this.loading = false;
     }
@@ -114,13 +108,13 @@ export class LoginComponent {
 
     this.loading = true;
     try {
-      await this.authSession.verifyEmailCode(
+      const session = await this.authSession.verifyEmailCode(
         this.codeEmail,
         this.emailCode.trim()
       );
       this.isOpenEmailCodeModal = false;
       this.emailCode = '';
-      await this.router.navigateByUrl(this.returnUrl());
+      await this.navigateAfterAuth(session.wallets.length);
     } catch (error) {
       this.error =
         error instanceof Error ? error.message : 'Verification failed';
@@ -153,10 +147,18 @@ export class LoginComponent {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   }
 
-  private returnUrl(): string {
-    const value = this.route.snapshot.queryParamMap.get('returnUrl');
-    return value && value.startsWith('/') && !value.startsWith('//')
-      ? value
-      : '/';
+  private async navigateAfterAuth(initialWalletCount: number): Promise<void> {
+    if (await hasLinkedWallets(this.authSession, initialWalletCount)) {
+      await this.router.navigateByUrl(
+        readReturnUrl(this.route.snapshot.queryParamMap)
+      );
+      return;
+    }
+
+    await this.router.navigate(['/generate-wallet'], {
+      queryParams: {
+        returnUrl: readReturnUrl(this.route.snapshot.queryParamMap),
+      },
+    });
   }
 }

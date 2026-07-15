@@ -95,12 +95,15 @@
         </button>
       </div>
       <div class="profile-shell__wallet-connect">
+        <p class="profile-shell__empty">
+          Connect a wallet to link or create one through the wallet modal.
+        </p>
         <app-wallet-bar />
       </div>
       <div
         class="profile-shell__empty"
         *ngIf="activeSession.wallets.length === 0">
-        No wallet linked.
+        No wallet linked yet.
       </div>
       <ul
         class="profile-shell__wallets"
