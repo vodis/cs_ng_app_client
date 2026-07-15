@@ -26,9 +26,7 @@
         <span>CraftScript</span>
       </div>
 
-      <h2>
-        {{ step === 'account' ? 'Welcome to CraftScript' : 'Set up wallet' }}
-      </h2>
+      <h2>Welcome to CraftScript</h2>
 
       <ng-container *ngIf="authSession.providerSnapshot$ | async as provider">
         <p
@@ -42,92 +40,57 @@
           }}
         </p>
 
-        <ng-container *ngIf="step === 'account'">
-          <ng-container
-            *ngIf="
-              provider.status === 'loading' || provider.status === 'ready'
+        <ng-container
+          *ngIf="provider.status === 'loading' || provider.status === 'ready'">
+          <div
+            class="register-shell__form-block"
+            [class.register-shell__form-block--pending]="
+              provider.status !== 'ready' || loading
             ">
-            <div
-              class="register-shell__form-block"
-              [class.register-shell__form-block--pending]="
-                provider.status !== 'ready' || loading
-              ">
-              <form
-                class="register-shell__form"
-                (ngSubmit)="registerWithEmail()"
-                novalidate>
-                <label for="register-email">Email</label>
+            <form
+              class="register-shell__form"
+              (ngSubmit)="registerWithEmail()"
+              novalidate>
+              <label for="register-email">Email</label>
+              <input
+                id="register-email"
+                name="email"
+                type="email"
+                placeholder="name@example.com"
+                [(ngModel)]="email"
+                [disabled]="provider.status !== 'ready' || loading" />
+
+              <label class="register-shell__policy">
                 <input
-                  id="register-email"
-                  name="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  [(ngModel)]="email"
+                  type="checkbox"
+                  name="policy"
+                  [(ngModel)]="agreedToPolicy"
                   [disabled]="provider.status !== 'ready' || loading" />
+                <span>
+                  By creating an account, I agree to CraftScript's
+                  <a href="/policy">Terms</a>.
+                </span>
+              </label>
 
-                <label class="register-shell__policy">
-                  <input
-                    type="checkbox"
-                    name="policy"
-                    [(ngModel)]="agreedToPolicy"
-                    [disabled]="provider.status !== 'ready' || loading" />
-                  <span>
-                    By creating an account, I agree to CraftScript's
-                    <a href="/policy">Terms</a>.
-                  </span>
-                </label>
+              <button
+                type="submit"
+                [disabled]="provider.status !== 'ready' || loading">
+                Register
+              </button>
+            </form>
 
-                <button
-                  type="submit"
-                  [disabled]="provider.status !== 'ready' || loading">
-                  Register
-                </button>
-              </form>
-
-              <div class="register-shell__divider">
-                <span>or</span>
-              </div>
-
-              <app-auth-social-buttons
-                [disabled]="provider.status !== 'ready' || loading"
-                [methods]="['google', 'apple', 'telegram']"
-                (methodSelected)="
-                  continueWithSocial($event)
-                "></app-auth-social-buttons>
+            <div class="register-shell__divider">
+              <span>or</span>
             </div>
-          </ng-container>
+
+            <app-auth-social-buttons
+              [disabled]="provider.status !== 'ready' || loading"
+              [methods]="['google', 'apple', 'telegram']"
+              (methodSelected)="
+                continueWithSocial($event)
+              "></app-auth-social-buttons>
+          </div>
         </ng-container>
-
-        <div
-          class="register-shell__wallet-step"
-          *ngIf="provider.status === 'ready' && step === 'wallet'">
-          <p>
-            Link a wallet before entering the dApp. You can connect an existing
-            wallet or create an embedded wallet secured by your account.
-          </p>
-
-          <button
-            class="register-shell__wallet-action"
-            type="button"
-            [disabled]="walletLoading"
-            (click)="connectExistingWallet()">
-            Connect existing wallet
-          </button>
-          <button
-            class="register-shell__wallet-action register-shell__wallet-action--primary"
-            type="button"
-            [disabled]="walletLoading"
-            (click)="generateWallet()">
-            Generate wallet
-          </button>
-          <button
-            class="register-shell__wallet-refresh"
-            type="button"
-            [disabled]="walletLoading"
-            (click)="finishAfterWalletLinked()">
-            Continue after wallet is connected
-          </button>
-        </div>
       </ng-container>
 
       <p class="register-shell__error" *ngIf="error">{{ error }}</p>
@@ -136,12 +99,6 @@
       <p class="register-shell__login-link">
         Already have an account? <a routerLink="/login">Log in</a>
       </p>
-
-      <app-side-modal
-        [isOpen]="isOpenWalletConnectMenu"
-        (closeRequested)="closeWalletConnectMenu()">
-        <app-wallets />
-      </app-side-modal>
 
       <app-side-modal
         [isOpen]="isOpenEmailCodeModal"

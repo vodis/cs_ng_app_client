@@ -73,6 +73,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return this.authSession.passkeyLinkEnabled;
   }
 
+  public isPasskeyLinked(): boolean {
+    return this.session?.user.passkeyEnabled === true;
+  }
+
+  public isPasskeyLoginAvailable(): boolean {
+    return this.authSession.passkeyLoginEnabled;
+  }
+
   public async enablePasskey(): Promise<void> {
     this.error = '';
     this.passkeyMessage = '';

@@ -1,0 +1,67 @@
+<section class="register-shell register-shell--centered" @authPageTransition>
+  <div class="register-shell__content">
+    <section class="register-shell__panel">
+      <div class="register-shell__brand">
+        <img
+          src="../../../assets/img/logo/logo.svg"
+          alt="CraftScript"
+          width="40"
+          height="40" />
+        <span>CraftScript</span>
+      </div>
+
+      <h2>Set up wallet</h2>
+
+      <ng-container *ngIf="authSession.providerSnapshot$ | async as provider">
+        <p
+          class="register-shell__status"
+          *ngIf="provider.status === 'disabled'">
+          Wallet setup is not enabled for this environment.
+        </p>
+        <p class="register-shell__status" *ngIf="provider.status === 'failed'">
+          {{ provider.error || 'Wallet setup is temporarily unavailable.' }}
+        </p>
+
+        <div
+          class="register-shell__wallet-step"
+          *ngIf="provider.status === 'ready'">
+          <p>
+            Link a wallet before entering the dApp. You can connect an existing
+            wallet or create an embedded wallet secured by your account.
+          </p>
+
+          <button
+            class="register-shell__wallet-action"
+            type="button"
+            [disabled]="walletLoading"
+            (click)="connectExistingWallet()">
+            Connect existing wallet
+          </button>
+          <button
+            class="register-shell__wallet-action register-shell__wallet-action--primary"
+            type="button"
+            [disabled]="walletLoading"
+            (click)="generateWallet()">
+            Generate wallet
+          </button>
+          <button
+            class="register-shell__wallet-refresh"
+            type="button"
+            [disabled]="walletLoading"
+            (click)="finishAfterWalletLinked()">
+            Continue after wallet is connected
+          </button>
+        </div>
+      </ng-container>
+
+      <p class="register-shell__error" *ngIf="error">{{ error }}</p>
+      <p class="register-shell__info-note" *ngIf="info">{{ info }}</p>
+
+      <app-side-modal
+        [isOpen]="isOpenWalletConnectMenu"
+        (closeRequested)="closeWalletConnectMenu()">
+        <app-wallets />
+      </app-side-modal>
+    </section>
+  </div>
+</section>

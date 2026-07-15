@@ -74,7 +74,7 @@ describe('AuthGuard', () => {
     await guard.canActivate({} as never, { url: '/farm' } as never);
 
     expect(authSession.refresh).not.toHaveBeenCalled();
-    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/register'], {
+    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
       queryParams: { returnUrl: '/farm' },
     });
   });
@@ -91,7 +91,7 @@ describe('AuthGuard', () => {
 
     await guard.canActivate({} as never, { url: '//example.test' } as never);
 
-    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/register'], {
+    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
       queryParams: { returnUrl: '/' },
     });
   });

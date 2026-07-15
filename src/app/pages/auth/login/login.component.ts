@@ -4,6 +4,15 @@ import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { LoginMethod } from '@core/auth/auth-session.types';
 import type { AuthSocialMethod } from '../shared/auth-social-buttons.component';
 import { authPageTransition } from '../shared/auth-page.animations';
+import {
+  hasLinkedWallets,
+  readReturnUrl,
+} from '../shared/auth-navigation.helper';
+import {
+  resolveLoginError,
+  PASSKEY_LOGIN_UNAVAILABLE_MESSAGE,
+} from '../shared/auth-login-messages.helper';
+import { ProductEventsService } from '@core/product-events/product-events.service';
 
 const LOGIN_SOCIAL_METHODS: AuthSocialMethod[] = [
   'passkey',
@@ -30,21 +39,30 @@ export class LoginComponent {
 
   public get socialMethods(): AuthSocialMethod[] {
     const loginMethods = new Set(this.authSession.enabledLoginMethods);
-    return LOGIN_SOCIAL_METHODS.filter(method => {
-      if (method === 'telegram') {
-        return true;
-      }
-      if (method === 'passkey') {
-        return this.authSession.passkeyLoginEnabled;
-      }
-      return loginMethods.has(method);
-    });
+    return LOGIN_SOCIAL_METHODS.filter(
+      method => method === 'telegram' || loginMethods.has(method)
+    );
   }
+
+  public disabledSocialMethods(
+    providerPasskeyLoginEnabled: boolean
+  ): AuthSocialMethod[] {
+    return providerPasskeyLoginEnabled ? [] : ['passkey'];
+  }
+
+  public showPasskeyLoginUnavailableNote(
+    providerPasskeyLoginEnabled: boolean
+  ): boolean {
+    return !providerPasskeyLoginEnabled;
+  }
+
+  public passkeyLoginUnavailableNote = PASSKEY_LOGIN_UNAVAILABLE_MESSAGE;
 
   constructor(
     public readonly authSession: AuthSessionService,
     private readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly productEvents: ProductEventsService
   ) {}
 
   public async loginWithEmail(): Promise<void> {
@@ -85,6 +103,11 @@ export class LoginComponent {
       return;
     }
 
+    if (method === 'passkey' && !this.authSession.passkeyLoginEnabled) {
+      this.info = PASSKEY_LOGIN_UNAVAILABLE_MESSAGE;
+      return;
+    }
+
     await this.continueWith(method);
   }
 
@@ -94,10 +117,12 @@ export class LoginComponent {
     this.loading = true;
 
     try {
-      await this.authSession.login(method);
-      await this.router.navigateByUrl(this.returnUrl());
+      const session = await this.authSession.login(method);
+      await this.navigateAfterAuth(session.wallets.length);
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Login failed';
+      this.error = resolveLoginError(method, error, {
+        reasonCode: this.productEvents.reason(error),
+      });
     } finally {
       this.loading = false;
     }
@@ -114,13 +139,13 @@ export class LoginComponent {
 
     this.loading = true;
     try {
-      await this.authSession.verifyEmailCode(
+      const session = await this.authSession.verifyEmailCode(
         this.codeEmail,
         this.emailCode.trim()
       );
       this.isOpenEmailCodeModal = false;
       this.emailCode = '';
-      await this.router.navigateByUrl(this.returnUrl());
+      await this.navigateAfterAuth(session.wallets.length);
     } catch (error) {
       this.error =
         error instanceof Error ? error.message : 'Verification failed';
@@ -153,10 +178,18 @@ export class LoginComponent {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   }
 
-  private returnUrl(): string {
-    const value = this.route.snapshot.queryParamMap.get('returnUrl');
-    return value && value.startsWith('/') && !value.startsWith('//')
-      ? value
-      : '/';
+  private async navigateAfterAuth(initialWalletCount: number): Promise<void> {
+    if (await hasLinkedWallets(this.authSession, initialWalletCount)) {
+      await this.router.navigateByUrl(
+        readReturnUrl(this.route.snapshot.queryParamMap)
+      );
+      return;
+    }
+
+    await this.router.navigate(['/generate-wallet'], {
+      queryParams: {
+        returnUrl: readReturnUrl(this.route.snapshot.queryParamMap),
+      },
+    });
   }
 }

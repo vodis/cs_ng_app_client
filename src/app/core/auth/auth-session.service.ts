@@ -186,7 +186,7 @@ export class AuthSessionService {
       this.walletGatewayBridge.disconnectWallet();
       this.walletsService.setAccount(undefined);
       this.clear();
-      await this.router.navigateByUrl('/register');
+      await this.router.navigateByUrl('/login');
     } finally {
       this.loadingSubject.next(false);
     }

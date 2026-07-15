@@ -1,20 +1,30 @@
 import { convertToParamMap, ParamMap } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
+import { ProductEventsService } from '@core/product-events/product-events.service';
 import { of } from 'rxjs';
+import {
+  PASSKEY_LOGIN_UNAVAILABLE_MESSAGE,
+  PASSKEY_SETUP_REQUIRED_MESSAGE,
+} from '../shared/auth-login-messages.helper';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
+  let productEvents: jasmine.SpyObj<ProductEventsService>;
   let router: jasmine.SpyObj<{
     navigateByUrl: (url: string) => Promise<boolean>;
+    navigate: (
+      commands: string[],
+      extras?: { queryParams?: Record<string, string> }
+    ) => Promise<boolean>;
   }>;
   let queryParamMap: ParamMap;
 
   beforeEach(() => {
     authSession = jasmine.createSpyObj<AuthSessionService>(
       'AuthSessionService',
-      ['login'],
+      ['login', 'sendEmailCode', 'verifyEmailCode', 'reloadWallets'],
       {
         providerSnapshot$: of({
           status: 'ready' as const,
@@ -28,22 +38,46 @@ describe('LoginComponent', () => {
         passkeyLoginEnabled: true,
       }
     );
-    router = jasmine.createSpyObj('Router', ['navigateByUrl']);
+    router = jasmine.createSpyObj('Router', ['navigateByUrl', 'navigate']);
     queryParamMap = convertToParamMap({});
     router.navigateByUrl.and.resolveTo(true);
+    router.navigate.and.resolveTo(true);
     authSession.login.and.resolveTo({
       user: {
         id: 'account-1',
         providerUserId: 'provider-user-1',
         sessionId: 'session-1',
       },
-      wallets: [],
+      wallets: [
+        {
+          id: 'wallet-1',
+          providerWalletId: 'wallet-1',
+          address: '0x1111111111111111111111111111111111111111',
+          chainType: 'ethereum',
+          walletType: 'embedded',
+          isPrimary: true,
+        },
+      ],
     });
+    authSession.reloadWallets.and.resolveTo([]);
+    productEvents = jasmine.createSpyObj<ProductEventsService>(
+      'ProductEventsService',
+      ['reason']
+    );
+    productEvents.reason.and.callFake((error: unknown) =>
+      error instanceof Error
+        ? error.message
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+        : 'unknown'
+    );
 
     component = new LoginComponent(
       authSession,
       router as never,
-      { snapshot: { queryParamMap } } as never
+      { snapshot: { queryParamMap } } as never,
+      productEvents
     );
   });
 
@@ -70,7 +104,7 @@ describe('LoginComponent', () => {
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/farm');
   });
 
-  it('shows passkey, google, apple, and telegram social options', () => {
+  it('shows passkey, google, apple, and telegram social options by default', () => {
     expect(component.socialMethods).toEqual([
       'passkey',
       'google',
@@ -79,13 +113,60 @@ describe('LoginComponent', () => {
     ]);
   });
 
-  it('hides passkey when passkey login is disabled', () => {
+  it('hides provider-backed social options when they are not enabled', () => {
+    Object.defineProperty(authSession, 'enabledLoginMethods', {
+      configurable: true,
+      get: () => ['email'],
+    });
+
+    expect(component.socialMethods).toEqual(['telegram']);
+  });
+
+  it('shows a helpful message when passkey is not enabled on the account', async () => {
+    authSession.login.and.rejectWith(new Error('No passkey credentials found'));
+
+    await component.continueWith('passkey');
+
+    expect(component.error).toBe(PASSKEY_SETUP_REQUIRED_MESSAGE);
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('shows an availability message when passkey login is disabled', async () => {
     Object.defineProperty(authSession, 'passkeyLoginEnabled', {
       configurable: true,
       get: () => false,
     });
+    component = createComponent();
 
-    expect(component.socialMethods).toEqual(['google', 'apple', 'telegram']);
+    await component.continueWithSocial('passkey');
+
+    expect(component.info).toBe(PASSKEY_LOGIN_UNAVAILABLE_MESSAGE);
+    expect(authSession.login).not.toHaveBeenCalled();
+  });
+
+  it('disables passkey when provider login capability is off', () => {
+    expect(component.disabledSocialMethods(false)).toEqual(['passkey']);
+    expect(component.disabledSocialMethods(true)).toEqual([]);
+    expect(component.showPasskeyLoginUnavailableNote(false)).toBeTrue();
+  });
+
+  it('routes wallet-less logins to generate-wallet', async () => {
+    authSession.login.and.resolveTo({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+      },
+      wallets: [],
+    });
+    authSession.reloadWallets.and.resolveTo([]);
+
+    await component.continueWith('google');
+
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/generate-wallet'], {
+      queryParams: { returnUrl: '/' },
+    });
   });
 
   it('shows a coming soon message for telegram login', async () => {
@@ -99,7 +180,8 @@ describe('LoginComponent', () => {
     return new LoginComponent(
       authSession,
       router as never,
-      { snapshot: { queryParamMap } } as never
+      { snapshot: { queryParamMap } } as never,
+      productEvents
     );
   }
 });

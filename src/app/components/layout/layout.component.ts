@@ -11,6 +11,7 @@ import {
 import { NavigationEnd, Router } from '@angular/router';
 import { Direction } from '@shared/components/animate-line/animate-line.component';
 import { filter, Subscription } from 'rxjs';
+import { isAuthShellRoute } from '@core/routing/auth-shell.routes';
 
 @Component({
   selector: 'app-layout',
@@ -28,7 +29,7 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   public verticalLineAnimating = true;
   public contentHeight: number | null = null;
   public lineResetKey = 0;
-  public hideShell = LayoutComponent.shouldHideShell(window.location.pathname);
+  public hideShell = isAuthShellRoute(window.location.pathname);
 
   private resizeObserver?: ResizeObserver;
   private routerSubscription?: Subscription;
@@ -40,7 +41,6 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public ngOnInit(): void {
     this.isMobileView = this.currentWidth <= 768;
-    LayoutComponent.syncAuthShellRouteClass(this.hideShell);
 
     this.routerSubscription = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
@@ -102,16 +102,6 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private updateShellVisibility(url: string): void {
-    this.hideShell = LayoutComponent.shouldHideShell(url);
-    LayoutComponent.syncAuthShellRouteClass(this.hideShell);
-  }
-
-  private static syncAuthShellRouteClass(hideShell: boolean): void {
-    document.documentElement.classList.toggle('auth-shell-route', hideShell);
-  }
-
-  private static shouldHideShell(url: string): boolean {
-    const path = url.split('?')[0].split('#')[0];
-    return path.startsWith('/register') || path.startsWith('/login');
+    this.hideShell = isAuthShellRoute(url);
   }
 }
