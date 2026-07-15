@@ -192,3 +192,46 @@ Update this guide and `AGENT_GUIDE.md` whenever one of the following changes:
 - Host/MFE communication contract.
 - Wallet integration lifecycle or routing behavior.
 - Required local run/test commands.
+
+## Authentication Routes and UX
+
+Host auth routes live under `src/app/pages/auth/`.
+
+| Route              | Access      | Notes                                                              |
+| ------------------ | ----------- | ------------------------------------------------------------------ |
+| `/login`           | Public      | Passkey, Google, Apple, Telegram always shown; email code fallback |
+| `/register`        | Public      | Account creation only; wallet setup is separate                    |
+| `/generate-wallet` | `AuthGuard` | First wallet onboarding after auth                                 |
+| `/profile`         | `AuthGuard` | Passkey enablement + Connect wallet button                         |
+
+### Login expectations
+
+- `/login` always renders Passkey, Google, Apple, and Telegram buttons.
+- Passkey remains visible even when the account has not enabled passkey yet.
+- When passkey sign-in fails because passkey is not enabled in profile, show a
+  UX message that tells the user to sign in with Google, Apple, or Telegram
+  first and enable passkey from profile.
+- Telegram may remain a staged provider; keep the button visible and show a
+  coming-soon/info state until the provider is wired.
+
+### Session redirect policy
+
+- Missing or non-renewable sessions redirect to `/login?returnUrl=<safe-path>`.
+- `AuthGuard` waits for auth-provider readiness before attempting refresh.
+- Logout navigates to `/login`.
+
+### Wallet onboarding split
+
+- `/generate-wallet` is the dedicated first-time setup page after register/login
+  when the account has no linked wallets.
+- `/profile` renders only a Connect wallet trigger (`app-wallet-bar`). Generate
+  wallet and external-wallet linking remain inside the wallets MFE modal.
+- Do not re-implement generate-wallet UI in profile; reuse the MFE modal flow.
+
+### Local validation for auth changes
+
+1. Start host and wallets MFE together.
+2. Verify `/login` social buttons and passkey-not-enabled messaging.
+3. Verify protected-route redirect to `/login` without a session.
+4. Verify register/login without wallets routes to `/generate-wallet`.
+5. Verify profile Connect wallet opens the wallets MFE modal.

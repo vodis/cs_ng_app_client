@@ -15,20 +15,6 @@
     <link
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
       rel="stylesheet" />
-    <style>
-      html.auth-shell-route app-header,
-      html.auth-shell-route app-sidebar {
-        display: none !important;
-      }
-    </style>
-    <script>
-      (function () {
-        var path = window.location.pathname;
-        if (path.indexOf('/login') === 0 || path.indexOf('/register') === 0) {
-          document.documentElement.classList.add('auth-shell-route');
-        }
-      })();
-    </script>
   </head>
   <body>
     <app-root></app-root>

@@ -56,8 +56,19 @@
             <app-auth-social-buttons
               [disabled]="provider.status !== 'ready' || loading"
               [methods]="socialMethods"
+              [disabledMethods]="
+                disabledSocialMethods(provider.passkeyLoginEnabled)
+              "
               (methodSelected)="continueWithSocial($event)">
             </app-auth-social-buttons>
+
+            <p
+              class="register-shell__info-note"
+              *ngIf="
+                showPasskeyLoginUnavailableNote(provider.passkeyLoginEnabled)
+              ">
+              {{ passkeyLoginUnavailableNote }}
+            </p>
           </div>
         </ng-container>
       </ng-container>

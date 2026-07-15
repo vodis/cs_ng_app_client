@@ -3,7 +3,7 @@
     *ngIf="isEnabled('passkey')"
     class="register-shell__social register-shell__social--passkey"
     type="button"
-    [disabled]="disabled"
+    [disabled]="isMethodDisabled('passkey')"
     (click)="select('passkey')">
     <span class="register-shell__social-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" focusable="false">
@@ -22,7 +22,7 @@
     *ngIf="isEnabled('google')"
     class="register-shell__social register-shell__social--google"
     type="button"
-    [disabled]="disabled"
+    [disabled]="isMethodDisabled('google')"
     (click)="select('google')">
     <span class="register-shell__social-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" focusable="false">
@@ -47,7 +47,7 @@
     *ngIf="isEnabled('apple')"
     class="register-shell__social register-shell__social--apple"
     type="button"
-    [disabled]="disabled"
+    [disabled]="isMethodDisabled('apple')"
     (click)="select('apple')">
     <span class="register-shell__social-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" focusable="false">
@@ -63,7 +63,7 @@
     *ngIf="isEnabled('telegram')"
     class="register-shell__social register-shell__social--telegram"
     type="button"
-    [disabled]="disabled"
+    [disabled]="isMethodDisabled('telegram')"
     (click)="select('telegram')">
     <span class="register-shell__social-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" focusable="false">

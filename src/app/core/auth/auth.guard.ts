@@ -30,7 +30,7 @@ export class AuthGuard implements CanActivate {
       provider.status === 'ready' ? await this.authSession.refresh() : null;
     return session
       ? true
-      : this.router.createUrlTree(['/register'], {
+      : this.router.createUrlTree(['/login'], {
           queryParams: { returnUrl: this.safeReturnUrl(state.url) },
         });
   }

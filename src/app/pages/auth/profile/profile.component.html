@@ -50,7 +50,10 @@
 
       <div
         class="profile-shell__passkey"
-        *ngIf="activeSession.user.passkeyEnabled; else passkeyDisabled">
+        *ngIf="
+          isPasskeyLinked() && isPasskeyLoginAvailable();
+          else passkeyLinkedOnly
+        ">
         <div
           class="profile-shell__passkey-status profile-shell__passkey-status--enabled">
           <span class="profile-shell__passkey-icon" aria-hidden="true">
@@ -72,6 +75,33 @@
           </div>
         </div>
       </div>
+
+      <ng-template #passkeyLinkedOnly>
+        <div
+          class="profile-shell__passkey"
+          *ngIf="isPasskeyLinked(); else passkeyDisabled">
+          <div class="profile-shell__passkey-status">
+            <span class="profile-shell__passkey-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path
+                  fill="currentColor"
+                  d="M12 12a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Zm-7 7.25v-1.1c0-2.2 3.13-3.65 7-3.65s7 1.45 7 3.65v1.1H5Z" />
+                <path
+                  fill="currentColor"
+                  d="M18.2 8.4a.75.75 0 0 1 1.06 0l1.34 1.34a3.25 3.25 0 0 1 0 4.6l-.47.47a.75.75 0 0 1-1.06-1.06l.47-.47a1.75 1.75 0 0 0 0-2.47l-1.34-1.34a.75.75 0 0 1 0-1.06Z" />
+              </svg>
+            </span>
+            <div class="profile-shell__passkey-copy">
+              <span class="profile-shell__passkey-label">Passkey linked</span>
+              <p class="profile-shell__empty">
+                Your account has a passkey, but passkey sign-in is not enabled
+                in this environment yet. Continue signing in with email, Google,
+                or Apple.
+              </p>
+            </div>
+          </div>
+        </div>
+      </ng-template>
 
       <ng-template #passkeyDisabled>
         <p class="profile-shell__empty">
@@ -95,12 +125,15 @@
         </button>
       </div>
       <div class="profile-shell__wallet-connect">
+        <p class="profile-shell__empty">
+          Connect a wallet to link or create one through the wallet modal.
+        </p>
         <app-wallet-bar />
       </div>
       <div
         class="profile-shell__empty"
         *ngIf="activeSession.wallets.length === 0">
-        No wallet linked.
+        No wallet linked yet.
       </div>
       <ul
         class="profile-shell__wallets"

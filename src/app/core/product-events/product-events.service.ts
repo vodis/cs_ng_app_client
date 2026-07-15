@@ -75,11 +75,16 @@ export class ProductEventsService {
       : `anon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
-  private sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  private sanitizeMetadata(
+    metadata: Record<string, unknown>
+  ): Record<string, unknown> {
     const denied = ['token', 'authorization', 'password', 'secret'];
     return Object.fromEntries(
       Object.entries(metadata)
-        .filter(([key]) => !denied.some(deniedKey => key.toLowerCase().includes(deniedKey)))
+        .filter(
+          ([key]) =>
+            !denied.some(deniedKey => key.toLowerCase().includes(deniedKey))
+        )
         .slice(0, 40)
     );
   }
@@ -108,6 +113,8 @@ export class ProductEventsService {
     url: string,
     status: number | 'network_error'
   ): void {
-    console.warn(`product telemetry delivery failed url=${url} status=${status}`);
+    console.warn(
+      `product telemetry delivery failed url=${url} status=${status}`
+    );
   }
 }

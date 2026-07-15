@@ -4,6 +4,7 @@ import { LoginComponent } from './login/login.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AuthGuard } from '@core/auth/auth.guard';
 import { RegisterComponent } from './register/register.component';
+import { GenerateWalletComponent } from './generate-wallet/generate-wallet.component';
 
 const routes: Routes = [
   {
@@ -13,6 +14,11 @@ const routes: Routes = [
   {
     path: 'register',
     component: RegisterComponent,
+  },
+  {
+    path: 'generate-wallet',
+    component: GenerateWalletComponent,
+    canActivate: [AuthGuard],
   },
   {
     path: 'profile',
