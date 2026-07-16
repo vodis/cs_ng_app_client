@@ -4,7 +4,7 @@ const {
 } = require('@angular-architects/module-federation/webpack');
 const mfManifest = require('../src/config/mf.manifest.json');
 
-module.exports = withModuleFederationPlugin({
+const mfConfig = withModuleFederationPlugin({
   remotes: mfManifest,
 
   shared: {
@@ -15,3 +15,13 @@ module.exports = withModuleFederationPlugin({
     }),
   },
 });
+
+// Override MF `publicPath: 'auto'` — avoids import.meta in styles.js (Angular classic script).
+module.exports = {
+  ...mfConfig,
+  output: {
+    ...mfConfig.output,
+    uniqueName: 'cs_ng_app_client',
+    publicPath: '/',
+  },
+};
