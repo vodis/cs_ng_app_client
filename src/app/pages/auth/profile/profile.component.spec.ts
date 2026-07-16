@@ -4,12 +4,14 @@ import { BehaviorSubject, of } from 'rxjs';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession } from '@core/auth/auth-session.types';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { ProfileComponent } from './profile.component';
 
 describe('ProfileComponent', () => {
   let component: ProfileComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let walletsService: jasmine.SpyObj<WalletsService>;
+  let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
   let sessionSubject: BehaviorSubject<AuthSession | null>;
 
   const enabledSession: AuthSession = {
@@ -72,8 +74,25 @@ describe('ProfileComponent', () => {
     walletsService = jasmine.createSpyObj<WalletsService>('WalletsService', [
       'requestOpen',
     ]);
+    walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
+      'WalletGatewayBridgeService',
+      ['syncConnectedWallet']
+    );
+    walletGatewayBridge.syncConnectedWallet.and.resolveTo({
+      status: 'connected',
+      account: linkedWalletSession.wallets[0].address,
+      chainId: null,
+      isVerified: false,
+      safetyStatus: null,
+      isBypassed: false,
+      executionState: 'operating.idle',
+    });
 
-    component = new ProfileComponent(authSession, walletsService);
+    component = new ProfileComponent(
+      authSession,
+      walletsService,
+      walletGatewayBridge
+    );
     component.ngOnInit();
   });
 
@@ -114,8 +133,19 @@ describe('ProfileComponent', () => {
     expect(component.hasLinkedWallets()).toBeTrue();
   });
 
-  it('opens the wallets MFE when viewing a linked wallet', () => {
-    component.openWalletModal();
+  it('syncs the connected wallet then opens the wallets MFE', async () => {
+    await component.openWalletModal();
+
+    expect(walletGatewayBridge.syncConnectedWallet).toHaveBeenCalledTimes(1);
+    expect(walletsService.requestOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('still opens the wallets MFE when sync fails', async () => {
+    walletGatewayBridge.syncConnectedWallet.and.rejectWith(
+      new Error('gateway unavailable')
+    );
+
+    await component.openWalletModal();
 
     expect(walletsService.requestOpen).toHaveBeenCalledTimes(1);
   });

@@ -7,6 +7,7 @@ import type {
   BackendWallet,
 } from '@core/auth/auth-session.types';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 
 @Component({
   selector: 'app-profile',
@@ -30,7 +31,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   constructor(
     public readonly authSession: AuthSessionService,
-    private readonly walletsService: WalletsService
+    private readonly walletsService: WalletsService,
+    private readonly walletGatewayBridge: WalletGatewayBridgeService
   ) {}
 
   public ngOnInit(): void {
@@ -104,7 +106,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return (this.session?.wallets.length ?? 0) > 0;
   }
 
-  public openWalletModal(): void {
+  public async openWalletModal(): Promise<void> {
+    try {
+      await this.walletGatewayBridge.syncConnectedWallet();
+    } catch {
+      // Still open the modal so the user can connect manually.
+    }
     this.walletsService.requestOpen();
   }
 

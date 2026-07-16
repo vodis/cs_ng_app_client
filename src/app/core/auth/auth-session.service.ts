@@ -183,6 +183,9 @@ export class AuthSessionService {
     this.loadingSubject.next(true);
     try {
       await this.authProvider.ensureEmbeddedWallet();
+      await this.walletGatewayBridge
+        .syncConnectedWallet()
+        .catch(() => undefined);
     } finally {
       this.loadingSubject.next(false);
     }
