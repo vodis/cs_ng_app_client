@@ -137,7 +137,7 @@ const modules = {
   'auth-provider': {
     mountAuthProvider: function () {
       return {
-        contractVersion: '2.2.0',
+        contractVersion: '2.3.0',
         unmount: function () {},
         subscribe: function (listener) {
           queueMicrotask(function () { listener(snapshot); });
@@ -148,6 +148,9 @@ const modules = {
         sendEmailCode: function () { return Promise.resolve(); },
         verifyEmailCode: function () { return Promise.resolve(session); },
         linkPasskey: function () { return Promise.resolve(session); },
+        ensureEmbeddedWallet: function () {
+          return Promise.resolve(session.wallets[0]);
+        },
         logout: function () { return Promise.resolve(); },
         getAccessToken: function () {
           return Promise.resolve(${serializedAccessToken});
