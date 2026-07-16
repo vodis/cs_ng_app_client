@@ -6,6 +6,7 @@ import type {
   BackendBalance,
   BackendWallet,
 } from '@core/auth/auth-session.types';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 
 @Component({
   selector: 'app-profile',
@@ -27,7 +28,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   private subscription?: Subscription;
 
-  constructor(public readonly authSession: AuthSessionService) {}
+  constructor(
+    public readonly authSession: AuthSessionService,
+    private readonly walletsService: WalletsService
+  ) {}
 
   public ngOnInit(): void {
     this.subscription = this.authSession.session$.subscribe(session => {
@@ -94,6 +98,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
     } finally {
       this.passkeyLoading = false;
     }
+  }
+
+  public hasLinkedWallets(): boolean {
+    return (this.session?.wallets.length ?? 0) > 0;
+  }
+
+  public openWalletModal(): void {
+    this.walletsService.requestOpen();
   }
 
   public async refreshWallets(): Promise<void> {

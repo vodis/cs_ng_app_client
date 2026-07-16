@@ -125,10 +125,23 @@
         </button>
       </div>
       <div class="profile-shell__wallet-connect">
-        <p class="profile-shell__empty">
-          Connect a wallet to link or create one through the wallet modal.
-        </p>
-        <app-wallet-bar />
+        <ng-container *ngIf="hasLinkedWallets(); else connectWallet">
+          <button
+            type="button"
+            mat-button
+            color="primary"
+            class="profile-shell__view-wallet"
+            (click)="openWalletModal()">
+            View wallet
+            <span aria-hidden="true">›</span>
+          </button>
+        </ng-container>
+        <ng-template #connectWallet>
+          <p class="profile-shell__empty">
+            Connect a wallet to link or create one through the wallet modal.
+          </p>
+          <app-wallet-bar />
+        </ng-template>
       </div>
       <div
         class="profile-shell__empty"
