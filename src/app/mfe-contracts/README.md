@@ -20,7 +20,7 @@ Use this as the source of truth for runtime communication in the Angular app.
 The canonical, open runtime contract is
 `cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. This host keeps only
 the structural consumer copy in `auth-provider.types.ts` and validates contract
-version `2.2.0` before mounting `mfe-wallets/auth-provider`.
+version `2.3.0` before mounting `mfe-wallets/auth-provider`.
 
 The wallet remote exposes atomized entrypoints:
 

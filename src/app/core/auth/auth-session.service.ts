@@ -179,6 +179,15 @@ export class AuthSessionService {
     }
   }
 
+  async ensureEmbeddedWallet(): Promise<void> {
+    this.loadingSubject.next(true);
+    try {
+      await this.authProvider.ensureEmbeddedWallet();
+    } finally {
+      this.loadingSubject.next(false);
+    }
+  }
+
   async logout(): Promise<void> {
     this.loadingSubject.next(true);
     try {

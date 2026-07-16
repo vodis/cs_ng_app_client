@@ -1,7 +1,5 @@
 import { convertToParamMap, ParamMap, Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
-import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
-import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { of } from 'rxjs';
 import { GenerateWalletComponent } from './generate-wallet.component';
 
@@ -9,14 +7,12 @@ describe('GenerateWalletComponent', () => {
   let component: GenerateWalletComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let router: jasmine.SpyObj<Router>;
-  let walletsService: jasmine.SpyObj<WalletsService>;
-  let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
   let queryParamMap: ParamMap;
 
   beforeEach(() => {
     authSession = jasmine.createSpyObj<AuthSessionService>(
       'AuthSessionService',
-      ['reloadWallets'],
+      ['ensureEmbeddedWallet', 'reloadWallets'],
       {
         session: {
           user: {
@@ -37,42 +33,27 @@ describe('GenerateWalletComponent', () => {
       }
     );
     router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
-    walletsService = jasmine.createSpyObj<WalletsService>('WalletsService', [
-      'requestOpen',
-    ]);
-    walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
-      'WalletGatewayBridgeService',
-      ['createEmbeddedWallet']
-    );
     queryParamMap = convertToParamMap({});
     router.navigateByUrl.and.resolveTo(true);
+    authSession.ensureEmbeddedWallet.and.resolveTo();
     authSession.reloadWallets.and.resolveTo([]);
 
     component = new GenerateWalletComponent(
       authSession,
       router,
-      { snapshot: { queryParamMap } } as never,
-      walletsService,
-      walletGatewayBridge
+      { snapshot: { queryParamMap } } as never
     );
   });
 
-  it('opens the wallet connector from the page', () => {
+  it('opens only the page-owned wallet connector modal', () => {
     component.connectExistingWallet();
 
     expect(component.isOpenWalletConnectMenu).toBeTrue();
-    expect(walletsService.requestOpen).toHaveBeenCalledTimes(1);
   });
 
   it('generates an embedded wallet and navigates after backend wallet refresh', async () => {
     queryParamMap = convertToParamMap({ returnUrl: '//evil.example' });
     component = createComponent();
-    walletGatewayBridge.createEmbeddedWallet.and.resolveTo({
-      account: '0x1111111111111111111111111111111111111111',
-      chainId: 1,
-      walletType: 'embedded',
-      source: 'provider',
-    });
     authSession.reloadWallets.and.resolveTo([
       {
         id: 'wallet-1',
@@ -86,7 +67,7 @@ describe('GenerateWalletComponent', () => {
 
     await component.generateWallet();
 
-    expect(walletGatewayBridge.createEmbeddedWallet).toHaveBeenCalledTimes(1);
+    expect(authSession.ensureEmbeddedWallet).toHaveBeenCalledTimes(1);
     expect(authSession.reloadWallets).toHaveBeenCalledTimes(1);
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/');
   });
@@ -121,9 +102,7 @@ describe('GenerateWalletComponent', () => {
     return new GenerateWalletComponent(
       authSession,
       router,
-      { snapshot: { queryParamMap } } as never,
-      walletsService,
-      walletGatewayBridge
+      { snapshot: { queryParamMap } } as never
     );
   }
 });
