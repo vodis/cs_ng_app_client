@@ -5,10 +5,10 @@
  * The wallet MFE is the single source of truth. Keep this copy compatible and
  * reject unsupported contract versions at runtime.
  */
-export type AuthProviderContractVersion = '2.2.0';
+export type AuthProviderContractVersion = '2.3.0';
 
 export const AUTH_PROVIDER_CONTRACT_VERSION: AuthProviderContractVersion =
-  '2.2.0';
+  '2.3.0';
 
 export type AuthProviderLoginMethod = 'email' | 'google' | 'apple' | 'passkey';
 
@@ -68,6 +68,7 @@ export type AuthProviderMountApi = {
     input: AuthProviderEmailCodeInput
   ) => Promise<AuthProviderSession>;
   linkPasskey: () => Promise<AuthProviderSession>;
+  ensureEmbeddedWallet: () => Promise<AuthProviderWallet>;
   logout: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
 };
