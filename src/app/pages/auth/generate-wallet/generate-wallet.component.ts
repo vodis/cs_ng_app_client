@@ -1,8 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
-import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
-import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { authPageTransition } from '../shared/auth-page.animations';
 import {
   hasLinkedWallets,
@@ -25,9 +23,7 @@ export class GenerateWalletComponent implements OnInit {
   constructor(
     public readonly authSession: AuthSessionService,
     private readonly router: Router,
-    private readonly route: ActivatedRoute,
-    private readonly walletsService: WalletsService,
-    private readonly walletGatewayBridge: WalletGatewayBridgeService
+    private readonly route: ActivatedRoute
   ) {}
 
   public async ngOnInit(): Promise<void> {
@@ -47,7 +43,6 @@ export class GenerateWalletComponent implements OnInit {
     this.error = '';
     this.info = '';
     this.isOpenWalletConnectMenu = true;
-    this.walletsService.requestOpen();
   }
 
   public closeWalletConnectMenu(): void {
@@ -60,7 +55,7 @@ export class GenerateWalletComponent implements OnInit {
     this.walletLoading = true;
 
     try {
-      await this.walletGatewayBridge.createEmbeddedWallet();
+      await this.authSession.ensureEmbeddedWallet();
       const wallets = await this.authSession.reloadWallets();
       if (wallets.length === 0) {
         throw new Error(

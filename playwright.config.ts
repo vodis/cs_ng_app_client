@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 5002;
+const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 5002);
 const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
@@ -29,7 +29,7 @@ export default defineConfig({
   ],
   webServer: {
     command: process.env.CI
-      ? `pnpm run build && pnpm exec serve -s dist/cs_ng_app_client -l ${PORT}`
+      ? `pnpm exec ng build --configuration development && pnpm exec serve -s dist/cs_ng_app_client -l ${PORT}`
       : `pnpm run start`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,

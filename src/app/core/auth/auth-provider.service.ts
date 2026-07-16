@@ -8,6 +8,7 @@ import {
   AuthProviderRemoteModule,
   AuthProviderSession,
   AuthProviderSnapshot,
+  AuthProviderWallet,
 } from '@mfe-contracts/auth-provider.types';
 import {
   WALLET_REMOTE_EXPOSED_MODULES,
@@ -87,6 +88,10 @@ export class AuthProviderService implements OnDestroy {
 
   linkPasskey(): Promise<AuthProviderSession> {
     return this.requireReadyProvider().linkPasskey();
+  }
+
+  ensureEmbeddedWallet(): Promise<AuthProviderWallet> {
+    return this.requireReadyProvider().ensureEmbeddedWallet();
   }
 
   logout(): Promise<void> {
@@ -276,6 +281,8 @@ export class AuthProviderService implements OnDestroy {
       typeof value.verifyEmailCode === 'function' &&
       'linkPasskey' in value &&
       typeof value.linkPasskey === 'function' &&
+      'ensureEmbeddedWallet' in value &&
+      typeof value.ensureEmbeddedWallet === 'function' &&
       'logout' in value &&
       typeof value.logout === 'function' &&
       'getAccessToken' in value &&
