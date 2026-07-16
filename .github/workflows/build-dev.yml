@@ -15,7 +15,6 @@ on:
 
 permissions:
   contents: read
-  packages: read
 
 env:
   NODE_VERSION: 18.x
@@ -41,11 +40,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Configure registry for @vodis (GitHub Packages)
-        run: |
-          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -70,11 +64,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
-
-      - name: Configure registry for @vodis (GitHub Packages)
-        run: |
-          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -108,11 +97,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Configure registry for @vodis (GitHub Packages)
-        run: |
-          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -142,11 +126,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
-
-      - name: Configure registry for @vodis (GitHub Packages)
-        run: |
-          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

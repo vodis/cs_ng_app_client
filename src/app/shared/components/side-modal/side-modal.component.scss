@@ -1,4 +1,4 @@
-@import '@vodis/ui-kit/styles/breakpoints';
+@use '../../../../styles/ui-kit/breakpoints' as *;
 
 :host {
   .side-modal-backdrop {

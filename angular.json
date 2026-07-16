@@ -43,7 +43,7 @@
             "extraWebpackConfig": "config/webpack.config.js",
             "commonChunk": false,
             "stylePreprocessorOptions": {
-              "includePaths": ["../node_modules/src/app/styles"]
+              "includePaths": ["src"]
             }
           },
           "configurations": {
@@ -118,7 +118,10 @@
               "src/assets/styles/default-theme-colors.css",
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [],
+            "stylePreprocessorOptions": {
+              "includePaths": ["src"]
+            }
           }
         },
         "lint": {

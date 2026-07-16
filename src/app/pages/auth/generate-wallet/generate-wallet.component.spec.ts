@@ -38,11 +38,9 @@ describe('GenerateWalletComponent', () => {
     authSession.ensureEmbeddedWallet.and.resolveTo();
     authSession.reloadWallets.and.resolveTo([]);
 
-    component = new GenerateWalletComponent(
-      authSession,
-      router,
-      { snapshot: { queryParamMap } } as never
-    );
+    component = new GenerateWalletComponent(authSession, router, {
+      snapshot: { queryParamMap },
+    } as never);
   });
 
   it('opens only the page-owned wallet connector modal', () => {
@@ -99,10 +97,8 @@ describe('GenerateWalletComponent', () => {
   });
 
   function createComponent(): GenerateWalletComponent {
-    return new GenerateWalletComponent(
-      authSession,
-      router,
-      { snapshot: { queryParamMap } } as never
-    );
+    return new GenerateWalletComponent(authSession, router, {
+      snapshot: { queryParamMap },
+    } as never);
   }
 });

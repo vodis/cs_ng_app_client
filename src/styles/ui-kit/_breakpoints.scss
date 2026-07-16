@@ -1,0 +1,67 @@
+@use 'sass:list';
+@use 'sass:map';
+@use './functions' as *;
+@use './variables' as *;
+
+@mixin media-breakpoint-up($from) {
+  $keys: map.keys($breakpoints);
+  $from-index: list.index($keys, $from);
+
+  @if not $from-index {
+    @error 'Wrong breakpoint #{$from}';
+  }
+
+  @media screen and (min-width: map.get($breakpoints, $from)) {
+    @content;
+  }
+}
+
+@mixin media-breakpoint($from, $to: null) {
+  @if not $to {
+    $to: map-next-key($breakpoints, $from);
+  }
+
+  $keys: map.keys($breakpoints);
+  $from-index: list.index($keys, $from);
+  $to-index: list.index($keys, $to);
+
+  @if not $from-index {
+    @error 'Wrong breakpoint #{$from}';
+  }
+
+  @if $from-index < list.length($breakpoints) and not $to-index {
+    @error 'Wrong breakpoint #{$to}';
+  }
+
+  @if $to != null and map.get($breakpoints, $from) >= map.get($breakpoints, $to)
+  {
+    @error 'Breakpoint #{$from} must be greater than #{$to}';
+  }
+
+  @if map.get($breakpoints, $from) <= 0 {
+    @media screen and (max-width: (map.get($breakpoints, $to) - 0.02px)) {
+      @content;
+    }
+  } @else if $from-index < list.length($breakpoints) {
+    @media screen and (min-width: map.get($breakpoints, $from)) and (max-width: map.get($breakpoints, $to) - 0.02px) {
+      @content;
+    }
+  } @else if $from-index == list.length($breakpoints) {
+    @media screen and (min-width: map.get($breakpoints, $from)) {
+      @content;
+    }
+  }
+}
+
+@mixin media-breakpoint-down($to) {
+  $keys: map.keys($breakpoints);
+  $to-index: list.index($keys, $to);
+
+  @if not $to-index {
+    @error 'Wrong breakpoint #{$to}';
+  }
+
+  @media screen and (max-width: (map.get($breakpoints, $to) - 0.02px)) {
+    @content;
+  }
+}

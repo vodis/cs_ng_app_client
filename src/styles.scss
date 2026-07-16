@@ -1,13 +1,14 @@
 // Angular Material 19: core + prebuilt theme (custom M2 theme requires internal APIs)
 @use '@angular/material' as mat;
+@use './styles/ui-kit/typography';
+@use './styles/ui-kit/utilities';
+@use './styles/ui-kit/grid';
+@use './assets/styles/mui-theme.css';
+@use './styles/exchange-page';
+@use './styles/register-page';
+@use './styles/profile-page';
 
 @include mat.core();
-
-/* You can add global styles to this file, and also import other style files */
-@import '@vodis/ui-kit/styles/typography';
-@import '@vodis/ui-kit/styles/utilities';
-@import '@vodis/ui-kit/styles/grid';
-@import './assets/styles/mui-theme.css';
 
 // Font imports
 @font-face {
@@ -77,10 +78,6 @@ button,
 a {
   cursor: pointer;
 }
-
-@import './styles/exchange-page';
-@import './styles/register-page';
-@import './styles/profile-page';
 
 .swap-form {
   --swap-radius: 10px;
