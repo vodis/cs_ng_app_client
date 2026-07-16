@@ -61,24 +61,24 @@ No direct imports from MFE internals into host domain logic.
 
 ### 1.2 Canonical event names
 
+- `connection.state.changed`
+- `connection.snapshot.updated`
 - `wallet.connected`
 - `wallet.disconnected`
-- `wallet.accountChanged`
-- `wallet.chainChanged`
-- `wallet.txSigned`
-- `wallet.error`
+- `wallet.account.changed`
+- `wallet.chain.changed`
 
 ### 1.3 Event payload envelope (required)
 
 ```ts
 export interface MfeEventEnvelope<TPayload = unknown> {
   eventName:
+    | 'connection.state.changed'
+    | 'connection.snapshot.updated'
     | 'wallet.connected'
     | 'wallet.disconnected'
-    | 'wallet.accountChanged'
-    | 'wallet.chainChanged'
-    | 'wallet.txSigned'
-    | 'wallet.error';
+    | 'wallet.account.changed'
+    | 'wallet.chain.changed';
   eventVersion: number;
   traceId: string;
   timestamp: string; // ISO-8601
@@ -92,7 +92,7 @@ export interface MfeEventEnvelope<TPayload = unknown> {
 ```ts
 export interface WalletConnectedPayload {
   account: string;
-  chainId: number;
+  chainId: number | null;
   connector?: string;
 }
 
@@ -156,6 +156,9 @@ Before merging contract changes:
 
 - Host starts and loads `mfe-wallets`.
 - Canonical events are emitted/consumed without runtime parsing errors.
+- `WalletsMfeMountApi.getSnapshot()` returns nullable `chainId` safely.
+- `WalletsMfeMountApi.syncConnectedWallet?.()` restores an already-linked
+  wallet when available and callers gracefully fall back when it is absent.
 - At least one backend-connected flow validates API envelope handling.
 - Error and fallback flows are verified (MFE unavailable or API failure).
 
@@ -178,9 +181,31 @@ Host files:
 - `src/app/domains/exchange/application/swap-execution.workflow.ts`
 - `src/app/shared/mfe/wallets/wallet-gateway.bridge.service.ts`
 
-Wallet MFE must expose `sendGatewayEvent` on `WalletsMfeMountApi` and `onIntentSigned` callback for the full flow to complete.
+Wallet MFE must expose `sendGatewayEvent` on `WalletsMfeMountApi` and
+`onIntentSigned` callback for the full flow to complete.
 
-## 7) Suggested file placement
+## 7) Connected Wallet Restore
+
+For linked-wallet profile flows, the host may request a best-effort restore of
+an already connected wallet before opening the wallet modal:
+
+```ts
+export type WalletsMfeMountApi = {
+  getSnapshot: () => WalletConnectionSnapshot;
+  syncConnectedWallet?: () => Promise<WalletConnectionSnapshot>;
+};
+
+export type WalletConnectionSnapshot = {
+  account: string | null;
+  chainId: number | null;
+};
+```
+
+`syncConnectedWallet` is optional for backward compatibility. If the mounted
+remote does not expose it, or if restore fails, the host should still open the
+wallet modal so the user can connect manually.
+
+## 8) Suggested file placement
 
 If/when extracting typed contracts into code, place them under:
 
