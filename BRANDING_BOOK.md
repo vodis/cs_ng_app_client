@@ -189,7 +189,7 @@ Main files:
 
 - `src/assets/styles/default-theme-colors.css`
 - `src/styles.scss`
-- `src/styles/ui-kit/_variables.scss`
-- `src/styles/ui-kit/_typography.scss`
+- `@vodis/cs-foundation/styles/variables`
+- `@vodis/cs-foundation/styles/typography`
 - `src/app/components/layout/layout.component.scss`
 - `docs/design-system.md`

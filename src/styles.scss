@@ -1,8 +1,8 @@
 // Angular Material 19: core + prebuilt theme (custom M2 theme requires internal APIs)
 @use '@angular/material' as mat;
-@use './styles/ui-kit/typography';
-@use './styles/ui-kit/utilities';
-@use './styles/ui-kit/grid';
+@use '@vodis/cs-foundation/styles/typography';
+@use '@vodis/cs-foundation/styles/utilities';
+@use '@vodis/cs-foundation/styles/grid';
 @use './assets/styles/mui-theme.css';
 @use './styles/exchange-page';
 @use './styles/register-page';
