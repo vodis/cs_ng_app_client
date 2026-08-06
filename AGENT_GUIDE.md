@@ -20,6 +20,20 @@ This guide is for AI/code agents and contributors working in `cs_ng_app_client`.
 - Integrate `mfe-wallets` safely through Module Federation.
 - Build a robust Angular dApp shell with predictable contracts.
 
+## UI Branding Reference
+
+When working on UI interface, visual styling, layout, spacing, typography,
+responsive behavior, shell chrome, or any user-facing design detail, use
+`BRANDING_BOOK.md` as the primary reference.
+
+Use it for:
+
+- palette and token decisions
+- font and typography sizing
+- spacing, padding, and shell measurements
+- mobile, laptop, and desktop dimension guidance
+- preserving visual consistency across header, sidebar, pages, and panels
+
 ## Exchange Page UI Reference
 
 The default route (`/`) renders the **Token Exchange** screen inside the host shell. Treat the layout below as the product baseline when changing home-page UI or styles.

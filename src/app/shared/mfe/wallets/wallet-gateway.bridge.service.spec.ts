@@ -101,4 +101,33 @@ describe('WalletGatewayBridgeService', () => {
 
     expect(window.localStorage.getItem('mfe-wallets.session.v1')).toBeNull();
   });
+
+  it('returns the current snapshot when a wallet is already connected', async () => {
+    service.registerMountApi(mountApi);
+
+    await expectAsync(service.syncConnectedWallet()).toBeResolvedTo(
+      connectedSnapshot
+    );
+  });
+
+  it('delegates connected-wallet sync to the mounted wallet MFE', async () => {
+    const idleSnapshot: WalletConnectionSnapshot = {
+      ...connectedSnapshot,
+      status: 'idle',
+      account: null,
+      chainId: null,
+      isVerified: false,
+    };
+    (mountApi.getSnapshot as jasmine.Spy).and.returnValue(idleSnapshot);
+    const syncConnectedWallet = jasmine
+      .createSpy('syncConnectedWallet')
+      .and.resolveTo(connectedSnapshot);
+    mountApi.syncConnectedWallet = syncConnectedWallet;
+    service.registerMountApi(mountApi);
+
+    await expectAsync(service.syncConnectedWallet()).toBeResolvedTo(
+      connectedSnapshot
+    );
+    expect(syncConnectedWallet).toHaveBeenCalledTimes(1);
+  });
 });

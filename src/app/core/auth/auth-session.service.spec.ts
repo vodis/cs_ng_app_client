@@ -31,6 +31,7 @@ describe('AuthSessionService', () => {
         'linkPasskey',
         'logout',
         'getAccessToken',
+        'ensureEmbeddedWallet',
       ],
       {
         snapshot: {
@@ -77,10 +78,27 @@ describe('AuthSessionService', () => {
       wallets: [],
     });
     authProvider.logout.and.resolveTo();
+    authProvider.ensureEmbeddedWallet.and.resolveTo({
+      id: 'wallet-1',
+      providerWalletId: 'provider-wallet-1',
+      address: '0x1111111111111111111111111111111111111111',
+      chainType: 'ethereum',
+      walletType: 'embedded',
+      isPrimary: true,
+    });
     walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
       'WalletGatewayBridgeService',
-      ['disconnectWallet']
+      ['disconnectWallet', 'syncConnectedWallet']
     );
+    walletGatewayBridge.syncConnectedWallet.and.resolveTo({
+      status: 'connected',
+      account: '0x1111111111111111111111111111111111111111',
+      chainId: null,
+      isVerified: false,
+      safetyStatus: null,
+      isBypassed: false,
+      executionState: 'operating.idle',
+    });
     walletsService = jasmine.createSpyObj<WalletsService>('WalletsService', [
       'setAccount',
     ]);
@@ -205,6 +223,14 @@ describe('AuthSessionService', () => {
     expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
     expect(service.session).toBeNull();
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/login');
+  }));
+
+  it('syncs the wallet gateway after ensuring an embedded wallet', fakeAsync(() => {
+    service.ensureEmbeddedWallet();
+    flushMicrotasks();
+
+    expect(authProvider.ensureEmbeddedWallet).toHaveBeenCalledTimes(1);
+    expect(walletGatewayBridge.syncConnectedWallet).toHaveBeenCalledTimes(1);
   }));
 
   it('refreshes session and wallets using the provider access token', fakeAsync(() => {

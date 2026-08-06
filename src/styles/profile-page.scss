@@ -71,6 +71,17 @@
     margin: 0 0 1rem;
   }
 
+  &__view-wallet {
+    min-width: 0;
+    padding-left: 0;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+
+    span {
+      margin-left: 0.15rem;
+    }
+  }
+
   dl {
     display: grid;
     margin: 0;

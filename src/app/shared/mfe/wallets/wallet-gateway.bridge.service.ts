@@ -192,6 +192,26 @@ export class WalletGatewayBridgeService {
     return createEmbeddedWallet();
   }
 
+  async syncConnectedWallet(): Promise<WalletConnectionSnapshot> {
+    const snapshot = this.snapshotSubject.value ?? this.mountApi?.getSnapshot();
+    if (snapshot?.account) {
+      return snapshot;
+    }
+
+    const syncConnectedWallet = this.mountApi?.syncConnectedWallet;
+    if (!syncConnectedWallet) {
+      throw this.executionFailure(
+        'GATEWAY_UNAVAILABLE',
+        'Wallet connection sync is not available',
+        true
+      );
+    }
+
+    const nextSnapshot = await syncConnectedWallet();
+    this.snapshotSubject.next(nextSnapshot);
+    return nextSnapshot;
+  }
+
   private canSendGatewayEvent(): boolean {
     return typeof this.mountApi?.sendGatewayEvent === 'function';
   }
