@@ -41,18 +41,13 @@ jobs:
         with:
           node-version: '22'
           cache: pnpm
-
-      - name: npm auth (@vodis packages)
-        run: |
-          if [ -z "${{ secrets.GH_PACKAGES_TOKEN }}" ]; then
-            echo "::error::Add repository secret GH_PACKAGES_TOKEN with read:packages access."
-            exit 1
-          fi
-          echo "@vodis:registry=https://npm.pkg.github.com/" >> .npmrc
-          printf '//npm.pkg.github.com/:_authToken=%s\n' "${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
+          registry-url: https://npm.pkg.github.com
+          scope: '@vodis'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Build production bundle
         run: pnpm run build-prod

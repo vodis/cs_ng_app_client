@@ -1,4 +1,4 @@
-@import '@vodis/ui-kit/styles/breakpoints';
+@use '@vodis/cs-foundation/styles/breakpoints' as *;
 
 :host {
   .side-modal-backdrop {

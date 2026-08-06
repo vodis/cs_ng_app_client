@@ -1,5 +1,3 @@
-@import '@vodis/ui-kit/styles/breakpoints';
-
 :host {
   .main-layout {
     min-height: 100vh;
@@ -62,9 +60,9 @@
         flex-direction: column;
 
         > .main-layout__content_mobile {
-          flex: 0 1 auto;
           width: 100%;
           min-width: 0;
+          flex: 0 1 auto;
           overflow-x: hidden;
         }
 

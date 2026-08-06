@@ -80,6 +80,7 @@ export type WalletsMfeMountApi = {
   getSnapshot: () => WalletConnectionSnapshot;
   sendGatewayEvent: (event: WalletGatewayEvent) => void;
   createEmbeddedWallet?: () => Promise<WalletOnboardingResult>;
+  syncConnectedWallet?: () => Promise<WalletConnectionSnapshot>;
   disconnectWallet?: () => void;
 };
 
