@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 env:
   NODE_VERSION: 18.x
@@ -39,9 +40,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+          registry-url: https://npm.pkg.github.com
+          scope: '@vodis'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: TypeScript / ESLint
         run: pnpm run lint
@@ -64,9 +69,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+          registry-url: https://npm.pkg.github.com
+          scope: '@vodis'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Install Chromium for headless tests
         run: |
@@ -96,9 +105,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+          registry-url: https://npm.pkg.github.com
+          scope: '@vodis'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Install Playwright Chromium
         run: pnpm run e2e:install
@@ -126,9 +139,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+          registry-url: https://npm.pkg.github.com
+          scope: '@vodis'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Production build (verify only, no deploy)
         run: pnpm run build-prod

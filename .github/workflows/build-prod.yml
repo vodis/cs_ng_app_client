@@ -41,9 +41,13 @@ jobs:
         with:
           node-version: '22'
           cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: '@vodis'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Build production bundle
         run: pnpm run build-prod

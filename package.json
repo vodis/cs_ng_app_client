@@ -37,7 +37,7 @@
     "@angular/router": "^19.2.0",
     "@babel/runtime": "^7.28.6",
     "@hakimio/ngx-google-analytics": "^15.0.0",
-    "@vodis/cs-foundation": "file:../cs-sdk/packages/cs-foundation",
+    "@vodis/cs-foundation": "0.2.0",
     "liveline": "^0.0.7",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
