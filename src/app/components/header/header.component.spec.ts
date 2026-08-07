@@ -10,7 +10,10 @@ import { HeaderComponent } from './header.component';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
-import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
+import {
+  CsTranslationsModule,
+  CsTranslationsService,
+} from '@vodis/cs-foundation/angular';
 
 describe('HeaderComponent', () => {
   let component: HeaderComponent;
@@ -43,6 +46,12 @@ describe('HeaderComponent', () => {
           provide: LocalizedRoutingService,
           useValue: {
             path: (path: string) => `/en${path === '/' ? '' : path}`,
+          },
+        },
+        {
+          provide: CsTranslationsService,
+          useValue: {
+            translate: (path: string, fallback?: string) => fallback ?? path,
           },
         },
       ],
