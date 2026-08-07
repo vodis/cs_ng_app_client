@@ -1,7 +1,11 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import {
+  localeRouteGuard,
+  preferredLocaleRedirect,
+} from '@core/routing/localized-routing.service';
 
-const routes: Routes = [
+const localizedRoutes: Routes = [
   {
     path: '',
     loadChildren: () =>
@@ -21,6 +25,53 @@ const routes: Routes = [
     path: 'proposals',
     loadChildren: () =>
       import('./pages/proposal/proposal.module').then(m => m.ProposalModule),
+  },
+];
+
+const routes: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    redirectTo: preferredLocaleRedirect,
+  },
+  {
+    path: 'farm',
+    pathMatch: 'full',
+    redirectTo: '/en/farm',
+  },
+  {
+    path: 'proposals',
+    pathMatch: 'full',
+    redirectTo: '/en/proposals',
+  },
+  {
+    path: 'login',
+    pathMatch: 'full',
+    redirectTo: '/en/login',
+  },
+  {
+    path: 'register',
+    pathMatch: 'full',
+    redirectTo: '/en/register',
+  },
+  {
+    path: 'generate-wallet',
+    pathMatch: 'full',
+    redirectTo: '/en/generate-wallet',
+  },
+  {
+    path: 'profile',
+    pathMatch: 'full',
+    redirectTo: '/en/profile',
+  },
+  {
+    path: ':locale',
+    canActivate: [localeRouteGuard],
+    children: localizedRoutes,
+  },
+  {
+    path: '**',
+    redirectTo: '/en',
   },
 ];
 

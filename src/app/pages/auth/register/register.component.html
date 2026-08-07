@@ -97,7 +97,8 @@
       <p class="register-shell__info-note" *ngIf="info">{{ info }}</p>
 
       <p class="register-shell__login-link">
-        Already have an account? <a routerLink="/login">Log in</a>
+        Already have an account?
+        <a [routerLink]="localizedRouting.path('/login')">Log in</a>
       </p>
 
       <app-side-modal

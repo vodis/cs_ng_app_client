@@ -6,6 +6,7 @@ import {
   hasLinkedWallets,
   readReturnUrl,
 } from '../shared/auth-navigation.helper';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 
 @Component({
   selector: 'app-generate-wallet',
@@ -23,7 +24,8 @@ export class GenerateWalletComponent implements OnInit {
   constructor(
     public readonly authSession: AuthSessionService,
     private readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly localizedRouting: LocalizedRoutingService
   ) {}
 
   public async ngOnInit(): Promise<void> {
@@ -34,7 +36,9 @@ export class GenerateWalletComponent implements OnInit {
 
     if (await hasLinkedWallets(this.authSession, session.wallets.length)) {
       await this.router.navigateByUrl(
-        readReturnUrl(this.route.snapshot.queryParamMap)
+        this.localizedRouting.path(
+          readReturnUrl(this.route.snapshot.queryParamMap)
+        )
       );
     }
   }
@@ -63,7 +67,9 @@ export class GenerateWalletComponent implements OnInit {
         );
       }
       await this.router.navigateByUrl(
-        readReturnUrl(this.route.snapshot.queryParamMap)
+        this.localizedRouting.path(
+          readReturnUrl(this.route.snapshot.queryParamMap)
+        )
       );
     } catch (error) {
       this.error =
@@ -85,7 +91,9 @@ export class GenerateWalletComponent implements OnInit {
         return;
       }
       await this.router.navigateByUrl(
-        readReturnUrl(this.route.snapshot.queryParamMap)
+        this.localizedRouting.path(
+          readReturnUrl(this.route.snapshot.queryParamMap)
+        )
       );
     } catch (error) {
       this.error =

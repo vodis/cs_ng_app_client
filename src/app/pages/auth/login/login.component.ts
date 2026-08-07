@@ -13,6 +13,7 @@ import {
   PASSKEY_LOGIN_UNAVAILABLE_MESSAGE,
 } from '../shared/auth-login-messages.helper';
 import { ProductEventsService } from '@core/product-events/product-events.service';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 
 const LOGIN_SOCIAL_METHODS: AuthSocialMethod[] = [
   'passkey',
@@ -62,7 +63,8 @@ export class LoginComponent {
     public readonly authSession: AuthSessionService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
-    private readonly productEvents: ProductEventsService
+    private readonly productEvents: ProductEventsService,
+    public readonly localizedRouting: LocalizedRoutingService
   ) {}
 
   public async loginWithEmail(): Promise<void> {
@@ -181,15 +183,22 @@ export class LoginComponent {
   private async navigateAfterAuth(initialWalletCount: number): Promise<void> {
     if (await hasLinkedWallets(this.authSession, initialWalletCount)) {
       await this.router.navigateByUrl(
-        readReturnUrl(this.route.snapshot.queryParamMap)
+        this.localizedRouting.path(
+          readReturnUrl(this.route.snapshot.queryParamMap)
+        )
       );
       return;
     }
 
-    await this.router.navigate(['/generate-wallet'], {
-      queryParams: {
-        returnUrl: readReturnUrl(this.route.snapshot.queryParamMap),
-      },
-    });
+    await this.router.navigate(
+      [this.localizedRouting.path('/generate-wallet')],
+      {
+        queryParams: {
+          returnUrl: this.localizedRouting.path(
+            readReturnUrl(this.route.snapshot.queryParamMap)
+          ),
+        },
+      }
+    );
   }
 }

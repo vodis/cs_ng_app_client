@@ -14,6 +14,7 @@ import {
   BackendWallet,
   LoginMethod,
 } from './auth-session.types';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 
 type MeResponse = {
   user: BackendUser;
@@ -49,7 +50,8 @@ export class AuthSessionService {
     private readonly authProvider: AuthProviderService,
     private readonly walletGatewayBridge: WalletGatewayBridgeService,
     private readonly walletsService: WalletsService,
-    private readonly productEvents: ProductEventsService
+    private readonly productEvents: ProductEventsService,
+    private readonly localizedRouting: LocalizedRoutingService
   ) {}
 
   get session(): AuthSession | null {
@@ -198,7 +200,7 @@ export class AuthSessionService {
       this.walletGatewayBridge.disconnectWallet();
       this.walletsService.setAccount(undefined);
       this.clear();
-      await this.router.navigateByUrl('/login');
+      await this.router.navigateByUrl(this.localizedRouting.path('/login'));
     } finally {
       this.loadingSubject.next(false);
     }
@@ -217,7 +219,7 @@ export class AuthSessionService {
       )
     );
     this.sessionSubject.next(null);
-    await this.router.navigateByUrl('/login');
+    await this.router.navigateByUrl(this.localizedRouting.path('/login'));
     return response.deletionAvailableAt;
   }
 

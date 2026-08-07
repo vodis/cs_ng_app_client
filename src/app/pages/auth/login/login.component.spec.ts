@@ -1,6 +1,7 @@
 import { convertToParamMap, ParamMap } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import { ProductEventsService } from '@core/product-events/product-events.service';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { of } from 'rxjs';
 import {
   PASSKEY_LOGIN_UNAVAILABLE_MESSAGE,
@@ -12,6 +13,7 @@ describe('LoginComponent', () => {
   let component: LoginComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let productEvents: jasmine.SpyObj<ProductEventsService>;
+  let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
   let router: jasmine.SpyObj<{
     navigateByUrl: (url: string) => Promise<boolean>;
     navigate: (
@@ -72,12 +74,20 @@ describe('LoginComponent', () => {
             .replace(/^_+|_+$/g, '')
         : 'unknown'
     );
+    localizedRouting = jasmine.createSpyObj<LocalizedRoutingService>(
+      'LocalizedRoutingService',
+      ['path']
+    );
+    localizedRouting.path.and.callFake(path =>
+      path === '/' ? '/en' : `/en${path}`
+    );
 
     component = new LoginComponent(
       authSession,
       router as never,
       { snapshot: { queryParamMap } } as never,
-      productEvents
+      productEvents,
+      localizedRouting
     );
   });
 
@@ -101,7 +111,7 @@ describe('LoginComponent', () => {
     await component.continueWith('passkey');
 
     expect(authSession.login).toHaveBeenCalledOnceWith('passkey');
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/farm');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/farm');
   });
 
   it('shows passkey, google, apple, and telegram social options by default', () => {
@@ -164,8 +174,8 @@ describe('LoginComponent', () => {
 
     await component.continueWith('google');
 
-    expect(router.navigate).toHaveBeenCalledOnceWith(['/generate-wallet'], {
-      queryParams: { returnUrl: '/' },
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/en/generate-wallet'], {
+      queryParams: { returnUrl: '/en' },
     });
   });
 
@@ -181,7 +191,8 @@ describe('LoginComponent', () => {
       authSession,
       router as never,
       { snapshot: { queryParamMap } } as never,
-      productEvents
+      productEvents,
+      localizedRouting
     );
   }
 });
