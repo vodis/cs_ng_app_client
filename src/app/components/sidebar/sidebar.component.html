@@ -10,7 +10,7 @@
             (closed)="handleToggleAccordion('isBoardPanelOpen', false)">
             <mat-expansion-panel-header>
               <mat-panel-title class="menu-title">
-                Informations
+                {{ 'Texts.sidebar-information' | csTranslate: 'Informations' }}
               </mat-panel-title>
               <mat-icon>{{
                 isBoardPanelOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'
@@ -23,7 +23,7 @@
                 class="menu-link"
                 [routerLinkActive]="'_is-active'"
                 (click)="handleRouteChanging(item.url)"
-                >{{ item.name }}</a
+                >{{ item.name | csTranslate: item.fallback }}</a
               >
             </li>
           </mat-expansion-panel>
@@ -36,7 +36,9 @@
             (opened)="handleToggleAccordion('isFarmPanelOpen', true)"
             (closed)="handleToggleAccordion('isFarmPanelOpen', false)">
             <mat-expansion-panel-header>
-              <mat-panel-title class="menu-title"> Finance </mat-panel-title>
+              <mat-panel-title class="menu-title">
+                {{ 'Texts.sidebar-finance' | csTranslate: 'Finance' }}
+              </mat-panel-title>
               <mat-icon>{{
                 isFarmPanelOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'
               }}</mat-icon>
@@ -48,7 +50,7 @@
                 class="menu-link"
                 [routerLinkActive]="'_is-active'"
                 (click)="handleRouteChanging(item.url)"
-                >{{ item.name }}</a
+                >{{ item.name | csTranslate: item.fallback }}</a
               >
             </li>
           </mat-expansion-panel>
@@ -62,7 +64,7 @@
             (closed)="handleToggleAccordion('isDevActivityPanelOpen', false)">
             <mat-expansion-panel-header>
               <mat-panel-title class="menu-title">
-                Dev Activity
+                {{ 'Texts.sidebar-dev-activity' | csTranslate: 'Dev Activity' }}
               </mat-panel-title>
               <mat-icon>{{
                 isDevActivityPanelOpen
@@ -77,7 +79,7 @@
                 class="menu-link"
                 [routerLinkActive]="'_is-active'"
                 (click)="handleRouteChanging(item.url)"
-                >{{ item.name }}</a
+                >{{ item.name | csTranslate: item.fallback }}</a
               >
             </li>
           </mat-expansion-panel>
@@ -94,7 +96,7 @@
             class="menu-link"
             [routerLinkActive]="'_is-active'"
             (click)="handleRouteChanging(item.url)"
-            >{{ item.name }}</a
+            >{{ item.name | csTranslate: item.fallback }}</a
           >
         </li>
       </ul>

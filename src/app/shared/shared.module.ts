@@ -16,6 +16,7 @@ import { CommonModule } from '@angular/common';
 import { AvatarComponent } from '@shared/components/avatar/avatar.component';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
+import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
 
 const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
 
@@ -25,6 +26,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     CommonModule,
     FormsModule,
     HttpClientModule,
+    CsTranslationsModule,
     WalletMenuComponent,
     WalletAccountComponent,
     AvatarComponent,
@@ -55,6 +57,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     CommonModule,
     FormsModule,
     HttpClientModule,
+    CsTranslationsModule,
     ...AngularMaterial,
   ],
 })

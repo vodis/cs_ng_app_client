@@ -1,5 +1,9 @@
 import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import {
+  CsTranslationsModule,
+  CsTranslationsService,
+} from '@vodis/cs-foundation/angular';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HeaderComponent } from '@components/header/header.component';
@@ -13,11 +17,16 @@ import {
   NgxGoogleAnalyticsModule,
   provideGoogleAnalytics,
 } from '@hakimio/ngx-google-analytics';
+import { environment } from '../environments/environment';
 
 function initializeAuthProvider(authProvider: AuthProviderService) {
   return () => {
     void authProvider.initialize();
   };
+}
+
+function initializeTranslations(translations: CsTranslationsService) {
+  return () => translations.initialize().catch(() => undefined);
 }
 
 @NgModule({
@@ -33,6 +42,11 @@ function initializeAuthProvider(authProvider: AuthProviderService) {
     AppRoutingModule,
     SharedModule,
     NgxGoogleAnalyticsModule,
+    CsTranslationsModule.forRoot({
+      apiBaseUrl: environment.apiUrl,
+      defaultLanguage: 'EN',
+      supportedLanguages: ['EN', 'UA', 'PT'],
+    }),
   ],
   providers: [
     provideAnimationsAsync(),
@@ -41,6 +55,12 @@ function initializeAuthProvider(authProvider: AuthProviderService) {
       provide: APP_INITIALIZER,
       useFactory: initializeAuthProvider,
       deps: [AuthProviderService],
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeTranslations,
+      deps: [CsTranslationsService],
       multi: true,
     },
   ],

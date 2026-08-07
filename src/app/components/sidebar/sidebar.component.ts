@@ -17,7 +17,8 @@ export class SidebarComponent {
 
   public sidebarBoardLinks = [
     {
-      name: 'Board',
+      name: 'Texts.sidebar-board',
+      fallback: 'Board',
       url: '/',
       isActive: true,
     },
@@ -25,7 +26,8 @@ export class SidebarComponent {
 
   public sidebarFinansialLinks = [
     {
-      name: 'Farm',
+      name: 'Texts.sidebar-farm',
+      fallback: 'Farm',
       url: '/farm',
       isActive: true,
     },
@@ -33,7 +35,8 @@ export class SidebarComponent {
 
   public sidebarWorkProposalLinks = [
     {
-      name: 'Proposals',
+      name: 'Texts.sidebar-proposals',
+      fallback: 'Proposals',
       url: '/proposals',
       isActive: true,
     },
