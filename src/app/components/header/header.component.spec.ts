@@ -9,6 +9,8 @@ import { of } from 'rxjs';
 import { HeaderComponent } from './header.component';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession } from '@core/auth/auth-session.types';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
 
 describe('HeaderComponent', () => {
   let component: HeaderComponent;
@@ -28,13 +30,19 @@ describe('HeaderComponent', () => {
 
   function setup(sessionValue: AuthSession | null): void {
     TestBed.configureTestingModule({
-      imports: [RouterTestingModule, MatIconModule],
+      imports: [RouterTestingModule, MatIconModule, CsTranslationsModule],
       declarations: [HeaderComponent],
       providers: [
         {
           provide: AuthSessionService,
           useValue: {
             session$: of(sessionValue),
+          },
+        },
+        {
+          provide: LocalizedRoutingService,
+          useValue: {
+            path: (path: string) => `/en${path === '/' ? '' : path}`,
           },
         },
       ],

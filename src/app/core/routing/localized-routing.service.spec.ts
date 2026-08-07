@@ -3,6 +3,8 @@ import {
   isLocaleSlug,
   languageToLocaleSlug,
   localeSlugToLanguage,
+  preferredLocalePath,
+  preferredLocaleRedirect,
   stripLocalePrefix,
 } from './localized-routing.service';
 
@@ -33,5 +35,13 @@ describe('localized routing helpers', () => {
     expect(stripLocalePrefix('/ua/farm')).toBe('/farm');
     expect(stripLocalePrefix('/pt/proposals')).toBe('/proposals');
     expect(stripLocalePrefix('/farm')).toBe('/farm');
+  });
+
+  it('builds legacy redirects from stored language preference', () => {
+    spyOn(window.localStorage, 'getItem').and.returnValue('PT');
+
+    expect(preferredLocaleRedirect()).toBe('/pt');
+    expect(preferredLocalePath('/farm')).toBe('/pt/farm');
+    expect(preferredLocalePath('/ua/proposals')).toBe('/pt/proposals');
   });
 });

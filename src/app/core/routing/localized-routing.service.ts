@@ -97,10 +97,23 @@ export const localeRouteGuard: CanActivateFn = async (
 };
 
 export function preferredLocaleRedirect(): string {
+  return preferredLocalePath('/');
+}
+
+export function preferredLocalePath(path: string): string {
   try {
     const storedLanguage = window.localStorage.getItem('active-language');
-    return `/${languageToLocaleSlug(storedLanguage ?? '')}`;
+    const locale = languageToLocaleSlug(storedLanguage ?? '');
+    const unprefixedPath = stripLocalePrefix(path);
+
+    return unprefixedPath === '/'
+      ? `/${locale}`
+      : `/${locale}${unprefixedPath}`;
   } catch {
-    return `/${DEFAULT_LOCALE_SLUG}`;
+    const unprefixedPath = stripLocalePrefix(path);
+
+    return unprefixedPath === '/'
+      ? `/${DEFAULT_LOCALE_SLUG}`
+      : `/${DEFAULT_LOCALE_SLUG}${unprefixedPath}`;
   }
 }

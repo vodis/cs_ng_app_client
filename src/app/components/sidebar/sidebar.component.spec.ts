@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import { SidebarComponent } from './sidebar.component';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 
 describe('SidebarComponent', () => {
   let component: SidebarComponent;
@@ -12,6 +13,14 @@ describe('SidebarComponent', () => {
     TestBed.configureTestingModule({
       imports: [RouterTestingModule],
       declarations: [SidebarComponent],
+      providers: [
+        {
+          provide: LocalizedRoutingService,
+          useValue: {
+            path: (path: string) => `/en${path === '/' ? '' : path}`,
+          },
+        },
+      ],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
     fixture = TestBed.createComponent(SidebarComponent);

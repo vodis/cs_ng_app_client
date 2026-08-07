@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import {
   localeRouteGuard,
+  preferredLocalePath,
   preferredLocaleRedirect,
 } from '@core/routing/localized-routing.service';
 
@@ -37,32 +38,32 @@ const routes: Routes = [
   {
     path: 'farm',
     pathMatch: 'full',
-    redirectTo: '/en/farm',
+    redirectTo: () => preferredLocalePath('/farm'),
   },
   {
     path: 'proposals',
     pathMatch: 'full',
-    redirectTo: '/en/proposals',
+    redirectTo: () => preferredLocalePath('/proposals'),
   },
   {
     path: 'login',
     pathMatch: 'full',
-    redirectTo: '/en/login',
+    redirectTo: () => preferredLocalePath('/login'),
   },
   {
     path: 'register',
     pathMatch: 'full',
-    redirectTo: '/en/register',
+    redirectTo: () => preferredLocalePath('/register'),
   },
   {
     path: 'generate-wallet',
     pathMatch: 'full',
-    redirectTo: '/en/generate-wallet',
+    redirectTo: () => preferredLocalePath('/generate-wallet'),
   },
   {
     path: 'profile',
     pathMatch: 'full',
-    redirectTo: '/en/profile',
+    redirectTo: () => preferredLocalePath('/profile'),
   },
   {
     path: ':locale',
@@ -71,7 +72,7 @@ const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: '/en',
+    redirectTo: preferredLocaleRedirect,
   },
 ];
 
