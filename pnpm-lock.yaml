@@ -70,8 +70,8 @@ importers:
         specifier: ^15.0.0
         version: 15.0.0(@angular/common@19.2.20(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(@angular/router@19.2.20(@angular/common@19.2.20(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@19.2.20(@angular/animations@19.2.20(@angular/common@19.2.20(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1)))(@angular/common@19.2.20(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1)))(rxjs@7.8.2))(rxjs@7.8.2)
       '@vodis/cs-foundation':
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.2.3
+        version: 0.2.3(@angular/common@19.2.20(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2)
       liveline:
         specifier: ^0.0.7
         version: 0.0.7(react@19.2.7)
@@ -2618,8 +2618,12 @@ packages:
     peerDependencies:
       vite: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0
 
-  '@vodis/cs-foundation@0.2.0':
-    resolution: {integrity: sha512-nwfVo3iD8VtUwDVz+QBhl5+BHBstAf/CyfDpAfS4K6NtB0cN00dQuXmbu5AihU7jhrsZXMMxeY85tgc4dzZAOQ==, tarball: https://npm.pkg.github.com/download/@vodis/cs-foundation/0.2.0/63686487607882b6031f953f02a93c97488c5fbe}
+  '@vodis/cs-foundation@0.2.3':
+    resolution: {integrity: sha512-emvg0WjNnVJ+KML7D4RxMqVIwkJtqTdsvDUE42fcMjujce4j4riJM1hpjl27b4rRh8EotzhjAciY5kzcvs9+pA==, tarball: https://npm.pkg.github.com/download/@vodis/cs-foundation/0.2.3/5746f1006ce057938aaeb0ad6331d9decb108b99}
+    peerDependencies:
+      '@angular/common': '>=16'
+      '@angular/core': '>=16'
+      rxjs: '>=7'
 
   '@webassemblyjs/ast@1.14.1':
     resolution: {integrity: sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ==}
@@ -9493,7 +9497,11 @@ snapshots:
     dependencies:
       vite: 6.4.1(@types/node@20.19.37)(jiti@1.21.7)(less@4.2.2)(sass@1.85.0)(terser@5.39.0)(yaml@2.8.2)
 
-  '@vodis/cs-foundation@0.2.0': {}
+  '@vodis/cs-foundation@0.2.3(@angular/common@19.2.20(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2)':
+    dependencies:
+      '@angular/common': 19.2.20(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2)
+      '@angular/core': 19.2.20(rxjs@7.8.2)(zone.js@0.15.1)
+      rxjs: 7.8.2
 
   '@webassemblyjs/ast@1.14.1':
     dependencies:

@@ -1,9 +1,9 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
-import { environment } from '../../../environments/environment';
 import { filter, Subscription } from 'rxjs';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession } from '@core/auth/auth-session.types';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 
 @Component({
   selector: 'app-header',
@@ -14,7 +14,6 @@ import type { AuthSession } from '@core/auth/auth-session.types';
 export class HeaderComponent implements OnInit, OnDestroy {
   public currentWidth = window.innerWidth;
   public isMobileView = false;
-  public originUrl: string = environment.origin;
   public horizontalLineAnimating = true;
   public lineResetKey = 0;
   public session: AuthSession | null = null;
@@ -24,7 +23,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly router: Router,
-    public readonly authSession: AuthSessionService
+    public readonly authSession: AuthSessionService,
+    public readonly localizedRouting: LocalizedRoutingService
   ) {}
 
   public ngOnInit(): void {

@@ -1,6 +1,9 @@
 <header class="header" [ngClass]="{ mobile: isMobileView }">
   <div class="header__content">
-    <a class="header__logo" href="{{ originUrl }}" routerLinkActive="_active">
+    <a
+      class="header__logo"
+      [routerLink]="localizedRouting.path('/')"
+      routerLinkActive="_active">
       <img
         alt="CraftScript Logo"
         height="40"
@@ -11,14 +14,22 @@
       <a
         class="header__account-link"
         [class.header__account-link--icon]="session"
-        [routerLink]="session ? '/profile' : '/login'"
+        [routerLink]="localizedRouting.path(session ? '/profile' : '/login')"
         routerLinkActive="_active"
-        [attr.aria-label]="session ? 'Profile' : 'Sign in'"
-        [attr.title]="session ? 'Profile' : 'Sign in'">
+        [attr.aria-label]="
+          session
+            ? ('Texts.header-profile' | csTranslate: 'Profile')
+            : ('Texts.header-sign-in' | csTranslate: 'Sign in')
+        "
+        [attr.title]="
+          session
+            ? ('Texts.header-profile' | csTranslate: 'Profile')
+            : ('Texts.header-sign-in' | csTranslate: 'Sign in')
+        ">
         @if (session) {
           <mat-icon aria-hidden="true">person</mat-icon>
         } @else {
-          Sign in
+          {{ 'Texts.header-sign-in' | csTranslate: 'Sign in' }}
         }
       </a>
     </div>
