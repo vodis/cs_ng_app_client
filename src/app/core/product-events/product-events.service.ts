@@ -14,6 +14,13 @@ type ProductEventInput = {
   metadata?: Record<string, unknown>;
 };
 
+type ProductEventContext = {
+  userId?: string;
+  sessionId?: string;
+  requestId?: string;
+  metadata?: Record<string, unknown>;
+};
+
 const ANONYMOUS_ID_KEY = 'cs_product_events_anonymous_id';
 
 @Injectable({ providedIn: 'root' })
@@ -38,6 +45,25 @@ export class ProductEventsService {
           }
         },
       });
+  }
+
+  recordFailure(
+    eventName: string,
+    error: unknown,
+    context: ProductEventContext = {}
+  ): void {
+    this.record({
+      eventName,
+      status: 'failed',
+      userId: context.userId,
+      sessionId: context.sessionId,
+      requestId: context.requestId,
+      reasonCode: this.reason(error),
+      metadata: {
+        message: this.message(error),
+        ...context.metadata,
+      },
+    });
   }
 
   reason(error: unknown): string {

@@ -95,4 +95,51 @@ describe('ProductEventsService', () => {
 
     expect(warn).not.toHaveBeenCalled();
   });
+
+  it('recordFailure normalizes reasonCode and message', () => {
+    service.recordFailure(
+      'wallet.last_connected.persist',
+      new Error('Quota exceeded'),
+      {
+        metadata: {
+          action: 'set',
+          storage: 'sessionStorage',
+        },
+      }
+    );
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/product-events`
+    );
+    expect(request.request.body).toEqual(
+      jasmine.objectContaining({
+        eventName: 'wallet.last_connected.persist',
+        status: 'failed',
+        reasonCode: 'quota_exceeded',
+        source: 'app-client',
+        metadata: jasmine.objectContaining({
+          action: 'set',
+          storage: 'sessionStorage',
+          message: 'Quota exceeded',
+        }),
+      })
+    );
+    request.flush({});
+  });
+
+  it('recordFailure uses unknown reason for non-Error values', () => {
+    service.recordFailure('wallet.last_connected.persist', 'boom');
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/product-events`
+    );
+    expect(request.request.body).toEqual(
+      jasmine.objectContaining({
+        eventName: 'wallet.last_connected.persist',
+        status: 'failed',
+        reasonCode: 'unknown',
+      })
+    );
+    request.flush({});
+  });
 });

@@ -27,6 +27,7 @@ const DISCONNECTED_SNAPSHOT: WalletConnectionSnapshot = {
   status: 'disconnected',
   account: null,
   chainId: null,
+  identity: null,
   isVerified: false,
   safetyStatus: null,
   isBypassed: false,
