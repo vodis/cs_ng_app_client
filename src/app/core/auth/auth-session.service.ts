@@ -128,11 +128,8 @@ export class AuthSessionService {
       });
       return session;
     } catch (error) {
-      this.productEvents.record({
-        eventName: 'auth.login',
-        status: 'failed',
-        reasonCode: this.productEvents.reason(error),
-        metadata: { authMethod, message: this.productEvents.message(error) },
+      this.productEvents.recordFailure('auth.login', error, {
+        metadata: { authMethod },
       });
       throw error;
     } finally {

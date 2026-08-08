@@ -71,6 +71,57 @@
     margin: 0 0 1rem;
   }
 
+  &__wallet-live,
+  &__last-wallet {
+    display: grid;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 8px;
+    background: rgb(255 255 255 / 4%);
+    gap: 0.85rem;
+  }
+
+  &__wallet-live-main,
+  &__last-wallet-copy {
+    display: grid;
+    min-width: 0;
+    gap: 0.2rem;
+  }
+
+  &__wallet-live-label,
+  &__last-wallet-label {
+    color: var(--secondary-text-color);
+    font-size: 0.78rem;
+    line-height: 1rem;
+  }
+
+  &__wallet-live-label {
+    color: var(--success, #7ee787);
+  }
+
+  &__wallet-live-address,
+  &__last-wallet-address {
+    color: var(--gray-30);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  &__wallet-live-actions,
+  &__last-wallet-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  &__wallet-locked {
+    color: var(--secondary-text-color);
+    font-size: 0.78rem;
+    line-height: 1rem;
+  }
+
   &__view-wallet {
     min-width: 0;
     padding-left: 0;
@@ -275,7 +326,9 @@
       gap: 0.15rem;
     }
 
-    &__wallet-actions {
+    &__wallet-actions,
+    &__wallet-live-actions,
+    &__last-wallet-actions {
       justify-content: flex-start;
     }
 

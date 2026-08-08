@@ -11,10 +11,27 @@ export type WalletConnectionStatus =
   | 'disconnected'
   | 'error';
 
+export type WalletConnectorId =
+  | 'metamask'
+  | 'walletconnect'
+  | 'coinbase'
+  | 'near'
+  | 'tonkeeper'
+  | 'privy';
+
+export type WalletIdentity = {
+  connectorId: WalletConnectorId;
+  address: string;
+  providerWalletId?: string;
+  chainType: 'ethereum' | 'near' | 'ton';
+  walletType: 'embedded' | 'external';
+};
+
 export type WalletConnectionSnapshot = {
   status: WalletConnectionStatus;
   account: string | null;
   chainId: number | null;
+  identity?: WalletIdentity | null;
   isVerified: boolean;
   safetyStatus: 'safe' | 'unsafe' | null;
   isBypassed: boolean;
@@ -37,7 +54,11 @@ export type WalletsMfeEvent =
     }
   | {
       type: 'wallet.connected';
-      payload: { account: string; chainId: number | null };
+      payload: {
+        account: string;
+        chainId: number | null;
+        identity?: WalletIdentity | null;
+      };
     }
   | { type: 'wallet.disconnected'; payload: { reason?: string } }
   | { type: 'wallet.account.changed'; payload: { account: string } }

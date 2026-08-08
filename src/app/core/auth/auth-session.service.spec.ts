@@ -106,7 +106,7 @@ describe('AuthSessionService', () => {
     ]);
     productEvents = jasmine.createSpyObj<ProductEventsService>(
       'ProductEventsService',
-      ['record', 'reason', 'message']
+      ['record', 'recordFailure', 'reason', 'message']
     );
     productEvents.reason.and.returnValue('test_error');
     productEvents.message.and.callFake((error: unknown) =>
