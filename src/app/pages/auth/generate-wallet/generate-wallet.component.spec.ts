@@ -1,5 +1,6 @@
 import { convertToParamMap, ParamMap, Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { of } from 'rxjs';
 import { GenerateWalletComponent } from './generate-wallet.component';
 
@@ -7,6 +8,7 @@ describe('GenerateWalletComponent', () => {
   let component: GenerateWalletComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let router: jasmine.SpyObj<Router>;
+  let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
   let queryParamMap: ParamMap;
 
   beforeEach(() => {
@@ -37,10 +39,22 @@ describe('GenerateWalletComponent', () => {
     router.navigateByUrl.and.resolveTo(true);
     authSession.ensureEmbeddedWallet.and.resolveTo();
     authSession.reloadWallets.and.resolveTo([]);
+    localizedRouting = jasmine.createSpyObj<LocalizedRoutingService>(
+      'LocalizedRoutingService',
+      ['path']
+    );
+    localizedRouting.path.and.callFake(path =>
+      path === '/' ? '/en' : `/en${path}`
+    );
 
-    component = new GenerateWalletComponent(authSession, router, {
-      snapshot: { queryParamMap },
-    } as never);
+    component = new GenerateWalletComponent(
+      authSession,
+      router,
+      {
+        snapshot: { queryParamMap },
+      } as never,
+      localizedRouting
+    );
   });
 
   it('opens only the page-owned wallet connector modal', () => {
@@ -67,7 +81,7 @@ describe('GenerateWalletComponent', () => {
 
     expect(authSession.ensureEmbeddedWallet).toHaveBeenCalledTimes(1);
     expect(authSession.reloadWallets).toHaveBeenCalledTimes(1);
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en');
   });
 
   it('requires a linked wallet before continuing', async () => {
@@ -93,12 +107,17 @@ describe('GenerateWalletComponent', () => {
 
     await component.ngOnInit();
 
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/farm');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/farm');
   });
 
   function createComponent(): GenerateWalletComponent {
-    return new GenerateWalletComponent(authSession, router, {
-      snapshot: { queryParamMap },
-    } as never);
+    return new GenerateWalletComponent(
+      authSession,
+      router,
+      {
+        snapshot: { queryParamMap },
+      } as never,
+      localizedRouting
+    );
   }
 });

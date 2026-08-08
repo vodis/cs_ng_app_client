@@ -6,6 +6,7 @@ import type {
   BackendBalance,
   BackendWallet,
 } from '@core/auth/auth-session.types';
+import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 
@@ -26,6 +27,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public passkeyLoading = false;
   public balances: BackendBalance[] = [];
   public balancesLoading = false;
+  public connectedAccount: string | null = null;
+  public lastConnectedWallet: LastConnectedWallet | null = null;
+  public walletActionBusy = false;
 
   private subscription?: Subscription;
 
@@ -36,14 +40,28 @@ export class ProfileComponent implements OnInit, OnDestroy {
   ) {}
 
   public ngOnInit(): void {
-    this.subscription = this.authSession.session$.subscribe(session => {
-      this.session = session;
-      if (session) {
-        void this.refreshBalances();
-      } else {
-        this.balances = [];
-      }
-    });
+    this.subscription = new Subscription();
+    this.subscription.add(
+      this.authSession.session$.subscribe(session => {
+        this.session = session;
+        if (session) {
+          this.seedLastConnectedFromBackend(session.wallets);
+          void this.refreshBalances();
+        } else {
+          this.balances = [];
+        }
+      })
+    );
+    this.subscription.add(
+      this.walletsService.account.subscribe(account => {
+        this.connectedAccount = account?.account ?? null;
+      })
+    );
+    this.subscription.add(
+      this.walletsService.lastConnected.subscribe(wallet => {
+        this.lastConnectedWallet = wallet ?? null;
+      })
+    );
   }
 
   public ngOnDestroy(): void {
@@ -58,6 +76,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return [wallet.chainType, wallet.walletType, wallet.source]
       .filter(Boolean)
       .join(' / ');
+  }
+
+  public lastConnectedMeta(wallet: LastConnectedWallet): string {
+    const parts = [
+      wallet.walletType === 'embedded' ? 'embedded' : 'external',
+      wallet.connectorId || wallet.source,
+    ].filter(Boolean);
+    return parts.join(' / ');
   }
 
   public balanceAmount(balance: BackendBalance): string {
@@ -106,12 +132,135 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return (this.session?.wallets.length ?? 0) > 0;
   }
 
+  public isLiveConnected(): boolean {
+    return Boolean(this.connectedAccount);
+  }
+
+  public showLastConnectedSection(): boolean {
+    return (
+      !this.isLiveConnected() && Boolean(this.resolveLastConnectedWallet())
+    );
+  }
+
+  public showEmptyConnectSection(): boolean {
+    return (
+      !this.isLiveConnected() &&
+      !this.showLastConnectedSection() &&
+      !this.hasLinkedWallets()
+    );
+  }
+
+  public resolveLastConnectedWallet(): LastConnectedWallet | null {
+    if (this.lastConnectedWallet) {
+      return this.lastConnectedWallet;
+    }
+
+    const linked = this.primaryLinkedWallet();
+    if (!linked) {
+      return null;
+    }
+
+    return this.toLastConnected(linked);
+  }
+
+  public isEmbeddedWallet(
+    wallet: LastConnectedWallet | BackendWallet | null | undefined
+  ): boolean {
+    if (!wallet) {
+      return false;
+    }
+
+    if ('walletType' in wallet) {
+      return String(wallet.walletType).toLowerCase() === 'embedded';
+    }
+
+    return false;
+  }
+
+  public canRemoveLinkedWallet(wallet: BackendWallet): boolean {
+    return !this.isEmbeddedWallet(wallet);
+  }
+
   public async openWalletModal(): Promise<void> {
     try {
       await this.walletGatewayBridge.syncConnectedWallet();
-    } catch {
-      // Still open the modal so the user can connect manually.
+    } catch {}
+    this.walletsService.requestOpen();
+  }
+
+  public async disconnectWallet(): Promise<void> {
+    this.error = '';
+    this.walletMessage = '';
+    this.walletActionBusy = true;
+    try {
+      const current = this.connectedAccount;
+      if (current) {
+        const linked = this.findLinkedWallet(current);
+        this.walletsService.rememberConnectedWallet(
+          linked
+            ? this.toLastConnected(linked)
+            : {
+                account: current,
+                chainId: this.walletsService.account.value?.chainId ?? null,
+                walletType: this.lastConnectedWallet?.walletType ?? 'external',
+                source: this.lastConnectedWallet?.source,
+                connectorId: this.lastConnectedWallet?.connectorId,
+              }
+        );
+      }
+      this.walletGatewayBridge.disconnectWallet();
+      this.walletsService.setAccount(undefined);
+      this.walletsService.requestClose();
+      this.walletMessage = 'Wallet disconnected';
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Wallet disconnect failed';
+    } finally {
+      this.walletActionBusy = false;
     }
+  }
+
+  public async reconnectWallet(): Promise<void> {
+    this.error = '';
+    this.walletMessage = '';
+    this.walletActionBusy = true;
+    try {
+      const snapshot = await this.walletGatewayBridge.syncConnectedWallet();
+      if (snapshot.account) {
+        this.walletsService.setAccount({
+          account: snapshot.account,
+          chainId: snapshot.chainId,
+        });
+        this.walletsService.rememberConnectedWallet({
+          account: snapshot.account,
+          chainId: snapshot.chainId,
+          walletType:
+            snapshot.identity?.walletType ??
+            this.lastConnectedWallet?.walletType ??
+            'external',
+          source:
+            snapshot.identity?.connectorId ?? this.lastConnectedWallet?.source,
+          connectorId:
+            snapshot.identity?.connectorId ??
+            this.lastConnectedWallet?.connectorId,
+        });
+        this.walletMessage = 'Wallet reconnected';
+        return;
+      }
+
+      this.walletsService.requestOpen();
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Wallet reconnect failed';
+      this.walletsService.requestOpen();
+    } finally {
+      this.walletActionBusy = false;
+    }
+  }
+
+  public connectAnotherWallet(): void {
+    this.error = '';
+    this.walletMessage = '';
     this.walletsService.requestOpen();
   }
 
@@ -163,6 +312,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public async deleteWallet(wallet: BackendWallet): Promise<void> {
+    if (!this.canRemoveLinkedWallet(wallet)) {
+      this.error =
+        'Embedded wallets stay linked to your account and cannot be removed.';
+      return;
+    }
+
     this.error = '';
     this.walletMessage = '';
     this.busyWalletId = wallet.id;
@@ -200,6 +355,42 @@ export class ProfileComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Logout failed';
     }
+  }
+
+  private seedLastConnectedFromBackend(wallets: BackendWallet[]): void {
+    if (this.lastConnectedWallet || wallets.length === 0) {
+      return;
+    }
+
+    const linked = this.primaryLinkedWallet(wallets);
+    if (linked) {
+      this.walletsService.rememberConnectedWallet(this.toLastConnected(linked));
+    }
+  }
+
+  private primaryLinkedWallet(
+    wallets: BackendWallet[] = this.session?.wallets ?? []
+  ): BackendWallet | undefined {
+    return wallets.find(wallet => wallet.isPrimary) ?? wallets[0];
+  }
+
+  private findLinkedWallet(address: string): BackendWallet | undefined {
+    const normalized = address.toLowerCase();
+    return this.session?.wallets.find(
+      wallet => wallet.address.toLowerCase() === normalized
+    );
+  }
+
+  private toLastConnected(wallet: BackendWallet): LastConnectedWallet {
+    return {
+      account: wallet.address,
+      chainId: null,
+      walletType:
+        String(wallet.walletType).toLowerCase() === 'embedded'
+          ? 'embedded'
+          : 'external',
+      source: wallet.source,
+    };
   }
 
   private rawToDecimal(rawBalance: string, decimals: number): string {

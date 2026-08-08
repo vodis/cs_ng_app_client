@@ -1,6 +1,7 @@
 import { Component, Inject, Input } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router } from '@angular/router';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -17,7 +18,8 @@ export class SidebarComponent {
 
   public sidebarBoardLinks = [
     {
-      name: 'Board',
+      name: 'Texts.sidebar-board',
+      fallback: 'Board',
       url: '/',
       isActive: true,
     },
@@ -25,7 +27,8 @@ export class SidebarComponent {
 
   public sidebarFinansialLinks = [
     {
-      name: 'Farm',
+      name: 'Texts.sidebar-farm',
+      fallback: 'Farm',
       url: '/farm',
       isActive: true,
     },
@@ -33,7 +36,8 @@ export class SidebarComponent {
 
   public sidebarWorkProposalLinks = [
     {
-      name: 'Proposals',
+      name: 'Texts.sidebar-proposals',
+      fallback: 'Proposals',
       url: '/proposals',
       isActive: true,
     },
@@ -47,7 +51,8 @@ export class SidebarComponent {
 
   constructor(
     @Inject(DOCUMENT) private document: Document,
-    private router: Router
+    private router: Router,
+    private readonly localizedRouting: LocalizedRoutingService
   ) {}
 
   public trackById(index: number): number {
@@ -55,7 +60,7 @@ export class SidebarComponent {
   }
 
   public handleRouteChanging(url: string): void {
-    this.router.navigateByUrl(url);
+    this.router.navigateByUrl(this.localizedRouting.path(url));
     this.document.body.classList.toggle('_is-locked');
   }
 

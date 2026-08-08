@@ -126,15 +126,11 @@ export class SwapExecutionWorkflow {
       this.logTransition(traceId, step, 'failed', Date.now() - startedAt, {
         error,
       });
-      this.productEvents.record({
-        eventName: 'swap.confirmed',
-        status: 'failed',
+      this.productEvents.recordFailure('swap.confirmed', error, {
         requestId: traceId,
-        reasonCode: this.productEvents.reason(error),
         metadata: {
           authMethod: request.authMethod,
           step,
-          message: this.productEvents.message(error),
           durationMs: Date.now() - startedAt,
         },
       });

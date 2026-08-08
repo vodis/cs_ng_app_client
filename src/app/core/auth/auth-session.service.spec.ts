@@ -10,6 +10,7 @@ import { AuthProviderService } from './auth-provider.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ProductEventsService } from '@core/product-events/product-events.service';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 
 describe('AuthSessionService', () => {
   let service: AuthSessionService;
@@ -19,6 +20,7 @@ describe('AuthSessionService', () => {
   let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
   let walletsService: jasmine.SpyObj<WalletsService>;
   let productEvents: jasmine.SpyObj<ProductEventsService>;
+  let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
 
   beforeEach(() => {
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
@@ -104,11 +106,18 @@ describe('AuthSessionService', () => {
     ]);
     productEvents = jasmine.createSpyObj<ProductEventsService>(
       'ProductEventsService',
-      ['record', 'reason', 'message']
+      ['record', 'recordFailure', 'reason', 'message']
     );
     productEvents.reason.and.returnValue('test_error');
     productEvents.message.and.callFake((error: unknown) =>
       error instanceof Error ? error.message : undefined
+    );
+    localizedRouting = jasmine.createSpyObj<LocalizedRoutingService>(
+      'LocalizedRoutingService',
+      ['path']
+    );
+    localizedRouting.path.and.callFake(path =>
+      path === '/' ? '/en' : `/en${path}`
     );
 
     TestBed.configureTestingModule({
@@ -119,6 +128,7 @@ describe('AuthSessionService', () => {
         { provide: WalletGatewayBridgeService, useValue: walletGatewayBridge },
         { provide: WalletsService, useValue: walletsService },
         { provide: ProductEventsService, useValue: productEvents },
+        { provide: LocalizedRoutingService, useValue: localizedRouting },
       ],
     });
 
@@ -222,7 +232,7 @@ describe('AuthSessionService', () => {
     expect(walletGatewayBridge.disconnectWallet).toHaveBeenCalledTimes(1);
     expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
     expect(service.session).toBeNull();
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/login');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/login');
   }));
 
   it('syncs the wallet gateway after ensuring an embedded wallet', fakeAsync(() => {

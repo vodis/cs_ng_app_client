@@ -1,5 +1,6 @@
 import { convertToParamMap, ParamMap, Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { of } from 'rxjs';
 import { RegisterComponent } from './register.component';
 
@@ -7,6 +8,7 @@ describe('RegisterComponent', () => {
   let component: RegisterComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let router: jasmine.SpyObj<Router>;
+  let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
   let queryParamMap: ParamMap;
 
   beforeEach(() => {
@@ -43,10 +45,22 @@ describe('RegisterComponent', () => {
     router.navigateByUrl.and.resolveTo(true);
     router.navigate.and.resolveTo(true);
     authSession.reloadWallets.and.resolveTo([]);
+    localizedRouting = jasmine.createSpyObj<LocalizedRoutingService>(
+      'LocalizedRoutingService',
+      ['path']
+    );
+    localizedRouting.path.and.callFake(path =>
+      path === '/' ? '/en' : `/en${path}`
+    );
 
-    component = new RegisterComponent(authSession, router, {
-      snapshot: { queryParamMap },
-    } as never);
+    component = new RegisterComponent(
+      authSession,
+      router,
+      {
+        snapshot: { queryParamMap },
+      } as never,
+      localizedRouting
+    );
   });
 
   it('requires a valid email and accepted policy before email registration', async () => {
@@ -92,8 +106,8 @@ describe('RegisterComponent', () => {
       '123456'
     );
     expect(component.isOpenEmailCodeModal).toBeFalse();
-    expect(router.navigate).toHaveBeenCalledOnceWith(['/generate-wallet'], {
-      queryParams: { returnUrl: '/' },
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/en/generate-wallet'], {
+      queryParams: { returnUrl: '/en' },
     });
   });
 
@@ -123,7 +137,7 @@ describe('RegisterComponent', () => {
 
     expect(authSession.login).toHaveBeenCalledOnceWith('google');
     expect(authSession.reloadWallets).not.toHaveBeenCalled();
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/farm');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/farm');
   });
 
   it('routes wallet-less social registration to generate-wallet', async () => {
@@ -140,14 +154,19 @@ describe('RegisterComponent', () => {
     await component.continueWith('apple');
 
     expect(authSession.reloadWallets).toHaveBeenCalledTimes(1);
-    expect(router.navigate).toHaveBeenCalledOnceWith(['/generate-wallet'], {
-      queryParams: { returnUrl: '/' },
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/en/generate-wallet'], {
+      queryParams: { returnUrl: '/en' },
     });
   });
 
   function createComponent(): RegisterComponent {
-    return new RegisterComponent(authSession, router, {
-      snapshot: { queryParamMap },
-    } as never);
+    return new RegisterComponent(
+      authSession,
+      router,
+      {
+        snapshot: { queryParamMap },
+      } as never,
+      localizedRouting
+    );
   }
 });

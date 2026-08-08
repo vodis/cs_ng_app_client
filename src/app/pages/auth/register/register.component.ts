@@ -8,6 +8,7 @@ import {
   hasLinkedWallets,
   readReturnUrl,
 } from '../shared/auth-navigation.helper';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 
 @Component({
   selector: 'app-register',
@@ -29,7 +30,8 @@ export class RegisterComponent {
   constructor(
     public readonly authSession: AuthSessionService,
     private readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    public readonly localizedRouting: LocalizedRoutingService
   ) {}
 
   public async registerWithEmail(): Promise<void> {
@@ -157,15 +159,22 @@ export class RegisterComponent {
   private async navigateAfterAuth(initialWalletCount: number): Promise<void> {
     if (await hasLinkedWallets(this.authSession, initialWalletCount)) {
       await this.router.navigateByUrl(
-        readReturnUrl(this.route.snapshot.queryParamMap)
+        this.localizedRouting.path(
+          readReturnUrl(this.route.snapshot.queryParamMap)
+        )
       );
       return;
     }
 
-    await this.router.navigate(['/generate-wallet'], {
-      queryParams: {
-        returnUrl: readReturnUrl(this.route.snapshot.queryParamMap),
-      },
-    });
+    await this.router.navigate(
+      [this.localizedRouting.path('/generate-wallet')],
+      {
+        queryParams: {
+          returnUrl: this.localizedRouting.path(
+            readReturnUrl(this.route.snapshot.queryParamMap)
+          ),
+        },
+      }
+    );
   }
 }

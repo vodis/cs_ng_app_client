@@ -96,6 +96,16 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
                 account: account.account,
                 chainId: this.walletsService.account.value?.chainId ?? null,
               });
+              this.walletsService.rememberConnectedWallet({
+                account: account.account,
+                chainId: this.walletsService.account.value?.chainId ?? null,
+                walletType:
+                  this.walletsService.lastConnected.value?.walletType ??
+                  'external',
+                source: this.walletsService.lastConnected.value?.source,
+                connectorId:
+                  this.walletsService.lastConnected.value?.connectorId,
+              });
               this.refreshBackendWallets();
             });
           },
@@ -156,6 +166,13 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       this.walletsService.setAccount({
         account: snapshot.account,
         chainId: snapshot.chainId,
+      });
+      this.walletsService.rememberConnectedWallet({
+        account: snapshot.account,
+        chainId: snapshot.chainId,
+        walletType: snapshot.identity?.walletType ?? 'external',
+        source: snapshot.identity?.connectorId,
+        connectorId: snapshot.identity?.connectorId,
       });
       this.refreshBackendWallets();
       return;

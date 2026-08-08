@@ -5,6 +5,10 @@ export const AUTH_SHELL_ROUTE_PREFIXES = [
 ] as const;
 
 export function isAuthShellRoute(url: string): boolean {
-  const path = url.split('?')[0].split('#')[0];
+  const path = url
+    .split('?')[0]
+    .split('#')[0]
+    .replace(/^\/(?:en|ua|pt)(?=\/|$)/, '');
+
   return AUTH_SHELL_ROUTE_PREFIXES.some(prefix => path.startsWith(prefix));
 }
