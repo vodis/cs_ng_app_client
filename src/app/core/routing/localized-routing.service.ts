@@ -31,15 +31,44 @@ export function languageToLocaleSlug(language: string): LocaleSlug {
   return isLocaleSlug(locale) ? locale : DEFAULT_LOCALE_SLUG;
 }
 
-export function stripLocalePrefix(path: string): string {
+function splitPathSuffix(path: string): { pathname: string; suffix: string } {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  const [firstSegment, ...rest] = cleanPath.split('/').filter(Boolean);
+  const suffixIndex = cleanPath.search(/[?#]/);
 
-  if (!isLocaleSlug(firstSegment)) {
-    return cleanPath;
+  if (suffixIndex === -1) {
+    return { pathname: cleanPath, suffix: '' };
   }
 
-  return rest.length > 0 ? `/${rest.join('/')}` : '/';
+  return {
+    pathname: cleanPath.slice(0, suffixIndex) || '/',
+    suffix: cleanPath.slice(suffixIndex),
+  };
+}
+
+export function stripLocalePrefix(path: string): string {
+  const { pathname, suffix } = splitPathSuffix(path);
+  const [firstSegment, ...rest] = pathname.split('/').filter(Boolean);
+
+  if (!isLocaleSlug(firstSegment)) {
+    return `${pathname}${suffix}`;
+  }
+
+  const unprefixedPathname = rest.length > 0 ? `/${rest.join('/')}` : '/';
+  return `${unprefixedPathname}${suffix}`;
+}
+
+export function localizedPath(path: string, locale: LocaleSlug): string {
+  const unprefixedPath = stripLocalePrefix(path);
+
+  if (unprefixedPath === '/') {
+    return `/${locale}`;
+  }
+
+  if (unprefixedPath.startsWith('/?') || unprefixedPath.startsWith('/#')) {
+    return `/${locale}${unprefixedPath.slice(1)}`;
+  }
+
+  return `/${locale}${unprefixedPath}`;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -50,10 +79,8 @@ export class LocalizedRoutingService {
   ) {}
 
   public currentLocale(): LocaleSlug {
-    const [firstSegment] = this.router.url
-      .split('?')[0]
-      .split('/')
-      .filter(Boolean);
+    const { pathname } = splitPathSuffix(this.router.url);
+    const [firstSegment] = pathname.split('/').filter(Boolean);
 
     if (isLocaleSlug(firstSegment)) {
       return firstSegment;
@@ -63,10 +90,7 @@ export class LocalizedRoutingService {
   }
 
   public path(path: string, locale = this.currentLocale()): string {
-    const unprefixedPath = stripLocalePrefix(path);
-    return unprefixedPath === '/'
-      ? `/${locale}`
-      : `/${locale}${unprefixedPath}`;
+    return localizedPath(path, locale);
   }
 
   public navigateByUrl(path: string): Promise<boolean> {
@@ -104,16 +128,9 @@ export function preferredLocalePath(path: string): string {
   try {
     const storedLanguage = window.localStorage.getItem('active-language');
     const locale = languageToLocaleSlug(storedLanguage ?? '');
-    const unprefixedPath = stripLocalePrefix(path);
 
-    return unprefixedPath === '/'
-      ? `/${locale}`
-      : `/${locale}${unprefixedPath}`;
+    return localizedPath(path, locale);
   } catch {
-    const unprefixedPath = stripLocalePrefix(path);
-
-    return unprefixedPath === '/'
-      ? `/${DEFAULT_LOCALE_SLUG}`
-      : `/${DEFAULT_LOCALE_SLUG}${unprefixedPath}`;
+    return localizedPath(path, DEFAULT_LOCALE_SLUG);
   }
 }
