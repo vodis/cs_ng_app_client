@@ -33,7 +33,9 @@
       <div class="main-layout__content_mobile">
         <ng-container *ngTemplateOutlet="content"></ng-container>
       </div>
-      <app-sidebar [isMobileView]="isMobileView"></app-sidebar>
+      <app-sidebar
+        [isMobileView]="isMobileView"
+        [navCompact]="mobileNavCompact"></app-sidebar>
     </div>
   </ng-container>
 

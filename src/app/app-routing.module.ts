@@ -18,6 +18,13 @@ const localizedRoutes: Routes = [
       import('./pages/auth/auth.module').then(m => m.AuthModule),
   },
   {
+    path: '',
+    loadChildren: () =>
+      import('./pages/placeholder/placeholder-page.module').then(
+        m => m.PlaceholderPageModule
+      ),
+  },
+  {
     path: 'farm',
     loadChildren: () =>
       import('./pages/farm/farm.module').then(m => m.FarmModule),
@@ -39,6 +46,21 @@ const routes: Routes = [
     path: 'farm',
     pathMatch: 'full',
     redirectTo: () => preferredLocalePath('/farm'),
+  },
+  {
+    path: 'home',
+    pathMatch: 'full',
+    redirectTo: () => preferredLocalePath('/home'),
+  },
+  {
+    path: 'history',
+    pathMatch: 'full',
+    redirectTo: () => preferredLocalePath('/history'),
+  },
+  {
+    path: 'portfolio',
+    pathMatch: 'full',
+    redirectTo: () => preferredLocalePath('/portfolio'),
   },
   {
     path: 'proposals',

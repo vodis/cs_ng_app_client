@@ -1,7 +1,15 @@
-import { Component, Inject, Input } from '@angular/core';
+import { Component, HostBinding, Inject, Input } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router } from '@angular/router';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+
+export type SidebarMobileLink = {
+  name: string;
+  fallback: string;
+  url: string;
+  icon: string;
+  exact?: boolean;
+};
 
 @Component({
   selector: 'app-sidebar',
@@ -11,6 +19,12 @@ import { LocalizedRoutingService } from '@core/routing/localized-routing.service
 })
 export class SidebarComponent {
   @Input() isMobileView = false;
+  @Input() navCompact = false;
+
+  @HostBinding('class.sidebar-host--nav-compact')
+  get hostNavCompact(): boolean {
+    return this.isMobileView && this.navCompact;
+  }
 
   public isBoardPanelOpen = true;
   public isFarmPanelOpen = true;
@@ -43,10 +57,36 @@ export class SidebarComponent {
     },
   ];
 
-  public sidebarMobile = [
-    ...this.sidebarBoardLinks,
-    ...this.sidebarFinansialLinks,
-    ...this.sidebarWorkProposalLinks,
+  /** App mobile bottom nav — matches design: Home / Swap / History / Portfolio */
+  public sidebarMobile: SidebarMobileLink[] = [
+    {
+      name: 'Texts.sidebar-home',
+      fallback: 'Home',
+      url: '/home',
+      icon: 'home',
+      exact: true,
+    },
+    {
+      name: 'Texts.sidebar-swap',
+      fallback: 'Swap',
+      url: '/',
+      icon: 'swap_horiz',
+      exact: true,
+    },
+    {
+      name: 'Texts.sidebar-history',
+      fallback: 'History',
+      url: '/history',
+      icon: 'history',
+      exact: true,
+    },
+    {
+      name: 'Texts.sidebar-portfolio',
+      fallback: 'Portfolio',
+      url: '/portfolio',
+      icon: 'pie_chart',
+      exact: true,
+    },
   ];
 
   constructor(
@@ -57,6 +97,10 @@ export class SidebarComponent {
 
   public trackById(index: number): number {
     return index;
+  }
+
+  public mobilePath(url: string): string {
+    return this.localizedRouting.path(url);
   }
 
   public handleRouteChanging(url: string): void {

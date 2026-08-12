@@ -1,4 +1,4 @@
-<div class="sidebar h-100">
+<div class="sidebar h-100" [class.sidebar--mobile]="isMobileView">
   <nav class="sidebar__nav" [ngClass]="{ mobile: isMobileView }">
     <ng-container *ngIf="!isMobileView">
       <ul class="sidebar__nav_menu">
@@ -88,16 +88,31 @@
     </ng-container>
 
     <ng-container *ngIf="isMobileView">
-      <ul class="sidebar__nav_menu">
+      <ul class="sidebar__nav_menu" aria-label="Mobile navigation">
         <li
           *ngFor="let item of sidebarMobile; trackBy: trackById"
           class="menu-item">
           <a
             class="menu-link"
-            [routerLinkActive]="'_is-active'"
-            (click)="handleRouteChanging(item.url)"
-            >{{ item.name | csTranslate: item.fallback }}</a
-          >
+            [routerLink]="mobilePath(item.url)"
+            routerLinkActive="_is-active"
+            [routerLinkActiveOptions]="{ exact: item.exact !== false }"
+            [attr.aria-label]="item.fallback">
+            <span class="menu-link__dot" aria-hidden="true"></span>
+            <span class="menu-link__icon-wrap" aria-hidden="true">
+              <mat-icon
+                class="menu-link__icon menu-link__icon--outline"
+                fontSet="material-icons-outlined"
+                >{{ item.icon }}</mat-icon
+              >
+              <mat-icon class="menu-link__icon menu-link__icon--filled">{{
+                item.icon
+              }}</mat-icon>
+            </span>
+            <span class="menu-link__label">{{
+              item.name | csTranslate: item.fallback
+            }}</span>
+          </a>
         </li>
       </ul>
     </ng-container>
