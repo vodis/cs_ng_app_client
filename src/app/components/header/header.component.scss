@@ -1,6 +1,13 @@
 :host {
   display: block;
+  position: relative;
   height: var(--shell-header-height);
+
+  &.header-host--mobile {
+    .header__line {
+      background: rgb(255 255 255 / 65%);
+    }
+  }
 
   .header {
     position: relative;
@@ -79,54 +86,75 @@
         color: var(--primary-text-color);
       }
     }
-
-    &__line,
-    &__animate-line {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      height: 1px;
-    }
-
-    &__line {
-      background: var(--main-border-color);
-    }
   }
 
-  .mobile .header {
-    &__content {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+  .header__line,
+  .header__animate-line {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+  }
+
+  .header__line {
+    background: var(--main-border-color);
+  }
+
+  .header.mobile {
+    .header__content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+      grid-template-columns: none;
     }
 
-    &__content_connect {
+    .header__logo {
+      width: auto;
+      justify-content: flex-start;
+
+      img {
+        width: auto;
+        height: 1.5rem;
+      }
+    }
+
+    .header__content_connect {
       height: 100%;
       justify-content: flex-end;
-      padding-right: 1rem;
-      grid-column: 3 / 5;
+      padding-right: 0;
+      grid-column: auto;
     }
 
-    &__account-link {
-      height: 2rem;
+    .header__account-link {
+      width: 1.85rem;
+      min-width: 1.85rem;
+      height: 1.85rem;
+      min-height: 1.85rem;
+      padding: 0;
+      border: 1.5px solid rgb(255 255 255 / 45%);
+      border-radius: 999px;
+      color: var(--main-text-color);
 
-      &--icon {
-        width: 2rem;
-        min-width: 2rem;
-        height: 2rem;
-        min-height: 2rem;
-        padding: 0;
+      &.header__account-link--icon {
+        width: 1.85rem;
+        min-width: 1.85rem;
+        height: 1.85rem;
+        min-height: 1.85rem;
+        border-color: rgb(255 255 255 / 45%);
       }
 
-      &:not(&--icon) {
-        padding: 0 0.65rem;
-        font-size: 0.78rem;
+      &._active {
+        border-color: rgb(255 255 255 / 55%);
+        color: var(--main-text-color);
       }
 
       mat-icon {
-        width: 1.125rem;
-        height: 1.125rem;
-        font-size: 1.125rem;
-        line-height: 1.125rem;
+        width: 1.05rem;
+        height: 1.05rem;
+        font-size: 1.05rem;
+        line-height: 1.05rem;
       }
     }
   }
