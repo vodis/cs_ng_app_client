@@ -8,7 +8,7 @@
       class="main-layout__content"
       (window:resize)="onResize($event)"
       *ngIf="!isMobileView">
-      <app-sidebar [isMobileView]="isMobileView"></app-sidebar>
+      <app-sidebar></app-sidebar>
       <app-animate-line
         *ngIf="verticalLineAnimating"
         [direction]="DirectionType.Row"
@@ -33,7 +33,8 @@
       <div class="main-layout__content_mobile">
         <ng-container *ngTemplateOutlet="content"></ng-container>
       </div>
-      <app-sidebar [isMobileView]="isMobileView"></app-sidebar>
+      <app-mobile-bottom-nav
+        [navCompact]="mobileNavCompact"></app-mobile-bottom-nav>
     </div>
   </ng-container>
 

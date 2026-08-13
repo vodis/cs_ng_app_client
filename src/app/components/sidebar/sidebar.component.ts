@@ -1,4 +1,4 @@
-import { Component, Inject, Input } from '@angular/core';
+import { Component, Inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router } from '@angular/router';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
@@ -10,8 +10,6 @@ import { LocalizedRoutingService } from '@core/routing/localized-routing.service
   styleUrls: ['sidebar.component.scss'],
 })
 export class SidebarComponent {
-  @Input() isMobileView = false;
-
   public isBoardPanelOpen = true;
   public isFarmPanelOpen = true;
   public isDevActivityPanelOpen = true;
@@ -41,12 +39,6 @@ export class SidebarComponent {
       url: '/proposals',
       isActive: true,
     },
-  ];
-
-  public sidebarMobile = [
-    ...this.sidebarBoardLinks,
-    ...this.sidebarFinansialLinks,
-    ...this.sidebarWorkProposalLinks,
   ];
 
   constructor(

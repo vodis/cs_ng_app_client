@@ -46,4 +46,30 @@ describe('LayoutComponent', () => {
 
     expect(component.hideShell).toBeFalse();
   });
+
+  it('compacts mobile nav when scrolling down and expands when scrolling up', () => {
+    component.isMobileView = true;
+    component.hideShell = false;
+
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: 10,
+    });
+    component.onWindowScroll();
+    expect(component.mobileNavCompact).toBeFalse();
+
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: 30,
+    });
+    component.onWindowScroll();
+    expect(component.mobileNavCompact).toBeTrue();
+
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: 15,
+    });
+    component.onWindowScroll();
+    expect(component.mobileNavCompact).toBeFalse();
+  });
 });

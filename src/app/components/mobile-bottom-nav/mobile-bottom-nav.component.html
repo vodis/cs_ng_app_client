@@ -1,0 +1,30 @@
+<nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+  <ul class="mobile-bottom-nav__menu">
+    <li
+      *ngFor="let item of links; trackBy: trackById"
+      class="mobile-bottom-nav__item">
+      <a
+        class="mobile-bottom-nav__link"
+        [routerLink]="path(item.url)"
+        routerLinkActive="_is-active"
+        [routerLinkActiveOptions]="{ exact: item.exact !== false }"
+        [attr.aria-label]="item.fallback">
+        <span class="mobile-bottom-nav__dot" aria-hidden="true"></span>
+        <span class="mobile-bottom-nav__icon-wrap" aria-hidden="true">
+          <mat-icon
+            class="mobile-bottom-nav__icon mobile-bottom-nav__icon--outline"
+            fontSet="material-icons-outlined"
+            >{{ item.icon }}</mat-icon
+          >
+          <mat-icon
+            class="mobile-bottom-nav__icon mobile-bottom-nav__icon--filled"
+            >{{ item.icon }}</mat-icon
+          >
+        </span>
+        <span class="mobile-bottom-nav__label">{{
+          item.name | csTranslate: item.fallback
+        }}</span>
+      </a>
+    </li>
+  </ul>
+</nav>

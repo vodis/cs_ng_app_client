@@ -13,7 +13,7 @@
     <div class="header__content_connect">
       <a
         class="header__account-link"
-        [class.header__account-link--icon]="session"
+        [class.header__account-link--icon]="!!session || isMobileView"
         [routerLink]="localizedRouting.path(session ? '/profile' : '/login')"
         routerLinkActive="_active"
         [attr.aria-label]="
@@ -26,21 +26,34 @@
             ? ('Texts.header-profile' | csTranslate: 'Profile')
             : ('Texts.header-sign-in' | csTranslate: 'Sign in')
         ">
-        @if (session) {
-          <mat-icon aria-hidden="true">person</mat-icon>
+        @if (session || isMobileView) {
+          <mat-icon
+            aria-hidden="true"
+            [fontSet]="
+              isMobileView ? 'material-icons-outlined' : 'material-icons'
+            "
+            >person</mat-icon
+          >
         } @else {
           {{ 'Texts.header-sign-in' | csTranslate: 'Sign in' }}
         }
       </a>
+      <button
+        *ngIf="isMobileView"
+        type="button"
+        class="header__menu-button"
+        aria-label="Menu">
+        <mat-icon fontSet="material-icons-outlined">menu</mat-icon>
+      </button>
     </div>
   </div>
-  <app-animate-line
-    *ngIf="horizontalLineAnimating"
-    class="header__animate-line"
-    [resetKey]="lineResetKey"
-    (animationComplete)="onHorizontalLineAnimationComplete()" />
-  <div
-    *ngIf="!horizontalLineAnimating"
-    class="header__line"
-    aria-hidden="true"></div>
 </header>
+<app-animate-line
+  *ngIf="horizontalLineAnimating"
+  class="header__animate-line"
+  [resetKey]="lineResetKey"
+  (animationComplete)="onHorizontalLineAnimationComplete()" />
+<div
+  *ngIf="!horizontalLineAnimating"
+  class="header__line"
+  aria-hidden="true"></div>
