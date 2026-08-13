@@ -1,6 +1,8 @@
 import type { ApiResponseEnvelope } from '@mfe-contracts/api-envelope';
-import type { ApprovedIntentPrepareRequest } from '@mfe-contracts/intent-prepare.contract';
-import type { SwapQuotePreview } from '@domains/exchange/models/swap.models';
+import type {
+  ApprovedSwapPreparePackage,
+  SwapQuotePreview,
+} from '@domains/exchange/models/swap.models';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -28,7 +30,7 @@ function readStringArray(
 
 function buildLegacyExecutionPackage(
   payload: Record<string, unknown>
-): ApprovedIntentPrepareRequest['executionPackage'] {
+): ApprovedSwapPreparePackage['executionPackage'] {
   return {
     providerId: readString(payload, 'providerId') ?? '',
     mode: 'intent_sign',
@@ -70,7 +72,7 @@ export function mapQuotePreviewResponse(
 
 export function mapApprovedPreparePackage(
   envelope: ApiResponseEnvelope<unknown>
-): ApprovedIntentPrepareRequest {
+): ApprovedSwapPreparePackage {
   const payload = unwrapData(envelope);
   if (!isRecord(payload['executionPackage'])) {
     payload['executionPackage'] = buildLegacyExecutionPackage(payload);
@@ -99,7 +101,7 @@ function unwrapData(
 
 function assertApprovedPreparePackage(
   payload: Record<string, unknown>
-): asserts payload is ApprovedIntentPrepareRequest {
+): asserts payload is ApprovedSwapPreparePackage {
   const protocol = payload['protocol'];
   const kind = payload['kind'];
   const quoteHashes = readStringArray(payload, 'quoteHashes');

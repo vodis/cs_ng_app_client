@@ -30,7 +30,11 @@ export type SwapQuoteRequest = {
 
 export type SwapPrepareRequest = Omit<SwapQuoteRequest, 'dry'>;
 
-export type ApprovedSwapPreparePackage = ApprovedIntentPrepareRequest;
+export type ApprovedSwapPreparePackage = ApprovedIntentPrepareRequest & {
+  executionPackage: NonNullable<
+    ApprovedIntentPrepareRequest['executionPackage']
+  >;
+};
 
 export type SwapExecutionOutcome = {
   intentHash: string;
