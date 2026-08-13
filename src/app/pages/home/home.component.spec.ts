@@ -17,6 +17,10 @@ import { WalletAccount } from '@domains/wallet/models/wallet.models';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
+import {
+  WalletBalance,
+  WalletBalancesService,
+} from '@shared/services/wallet-balances.service';
 import { environment } from '../../../environments/environment';
 import { HomeComponent } from './home.component';
 
@@ -65,6 +69,14 @@ class ExchangeAssetsServiceStub {
   }
 }
 
+class WalletBalancesServiceStub {
+  public balances: WalletBalance[] = [];
+
+  public loadBalances() {
+    return of(this.balances);
+  }
+}
+
 describe('HomeComponent market overview', () => {
   let component: HomeComponent;
   let fixture: ComponentFixture<HomeComponent>;
@@ -78,6 +90,7 @@ describe('HomeComponent market overview', () => {
         { provide: WalletsService, useClass: WalletsServiceStub },
         { provide: SwapFlowFacade, useClass: SwapFlowFacadeStub },
         { provide: ExchangeAssetsService, useClass: ExchangeAssetsServiceStub },
+        { provide: WalletBalancesService, useClass: WalletBalancesServiceStub },
       ],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
@@ -259,6 +272,82 @@ describe('HomeComponent market overview', () => {
 
     expect(component.toAmountDisplay()).toBe('0.450318543814579873646208');
     expect(component.toAmountFormatted()).toBe('0,4503');
+  });
+
+  it('shows live NEAR balance for the connected NEAR wallet', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: '1250000000000000000000000',
+        balanceDecimal: '1.25',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2026-08-12T12:00:15.000Z',
+      },
+    ];
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+
+    expect(component.balanceLabel('NEAR')).toBe('Balance: 1,25 NEAR');
+  });
+
+  it('blocks NEAR quotes when entered amount exceeds live balance', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: '1000000000000000000000000',
+        balanceDecimal: '1',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2026-08-12T12:00:15.000Z',
+      },
+    ];
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.fromToken = {
+      ...component.fromToken,
+      symbol: 'NEAR',
+      decimals: 24,
+    };
+    component.amount = '2';
+
+    component.submitQuote();
+
+    expect(component.quoteError).toBe('Insufficient NEAR balance.');
   });
 
   it('prefers backend formatted quote amount from nested quote response', () => {

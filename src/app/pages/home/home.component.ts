@@ -3,6 +3,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
+import {
+  WalletBalance,
+  WalletBalancesService,
+} from '@shared/services/wallet-balances.service';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
 import type {
@@ -205,12 +209,17 @@ export class HomeComponent {
   public showAdvancedMarketView = false;
   public exchangeAssetsLoading = false;
   public exchangeAssetsError = '';
+  public balancesLoading = false;
+  public balancesError = '';
+
+  private walletBalances: WalletBalance[] = [];
 
   constructor(
     private readonly httpClient: HttpClient,
     private readonly walletsService: WalletsService,
     private readonly swapFlowFacade: SwapFlowFacade,
-    private readonly exchangeAssetsService: ExchangeAssetsService
+    private readonly exchangeAssetsService: ExchangeAssetsService,
+    private readonly walletBalancesService: WalletBalancesService
   ) {
     this.walletsService.account
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -223,6 +232,7 @@ export class HomeComponent {
         ) {
           this.walletAddress = nextWalletAddress;
           this.walletChainId = nextWalletChainId;
+          this.loadWalletBalances();
           this.refreshSwapQuotePreview();
         }
       });
@@ -278,6 +288,12 @@ export class HomeComponent {
 
     if (!amount || /^0+$/.test(amount)) {
       this.quoteError = `Enter a valid ${this.fromToken.symbol} amount.`;
+      return;
+    }
+
+    const balanceError = this.validateSourceBalance(amount);
+    if (balanceError) {
+      this.quoteError = balanceError;
       return;
     }
 
@@ -606,6 +622,15 @@ export class HomeComponent {
   }
 
   public balanceLabel(symbol: string): string {
+    const balance = this.balanceForSymbol(symbol);
+    if (balance) {
+      return `Balance: ${this.formatBalance(balance)} ${this.displaySymbolFor(balance.symbol)}`;
+    }
+
+    if (this.balancesLoading && this.isNearTokenSymbol(symbol)) {
+      return `Balance: loading ${this.displaySymbolFor(symbol)}`;
+    }
+
     if (symbol === 'USDC') {
       return 'Balance: 1,250.00 USDC';
     }
@@ -828,6 +853,10 @@ export class HomeComponent {
     const amount = this.toBaseUnits(this.amount, this.fromToken.decimals);
 
     if (!amount || /^0+$/.test(amount)) {
+      return undefined;
+    }
+
+    if (this.validateSourceBalance(amount)) {
       return undefined;
     }
 
@@ -1110,6 +1139,99 @@ export class HomeComponent {
         this.exchangeAssetsError = 'Failed to load assets. Try again later.';
       },
     });
+  }
+
+  private loadWalletBalances(): void {
+    this.walletBalances = [];
+    this.balancesError = '';
+
+    if (!this.walletAddress || !this.isNearWalletAddress(this.walletAddress)) {
+      this.balancesLoading = false;
+      return;
+    }
+
+    const walletAddress = this.walletAddress.toLowerCase();
+    this.balancesLoading = true;
+
+    this.walletBalancesService
+      .loadBalances({
+        walletAddress: this.walletAddress,
+        network: 'near:mainnet',
+      })
+      .subscribe({
+        next: balances => {
+          if (this.walletAddress.toLowerCase() !== walletAddress) {
+            return;
+          }
+
+          this.walletBalances = balances.filter(
+            balance =>
+              balance.chainType === 'near' &&
+              balance.walletAddress.toLowerCase() === walletAddress
+          );
+          this.balancesLoading = false;
+        },
+        error: () => {
+          if (this.walletAddress.toLowerCase() !== walletAddress) {
+            return;
+          }
+
+          this.walletBalances = [];
+          this.balancesLoading = false;
+          this.balancesError = 'Failed to load wallet balance.';
+        },
+      });
+  }
+
+  private validateSourceBalance(amountRaw: string): string {
+    if (!this.isNearTokenSymbol(this.fromToken.symbol)) {
+      return '';
+    }
+
+    const balance = this.balanceForSymbol(this.fromToken.symbol);
+    if (!balance) {
+      return this.balancesError || 'NEAR balance is unavailable.';
+    }
+
+    try {
+      if (BigInt(amountRaw) > BigInt(balance.balanceRaw)) {
+        return `Insufficient ${this.displaySymbolFor(this.fromToken.symbol)} balance.`;
+      }
+    } catch {
+      return 'NEAR balance is unavailable.';
+    }
+
+    return '';
+  }
+
+  private balanceForSymbol(symbol: string): WalletBalance | undefined {
+    const displaySymbol = this.displaySymbolFor(symbol);
+
+    return this.walletBalances.find(
+      balance => this.displaySymbolFor(balance.symbol) === displaySymbol
+    );
+  }
+
+  private formatBalance(balance: WalletBalance): string {
+    const decimal =
+      balance.balanceDecimal ??
+      this.fromBaseUnits(
+        balance.balanceRaw,
+        this.tokenDecimals(balance.decimals)
+      );
+
+    return this.formatSwapAmount(
+      decimal,
+      this.swapAmountFractionDigits(this.displaySymbolFor(balance.symbol))
+    );
+  }
+
+  private isNearTokenSymbol(symbol: string): boolean {
+    return this.displaySymbolFor(symbol) === 'NEAR';
+  }
+
+  private isNearWalletAddress(address: string): boolean {
+    return /^[a-z0-9._-]+\.(?:near|testnet|tg)$/i.test(address);
   }
 
   private pickDefaultFromToken(): ExchangeToken | undefined {
