@@ -98,6 +98,7 @@ export class SwapExecutionWorkflow {
 
       const intentHash = await this.intentRelayService.submitIntent({
         traceId,
+        providerId: preparePackage.providerId,
         signature,
         quoteHashes: preparePackage.quoteHashes,
         user: {

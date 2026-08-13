@@ -21,6 +21,8 @@ export type NearIntentsTokenDelta = {
 
 type NearIntentsPrepareBase = {
   protocol: 'near-intents';
+  /** Aggregator/provider selected by BFF for execution. */
+  providerId: string;
   quoteHashes: string[];
   signerId: string;
   authMethod: DefuseAuthMethod;

@@ -38,6 +38,7 @@ export type IntentRelayUserInfo = {
 };
 
 export type IntentRelaySubmitInput = {
+  providerId: string;
   signedIntent: DefuseSignedIntentData;
   quoteHashes: string[];
   user: IntentRelayUserInfo;

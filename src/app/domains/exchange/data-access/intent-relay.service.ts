@@ -20,12 +20,14 @@ export class IntentRelayService {
 
   submitIntent(input: {
     traceId?: string;
+    providerId: string;
     signature: DefuseWalletSignatureResult;
     quoteHashes: string[];
     user: IntentRelaySubmitInput['user'];
   }): Promise<string> {
     return firstValueFrom(
       this.swapApiClient.submitSignedIntent({
+        providerId: input.providerId,
         signature: input.signature,
         quoteHashes: input.quoteHashes,
         user: input.user,

@@ -83,6 +83,7 @@ function assertApprovedPreparePackage(
   const protocol = payload['protocol'];
   const kind = payload['kind'];
   const quoteHashes = readStringArray(payload, 'quoteHashes');
+  const providerId = readString(payload, 'providerId');
   const signerId = readString(payload, 'signerId');
   const authMethod = readString(payload, 'authMethod');
   const deadlineTimestamp = payload['deadlineTimestamp'];
@@ -94,6 +95,10 @@ function assertApprovedPreparePackage(
 
   if (kind !== 'swap' && kind !== 'transfer') {
     invalidPreparePackage('Missing prepare kind');
+  }
+
+  if (!providerId) {
+    invalidPreparePackage('Missing providerId from BFF');
   }
 
   if (!quoteHashes?.length) {

@@ -62,6 +62,7 @@ function preview(amountOut: string): SwapQuotePreview {
 function approvedPreparePackage(): ApprovedSwapPreparePackage {
   return {
     protocol: 'near-intents',
+    providerId: 'solver-relay',
     kind: 'swap',
     quoteHashes: ['quote-hash'],
     signerId: '0x0000000000000000000000000000000000000001',

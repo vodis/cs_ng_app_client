@@ -19,6 +19,7 @@ import {
 } from './swap-api.mappers';
 
 type SubmitIntentRequestBody = {
+  providerId: string;
   signature: DefuseWalletSignatureResult;
   quoteHashes: string[];
   userAddress: string;
@@ -53,12 +54,14 @@ export class SwapApiClient {
   }
 
   submitSignedIntent(input: {
+    providerId: string;
     signature: DefuseWalletSignatureResult;
     quoteHashes: string[];
     user: IntentRelayUserInfo;
     traceId: string;
   }): Observable<string> {
     const body: SubmitIntentRequestBody = {
+      providerId: input.providerId,
       signature: input.signature,
       quoteHashes: input.quoteHashes,
       userAddress: input.user.userAddress,
