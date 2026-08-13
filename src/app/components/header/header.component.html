@@ -38,6 +38,13 @@
           {{ 'Texts.header-sign-in' | csTranslate: 'Sign in' }}
         }
       </a>
+      <button
+        *ngIf="isMobileView"
+        type="button"
+        class="header__menu-button"
+        aria-label="Menu">
+        <mat-icon fontSet="material-icons-outlined">menu</mat-icon>
+      </button>
     </div>
   </div>
 </header>
