@@ -10,6 +10,15 @@ import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 
+export type ProfileLoginSession = {
+  status: 'Active' | 'Revoked';
+  issued: string;
+  endDate: string;
+  organization: string;
+  authentication: string;
+  application: string;
+};
+
 @Component({
   selector: 'app-profile',
   standalone: false,
@@ -30,8 +39,41 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public connectedAccount: string | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
   public walletActionBusy = false;
+  public showAllSessions = false;
+  public readonly loginSessions: ProfileLoginSession[] = [
+    {
+      status: 'Active',
+      issued: 'Aug 13, 2026, 11:56 AM',
+      endDate: 'Aug 20, 2026, 11:56 AM',
+      organization: 'CraftScript',
+      authentication: 'Google OAuth',
+      application: 'NEAR Intents Partner Portal',
+    },
+    {
+      status: 'Revoked',
+      issued: 'Aug 13, 2026, 11:23 AM',
+      endDate: 'Aug 20, 2026, 11:23 AM',
+      organization: '137372',
+      authentication: 'Google OAuth',
+      application: 'NEAR Intents Partner Portal',
+    },
+    {
+      status: 'Revoked',
+      issued: 'Aug 12, 2026, 6:41 PM',
+      endDate: 'Aug 19, 2026, 6:41 PM',
+      organization: 'CraftScript',
+      authentication: 'Google OAuth',
+      application: 'NEAR Intents Partner Portal',
+    },
+  ];
 
   private subscription?: Subscription;
+
+  public get visibleLoginSessions(): ProfileLoginSession[] {
+    return this.showAllSessions
+      ? this.loginSessions
+      : this.loginSessions.slice(0, 2);
+  }
 
   constructor(
     public readonly authSession: AuthSessionService,
