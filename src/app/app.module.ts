@@ -9,6 +9,7 @@ import { AppComponent } from './app.component';
 import { HeaderComponent } from '@components/header/header.component';
 import { LayoutComponent } from '@components/layout/layout.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
+import { MobileBottomNavComponent } from '@components/mobile-bottom-nav/mobile-bottom-nav.component';
 import { SharedModule } from '@shared/shared.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -35,6 +36,7 @@ function initializeTranslations(translations: CsTranslationsService) {
     HeaderComponent,
     LayoutComponent,
     SidebarComponent,
+    MobileBottomNavComponent,
   ],
   imports: [
     BrowserModule,

@@ -48,39 +48,8 @@ describe('SidebarComponent', () => {
       ...component.sidebarBoardLinks,
       ...component.sidebarFinansialLinks,
       ...component.sidebarWorkProposalLinks,
-      ...component.sidebarMobile,
     ].map(link => link.url);
 
     expect(sidebarUrls).not.toContain('/profile');
-  });
-
-  it('renders Home, Swap, History, and Portfolio in mobile nav', () => {
-    component.isMobileView = true;
-    fixture.detectChanges();
-
-    expect(component.sidebarMobile.map(link => link.fallback)).toEqual([
-      'Home',
-      'Swap',
-      'History',
-      'Portfolio',
-    ]);
-
-    const labels = Array.from(
-      fixture.nativeElement.querySelectorAll(
-        '.menu-link__label'
-      ) as NodeListOf<HTMLElement>
-    ).map(el => el.textContent?.trim());
-
-    expect(labels).toEqual(['Home', 'Swap', 'History', 'Portfolio']);
-  });
-
-  it('applies compact class to mobile nav host when navCompact is true', () => {
-    component.isMobileView = true;
-    component.navCompact = true;
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.classList).toContain(
-      'sidebar-host--nav-compact'
-    );
   });
 });
