@@ -26,6 +26,23 @@ function readStringArray(
   return value.every(item => typeof item === 'string') ? value : undefined;
 }
 
+function buildLegacyExecutionPackage(
+  payload: Record<string, unknown>
+): ApprovedIntentPrepareRequest['executionPackage'] {
+  return {
+    providerId: readString(payload, 'providerId') ?? '',
+    mode: 'intent_sign',
+    protocol: readString(payload, 'protocol') ?? 'near-intents',
+    requiredAction: 'sign',
+    payload: {
+      quoteHashes: readStringArray(payload, 'quoteHashes') ?? [],
+      signerId: readString(payload, 'signerId'),
+      deadlineTimestamp: payload['deadlineTimestamp'],
+      signatureStandard: readString(payload, 'signatureStandard'),
+    },
+  };
+}
+
 export function mapQuotePreviewResponse(
   envelope: ApiResponseEnvelope<unknown>
 ): SwapQuotePreview {
@@ -55,6 +72,9 @@ export function mapApprovedPreparePackage(
   envelope: ApiResponseEnvelope<unknown>
 ): ApprovedIntentPrepareRequest {
   const payload = unwrapData(envelope);
+  if (!isRecord(payload['executionPackage'])) {
+    payload['executionPackage'] = buildLegacyExecutionPackage(payload);
+  }
   assertApprovedPreparePackage(payload);
   return payload;
 }
@@ -84,6 +104,7 @@ function assertApprovedPreparePackage(
   const kind = payload['kind'];
   const quoteHashes = readStringArray(payload, 'quoteHashes');
   const providerId = readString(payload, 'providerId');
+  const executionPackage = payload['executionPackage'];
   const signerId = readString(payload, 'signerId');
   const authMethod = readString(payload, 'authMethod');
   const deadlineTimestamp = payload['deadlineTimestamp'];
@@ -101,7 +122,26 @@ function assertApprovedPreparePackage(
     invalidPreparePackage('Missing providerId from BFF');
   }
 
-  if (!quoteHashes?.length) {
+  if (!isRecord(executionPackage)) {
+    invalidPreparePackage('Missing executionPackage from BFF');
+  }
+
+  if (readString(executionPackage, 'providerId') !== providerId) {
+    invalidPreparePackage('Execution package provider mismatch');
+  }
+
+  const requiredAction = readString(executionPackage, 'requiredAction');
+  const executionPayload = executionPackage['payload'];
+
+  if (!requiredAction) {
+    invalidPreparePackage('Missing executionPackage requiredAction');
+  }
+
+  if (!isRecord(executionPayload)) {
+    invalidPreparePackage('Missing executionPackage payload');
+  }
+
+  if (requiredAction === 'sign' && !quoteHashes?.length) {
     invalidPreparePackage('Missing quoteHashes from BFF');
   }
 

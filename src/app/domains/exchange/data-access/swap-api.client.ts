@@ -13,6 +13,7 @@ import type {
   DefuseWalletSignatureResult,
   IntentRelayUserInfo,
 } from '@mfe-contracts/wallet-execution.types';
+import type { SwapExecutionMode } from '@mfe-contracts/intent-prepare.contract';
 import {
   mapApprovedPreparePackage,
   mapQuotePreviewResponse,
@@ -20,6 +21,8 @@ import {
 
 type SubmitIntentRequestBody = {
   providerId: string;
+  executionMode?: SwapExecutionMode;
+  executionPayload?: Record<string, unknown>;
   signature: DefuseWalletSignatureResult;
   quoteHashes: string[];
   userAddress: string;
@@ -55,6 +58,8 @@ export class SwapApiClient {
 
   submitSignedIntent(input: {
     providerId: string;
+    executionMode?: SwapExecutionMode;
+    executionPayload?: Record<string, unknown>;
     signature: DefuseWalletSignatureResult;
     quoteHashes: string[];
     user: IntentRelayUserInfo;
@@ -62,6 +67,12 @@ export class SwapApiClient {
   }): Observable<string> {
     const body: SubmitIntentRequestBody = {
       providerId: input.providerId,
+      executionMode: input.executionMode,
+      executionPayload: {
+        ...input.executionPayload,
+        signature: input.signature,
+        quoteHashes: input.quoteHashes,
+      },
       signature: input.signature,
       quoteHashes: input.quoteHashes,
       userAddress: input.user.userAddress,

@@ -1,4 +1,7 @@
-import type { DefuseAuthMethod } from './intent-prepare.contract';
+import type {
+  DefuseAuthMethod,
+  SwapExecutionMode,
+} from './intent-prepare.contract';
 
 /** Wallet-returned signature envelope (Defuse `WalletSignatureResult`). */
 export type DefuseWalletSignatureResult = Record<string, unknown>;
@@ -39,6 +42,8 @@ export type IntentRelayUserInfo = {
 
 export type IntentRelaySubmitInput = {
   providerId: string;
+  executionMode?: SwapExecutionMode;
+  executionPayload?: Record<string, unknown>;
   signedIntent: DefuseSignedIntentData;
   quoteHashes: string[];
   user: IntentRelayUserInfo;

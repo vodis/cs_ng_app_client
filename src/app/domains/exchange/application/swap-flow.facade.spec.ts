@@ -63,6 +63,15 @@ function approvedPreparePackage(): ApprovedSwapPreparePackage {
   return {
     protocol: 'near-intents',
     providerId: 'solver-relay',
+    executionPackage: {
+      providerId: 'solver-relay',
+      mode: 'intent_sign',
+      protocol: 'near-intents',
+      requiredAction: 'sign',
+      payload: {
+        quoteHashes: ['quote-hash'],
+      },
+    },
     kind: 'swap',
     quoteHashes: ['quote-hash'],
     signerId: '0x0000000000000000000000000000000000000001',
