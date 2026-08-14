@@ -323,4 +323,15 @@ describe('ProfileComponent', () => {
     expect(component.isLiveConnected()).toBeTrue();
     expect(component.showLastConnectedSection()).toBeFalse();
   });
+
+  it('shows two sessions by default and the rest after See all', () => {
+    expect(component.visibleLoginSessions.length).toBe(2);
+
+    component.toggleSessions();
+
+    expect(component.visibleLoginSessions.length).toBe(
+      component.loginSessions.length
+    );
+    expect(component.showAllSessions).toBeTrue();
+  });
 });
