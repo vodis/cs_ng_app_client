@@ -288,7 +288,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let login of visibleLoginSessions">
+            <tr
+              *ngFor="
+                let login of visibleLoginSessions;
+                trackBy: trackByLoginSession
+              ">
               <td data-label="Status">
                 <span
                   class="profile-shell__session-status"
@@ -333,7 +337,7 @@
         color="primary"
         class="profile-shell__sessions-more"
         *ngIf="loginSessions.length > 2"
-        (click)="showAllSessions = !showAllSessions">
+        (click)="toggleSessions()">
         {{ showAllSessions ? 'Show last 2' : 'See all past sessions' }}
       </button>
     </section>

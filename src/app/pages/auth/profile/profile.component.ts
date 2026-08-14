@@ -10,7 +10,7 @@ import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 
-export type ProfileLoginSession = {
+type ProfileLoginSession = {
   status: 'Active' | 'Revoked';
   issued: string;
   endDate: string;
@@ -18,6 +18,33 @@ export type ProfileLoginSession = {
   authentication: string;
   application: string;
 };
+
+const MOCK_LOGIN_SESSIONS: ProfileLoginSession[] = [
+  {
+    status: 'Active',
+    issued: 'Aug 13, 2026, 11:56 AM',
+    endDate: 'Aug 20, 2026, 11:56 AM',
+    organization: 'CraftScript',
+    authentication: 'Google OAuth',
+    application: 'NEAR Intents Partner Portal',
+  },
+  {
+    status: 'Revoked',
+    issued: 'Aug 13, 2026, 11:23 AM',
+    endDate: 'Aug 20, 2026, 11:23 AM',
+    organization: '137372',
+    authentication: 'Google OAuth',
+    application: 'NEAR Intents Partner Portal',
+  },
+  {
+    status: 'Revoked',
+    issued: 'Aug 12, 2026, 6:41 PM',
+    endDate: 'Aug 19, 2026, 6:41 PM',
+    organization: 'CraftScript',
+    authentication: 'Google OAuth',
+    application: 'NEAR Intents Partner Portal',
+  },
+];
 
 @Component({
   selector: 'app-profile',
@@ -40,40 +67,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public lastConnectedWallet: LastConnectedWallet | null = null;
   public walletActionBusy = false;
   public showAllSessions = false;
-  public readonly loginSessions: ProfileLoginSession[] = [
-    {
-      status: 'Active',
-      issued: 'Aug 13, 2026, 11:56 AM',
-      endDate: 'Aug 20, 2026, 11:56 AM',
-      organization: 'CraftScript',
-      authentication: 'Google OAuth',
-      application: 'NEAR Intents Partner Portal',
-    },
-    {
-      status: 'Revoked',
-      issued: 'Aug 13, 2026, 11:23 AM',
-      endDate: 'Aug 20, 2026, 11:23 AM',
-      organization: '137372',
-      authentication: 'Google OAuth',
-      application: 'NEAR Intents Partner Portal',
-    },
-    {
-      status: 'Revoked',
-      issued: 'Aug 12, 2026, 6:41 PM',
-      endDate: 'Aug 19, 2026, 6:41 PM',
-      organization: 'CraftScript',
-      authentication: 'Google OAuth',
-      application: 'NEAR Intents Partner Portal',
-    },
-  ];
+  public readonly loginSessions = MOCK_LOGIN_SESSIONS;
+  public visibleLoginSessions = MOCK_LOGIN_SESSIONS.slice(0, 2);
 
   private subscription?: Subscription;
-
-  public get visibleLoginSessions(): ProfileLoginSession[] {
-    return this.showAllSessions
-      ? this.loginSessions
-      : this.loginSessions.slice(0, 2);
-  }
 
   constructor(
     public readonly authSession: AuthSessionService,
@@ -108,6 +105,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.subscription?.unsubscribe();
+  }
+
+  public toggleSessions(): void {
+    this.showAllSessions = !this.showAllSessions;
+    this.visibleLoginSessions = this.showAllSessions
+      ? this.loginSessions
+      : this.loginSessions.slice(0, 2);
+  }
+
+  public trackByLoginSession(
+    _index: number,
+    login: ProfileLoginSession
+  ): string {
+    return [login.status, login.issued, login.organization].join('|');
   }
 
   public shortAddress(address: string): string {
