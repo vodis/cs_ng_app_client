@@ -197,7 +197,7 @@ describe('ProfileComponent', () => {
     expect(component.walletMessage).toBe('Wallet disconnected');
   });
 
-  it('shows a last-connected section after disconnect for embedded wallets', () => {
+  it('shows a last-connected section after disconnect when wallet is not linked', () => {
     lastConnectedSubject.next({
       account: linkedWalletSession.wallets[0].address,
       chainId: null,
@@ -215,6 +215,56 @@ describe('ProfileComponent', () => {
     ).toBeFalse();
   });
 
+  it('hides last connected when that wallet is already in connected wallets', () => {
+    sessionSubject.next(linkedWalletSession);
+    lastConnectedSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: null,
+      walletType: 'embedded',
+      source: 'privy',
+      connectorId: 'privy',
+    });
+
+    expect(component.showLastConnectedSection()).toBeFalse();
+  });
+
+  it('omits provider details from last connected copy', () => {
+    sessionSubject.next(linkedWalletSession);
+    lastConnectedSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: null,
+      walletType: 'embedded',
+      source: 'privy',
+      connectorId: 'privy',
+    });
+
+    const meta = component.lastConnectedMeta(
+      component.resolveLastConnectedWallet()!
+    );
+
+    expect(meta).toBe('Ethereum • Embedded');
+  });
+
+  it('resolves chain logos for linked wallets', () => {
+    expect(component.walletChainIcon('ethereum')).toContain('1027.png');
+    expect(component.walletChainIcon('near')).toContain('6535.png');
+    expect(component.walletChainIcon('ton')).toContain('11419.png');
+    expect(component.walletChainIcon('unknown')).toBe('');
+
+    sessionSubject.next(linkedWalletSession);
+    lastConnectedSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: null,
+      walletType: 'embedded',
+      source: 'privy',
+      connectorId: 'privy',
+    });
+
+    expect(
+      component.lastConnectedChainIcon(component.resolveLastConnectedWallet()!)
+    ).toContain('1027.png');
+  });
+
   it('allows connect wallet and remove for external wallets', () => {
     sessionSubject.next(externalWalletSession);
     lastConnectedSubject.next({
@@ -225,13 +275,26 @@ describe('ProfileComponent', () => {
       connectorId: 'metamask',
     });
 
-    expect(component.showLastConnectedSection()).toBeTrue();
+    expect(component.showLastConnectedSection()).toBeFalse();
     expect(
       component.isEmbeddedWallet(component.resolveLastConnectedWallet())
     ).toBeFalse();
     expect(
       component.canRemoveLinkedWallet(externalWalletSession.wallets[0])
     ).toBeTrue();
+  });
+
+  it('shows last connected for a disconnected wallet not in the linked list', () => {
+    sessionSubject.next(linkedWalletSession);
+    lastConnectedSubject.next({
+      account: '0xdifferent0000000000000000000000000000001',
+      chainId: null,
+      walletType: 'external',
+      source: 'metamask',
+      connectorId: 'metamask',
+    });
+
+    expect(component.showLastConnectedSection()).toBeTrue();
   });
 
   it('reconnects by syncing without opening the wallets MFE', async () => {
@@ -297,7 +360,7 @@ describe('ProfileComponent', () => {
         walletType: 'embedded',
       })
     );
-    expect(component.showLastConnectedSection()).toBeTrue();
+    expect(component.showLastConnectedSection()).toBeFalse();
   });
 
   it('shows empty connect section only when there is no wallet history', () => {
