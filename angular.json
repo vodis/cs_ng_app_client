@@ -66,6 +66,13 @@
                   "with": "src/environments/environment.production.ts"
                 }
               ],
+              "optimization": {
+                "scripts": true,
+                "styles": true,
+                "fonts": {
+                  "inline": false
+                }
+              },
               "outputHashing": "all",
               "extraWebpackConfig": "config/webpack.prod.config.js"
             },
