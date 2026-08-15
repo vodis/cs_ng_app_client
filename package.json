@@ -38,7 +38,6 @@
     "@babel/runtime": "^7.28.6",
     "@hakimio/ngx-google-analytics": "^15.0.0",
     "@vodis/cs-foundation": "0.2.3",
-    "@vodis/cs-intents": "0.1.0",
     "liveline": "^0.0.7",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

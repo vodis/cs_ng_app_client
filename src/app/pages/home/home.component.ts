@@ -1156,7 +1156,7 @@ export class HomeComponent {
     this.walletBalancesService
       .loadBalances({
         walletAddress: this.walletAddress,
-        network: 'near:mainnet',
+        network: this.nearNetworkForAddress(this.walletAddress),
       })
       .subscribe({
         next: balances => {
@@ -1170,6 +1170,11 @@ export class HomeComponent {
               balance.walletAddress.toLowerCase() === walletAddress
           );
           this.balancesLoading = false;
+          if (
+            this.walletBalances.some(balance => !this.isBalanceExpired(balance))
+          ) {
+            this.refreshSwapQuotePreview();
+          }
         },
         error: () => {
           if (this.walletAddress.toLowerCase() !== walletAddress) {
@@ -1190,7 +1195,16 @@ export class HomeComponent {
 
     const balance = this.balanceForSymbol(this.fromToken.symbol);
     if (!balance) {
-      return this.balancesError || 'NEAR balance is unavailable.';
+      return this.balancesLoading
+        ? 'NEAR balance is loading.'
+        : this.balancesError || 'NEAR balance is unavailable.';
+    }
+
+    if (this.isBalanceExpired(balance)) {
+      if (!this.balancesLoading) {
+        this.loadWalletBalances();
+      }
+      return 'NEAR balance is loading.';
     }
 
     try {
@@ -1232,6 +1246,17 @@ export class HomeComponent {
 
   private isNearWalletAddress(address: string): boolean {
     return /^[a-z0-9._-]+\.(?:near|testnet|tg)$/i.test(address);
+  }
+
+  private nearNetworkForAddress(
+    address: string
+  ): 'near:mainnet' | 'near:testnet' {
+    return /\.testnet$/i.test(address) ? 'near:testnet' : 'near:mainnet';
+  }
+
+  private isBalanceExpired(balance: WalletBalance): boolean {
+    const expiresAt = Date.parse(balance.expiresAt);
+    return !Number.isFinite(expiresAt) || expiresAt <= Date.now();
   }
 
   private pickDefaultFromToken(): ExchangeToken | undefined {

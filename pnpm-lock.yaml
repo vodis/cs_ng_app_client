@@ -72,9 +72,6 @@ importers:
       '@vodis/cs-foundation':
         specifier: 0.2.3
         version: 0.2.3(@angular/common@19.2.20(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2)
-      '@vodis/cs-intents':
-        specifier: 0.1.0
-        version: 0.1.0
       liveline:
         specifier: ^0.0.7
         version: 0.0.7(react@19.2.7)
@@ -2627,9 +2624,6 @@ packages:
       '@angular/common': '>=16'
       '@angular/core': '>=16'
       rxjs: '>=7'
-
-  '@vodis/cs-intents@0.1.0':
-    resolution: {integrity: sha512-jpTAOHBAphSq6Cg3fsOUs5GKRmNNEk79uLneLEbdQv52uUGizmwzQopNxSm0G84uv4c0lfiVsyvxIRBwIv0JeA==}
 
   '@webassemblyjs/ast@1.14.1':
     resolution: {integrity: sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ==}
@@ -9508,8 +9502,6 @@ snapshots:
       '@angular/common': 19.2.20(@angular/core@19.2.20(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2)
       '@angular/core': 19.2.20(rxjs@7.8.2)(zone.js@0.15.1)
       rxjs: 7.8.2
-
-  '@vodis/cs-intents@0.1.0': {}
 
   '@webassemblyjs/ast@1.14.1':
     dependencies:
