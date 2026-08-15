@@ -14,10 +14,8 @@ import type {
   IntentRelayUserInfo,
 } from '@mfe-contracts/wallet-execution.types';
 import type { SwapExecutionMode } from '@mfe-contracts/intent-prepare.contract';
-import {
-  mapApprovedPreparePackage,
-  mapQuotePreviewResponse,
-} from './swap-api.mappers';
+import { mapQuotePreviewResponse } from './swap-api.mappers';
+import { parseApprovedSwapPrepareResponse } from './swap-prepare-response.parser';
 
 type SubmitIntentRequestBody = {
   providerId: string;
@@ -53,7 +51,7 @@ export class SwapApiClient {
       .post<
         ApiResponseEnvelope<unknown>
       >(`${environment.apiUrl}/api/v1/swaps/prepare`, this.toOneClickBody({ ...request, dry: false }), { headers: this.traceHeaders(request.traceId) })
-      .pipe(map(mapApprovedPreparePackage));
+      .pipe(map(parseApprovedSwapPrepareResponse));
   }
 
   submitSignedIntent(input: {
