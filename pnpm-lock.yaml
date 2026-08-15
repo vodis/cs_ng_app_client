@@ -2628,7 +2628,7 @@ packages:
       '@angular/core': '>=16'
       rxjs: '>=7'
   '@vodis/cs-intents@0.1.0':
-    resolution: {integrity: sha512-jpTAOHBAphSq6Cg3fsOUs5GKRmNNEk79uLneLEbdQv52uUGizmwzQopNxSm0G84uv4c0lfiVsyvxIRBwIv0JeA==}
+    resolution: {integrity: sha512-jpTAOHBAphSq6Cg3fsOUs5GKRmNNEk79uLneLEbdQv52uUGizmwzQopNxSm0G84uv4c0lfiVsyvxIRBwIv0JeA==, tarball: https://npm.pkg.github.com/download/@vodis/cs-intents/0.1.0/2f6f2931225837d6665f546473a4f0759f0a51c0}
 
   '@webassemblyjs/ast@1.14.1':
     resolution: {integrity: sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ==}
