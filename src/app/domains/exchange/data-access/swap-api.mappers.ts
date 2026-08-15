@@ -28,23 +28,6 @@ function readStringArray(
   return value.every(item => typeof item === 'string') ? value : undefined;
 }
 
-function buildLegacyExecutionPackage(
-  payload: Record<string, unknown>
-): ApprovedSwapPreparePackage['executionPackage'] {
-  return {
-    providerId: readString(payload, 'providerId') ?? '',
-    mode: 'intent_sign',
-    protocol: readString(payload, 'protocol') ?? 'near-intents',
-    requiredAction: 'sign',
-    payload: {
-      quoteHashes: readStringArray(payload, 'quoteHashes') ?? [],
-      signerId: readString(payload, 'signerId'),
-      deadlineTimestamp: payload['deadlineTimestamp'],
-      signatureStandard: readString(payload, 'signatureStandard'),
-    },
-  };
-}
-
 export function mapQuotePreviewResponse(
   envelope: ApiResponseEnvelope<unknown>
 ): SwapQuotePreview {
@@ -74,9 +57,6 @@ export function mapApprovedPreparePackage(
   envelope: ApiResponseEnvelope<unknown>
 ): ApprovedSwapPreparePackage {
   const payload = unwrapData(envelope);
-  if (!isRecord(payload['executionPackage'])) {
-    payload['executionPackage'] = buildLegacyExecutionPackage(payload);
-  }
   assertApprovedPreparePackage(payload);
   return payload;
 }

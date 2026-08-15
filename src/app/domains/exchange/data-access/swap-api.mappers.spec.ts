@@ -1,5 +1,8 @@
 import type { ApiResponseEnvelope } from '@mfe-contracts/api-envelope';
-import { mapQuotePreviewResponse } from './swap-api.mappers';
+import {
+  mapApprovedPreparePackage,
+  mapQuotePreviewResponse,
+} from './swap-api.mappers';
 
 describe('swap-api mappers', () => {
   it('maps backend amountOut into the quote preview', () => {
@@ -59,6 +62,29 @@ describe('swap-api mappers', () => {
 
     expect(mapQuotePreviewResponse(envelope).amountOut).toBe(
       '450318543814579873646208'
+    );
+  });
+
+  it('rejects a prepare package without an execution package', () => {
+    const envelope: ApiResponseEnvelope<unknown> = {
+      data: {
+        protocol: 'near-intents',
+        kind: 'swap',
+        providerId: 'near-intents',
+        quoteHashes: ['quote-hash'],
+        signerId: 'signer.near',
+        authMethod: 'near',
+        deadlineTimestamp: 1_800_000_000,
+        tokenDeltas: [{ assetId: 'near', amount: '-1' }],
+      },
+      error: null,
+    };
+
+    expect(() => mapApprovedPreparePackage(envelope)).toThrow(
+      jasmine.objectContaining({
+        code: 'INVALID_PREPARE_PACKAGE',
+        message: 'Missing executionPackage from BFF',
+      })
     );
   });
 });
