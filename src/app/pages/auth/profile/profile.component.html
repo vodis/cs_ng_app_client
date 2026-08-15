@@ -122,21 +122,35 @@
     <section class="profile-shell__panel">
       <div class="profile-shell__panel-header">
         <h2>Wallets</h2>
-        <button type="button" mat-button (click)="refreshWallets()">
-          Refresh
+        <button
+          type="button"
+          mat-button
+          class="profile-shell__refresh"
+          (click)="refreshWallets()">
+          <mat-icon aria-hidden="true">refresh</mat-icon>
+          <span class="profile-shell__refresh-label">Refresh</span>
         </button>
       </div>
 
       <div class="profile-shell__wallet-connect" *ngIf="isLiveConnected()">
+        <h3 class="profile-shell__section-title">Connected</h3>
         <div class="profile-shell__wallet-live">
-          <div class="profile-shell__wallet-live-main">
-            <span class="profile-shell__wallet-live-label">Connected</span>
-            <span class="profile-shell__wallet-live-address">{{
-              shortAddress(connectedAccount!)
-            }}</span>
-            <small *ngIf="resolveLastConnectedWallet() as liveMeta">{{
-              lastConnectedMeta(liveMeta)
-            }}</small>
+          <div class="profile-shell__wallet-identity">
+            <ng-container *ngIf="resolveLastConnectedWallet() as liveMeta">
+              <img
+                *ngIf="lastConnectedChainIcon(liveMeta) as chainIcon"
+                class="profile-shell__chain-logo"
+                [src]="chainIcon"
+                alt="" />
+            </ng-container>
+            <div class="profile-shell__wallet-live-main">
+              <span class="profile-shell__wallet-live-address">{{
+                shortAddress(connectedAccount!)
+              }}</span>
+              <small *ngIf="resolveLastConnectedWallet() as liveMeta">{{
+                lastConnectedMeta(liveMeta)
+              }}</small>
+            </div>
           </div>
           <div class="profile-shell__wallet-live-actions">
             <button
@@ -146,7 +160,7 @@
               class="profile-shell__view-wallet"
               [disabled]="walletActionBusy"
               (click)="openWalletModal()">
-              View wallet
+              Manage wallets
               <span aria-hidden="true">›</span>
             </button>
             <button
@@ -163,33 +177,41 @@
       <div
         class="profile-shell__wallet-connect"
         *ngIf="showLastConnectedSection()">
+        <h3 class="profile-shell__section-title">Last connected</h3>
         <div
           class="profile-shell__last-wallet"
           *ngIf="resolveLastConnectedWallet() as lastWallet">
-          <div class="profile-shell__last-wallet-copy">
-            <span class="profile-shell__last-wallet-label"
-              >Your last connected wallet</span
-            >
-            <span class="profile-shell__last-wallet-address">{{
-              shortAddress(lastWallet.account)
-            }}</span>
-            <small>{{ lastConnectedMeta(lastWallet) }}</small>
+          <div class="profile-shell__wallet-identity">
+            <img
+              *ngIf="lastConnectedChainIcon(lastWallet) as chainIcon"
+              class="profile-shell__chain-logo"
+              [src]="chainIcon"
+              alt="" />
+            <div class="profile-shell__last-wallet-copy">
+              <span class="profile-shell__last-wallet-address">{{
+                shortAddress(lastWallet.account)
+              }}</span>
+              <small>{{ lastConnectedMeta(lastWallet) }}</small>
+            </div>
           </div>
           <div class="profile-shell__last-wallet-actions">
             <button
               type="button"
               mat-flat-button
               color="primary"
+              class="profile-shell__reconnect"
               [disabled]="walletActionBusy"
               (click)="reconnectWallet()">
               Reconnect
             </button>
             <button
               type="button"
-              mat-stroked-button
+              mat-button
+              color="primary"
+              class="profile-shell__connect-another"
               [disabled]="walletActionBusy"
               (click)="connectAnotherWallet()">
-              Connect wallet
+              Connect another wallet
             </button>
           </div>
         </div>
@@ -217,7 +239,7 @@
           color="primary"
           class="profile-shell__view-wallet"
           (click)="openWalletModal()">
-          View wallet
+          Manage wallets
           <span aria-hidden="true">›</span>
         </button>
       </div>
@@ -231,42 +253,61 @@
         ">
         No wallet linked yet.
       </div>
-      <ul
-        class="profile-shell__wallets"
-        *ngIf="activeSession.wallets.length > 0">
-        <li *ngFor="let wallet of activeSession.wallets">
-          <div class="profile-shell__wallet-main">
-            <span>{{ shortAddress(wallet.address) }}</span>
-            <small>{{ walletMeta(wallet) }}</small>
-          </div>
-          <div class="profile-shell__wallet-actions">
-            <span class="profile-shell__primary" *ngIf="wallet.isPrimary"
-              >Active</span
-            >
-            <span
-              class="profile-shell__wallet-locked"
-              *ngIf="isEmbeddedWallet(wallet)"
-              >Linked</span
-            >
-            <button
-              type="button"
-              mat-button
-              *ngIf="!wallet.isPrimary"
-              [disabled]="busyWalletId === wallet.id"
-              (click)="setPrimaryWallet(wallet)">
-              Make active
-            </button>
-            <button
-              type="button"
-              mat-button
-              *ngIf="canRemoveLinkedWallet(wallet)"
-              [disabled]="busyWalletId === wallet.id"
-              (click)="deleteWallet(wallet)">
-              Remove
-            </button>
-          </div>
-        </li>
-      </ul>
+
+      <div *ngIf="activeSession.wallets.length > 0">
+        <h3 class="profile-shell__section-title">Connected wallets</h3>
+        <ul class="profile-shell__wallets">
+          <li *ngFor="let wallet of activeSession.wallets">
+            <div class="profile-shell__wallet-identity">
+              <img
+                *ngIf="walletChainIcon(wallet.chainType) as chainIcon"
+                class="profile-shell__chain-logo"
+                [src]="chainIcon"
+                alt="" />
+              <div class="profile-shell__wallet-main">
+                <div class="profile-shell__wallet-heading">
+                  <span class="profile-shell__wallet-address">{{
+                    shortAddress(wallet.address)
+                  }}</span>
+                  <div class="profile-shell__wallet-status">
+                    <span
+                      class="profile-shell__wallet-badge"
+                      *ngIf="wallet.isPrimary"
+                      >Active</span
+                    >
+                    <span
+                      class="profile-shell__wallet-locked"
+                      *ngIf="isEmbeddedWallet(wallet)"
+                      >Linked</span
+                    >
+                  </div>
+                </div>
+                <small>{{ walletMeta(wallet) }}</small>
+              </div>
+            </div>
+            <div
+              class="profile-shell__wallet-actions"
+              *ngIf="!wallet.isPrimary || canRemoveLinkedWallet(wallet)">
+              <button
+                type="button"
+                mat-button
+                *ngIf="!wallet.isPrimary"
+                [disabled]="busyWalletId === wallet.id"
+                (click)="setPrimaryWallet(wallet)">
+                Make active
+              </button>
+              <button
+                type="button"
+                mat-button
+                *ngIf="canRemoveLinkedWallet(wallet)"
+                [disabled]="busyWalletId === wallet.id"
+                (click)="deleteWallet(wallet)">
+                Remove
+              </button>
+            </div>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <section class="profile-shell__panel profile-shell__panel--wide">

@@ -9,6 +9,13 @@ import type {
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
+
+const CHAIN_ICON_URLS: Record<string, string> = {
+  ethereum: EXCHANGE_TOKEN_ICON_URLS['ETH'],
+  near: EXCHANGE_TOKEN_ICON_URLS['NEAR'],
+  ton: 'https://s2.coinmarketcap.com/static/img/coins/128x128/11419.png',
+};
 
 type ProfileLoginSession = {
   status: 'Active' | 'Revoked';
@@ -126,17 +133,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public walletMeta(wallet: BackendWallet): string {
-    return [wallet.chainType, wallet.walletType, wallet.source]
-      .filter(Boolean)
-      .join(' / ');
+    const chain = this.capitalizeLabel(wallet.chainType);
+    const kind = this.isEmbeddedWallet(wallet) ? 'Embedded' : 'External';
+    return [chain, kind].filter(Boolean).join(' • ');
   }
 
   public lastConnectedMeta(wallet: LastConnectedWallet): string {
-    const parts = [
-      wallet.walletType === 'embedded' ? 'embedded' : 'external',
-      wallet.connectorId || wallet.source,
-    ].filter(Boolean);
-    return parts.join(' / ');
+    const chain = this.capitalizeLabel(this.lastConnectedChainType(wallet));
+    const kind = this.isEmbeddedWallet(wallet) ? 'Embedded' : 'External';
+    return [chain, kind].filter(Boolean).join(' • ');
+  }
+
+  public walletChainIcon(chainType: string | null | undefined): string {
+    return CHAIN_ICON_URLS[String(chainType || '').toLowerCase()] ?? '';
+  }
+
+  public lastConnectedChainIcon(wallet: LastConnectedWallet): string {
+    return this.walletChainIcon(this.lastConnectedChainType(wallet));
   }
 
   public balanceAmount(balance: BackendBalance): string {
@@ -455,5 +468,30 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const whole = padded.slice(0, -decimals);
     const fraction = padded.slice(-decimals).replace(/0+$/, '');
     return fraction ? `${whole}.${fraction}` : whole;
+  }
+
+  private capitalizeLabel(value: string | null | undefined): string {
+    if (!value) {
+      return '';
+    }
+
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  private lastConnectedChainType(
+    wallet: LastConnectedWallet
+  ): string | undefined {
+    return (
+      this.findLinkedWallet(wallet.account)?.chainType ||
+      this.chainTypeFromId(wallet.chainId)
+    );
+  }
+
+  private chainTypeFromId(chainId: number | null): string {
+    if (chainId === 1) {
+      return 'ethereum';
+    }
+
+    return '';
   }
 }
