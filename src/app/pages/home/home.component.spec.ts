@@ -6,7 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, Subject, of } from 'rxjs';
 import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
 import {
   SwapFlowError,
@@ -17,6 +17,10 @@ import { WalletAccount } from '@domains/wallet/models/wallet.models';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
+import {
+  WalletBalance,
+  WalletBalancesService,
+} from '@shared/services/wallet-balances.service';
 import { environment } from '../../../environments/environment';
 import { HomeComponent } from './home.component';
 
@@ -43,9 +47,7 @@ class SwapFlowFacadeStub {
   public readonly intentHash$ = this.intentHashSubject.asObservable();
   public readonly quotePreview: SwapQuotePreview | undefined = undefined;
 
-  public watchQuotePreview(): void {
-    return undefined;
-  }
+  public watchQuotePreview = jasmine.createSpy('watchQuotePreview');
 
   public refreshQuotePreview(): void {
     return undefined;
@@ -65,6 +67,25 @@ class ExchangeAssetsServiceStub {
   }
 }
 
+class WalletBalancesServiceStub {
+  public balances: WalletBalance[] = [];
+  public balancesSubject?: Subject<WalletBalance[]>;
+  public calls: Array<{
+    walletAddress?: string;
+    network?: string;
+    assetId?: string;
+  }> = [];
+
+  public loadBalances(params?: {
+    walletAddress?: string;
+    network?: string;
+    assetId?: string;
+  }) {
+    this.calls.push(params ?? {});
+    return this.balancesSubject ?? of(this.balances);
+  }
+}
+
 describe('HomeComponent market overview', () => {
   let component: HomeComponent;
   let fixture: ComponentFixture<HomeComponent>;
@@ -78,6 +99,7 @@ describe('HomeComponent market overview', () => {
         { provide: WalletsService, useClass: WalletsServiceStub },
         { provide: SwapFlowFacade, useClass: SwapFlowFacadeStub },
         { provide: ExchangeAssetsService, useClass: ExchangeAssetsServiceStub },
+        { provide: WalletBalancesService, useClass: WalletBalancesServiceStub },
       ],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
@@ -259,6 +281,209 @@ describe('HomeComponent market overview', () => {
 
     expect(component.toAmountDisplay()).toBe('0.450318543814579873646208');
     expect(component.toAmountFormatted()).toBe('0,4503');
+  });
+
+  it('shows live NEAR balance for the connected NEAR wallet', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: '1250000000000000000000000',
+        balanceDecimal: '1.25',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+      },
+    ];
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+
+    expect(component.balanceLabel('NEAR')).toBe('Balance: 1,25 NEAR');
+  });
+
+  it('blocks NEAR quotes when entered amount exceeds live balance', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: '1000000000000000000000000',
+        balanceDecimal: '1',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+      },
+    ];
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.fromToken = {
+      ...component.fromToken,
+      symbol: 'NEAR',
+      decimals: 24,
+    };
+    component.amount = '2';
+
+    component.submitQuote();
+
+    expect(component.quoteError).toBe('Insufficient NEAR balance.');
+  });
+
+  it('uses the testnet balance network for a .testnet wallet', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.testnet', chainId: null });
+
+    expect(balancesService.calls).toEqual([
+      {
+        walletAddress: 'alice.testnet',
+        network: 'near:testnet',
+      },
+    ]);
+  });
+
+  it('retries the quote preview after an asynchronous balance load', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    balancesService.balancesSubject = new Subject<WalletBalance[]>();
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.fromToken = {
+      ...component.toToken,
+      symbol: 'NEAR',
+      decimals: 24,
+    };
+    component.toToken = {
+      assetId:
+        'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+    };
+    component.amount = '1';
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+
+    expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(undefined);
+
+    balancesService.balancesSubject.next([
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: '2000000000000000000000000',
+        balanceDecimal: '2',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+      },
+    ]);
+
+    expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        amount: '1000000000000000000000000',
+        userAddress: 'alice.near',
+      })
+    );
+  });
+
+  it('reloads an expired balance before allowing a NEAR quote', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: '2000000000000000000000000',
+        balanceDecimal: '2',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2026-08-12T12:00:15.000Z',
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.fromToken = {
+      ...component.toToken,
+      symbol: 'NEAR',
+      decimals: 24,
+    };
+    component.amount = '1';
+
+    component.submitQuote();
+
+    expect(balancesService.calls.length).toBe(2);
+    expect(component.quoteError).toBe('NEAR balance is loading.');
   });
 
   it('prefers backend formatted quote amount from nested quote response', () => {

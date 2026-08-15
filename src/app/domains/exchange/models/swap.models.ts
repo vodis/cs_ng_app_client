@@ -1,4 +1,4 @@
-import type { ApprovedIntentPrepareRequest } from '@mfe-contracts/intent-prepare.contract';
+import type { NearIntentsSwapPrepareRequest } from '@mfe-contracts/intent-prepare.contract';
 import type { ApiErrorEnvelope } from '@mfe-contracts/api-envelope';
 
 export type SwapFlowState =
@@ -30,7 +30,50 @@ export type SwapQuoteRequest = {
 
 export type SwapPrepareRequest = Omit<SwapQuoteRequest, 'dry'>;
 
-export type ApprovedSwapPreparePackage = ApprovedIntentPrepareRequest;
+type IntentSignExecutionPackage = {
+  providerId: string;
+  mode: 'intent_sign';
+  protocol: 'near-intents';
+  requiredAction: 'sign';
+  payload: Record<string, unknown>;
+};
+
+type DepositAddressExecutionPackage = {
+  providerId: string;
+  mode: 'deposit_address';
+  protocol: string;
+  requiredAction: 'deposit';
+  payload: Record<string, unknown>;
+};
+
+type EvmTransactionExecutionPackage = {
+  providerId: string;
+  mode: 'evm_transaction';
+  protocol: string;
+  requiredAction: 'submit_transaction';
+  payload: Record<string, unknown>;
+};
+
+type ExternalRedirectExecutionPackage = {
+  providerId: string;
+  mode: 'external_redirect';
+  protocol: string;
+  requiredAction: 'redirect';
+  payload: Record<string, unknown>;
+};
+
+export type ApprovedSwapExecutionPackage =
+  | IntentSignExecutionPackage
+  | DepositAddressExecutionPackage
+  | EvmTransactionExecutionPackage
+  | ExternalRedirectExecutionPackage;
+
+export type ApprovedSwapPreparePackage = Omit<
+  NearIntentsSwapPrepareRequest,
+  'executionPackage'
+> & {
+  executionPackage: ApprovedSwapExecutionPackage;
+};
 
 export type SwapExecutionOutcome = {
   intentHash: string;
