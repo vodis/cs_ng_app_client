@@ -47,6 +47,12 @@
   --shell-grid-columns-mobile: 4;
 }
 
+@media (max-width: 768px) {
+  :root {
+    --shell-header-height: 3.5rem;
+  }
+}
+
 html {
   position: static;
 }

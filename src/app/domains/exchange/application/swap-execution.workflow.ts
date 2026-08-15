@@ -85,6 +85,14 @@ export class SwapExecutionWorkflow {
         })
       );
 
+      if (preparePackage.executionPackage.requiredAction !== 'sign') {
+        throw {
+          code: 'UNSUPPORTED_EXECUTION_ACTION',
+          message: `Swap execution action ${preparePackage.executionPackage.requiredAction} is not supported yet`,
+          retryable: false,
+        };
+      }
+
       step = 'awaitingUserSignature';
       this.logTransition(traceId, step, 'started');
 
@@ -98,6 +106,9 @@ export class SwapExecutionWorkflow {
 
       const intentHash = await this.intentRelayService.submitIntent({
         traceId,
+        providerId: preparePackage.providerId,
+        executionMode: preparePackage.executionPackage.mode,
+        executionPayload: preparePackage.executionPackage.payload,
         signature,
         quoteHashes: preparePackage.quoteHashes,
         user: {

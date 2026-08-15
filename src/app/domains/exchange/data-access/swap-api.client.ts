@@ -13,12 +13,14 @@ import type {
   DefuseWalletSignatureResult,
   IntentRelayUserInfo,
 } from '@mfe-contracts/wallet-execution.types';
-import {
-  mapApprovedPreparePackage,
-  mapQuotePreviewResponse,
-} from './swap-api.mappers';
+import type { SwapExecutionMode } from '@mfe-contracts/intent-prepare.contract';
+import { mapQuotePreviewResponse } from './swap-api.mappers';
+import { parseApprovedSwapPrepareResponse } from './swap-prepare-response.parser';
 
 type SubmitIntentRequestBody = {
+  providerId: string;
+  executionMode?: SwapExecutionMode;
+  executionPayload?: Record<string, unknown>;
   signature: DefuseWalletSignatureResult;
   quoteHashes: string[];
   userAddress: string;
@@ -49,16 +51,26 @@ export class SwapApiClient {
       .post<
         ApiResponseEnvelope<unknown>
       >(`${environment.apiUrl}/api/v1/swaps/prepare`, this.toOneClickBody({ ...request, dry: false }), { headers: this.traceHeaders(request.traceId) })
-      .pipe(map(mapApprovedPreparePackage));
+      .pipe(map(parseApprovedSwapPrepareResponse));
   }
 
   submitSignedIntent(input: {
+    providerId: string;
+    executionMode?: SwapExecutionMode;
+    executionPayload?: Record<string, unknown>;
     signature: DefuseWalletSignatureResult;
     quoteHashes: string[];
     user: IntentRelayUserInfo;
     traceId: string;
   }): Observable<string> {
     const body: SubmitIntentRequestBody = {
+      providerId: input.providerId,
+      executionMode: input.executionMode,
+      executionPayload: {
+        ...input.executionPayload,
+        signature: input.signature,
+        quoteHashes: input.quoteHashes,
+      },
       signature: input.signature,
       quoteHashes: input.quoteHashes,
       userAddress: input.user.userAddress,

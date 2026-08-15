@@ -9,6 +9,49 @@ import type {
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
+
+const CHAIN_ICON_URLS: Record<string, string> = {
+  ethereum: EXCHANGE_TOKEN_ICON_URLS['ETH'],
+  near: EXCHANGE_TOKEN_ICON_URLS['NEAR'],
+  ton: 'https://s2.coinmarketcap.com/static/img/coins/128x128/11419.png',
+};
+
+type ProfileLoginSession = {
+  status: 'Active' | 'Revoked';
+  issued: string;
+  endDate: string;
+  organization: string;
+  authentication: string;
+  application: string;
+};
+
+const MOCK_LOGIN_SESSIONS: ProfileLoginSession[] = [
+  {
+    status: 'Active',
+    issued: 'Aug 13, 2026, 11:56 AM',
+    endDate: 'Aug 20, 2026, 11:56 AM',
+    organization: 'CraftScript',
+    authentication: 'Google OAuth',
+    application: 'NEAR Intents Partner Portal',
+  },
+  {
+    status: 'Revoked',
+    issued: 'Aug 13, 2026, 11:23 AM',
+    endDate: 'Aug 20, 2026, 11:23 AM',
+    organization: '137372',
+    authentication: 'Google OAuth',
+    application: 'NEAR Intents Partner Portal',
+  },
+  {
+    status: 'Revoked',
+    issued: 'Aug 12, 2026, 6:41 PM',
+    endDate: 'Aug 19, 2026, 6:41 PM',
+    organization: 'CraftScript',
+    authentication: 'Google OAuth',
+    application: 'NEAR Intents Partner Portal',
+  },
+];
 
 @Component({
   selector: 'app-profile',
@@ -30,6 +73,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public connectedAccount: string | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
   public walletActionBusy = false;
+  public showAllSessions = false;
+  public readonly loginSessions = MOCK_LOGIN_SESSIONS;
+  public visibleLoginSessions = MOCK_LOGIN_SESSIONS.slice(0, 2);
 
   private subscription?: Subscription;
 
@@ -68,22 +114,42 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.subscription?.unsubscribe();
   }
 
+  public toggleSessions(): void {
+    this.showAllSessions = !this.showAllSessions;
+    this.visibleLoginSessions = this.showAllSessions
+      ? this.loginSessions
+      : this.loginSessions.slice(0, 2);
+  }
+
+  public trackByLoginSession(
+    _index: number,
+    login: ProfileLoginSession
+  ): string {
+    return [login.status, login.issued, login.organization].join('|');
+  }
+
   public shortAddress(address: string): string {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   }
 
   public walletMeta(wallet: BackendWallet): string {
-    return [wallet.chainType, wallet.walletType, wallet.source]
-      .filter(Boolean)
-      .join(' / ');
+    const chain = this.capitalizeLabel(wallet.chainType);
+    const kind = this.isEmbeddedWallet(wallet) ? 'Embedded' : 'External';
+    return [chain, kind].filter(Boolean).join(' • ');
   }
 
   public lastConnectedMeta(wallet: LastConnectedWallet): string {
-    const parts = [
-      wallet.walletType === 'embedded' ? 'embedded' : 'external',
-      wallet.connectorId || wallet.source,
-    ].filter(Boolean);
-    return parts.join(' / ');
+    const chain = this.capitalizeLabel(this.lastConnectedChainType(wallet));
+    const kind = this.isEmbeddedWallet(wallet) ? 'Embedded' : 'External';
+    return [chain, kind].filter(Boolean).join(' • ');
+  }
+
+  public walletChainIcon(chainType: string | null | undefined): string {
+    return CHAIN_ICON_URLS[String(chainType || '').toLowerCase()] ?? '';
+  }
+
+  public lastConnectedChainIcon(wallet: LastConnectedWallet): string {
+    return this.walletChainIcon(this.lastConnectedChainType(wallet));
   }
 
   public balanceAmount(balance: BackendBalance): string {
@@ -402,5 +468,30 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const whole = padded.slice(0, -decimals);
     const fraction = padded.slice(-decimals).replace(/0+$/, '');
     return fraction ? `${whole}.${fraction}` : whole;
+  }
+
+  private capitalizeLabel(value: string | null | undefined): string {
+    if (!value) {
+      return '';
+    }
+
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  private lastConnectedChainType(
+    wallet: LastConnectedWallet
+  ): string | undefined {
+    return (
+      this.findLinkedWallet(wallet.account)?.chainType ||
+      this.chainTypeFromId(wallet.chainId)
+    );
+  }
+
+  private chainTypeFromId(chainId: number | null): string {
+    if (chainId === 1) {
+      return 'ethereum';
+    }
+
+    return '';
   }
 }

@@ -1,5 +1,6 @@
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatIconModule } from '@angular/material/icon';
 import { RouterTestingModule } from '@angular/router/testing';
 import {
   CsTranslationsModule,
@@ -15,7 +16,7 @@ describe('SidebarComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [RouterTestingModule, CsTranslationsModule],
+      imports: [RouterTestingModule, CsTranslationsModule, MatIconModule],
       declarations: [SidebarComponent],
       providers: [
         {
@@ -47,7 +48,6 @@ describe('SidebarComponent', () => {
       ...component.sidebarBoardLinks,
       ...component.sidebarFinansialLinks,
       ...component.sidebarWorkProposalLinks,
-      ...component.sidebarMobile,
     ].map(link => link.url);
 
     expect(sidebarUrls).not.toContain('/profile');

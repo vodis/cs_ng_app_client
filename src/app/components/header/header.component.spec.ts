@@ -69,6 +69,8 @@ describe('HeaderComponent', () => {
 
   it('shows sign in text when logged out', () => {
     setup(null);
+    component.isMobileView = false;
+    fixture.detectChanges();
 
     const link = fixture.nativeElement.querySelector(
       '.header__account-link'
@@ -88,5 +90,26 @@ describe('HeaderComponent', () => {
     expect(link.getAttribute('aria-label')).toBe('Profile');
     expect(link.classList.contains('header__account-link--icon')).toBeTrue();
     expect(link.querySelector('mat-icon')?.textContent?.trim()).toBe('person');
+  });
+
+  it('shows account icon on mobile when logged out', () => {
+    setup(null);
+    component.isMobileView = true;
+    fixture.detectChanges();
+
+    const link = fixture.nativeElement.querySelector(
+      '.header__account-link'
+    ) as HTMLElement;
+
+    expect(link.classList.contains('header__account-link--icon')).toBeTrue();
+    expect(link.querySelector('mat-icon')?.textContent?.trim()).toBe('person');
+  });
+
+  it('applies mobile host class', () => {
+    setup(null);
+    component.isMobileView = true;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.classList).toContain('header-host--mobile');
   });
 });
