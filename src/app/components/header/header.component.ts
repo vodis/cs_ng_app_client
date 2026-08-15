@@ -1,4 +1,10 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import {
+  Component,
+  HostBinding,
+  HostListener,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { AuthSessionService } from '@core/auth/auth-session.service';
@@ -20,6 +26,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   private routerSubscription?: Subscription;
   private sessionSubscription?: Subscription;
+
+  @HostBinding('class.header-host--mobile')
+  get hostMobile(): boolean {
+    return this.isMobileView;
+  }
 
   constructor(
     private readonly router: Router,

@@ -215,7 +215,7 @@ describe('ProfileComponent', () => {
     ).toBeFalse();
   });
 
-  it('hides last connected when that wallet is already in connected wallets', () => {
+  it('keeps reconnect available when the remembered wallet is linked', () => {
     sessionSubject.next(linkedWalletSession);
     lastConnectedSubject.next({
       account: linkedWalletSession.wallets[0].address,
@@ -225,7 +225,7 @@ describe('ProfileComponent', () => {
       connectorId: 'privy',
     });
 
-    expect(component.showLastConnectedSection()).toBeFalse();
+    expect(component.showLastConnectedSection()).toBeTrue();
   });
 
   it('omits provider details from last connected copy', () => {
@@ -265,7 +265,7 @@ describe('ProfileComponent', () => {
     ).toContain('1027.png');
   });
 
-  it('allows connect wallet and remove for external wallets', () => {
+  it('shows reconnect and allows removal for external wallets', () => {
     sessionSubject.next(externalWalletSession);
     lastConnectedSubject.next({
       account: externalWalletSession.wallets[0].address,
@@ -275,7 +275,7 @@ describe('ProfileComponent', () => {
       connectorId: 'metamask',
     });
 
-    expect(component.showLastConnectedSection()).toBeFalse();
+    expect(component.showLastConnectedSection()).toBeTrue();
     expect(
       component.isEmbeddedWallet(component.resolveLastConnectedWallet())
     ).toBeFalse();
@@ -360,7 +360,7 @@ describe('ProfileComponent', () => {
         walletType: 'embedded',
       })
     );
-    expect(component.showLastConnectedSection()).toBeFalse();
+    expect(component.showLastConnectedSection()).toBeTrue();
   });
 
   it('shows empty connect section only when there is no wallet history', () => {
@@ -385,5 +385,16 @@ describe('ProfileComponent', () => {
 
     expect(component.isLiveConnected()).toBeTrue();
     expect(component.showLastConnectedSection()).toBeFalse();
+  });
+
+  it('shows two sessions by default and the rest after See all', () => {
+    expect(component.visibleLoginSessions.length).toBe(2);
+
+    component.toggleSessions();
+
+    expect(component.visibleLoginSessions.length).toBe(
+      component.loginSessions.length
+    );
+    expect(component.showAllSessions).toBeTrue();
   });
 });

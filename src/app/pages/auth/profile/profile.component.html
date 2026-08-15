@@ -102,16 +102,20 @@
       </ng-template>
 
       <ng-template #passkeyDisabled>
-        <p class="profile-shell__empty">
-          Enable passkey authentication for faster sign in.
-        </p>
-        <button
-          type="button"
-          mat-stroked-button
-          [disabled]="passkeyLoading || !canEnablePasskey()"
-          (click)="enablePasskey()">
-          Enable passkey
-        </button>
+        <div class="profile-shell__passkey">
+          <div class="profile-shell__passkey-copy">
+            <p class="profile-shell__empty">
+              Enable passkey authentication for faster sign in.
+            </p>
+            <button
+              type="button"
+              mat-stroked-button
+              [disabled]="passkeyLoading || !canEnablePasskey()"
+              (click)="enablePasskey()">
+              Enable passkey
+            </button>
+          </div>
+        </div>
       </ng-template>
     </section>
 
@@ -304,6 +308,79 @@
           </li>
         </ul>
       </div>
+    </section>
+
+    <section class="profile-shell__panel profile-shell__panel--wide">
+      <h2>Sessions</h2>
+
+      <div class="profile-shell__sessions-wrap">
+        <table class="profile-shell__sessions-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Issued</th>
+              <th>End date</th>
+              <th>Organization</th>
+              <th>Authentication</th>
+              <th>Application</th>
+              <th
+                class="profile-shell__sessions-chevron"
+                aria-hidden="true"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="
+                let login of visibleLoginSessions;
+                trackBy: trackByLoginSession
+              ">
+              <td data-label="Status">
+                <span
+                  class="profile-shell__session-status"
+                  [class.profile-shell__session-status--active]="
+                    login.status === 'Active'
+                  "
+                  [class.profile-shell__session-status--revoked]="
+                    login.status === 'Revoked'
+                  ">
+                  <span
+                    class="profile-shell__session-dot"
+                    aria-hidden="true"></span>
+                  {{ login.status }}
+                </span>
+              </td>
+              <td data-label="Issued">{{ login.issued }}</td>
+              <td data-label="End date">{{ login.endDate }}</td>
+              <td data-label="Organization">{{ login.organization }}</td>
+              <td data-label="Authentication">{{ login.authentication }}</td>
+              <td data-label="Application" class="profile-shell__sessions-app">
+                {{ login.application }}
+              </td>
+              <td class="profile-shell__sessions-chevron" aria-hidden="true">
+                <svg viewBox="0 0 16 16" focusable="false">
+                  <path
+                    d="M6 3.2 11 8 6 12.8"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5" />
+                </svg>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <button
+        type="button"
+        mat-button
+        color="primary"
+        class="profile-shell__sessions-more"
+        *ngIf="loginSessions.length > 2"
+        (click)="toggleSessions()">
+        {{ showAllSessions ? 'Show last 2' : 'See all past sessions' }}
+      </button>
     </section>
 
     <section class="profile-shell__panel profile-shell__panel--wide">
