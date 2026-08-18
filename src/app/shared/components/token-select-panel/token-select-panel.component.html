@@ -1,5 +1,14 @@
 <div class="token-select-panel">
   <header class="token-select-panel__header">
+    @if (pendingSymbol) {
+      <button
+        type="button"
+        class="token-select-panel__back"
+        aria-label="Back to assets"
+        (click)="handleBack()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+    }
     <h6 class="token-select-panel__title">{{ title }}</h6>
     <button
       type="button"
@@ -18,36 +27,73 @@
         {{ viewModel.statusMessage }}
       </p>
     } @else {
-      <label class="token-select-panel__search">
-        <span class="token-select-panel__search-label"
-          >Search by name or symbol</span
-        >
-        <input
-          type="search"
-          class="token-select-panel__search-input"
-          placeholder="Search tokens"
-          autocomplete="off"
-          spellcheck="false"
-          [(ngModel)]="filterQuery"
-          (keydown.escape)="handleClose()" />
-      </label>
+      @if (!pendingSymbol) {
+        <label class="token-select-panel__search">
+          <span class="token-select-panel__search-label"
+            >Search by name or symbol</span
+          >
+          <input
+            type="search"
+            class="token-select-panel__search-input"
+            placeholder="Search tokens"
+            autocomplete="off"
+            spellcheck="false"
+            [(ngModel)]="filterQuery"
+            (keydown.escape)="handleClose()" />
+        </label>
+      }
 
-      @if (filteredTokens.length === 0) {
+      @if (pendingSymbol) {
+        <p class="token-select-panel__step-label">
+          Select {{ pendingSymbol }} network
+        </p>
+        <ul
+          class="token-select-panel__list"
+          role="listbox"
+          aria-label="Select network">
+          @for (token of networkOptions; track token.assetId) {
+            <li role="presentation">
+              <button
+                type="button"
+                class="token-select-panel__item"
+                role="option"
+                [attr.aria-selected]="isAssetSelected(token)"
+                [class.token-select-panel__item--selected]="
+                  isAssetSelected(token)
+                "
+                (click)="handleNetworkSelect(token)">
+                <span class="token-select-panel__network-mark">{{
+                  networkName(token).charAt(0)
+                }}</span>
+                <span class="token-select-panel__meta"
+                  ><strong>{{ networkName(token) }}</strong
+                  ><span
+                    >{{ pendingSymbol }} on {{ networkName(token) }}</span
+                  ></span
+                >
+              </button>
+            </li>
+          }
+        </ul>
+      } @else if (assetOptions.length === 0) {
         <p class="token-select-panel__status">No matching tokens.</p>
       } @else {
         <ul
           class="token-select-panel__list"
           role="listbox"
           [attr.aria-label]="title">
-          @for (token of filteredTokens; track token.assetId) {
+          @for (
+            token of assetOptions;
+            track token.displaySymbol || token.symbol
+          ) {
             <li role="presentation">
               <button
                 type="button"
                 class="token-select-panel__item"
                 role="option"
-                [attr.aria-selected]="token.symbol === selectedSymbol"
+                [attr.aria-selected]="token.assetId === selectedAssetId"
                 [class.token-select-panel__item--selected]="
-                  token.symbol === selectedSymbol
+                  token.assetId === selectedAssetId
                 "
                 (click)="handleSelect(token)">
                 <span
@@ -61,7 +107,9 @@
                 </span>
                 <span class="token-select-panel__meta">
                   <strong>{{ token.displaySymbol || token.symbol }}</strong>
-                  <span>{{ token.name }}</span>
+                  <span
+                    >{{ token.name }} · {{ assetNetworkSummary(token) }}</span
+                  >
                 </span>
               </button>
             </li>

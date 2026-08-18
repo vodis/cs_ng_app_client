@@ -22,7 +22,9 @@ export type SwapFormInput = {
   originAsset: string;
   destinationAsset: string;
   amount: string;
-  userAddress: string;
+  signerId: string;
+  recipient: string;
+  recipientType: 'DESTINATION_CHAIN' | 'INTENTS';
   slippageTolerance: number;
   deadline: string;
   authMethod: 'evm' | 'near';
@@ -202,7 +204,9 @@ export class SwapFlowFacade {
       input.originAsset,
       input.destinationAsset,
       input.amount,
-      input.userAddress.toLowerCase(),
+      input.signerId.toLowerCase(),
+      input.recipient.toLowerCase(),
+      input.recipientType,
       input.slippageTolerance,
       input.authMethod,
     ].join('|');

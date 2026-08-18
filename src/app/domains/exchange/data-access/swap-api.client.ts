@@ -40,7 +40,7 @@ export class SwapApiClient {
     return this.httpClient
       .post<
         ApiResponseEnvelope<unknown>
-      >(`${environment.apiUrl}/api/v1/quotes/one-click`, this.toOneClickBody(request), { headers: this.traceHeaders(request.traceId) })
+      >(`${environment.apiUrl}/api/v1/quotes/one-click`, this.toQuoteBody(request), { headers: this.traceHeaders(request.traceId) })
       .pipe(map(mapQuotePreviewResponse));
   }
 
@@ -50,7 +50,7 @@ export class SwapApiClient {
     return this.httpClient
       .post<
         ApiResponseEnvelope<unknown>
-      >(`${environment.apiUrl}/api/v1/swaps/prepare`, this.toOneClickBody({ ...request, dry: false }), { headers: this.traceHeaders(request.traceId) })
+      >(`${environment.apiUrl}/api/v1/swaps/prepare`, this.toPrepareBody(request), { headers: this.traceHeaders(request.traceId) })
       .pipe(map(parseApprovedSwapPrepareResponse));
   }
 
@@ -101,9 +101,7 @@ export class SwapApiClient {
       );
   }
 
-  private toOneClickBody(
-    request: SwapQuoteRequest & { traceId?: string }
-  ): Record<string, unknown> {
+  private toQuoteBody(request: SwapQuoteRequest): Record<string, unknown> {
     return {
       dry: request.dry,
       slippageTolerance: request.slippageTolerance,
@@ -111,11 +109,28 @@ export class SwapApiClient {
       destinationAsset: request.destinationAsset,
       amount: request.amount,
       deadline: request.deadline,
-      userAddress: request.userAddress.toLowerCase(),
+      userAddress: request.signerId.toLowerCase(),
+      recipient: request.recipient,
+      recipientType: request.recipientType,
       authMethod: request.authMethod,
       swapType: 'EXACT_INPUT',
       isConfidential: false,
       isAuthenticated: true,
+    };
+  }
+
+  private toPrepareBody(request: SwapPrepareRequest): Record<string, unknown> {
+    return {
+      originAsset: request.originAsset,
+      destinationAsset: request.destinationAsset,
+      amount: request.amount,
+      deadline: request.deadline,
+      signerId: request.signerId.toLowerCase(),
+      recipient: request.recipient,
+      recipientType: request.recipientType,
+      authMethod: request.authMethod,
+      slippageTolerance: request.slippageTolerance,
+      swapType: 'EXACT_INPUT',
     };
   }
 

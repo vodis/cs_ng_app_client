@@ -1,0 +1,53 @@
+<section class="recipient-panel">
+  <header class="recipient-panel__header">
+    <div>
+      <p>DESTINATION</p>
+      <h2>Select recipient</h2>
+    </div>
+    <button type="button" aria-label="Close recipient panel" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <form class="recipient-panel__body" (ngSubmit)="save()">
+    <div class="recipient-panel__network">
+      <span>{{ networkName().charAt(0) }}</span>
+      <div>
+        <small>NETWORK</small><strong>{{ networkName() }}</strong>
+      </div>
+    </div>
+    <label>
+      <span class="recipient-panel__field-label">Wallet address</span>
+      <input
+        type="text"
+        name="recipientAddress"
+        autocomplete="off"
+        spellcheck="false"
+        [placeholder]="networkName() + ' recipient address'"
+        [(ngModel)]="draftAddress"
+        [attr.aria-invalid]="validationError ? true : null" />
+    </label>
+    @if (validationError) {
+      <p class="recipient-panel__error">{{ validationError }}</p>
+    }
+    <button class="recipient-panel__save" type="submit">SAVE RECIPIENT</button>
+
+    <div class="recipient-panel__soon-title">
+      More ways <span>COMING SOON</span>
+    </div>
+    <div class="recipient-panel__soon" aria-disabled="true">
+      <mat-icon>qr_code_scanner</mat-icon>
+      <div>
+        <strong>Scan QR code</strong
+        ><small>Use your camera to scan a wallet address</small>
+      </div>
+    </div>
+    <div class="recipient-panel__soon" aria-disabled="true">
+      <mat-icon>account_balance_wallet</mat-icon>
+      <div>
+        <strong>Connect recipient wallet</strong
+        ><small>Choose an address through wallet connection</small>
+      </div>
+    </div>
+  </form>
+</section>

@@ -10,6 +10,7 @@ const tokens: ExchangeToken[] = [
     name: 'USD Coin',
     assetId: 'usdc-asset',
     color: '#2f8cff',
+    blockchain: 'eth',
   },
   {
     symbol: 'NEAR',
@@ -17,6 +18,7 @@ const tokens: ExchangeToken[] = [
     name: 'NEAR Protocol',
     assetId: 'near-asset',
     color: '#2fd17c',
+    blockchain: 'near',
   },
 ];
 

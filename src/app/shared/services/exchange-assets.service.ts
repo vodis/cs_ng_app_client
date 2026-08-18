@@ -30,46 +30,15 @@ export class ExchangeAssetsService {
       .pipe(
         map(response => {
           const assets = response.data ?? [];
-          return this.dedupeAssetsBySymbol(assets)
+          return assets
             .map(asset => this.mapAssetToExchangeToken(asset))
-            .sort((left, right) => left.symbol.localeCompare(right.symbol));
+            .sort(
+              (left, right) =>
+                left.symbol.localeCompare(right.symbol) ||
+                left.blockchain.localeCompare(right.blockchain)
+            );
         })
       );
-  }
-
-  private dedupeAssetsBySymbol(assets: AssetDto[]): AssetDto[] {
-    const preferredBySymbol = new Map<string, AssetDto>();
-
-    for (const asset of assets) {
-      const current = preferredBySymbol.get(asset.symbol);
-      if (!current || this.preferAsset(asset, current)) {
-        preferredBySymbol.set(asset.symbol, asset);
-      }
-    }
-
-    return Array.from(preferredBySymbol.values());
-  }
-
-  private preferAsset(candidate: AssetDto, current: AssetDto): boolean {
-    return this.assetPriority(candidate) > this.assetPriority(current);
-  }
-
-  private assetPriority(asset: AssetDto): number {
-    const assetId = asset.assetId.toLowerCase();
-    const isNearNative =
-      asset.blockchain === 'near' &&
-      assetId.startsWith('nep141:') &&
-      !assetId.includes('.omft.');
-
-    if (isNearNative) {
-      return 3;
-    }
-
-    if (asset.blockchain === 'near') {
-      return 2;
-    }
-
-    return 1;
   }
 
   private mapAssetToExchangeToken(asset: AssetDto): ExchangeToken {
@@ -80,6 +49,7 @@ export class ExchangeAssetsService {
       name: asset.name?.trim() || asset.symbol,
       icon: asset.icon,
       decimals: asset.decimals,
+      blockchain: asset.blockchain?.trim().toLowerCase() || 'unknown',
       color: this.colorForSymbol(asset.symbol),
     };
   }

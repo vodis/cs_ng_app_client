@@ -5,7 +5,10 @@
 
 <div
   class="side-modal"
-  [ngClass]="{ open: isOpen }"
+  [ngClass]="{ open: isOpen, 'side-modal--left': placement === 'left' }"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-hidden]="!isOpen"
   (click)="$event.stopPropagation()">
   <ng-content></ng-content>
 </div>

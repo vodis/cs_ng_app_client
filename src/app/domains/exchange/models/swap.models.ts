@@ -21,7 +21,9 @@ export type SwapQuoteRequest = {
   originAsset: string;
   destinationAsset: string;
   amount: string;
-  userAddress: string;
+  signerId: string;
+  recipient: string;
+  recipientType: 'DESTINATION_CHAIN' | 'INTENTS';
   slippageTolerance: number;
   deadline: string;
   authMethod: 'evm' | 'near';
