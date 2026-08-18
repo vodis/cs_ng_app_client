@@ -63,22 +63,16 @@
           width: 100%;
           min-width: 0;
           flex: 1 1 auto;
-          padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+          padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
           overflow-x: hidden;
         }
 
         app-mobile-bottom-nav {
-          position: fixed;
+          position: static;
           z-index: 20;
-          right: 0;
-          bottom: 0;
-          left: 0;
-          width: 100%;
+          width: auto;
           flex: none;
-          align-self: stretch;
-          margin-top: 0;
-          grid-column: auto;
-          grid-row: auto;
+          pointer-events: none;
         }
       }
     }

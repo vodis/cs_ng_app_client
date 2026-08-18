@@ -30,10 +30,7 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   public contentHeight: number | null = null;
   public lineResetKey = 0;
   public hideShell = isAuthShellRoute(window.location.pathname);
-  public mobileNavCompact = false;
 
-  private readonly scrollThreshold = 8;
-  private lastScrollY = 0;
   private resizeObserver?: ResizeObserver;
   private routerSubscription?: Subscription;
 
@@ -51,7 +48,6 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
         this.updateShellVisibility(event.urlAfterRedirects);
         this.verticalLineAnimating = true;
         this.lineResetKey += 1;
-        this.resetMobileNavScroll();
         this.updateContentHeight();
       });
   }
@@ -80,31 +76,7 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
     ).target.innerWidth;
     this.isMobileView = this.currentWidth <= 768;
 
-    if (!this.isMobileView) {
-      this.mobileNavCompact = false;
-    }
-
     this.updateContentHeight();
-  }
-
-  @HostListener('window:scroll')
-  public onWindowScroll(): void {
-    if (!this.isMobileView || this.hideShell) {
-      return;
-    }
-
-    const currentScrollY = window.scrollY;
-    const delta = currentScrollY - this.lastScrollY;
-
-    if (currentScrollY <= 16) {
-      this.mobileNavCompact = false;
-    } else if (delta > this.scrollThreshold) {
-      this.mobileNavCompact = true;
-    } else if (delta < -this.scrollThreshold) {
-      this.mobileNavCompact = false;
-    }
-
-    this.lastScrollY = currentScrollY;
   }
 
   public onVerticalLineAnimationComplete(): void {
@@ -132,10 +104,5 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private updateShellVisibility(url: string): void {
     this.hideShell = isAuthShellRoute(url);
-  }
-
-  private resetMobileNavScroll(): void {
-    this.mobileNavCompact = false;
-    this.lastScrollY = window.scrollY;
   }
 }
