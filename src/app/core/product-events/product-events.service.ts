@@ -104,7 +104,15 @@ export class ProductEventsService {
   private sanitizeMetadata(
     metadata: Record<string, unknown>
   ): Record<string, unknown> {
-    const denied = ['token', 'authorization', 'password', 'secret'];
+    const denied = [
+      'token',
+      'authorization',
+      'password',
+      'secret',
+      'code',
+      'verifier',
+      'credential',
+    ];
     return Object.fromEntries(
       Object.entries(metadata)
         .filter(
@@ -112,6 +120,33 @@ export class ProductEventsService {
             !denied.some(deniedKey => key.toLowerCase().includes(deniedKey))
         )
         .slice(0, 40)
+        .map(([key, value]) => [key, this.sanitizeValue(value, denied, 0)])
+    );
+  }
+
+  private sanitizeValue(
+    value: unknown,
+    denied: string[],
+    depth: number
+  ): unknown {
+    if (depth >= 4) return '[truncated]';
+    if (Array.isArray(value)) {
+      return value
+        .slice(0, 40)
+        .map(item => this.sanitizeValue(item, denied, depth + 1));
+    }
+    if (typeof value !== 'object' || value === null) return value;
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(
+          ([key]) =>
+            !denied.some(deniedKey => key.toLowerCase().includes(deniedKey))
+        )
+        .slice(0, 40)
+        .map(([key, nested]) => [
+          key,
+          this.sanitizeValue(nested, denied, depth + 1),
+        ])
     );
   }
 

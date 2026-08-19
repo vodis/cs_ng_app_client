@@ -17,12 +17,6 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     data: { title: 'History' },
   },
-  {
-    path: 'portfolio',
-    component: PlaceholderPageComponent,
-    canActivate: [AuthGuard],
-    data: { title: 'Portfolio' },
-  },
 ];
 
 @NgModule({

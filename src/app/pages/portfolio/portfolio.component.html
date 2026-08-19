@@ -1,0 +1,365 @@
+<main class="portfolio-page">
+  <header class="portfolio-page__header">
+    <div>
+      <p class="portfolio-page__eyebrow">
+        {{ 'Texts.portfolio-eyebrow' | csTranslate: 'Portfolio intelligence' }}
+      </p>
+      <h1>{{ 'Texts.portfolio-title' | csTranslate: 'Your portfolio' }}</h1>
+      <p class="portfolio-page__subtitle">
+        A private, read-only view for you and the agents you choose.
+      </p>
+    </div>
+    <button
+      mat-flat-button
+      color="primary"
+      (click)="openAgent()"
+      *ngIf="config?.enabled">
+      <mat-icon aria-hidden="true">auto_awesome</mat-icon>
+      Connect AI agent
+    </button>
+  </header>
+
+  <p class="portfolio-page__alert portfolio-page__alert--error" *ngIf="error">
+    {{ error }}
+    <button type="button" mat-button (click)="load()">Try again</button>
+  </p>
+  <p
+    class="portfolio-page__alert portfolio-page__alert--error"
+    *ngIf="actionError">
+    {{ actionError }}
+  </p>
+
+  <section class="portfolio-page__loading" *ngIf="loading" aria-live="polite">
+    <span class="portfolio-page__loading-dot"></span
+    ><span class="portfolio-page__loading-dot"></span
+    ><span class="portfolio-page__loading-dot"></span>
+    <p>Building your latest portfolio snapshot…</p>
+  </section>
+
+  <ng-container *ngIf="!loading && portfolio as snapshot">
+    <section class="portfolio-summary">
+      <article class="portfolio-summary__value">
+        <p class="portfolio-summary__label">Total portfolio value</p>
+        <strong>{{ currency(snapshot.totalValue) }}</strong>
+        <small class="portfolio-summary__updated"
+          >USD estimate · Updated {{ date(snapshot.asOf) }}</small
+        >
+      </article>
+
+      <article class="portfolio-summary__allocation">
+        <div class="allocation-ring" [style.background]="allocationGradient()">
+          <span class="allocation-ring__value">{{
+            snapshot.positions.length
+          }}</span>
+          <small class="allocation-ring__label">assets</small>
+        </div>
+        <div>
+          <h2>Allocation</h2>
+          <p
+            class="portfolio-summary__allocation-copy"
+            *ngIf="snapshot.unpricedPositionCount === 0">
+            All positions are priced.
+          </p>
+          <p
+            class="portfolio-summary__allocation-copy"
+            *ngIf="snapshot.unpricedPositionCount > 0">
+            {{ snapshot.unpricedPositionCount }}
+            {{
+              snapshot.unpricedPositionCount === 1
+                ? 'position is'
+                : 'positions are'
+            }}
+            unpriced.
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <div class="portfolio-grid">
+      <section class="portfolio-panel portfolio-panel--positions">
+        <div class="portfolio-panel__header">
+          <div>
+            <p class="portfolio-panel__eyebrow">Holdings</p>
+            <h2>Positions</h2>
+          </div>
+          <span class="portfolio-panel__count"
+            >{{ snapshot.positions.length }} assets</span
+          >
+        </div>
+
+        <div
+          class="position-table"
+          *ngIf="snapshot.positions.length; else emptyPortfolio">
+          <div class="position-table__head">
+            <span>Asset</span><span>Balance</span><span>Value</span
+            ><span>Allocation</span>
+          </div>
+          <div
+            class="position-table__row"
+            *ngFor="
+              let position of snapshot.positions;
+              let index = index;
+              trackBy: trackPosition
+            ">
+            <div class="position-table__asset">
+              <span
+                class="position-table__mark"
+                [style.background]="positionColor(index)">
+                {{ position.symbol.slice(0, 1) }}
+              </span>
+              <span
+                ><strong>{{ position.symbol }}</strong
+                ><small>{{ label(position.chain) }}</small></span
+              >
+            </div>
+            <span>{{ quantity(position) }}</span>
+            <span [class.position-table__unpriced]="position.valueUsd === null">
+              {{ currency(position.valueUsd) }}
+            </span>
+            <span>{{ percent(position) }}</span>
+          </div>
+        </div>
+        <ng-template #emptyPortfolio>
+          <div class="portfolio-panel__empty">
+            <mat-icon aria-hidden="true">account_balance_wallet</mat-icon>
+            <h3>No balances found</h3>
+            <p class="portfolio-panel__empty-copy">
+              Connect or fund a wallet, then refresh this page.
+            </p>
+          </div>
+        </ng-template>
+      </section>
+
+      <aside class="portfolio-side">
+        <section class="portfolio-panel preferences-card">
+          <div class="portfolio-panel__header">
+            <div>
+              <p class="portfolio-panel__eyebrow">Agent context</p>
+              <h2>Investment preferences</h2>
+            </div>
+            <button
+              type="button"
+              mat-icon-button
+              aria-label="Edit investment preferences"
+              (click)="openProfile()">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </div>
+          <dl>
+            <div class="preferences-card__row">
+              <dt>Objective</dt>
+              <dd>{{ label(profile?.objective) }}</dd>
+            </div>
+            <div class="preferences-card__row">
+              <dt>Risk</dt>
+              <dd>{{ label(profile?.riskTolerance) }}</dd>
+            </div>
+            <div class="preferences-card__row">
+              <dt>Horizon</dt>
+              <dd>{{ label(profile?.horizon) }}</dd>
+            </div>
+          </dl>
+          <p class="preferences-card__note">
+            Only these preferences—not your email or login details—are shared
+            with an approved agent.
+          </p>
+        </section>
+
+        <section class="portfolio-panel agent-card" *ngIf="config?.enabled">
+          <div class="portfolio-panel__header">
+            <div>
+              <p class="portfolio-panel__eyebrow">Read-only access</p>
+              <h2>Connected agents</h2>
+            </div>
+            <button
+              type="button"
+              mat-button
+              color="primary"
+              (click)="openAgent()">
+              Connect
+            </button>
+          </div>
+          <ul *ngIf="connections.length; else noConnections">
+            <li
+              *ngFor="let connection of connections; trackBy: trackConnection">
+              <div class="agent-card__identity">
+                <span class="agent-card__icon"
+                  ><mat-icon aria-hidden="true">smart_toy</mat-icon></span
+                >
+                <div class="agent-card__copy">
+                  <strong>{{ connection.clientName }}</strong
+                  ><small>Expires {{ date(connection.expiresAt) }}</small>
+                </div>
+              </div>
+              <button
+                type="button"
+                mat-button
+                [disabled]="revokingId === connection.id"
+                (click)="revoke(connection)">
+                Revoke
+              </button>
+            </li>
+          </ul>
+          <ng-template #noConnections>
+            <div class="agent-card__empty">
+              <p class="agent-card__empty-copy">
+                No agent can access your portfolio.
+              </p>
+              <button type="button" mat-stroked-button (click)="openAgent()">
+                Connect your agent
+              </button>
+            </div>
+          </ng-template>
+        </section>
+      </aside>
+    </div>
+  </ng-container>
+</main>
+
+<app-side-modal [isOpen]="profileOpen" (closeModal)="profileOpen = false">
+  <section class="portfolio-modal" *ngIf="profileOpen">
+    <header>
+      <p class="portfolio-modal__eyebrow">Agent context</p>
+      <h2>Investment preferences</h2>
+    </header>
+    <p class="portfolio-modal__intro">
+      These choices help your agent tailor its analysis. They are not a
+      suitability assessment.
+    </p>
+    <label>
+      <span>Primary objective</span>
+      <select [(ngModel)]="objective">
+        <option value="growth">Growth</option>
+        <option value="income">Income</option>
+        <option value="capital_preservation">Capital preservation</option>
+      </select>
+    </label>
+    <label>
+      <span>Risk tolerance</span>
+      <select [(ngModel)]="riskTolerance">
+        <option value="conservative">Conservative</option>
+        <option value="balanced">Balanced</option>
+        <option value="aggressive">Aggressive</option>
+      </select>
+    </label>
+    <label>
+      <span>Investment horizon</span>
+      <select [(ngModel)]="horizon">
+        <option value="under_1y">Under 1 year</option>
+        <option value="1_3y">1–3 years</option>
+        <option value="3_5y">3–5 years</option>
+        <option value="over_5y">Over 5 years</option>
+      </select>
+    </label>
+    <p class="portfolio-modal__error" *ngIf="actionError">{{ actionError }}</p>
+    <div class="portfolio-modal__actions">
+      <button mat-button (click)="profileOpen = false">Cancel</button>
+      <button
+        mat-flat-button
+        color="primary"
+        [disabled]="savingProfile"
+        (click)="saveProfile()">
+        Save preferences
+      </button>
+    </div>
+  </section>
+</app-side-modal>
+
+<app-side-modal [isOpen]="agentOpen" (closeModal)="agentOpen = false">
+  <section class="portfolio-modal agent-connect" *ngIf="agentOpen">
+    <header>
+      <p class="portfolio-modal__eyebrow">Bring your own capacity</p>
+      <h2>Connect an AI agent</h2>
+    </header>
+
+    <ng-container
+      *ngIf="pendingAuthorization as authorization; else connectInstructions">
+      <div class="agent-connect__request">
+        <span class="agent-connect__request-icon"
+          ><mat-icon aria-hidden="true">smart_toy</mat-icon></span
+        >
+        <div class="agent-connect__request-copy">
+          <small>Requesting access</small
+          ><strong>{{ authorization.clientName }}</strong>
+        </div>
+      </div>
+      <h3>Allow read-only access?</h3>
+      <ul class="agent-connect__permissions">
+        <li *ngFor="let scope of authorization.scopes">
+          <mat-icon>check</mat-icon>{{ scope }}
+        </li>
+      </ul>
+      <div class="portfolio-modal__actions">
+        <button
+          mat-stroked-button
+          [disabled]="authorizationLoading"
+          (click)="decide('deny')">
+          Deny
+        </button>
+        <button
+          mat-flat-button
+          color="primary"
+          [disabled]="authorizationLoading"
+          (click)="decide('approve')">
+          Allow for 30 days
+        </button>
+      </div>
+    </ng-container>
+
+    <ng-template #connectInstructions>
+      <div class="agent-connect__tested">
+        <mat-icon>verified</mat-icon>Tested with
+        {{ config?.testedClients?.join(' and ') || 'ChatGPT and Codex' }}
+      </div>
+      <ol>
+        <li>Add the CraftScript MCP server in your agent.</li>
+        <li>
+          Choose Connect and sign in to CraftScript in the opened browser.
+        </li>
+        <li>Review and approve the read-only permissions.</li>
+      </ol>
+      <div class="agent-connect__url">
+        <span class="agent-connect__url-copy"
+          ><small>MCP server URL</small><code>{{ config?.mcpUrl }}</code></span
+        >
+        <button
+          type="button"
+          mat-icon-button
+          aria-label="Copy MCP server URL"
+          (click)="copyMcpUrl()">
+          <mat-icon>{{ copying ? 'check' : 'content_copy' }}</mat-icon>
+        </button>
+      </div>
+      <div class="agent-connect__divider">
+        <span>or use a device code</span>
+      </div>
+      <label>
+        <span>Code shown by your agent</span>
+        <input
+          [(ngModel)]="deviceCode"
+          maxlength="9"
+          autocomplete="one-time-code"
+          placeholder="ABCD-EFGH" />
+      </label>
+      <p class="portfolio-modal__error" *ngIf="actionError">
+        {{ actionError }}
+      </p>
+      <button
+        mat-flat-button
+        color="primary"
+        class="agent-connect__continue"
+        [disabled]="deviceLoading"
+        (click)="findDeviceCode()">
+        Continue
+      </button>
+      <p class="agent-connect__disclaimer">
+        AI analysis can be wrong and cannot guarantee profit. Review every
+        suggestion independently.
+      </p>
+    </ng-template>
+    <p class="agent-connect__privacy">
+      Your provider login stays with your agent. CraftScript receives no OpenAI
+      or other model-provider credential.
+    </p>
+  </section>
+</app-side-modal>
