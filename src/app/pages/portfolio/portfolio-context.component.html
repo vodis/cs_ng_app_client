@@ -1,0 +1,81 @@
+<aside class="portfolio-side">
+  <section class="portfolio-panel preferences-card">
+    <div class="portfolio-panel__header">
+      <div>
+        <p class="portfolio-panel__eyebrow">Agent context</p>
+        <h2>Investment preferences</h2>
+      </div>
+      <button
+        type="button"
+        mat-icon-button
+        aria-label="Edit investment preferences"
+        (click)="editProfile.emit()">
+        <mat-icon>edit</mat-icon>
+      </button>
+    </div>
+    <dl>
+      <div class="preferences-card__row">
+        <dt>Objective</dt>
+        <dd>{{ label(profile?.objective) }}</dd>
+      </div>
+      <div class="preferences-card__row">
+        <dt>Risk</dt>
+        <dd>{{ label(profile?.riskTolerance) }}</dd>
+      </div>
+      <div class="preferences-card__row">
+        <dt>Horizon</dt>
+        <dd>{{ label(profile?.horizon) }}</dd>
+      </div>
+    </dl>
+    <p class="preferences-card__note">
+      Only these preferences—not your email or login details—are shared with an
+      approved agent.
+    </p>
+  </section>
+
+  <section class="portfolio-panel agent-card" *ngIf="config?.enabled">
+    <div class="portfolio-panel__header">
+      <div>
+        <p class="portfolio-panel__eyebrow">Read-only access</p>
+        <h2>Connected agents</h2>
+      </div>
+      <button
+        type="button"
+        mat-button
+        color="primary"
+        (click)="connectAgent.emit()">
+        Connect
+      </button>
+    </div>
+    <ul *ngIf="connections.length; else noConnections">
+      <li *ngFor="let connection of connections; trackBy: trackConnection">
+        <div class="agent-card__identity">
+          <span class="agent-card__icon"
+            ><mat-icon aria-hidden="true">smart_toy</mat-icon></span
+          >
+          <div class="agent-card__copy">
+            <strong>{{ connection.clientName }}</strong
+            ><small>Expires {{ date(connection.expiresAt) }}</small>
+          </div>
+        </div>
+        <button
+          type="button"
+          mat-button
+          [disabled]="revokingId === connection.id"
+          (click)="revokeAgent.emit(connection)">
+          Revoke
+        </button>
+      </li>
+    </ul>
+    <ng-template #noConnections>
+      <div class="agent-card__empty">
+        <p class="agent-card__empty-copy">
+          No agent can access your portfolio.
+        </p>
+        <button type="button" mat-stroked-button (click)="connectAgent.emit()">
+          Connect your agent
+        </button>
+      </div>
+    </ng-template>
+  </section>
+</aside>

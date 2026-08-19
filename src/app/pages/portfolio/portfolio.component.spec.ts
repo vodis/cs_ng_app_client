@@ -76,11 +76,6 @@ describe('PortfolioComponent', () => {
     expect(component.actionError).toContain('8-character');
   });
 
-  it('builds a bounded allocation gradient from server percentages', async () => {
-    await component.load();
-    expect(component.allocationGradient()).toContain('#43e6a0 0% 100%');
-  });
-
   it('saves only the fixed investment preference fields', async () => {
     api.saveInvestmentProfile.and.resolveTo({
       objective: 'income',

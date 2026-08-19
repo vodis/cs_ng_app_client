@@ -8,12 +8,9 @@ import {
   InvestmentHorizon,
   InvestmentObjective,
   InvestmentProfile,
-  PortfolioPosition,
   PortfolioSnapshot,
   RiskTolerance,
 } from './portfolio.models';
-
-const POSITION_COLORS = ['#43e6a0', '#7c8cff', '#ffb84d', '#ff6b8a', '#45b7e8'];
 
 @Component({
   selector: 'app-portfolio',
@@ -176,69 +173,6 @@ export class PortfolioComponent implements OnInit {
     } finally {
       this.revokingId = '';
     }
-  }
-
-  positionColor(index: number): string {
-    return POSITION_COLORS[index % POSITION_COLORS.length];
-  }
-
-  allocationGradient(): string {
-    const valued = (this.portfolio?.positions ?? []).filter(
-      position => Number(position.allocationPercent) > 0
-    );
-    let offset = 0;
-    const stops = valued.map((position, index) => {
-      const start = offset;
-      offset += Math.max(0, Math.min(100, Number(position.allocationPercent)));
-      return `${this.positionColor(index)} ${start}% ${offset}%`;
-    });
-    return stops.length
-      ? `conic-gradient(${stops.join(',')})`
-      : 'conic-gradient(var(--gray-80) 0 100%)';
-  }
-
-  currency(value: string | null): string {
-    if (value === null) return 'Unpriced';
-    const parsed = Number(value);
-    return Number.isFinite(parsed)
-      ? parsed.toLocaleString(undefined, {
-          style: 'currency',
-          currency: 'USD',
-          maximumFractionDigits: 2,
-        })
-      : '$—';
-  }
-
-  quantity(position: PortfolioPosition): string {
-    const value = Number(position.quantity);
-    return Number.isFinite(value)
-      ? `${value.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${position.symbol}`
-      : `${position.quantity} ${position.symbol}`;
-  }
-
-  percent(position: PortfolioPosition): string {
-    return position.allocationPercent === null
-      ? '—'
-      : `${Number(position.allocationPercent).toFixed(1)}%`;
-  }
-
-  label(value: string | undefined): string {
-    if (!value) return 'Not set';
-    return value
-      .replaceAll('_', ' ')
-      .replace(/\b\w/g, char => char.toUpperCase());
-  }
-
-  date(value: string | null | undefined): string {
-    return value ? new Date(value).toLocaleString() : 'Never';
-  }
-
-  trackPosition(_index: number, item: PortfolioPosition): string {
-    return `${item.walletRef}:${item.assetId}`;
-  }
-
-  trackConnection(_index: number, item: AgentConnection): string {
-    return item.id;
   }
 
   private async reloadConnections(): Promise<void> {

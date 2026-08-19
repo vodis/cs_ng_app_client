@@ -1,0 +1,89 @@
+<section class="portfolio-summary">
+  <article class="portfolio-summary__value">
+    <p class="portfolio-summary__label">Total portfolio value</p>
+    <strong>{{ currency(snapshot.totalValue) }}</strong>
+    <small class="portfolio-summary__updated"
+      >USD estimate · Updated {{ date(snapshot.asOf) }}</small
+    >
+  </article>
+
+  <article class="portfolio-summary__allocation">
+    <div class="allocation-ring" [style.background]="allocationGradient()">
+      <span class="allocation-ring__value">{{
+        snapshot.positions.length
+      }}</span>
+      <small class="allocation-ring__label">assets</small>
+    </div>
+    <div>
+      <h2>Allocation</h2>
+      <p
+        class="portfolio-summary__allocation-copy"
+        *ngIf="snapshot.unpricedPositionCount === 0">
+        All positions are priced.
+      </p>
+      <p
+        class="portfolio-summary__allocation-copy"
+        *ngIf="snapshot.unpricedPositionCount > 0">
+        {{ snapshot.unpricedPositionCount }}
+        {{
+          snapshot.unpricedPositionCount === 1 ? 'position is' : 'positions are'
+        }}
+        unpriced.
+      </p>
+    </div>
+  </article>
+</section>
+
+<section class="portfolio-panel portfolio-panel--positions">
+  <div class="portfolio-panel__header">
+    <div>
+      <p class="portfolio-panel__eyebrow">Holdings</p>
+      <h2>Positions</h2>
+    </div>
+    <span class="portfolio-panel__count"
+      >{{ snapshot.positions.length }} assets</span
+    >
+  </div>
+
+  <div
+    class="position-table"
+    *ngIf="snapshot.positions.length; else emptyPortfolio">
+    <div class="position-table__head">
+      <span>Asset</span><span>Balance</span><span>Value</span
+      ><span>Allocation</span>
+    </div>
+    <div
+      class="position-table__row"
+      *ngFor="
+        let position of snapshot.positions;
+        let index = index;
+        trackBy: trackPosition
+      ">
+      <div class="position-table__asset">
+        <span
+          class="position-table__mark"
+          [style.background]="positionColor(index)">
+          {{ position.symbol.slice(0, 1) }}
+        </span>
+        <span
+          ><strong>{{ position.symbol }}</strong
+          ><small>{{ label(position.chain) }}</small></span
+        >
+      </div>
+      <span>{{ quantity(position) }}</span>
+      <span [class.position-table__unpriced]="position.valueUsd === null">
+        {{ currency(position.valueUsd) }}
+      </span>
+      <span>{{ percent(position) }}</span>
+    </div>
+  </div>
+  <ng-template #emptyPortfolio>
+    <div class="portfolio-panel__empty">
+      <mat-icon aria-hidden="true">account_balance_wallet</mat-icon>
+      <h3>No balances found</h3>
+      <p class="portfolio-panel__empty-copy">
+        Connect or fund a wallet, then refresh this page.
+      </p>
+    </div>
+  </ng-template>
+</section>
