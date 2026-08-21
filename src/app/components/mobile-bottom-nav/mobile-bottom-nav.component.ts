@@ -40,7 +40,10 @@ export type MobileNavItem = {
   selector: 'app-mobile-bottom-nav',
   standalone: false,
   templateUrl: './mobile-bottom-nav.component.html',
-  styleUrls: ['./mobile-bottom-nav.component.scss'],
+  styleUrls: [
+    './mobile-bottom-nav.component.scss',
+    './mobile-bottom-nav-panel.component.scss',
+  ],
 })
 export class MobileBottomNavComponent implements OnDestroy {
   public menuOpen = false;
