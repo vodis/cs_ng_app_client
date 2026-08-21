@@ -1,150 +1,79 @@
 :host {
+  --fn-bg: #111617;
+  --fn-border: #343b3d;
+  --fn-text: #f4f4f4;
+  --fn-muted: #9ba1a3;
+  --fn-accent: var(--primary-text-color);
+  --fn-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --fn-duration: 230ms;
+
   display: block;
   pointer-events: none;
+}
 
-  &.mobile-bottom-nav-host--compact {
-    .mobile-bottom-nav__menu {
-      height: 2.65rem;
-      padding: 0.1rem;
-      border-radius: 1rem;
-    }
+.nav-overlay {
+  position: fixed;
+  z-index: 90;
+  background: rgb(0 0 0 / 58%);
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--fn-duration) var(--fn-ease),
+    visibility var(--fn-duration) var(--fn-ease);
+  visibility: hidden;
+}
 
-    .mobile-bottom-nav__link {
-      padding: 0.2rem 0.15rem;
-      gap: 0;
-    }
+.floating-menu-button {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgb(254 108 0 / 40%);
+  border-radius: 50%;
+  background: var(--fn-bg);
+  box-shadow: 0 0 8px rgb(254 108 0 / 22%);
+  place-items: center;
+}
 
-    .mobile-bottom-nav__label {
-      max-height: 0;
-      margin: 0;
-      opacity: 0;
-    }
+.floating-trigger {
+  position: fixed;
+  z-index: 110;
+  right: 18px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: none;
+  cursor: pointer;
+  outline: none;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active .floating-menu-button {
+    transform: scale(0.94);
   }
 }
 
-.mobile-bottom-nav {
-  height: auto;
-  padding: 0 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
-  border-top: 0;
-  background: transparent;
-  pointer-events: none;
+.floating-trigger:focus-visible .floating-menu-button {
+  outline: 2px solid var(--fn-accent);
+  outline-offset: 3px;
+}
 
-  &__menu {
-    display: grid;
-    height: 3.75rem;
-    margin: 0;
-    border: 1px solid rgb(255 255 255 / 12%);
-    border-radius: 1.25rem;
-    background: rgb(17 20 23 / 96%);
-    box-shadow: 0 6px 16px rgb(0 0 0 / 28%);
-    color: rgb(255 255 255 / 55%);
-    gap: 0;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    padding: 0.15rem;
-    pointer-events: auto;
-    text-transform: none;
-    backdrop-filter: blur(12px);
-    transition:
-      height 0.25s ease,
-      padding 0.25s ease,
-      border-radius 0.25s ease;
-  }
+.menu-dots {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  gap: 6px;
+  grid-template-columns: repeat(2, 8px);
+  grid-template-rows: repeat(2, 8px);
+  place-content: center;
 
-  &__item {
-    display: flex;
-    min-width: 0;
-    align-items: stretch;
-    justify-content: center;
-  }
-
-  &__link {
-    position: relative;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0.35rem 0.15rem 0.3rem;
-    border-radius: 1rem;
-    color: rgb(255 255 255 / 55%);
-    font-size: 0.68rem;
-    font-weight: 500;
-    gap: 0.12rem;
-    letter-spacing: 0.01em;
-    line-height: 1;
-    text-decoration: none;
-    transition:
-      color 0.12s ease,
-      padding 0.25s ease,
-      gap 0.25s ease;
-
-    &:hover {
-      color: rgb(255 255 255 / 78%);
-    }
-
-    &:active .mobile-bottom-nav__icon-wrap {
-      transform: scale(0.92);
-    }
-
-    &._is-active {
-      color: var(--primary-text-color);
-      background: transparent;
-
-      .mobile-bottom-nav__dot {
-        opacity: 1;
-      }
-
-      .mobile-bottom-nav__icon--outline {
-        display: none;
-      }
-
-      .mobile-bottom-nav__icon--filled {
-        display: block;
-      }
-    }
-  }
-
-  &__dot {
-    position: absolute;
-    top: 0.22rem;
-    left: 50%;
-    width: 0.22rem;
-    height: 0.22rem;
-    border-radius: 999px;
-    background: var(--primary-text-color);
-    opacity: 0;
-    transform: translateX(-50%);
-  }
-
-  &__icon-wrap {
-    display: flex;
-    transition: transform 0.15s ease;
-  }
-
-  &__icon {
-    display: block;
-    width: 1.35rem;
-    height: 1.35rem;
-    font-size: 1.35rem;
-    line-height: 1.35rem;
-  }
-
-  &__icon--filled {
-    display: none;
-  }
-
-  &__label {
-    overflow: hidden;
-    max-width: 100%;
-    max-height: 1rem;
-    font-weight: 500;
-    opacity: 1;
-    text-overflow: ellipsis;
-    transition:
-      max-height 0.25s ease,
-      opacity 0.2s ease,
-      margin 0.25s ease;
-    white-space: nowrap;
+  span {
+    width: 8px;
+    height: 8px;
+    border-radius: 1.5px;
+    background: var(--fn-accent);
   }
 }

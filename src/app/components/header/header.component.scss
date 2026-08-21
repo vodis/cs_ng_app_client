@@ -5,7 +5,7 @@
 
   &.header-host--mobile {
     .header__line {
-      background: rgb(255 255 255 / 65%);
+      background: #343b3d;
     }
   }
 
@@ -106,7 +106,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 1rem;
+      padding: 0 1.25rem;
       grid-template-columns: none;
     }
 
@@ -116,7 +116,7 @@
 
       img {
         width: auto;
-        height: 1.5rem;
+        height: 2.125rem;
       }
     }
 
@@ -124,45 +124,28 @@
       height: 100%;
       justify-content: flex-end;
       padding-right: 0;
-      gap: 0.65rem;
+      gap: 1rem;
       grid-column: auto;
     }
 
-    .header__menu-button {
+    .header__account-link,
+    .header__account-link.header__account-link--icon,
+    .header__account-link._active {
+      width: 1.875rem;
+      min-width: 1.875rem;
+      height: 1.875rem;
+      min-height: 1.875rem;
       padding: 0;
       border: 0;
+      border-radius: 0;
       background: none;
-      color: inherit;
-    }
-
-    .header__account-link {
-      width: 1.85rem;
-      min-width: 1.85rem;
-      height: 1.85rem;
-      min-height: 1.85rem;
-      padding: 0;
-      border: 1.5px solid rgb(255 255 255 / 45%);
-      border-radius: 999px;
       color: var(--main-text-color);
 
-      &.header__account-link--icon {
-        width: 1.85rem;
-        min-width: 1.85rem;
-        height: 1.85rem;
-        min-height: 1.85rem;
-        border-color: rgb(255 255 255 / 45%);
-      }
-
-      &._active {
-        border-color: rgb(255 255 255 / 55%);
-        color: var(--main-text-color);
-      }
-
       mat-icon {
-        width: 1.05rem;
-        height: 1.05rem;
-        font-size: 1.05rem;
-        line-height: 1.05rem;
+        width: 1.75rem;
+        height: 1.75rem;
+        font-size: 1.75rem;
+        line-height: 1.75rem;
       }
     }
   }
