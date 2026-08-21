@@ -95,3 +95,50 @@ test.describe('Shell layout (desktop)', () => {
     ).toHaveCount(0);
   });
 });
+
+test.describe('Mobile floating navigation', () => {
+  test.use({ viewport: { width: 390, height: 360 } });
+
+  test.beforeEach(async ({ page }) => {
+    await gotoExchangePage(page);
+  });
+
+  test('More panel stays scrollable on short landscape viewports', async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: 'Open navigation' }).click();
+    await page.getByRole('button', { name: 'More' }).click();
+
+    const viewport = page.locator('.floating-nav__viewport');
+    await expect(viewport).toBeVisible();
+
+    const overflowY = await viewport.evaluate(
+      el => getComputedStyle(el).overflowY
+    );
+    expect(overflowY).toBe('auto');
+
+    await expect(page.getByRole('link', { name: 'Docs' })).toBeAttached();
+
+    await page.getByRole('link', { name: 'Docs' }).evaluate(el => {
+      (el as HTMLElement).scrollIntoView({ block: 'nearest' });
+    });
+    await expect(page.getByRole('link', { name: 'Docs' })).toBeVisible();
+  });
+
+  test('inactive level is removed from keyboard tab order', async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: 'Open navigation' }).click();
+
+    const moreLevel = page.locator('.floating-nav__level--more');
+    await expect(moreLevel).toHaveAttribute('inert', '');
+
+    await page.getByRole('button', { name: 'More' }).click();
+
+    await expect(page.locator('.floating-nav__level--primary')).toHaveAttribute(
+      'inert',
+      ''
+    );
+    await expect(moreLevel).not.toHaveAttribute('inert');
+  });
+});

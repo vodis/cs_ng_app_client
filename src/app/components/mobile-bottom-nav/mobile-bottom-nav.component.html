@@ -1,16 +1,39 @@
 <div
   class="nav-overlay"
-  (click)="closeMenu()"
+  (click)="closeMenu(true)"
   [attr.aria-hidden]="menuOpen ? null : 'true'"></div>
 
+<button
+  #menuTrigger
+  class="floating-trigger"
+  type="button"
+  [attr.aria-label]="menuOpen ? 'Close navigation' : 'Open navigation'"
+  [attr.aria-expanded]="menuOpen"
+  aria-controls="floatingNav"
+  (click)="toggleMenu()">
+  <span class="floating-menu-button" aria-hidden="true">
+    <span class="menu-dots">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </span>
+  </span>
+</button>
+
 <nav
+  #floatingNav
   class="floating-nav"
   id="floatingNav"
   aria-label="Main navigation"
-  [attr.aria-hidden]="menuOpen ? null : 'true'">
+  [attr.aria-hidden]="menuOpen ? null : 'true'"
+  [attr.inert]="menuOpen ? null : ''">
   <div class="floating-nav__viewport">
     <div class="floating-nav__track">
-      <div class="floating-nav__level floating-nav__level--primary">
+      <div
+        class="floating-nav__level floating-nav__level--primary"
+        [attr.aria-hidden]="moreOpen ? 'true' : null"
+        [attr.inert]="moreOpen ? '' : null">
         <ng-container
           *ngFor="let item of links; let i = index; trackBy: trackById">
           <button
@@ -48,7 +71,9 @@
 
       <div
         class="floating-nav__level floating-nav__level--more"
-        id="floatingNavMore">
+        id="floatingNavMore"
+        [attr.aria-hidden]="moreOpen ? null : 'true'"
+        [attr.inert]="moreOpen ? null : ''">
         <button
           class="nav-item nav-item--back"
           type="button"
@@ -107,23 +132,6 @@
   </button>
 </nav>
 
-<button
-  class="floating-trigger"
-  type="button"
-  [attr.aria-label]="menuOpen ? 'Close navigation' : 'Open navigation'"
-  [attr.aria-expanded]="menuOpen"
-  aria-controls="floatingNav"
-  (click)="toggleMenu()">
-  <span class="floating-menu-button" aria-hidden="true">
-    <span class="menu-dots">
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
-    </span>
-  </span>
-</button>
-
 <ng-template #navIcon let-icon="icon">
   <span class="nav-icon" aria-hidden="true">
     <svg *ngIf="icon === 'home'" viewBox="0 0 24 24">
@@ -170,10 +178,6 @@
       <circle cx="12" cy="12" r="3" />
       <path
         d="M19.4 13a7.7 7.7 0 0 0 .1-2l2-1.5-2-3.5-2.4 1a7.4 7.4 0 0 0-1.7-1L13 3h-2l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.7 7.7 0 0 0 .1 2l-2 1.5 2 3.5 2.4-1a7.4 7.4 0 0 0 1.7 1L11 21h2l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.5Z" />
-    </svg>
-    <svg *ngIf="icon === 'security'" viewBox="0 0 24 24">
-      <path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6Z" />
-      <path d="m9 12 2 2 4-4" />
     </svg>
     <svg *ngIf="icon === 'external'" viewBox="0 0 24 24">
       <path d="M14 5h5v5" />

@@ -1,5 +1,10 @@
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+} from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -81,6 +86,21 @@ describe('MobileBottomNavComponent', () => {
     expect(labels).toEqual(['Home', 'Exchange', 'Portfolio', 'More']);
   });
 
+  it('keeps visible internal destinations unique', () => {
+    const destinations = component.internalDestinations();
+
+    expect(destinations).toEqual([
+      '/home',
+      '/',
+      '/portfolio',
+      '/farm',
+      '/proposals',
+      '/history',
+      '/profile',
+    ]);
+    expect(new Set(destinations).size).toBe(destinations.length);
+  });
+
   it('opens More as a second level without leaving the current page', () => {
     component.toggleMenu();
     fixture.detectChanges();
@@ -94,7 +114,6 @@ describe('MobileBottomNavComponent', () => {
       'Bots',
       'History',
       'Settings',
-      'Security',
       'Craftscript.com',
       'Docs',
     ]);
@@ -111,10 +130,39 @@ describe('MobileBottomNavComponent', () => {
       'Bots',
       'History',
       'Settings',
-      'Security',
       'Craftscript.com',
       'Docs',
     ]);
+  });
+
+  it('marks the inactive level as inert so it stays out of tab order', () => {
+    component.toggleMenu();
+    fixture.detectChanges();
+
+    const primary = fixture.nativeElement.querySelector(
+      '.floating-nav__level--primary'
+    ) as HTMLElement;
+    const more = fixture.nativeElement.querySelector(
+      '.floating-nav__level--more'
+    ) as HTMLElement;
+
+    expect(primary.hasAttribute('inert')).toBeFalse();
+    expect(more.hasAttribute('inert')).toBeTrue();
+
+    component.openMore();
+    fixture.detectChanges();
+
+    expect(primary.hasAttribute('inert')).toBeTrue();
+    expect(more.hasAttribute('inert')).toBeFalse();
+  });
+
+  it('keeps the floating panel scrollable for short viewports', () => {
+    const viewport = fixture.nativeElement.querySelector(
+      '.floating-nav__viewport'
+    ) as HTMLElement;
+    const styles = getComputedStyle(viewport);
+
+    expect(styles.overflowY).toBe('auto');
   });
 
   it('returns to the first level from Back and Escape', () => {
@@ -150,6 +198,29 @@ describe('MobileBottomNavComponent', () => {
     expect(component.menuOpen).toBeFalse();
     expect(component.moreOpen).toBeFalse();
   });
+
+  it('starts closed after being recreated like a mobile remount', () => {
+    component.toggleMenu();
+    fixture.detectChanges();
+    expect(component.menuOpen).toBeTrue();
+
+    fixture.destroy();
+
+    const remounted = TestBed.createComponent(MobileBottomNavComponent);
+    remounted.detectChanges();
+
+    expect(remounted.componentInstance.menuOpen).toBeFalse();
+    remounted.destroy();
+  });
+
+  it('moves focus into the active level when the menu opens', fakeAsync(() => {
+    component.toggleMenu();
+    fixture.detectChanges();
+    tick();
+
+    const active = document.activeElement as HTMLElement | null;
+    expect(active?.closest('.floating-nav__level--primary')).toBeTruthy();
+  }));
 
   it('closes the menu after navigation', async () => {
     component.toggleMenu();

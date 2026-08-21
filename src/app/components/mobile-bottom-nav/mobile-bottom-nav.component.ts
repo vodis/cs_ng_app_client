@@ -1,4 +1,11 @@
-import { Component, HostBinding, HostListener, OnDestroy } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostBinding,
+  HostListener,
+  OnDestroy,
+  ViewChild,
+} from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import {
@@ -6,7 +13,6 @@ import {
   stripLocalePrefix,
 } from '@core/routing/localized-routing.service';
 import { environment } from '../../../environments/environment';
-import { MobileNavMenuService } from './mobile-nav-menu.service';
 
 export type MobileNavIcon =
   | 'home'
@@ -18,7 +24,6 @@ export type MobileNavIcon =
   | 'bots'
   | 'history'
   | 'settings'
-  | 'security'
   | 'external'
   | 'docs';
 
@@ -40,6 +45,12 @@ export type MobileNavItem = {
 export class MobileBottomNavComponent implements OnDestroy {
   public menuOpen = false;
   public moreOpen = false;
+
+  @ViewChild('menuTrigger')
+  private menuTrigger?: ElementRef<HTMLButtonElement>;
+
+  @ViewChild('floatingNav')
+  private floatingNav?: ElementRef<HTMLElement>;
 
   @HostBinding('class.menu-open')
   get hostMenuOpen(): boolean {
@@ -106,12 +117,6 @@ export class MobileBottomNavComponent implements OnDestroy {
       icon: 'settings',
     },
     {
-      name: 'Texts.sidebar-security',
-      fallback: 'Security',
-      url: '/profile',
-      icon: 'security',
-    },
-    {
       name: 'Texts.sidebar-website',
       fallback: 'Craftscript.com',
       href: environment.origin,
@@ -133,20 +138,11 @@ export class MobileBottomNavComponent implements OnDestroy {
   ];
 
   private routerSubscription?: Subscription;
-  private menuSubscription?: Subscription;
 
   constructor(
     private readonly localizedRouting: LocalizedRoutingService,
-    private readonly router: Router,
-    private readonly navMenu: MobileNavMenuService
+    private readonly router: Router
   ) {
-    this.menuOpen = this.navMenu.isOpen;
-    this.menuSubscription = this.navMenu.open$.subscribe(open => {
-      this.menuOpen = open;
-      if (!open) {
-        this.moreOpen = false;
-      }
-    });
     this.routerSubscription = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => this.closeMenu());
@@ -154,7 +150,6 @@ export class MobileBottomNavComponent implements OnDestroy {
 
   public ngOnDestroy(): void {
     this.routerSubscription?.unsubscribe();
-    this.menuSubscription?.unsubscribe();
   }
 
   public trackById(index: number): number {
@@ -171,25 +166,33 @@ export class MobileBottomNavComponent implements OnDestroy {
 
   public toggleMenu(): void {
     if (this.menuOpen) {
-      this.closeMenu();
+      this.closeMenu(true);
       return;
     }
 
     this.moreOpen = false;
-    this.navMenu.open();
+    this.menuOpen = true;
+    this.focusActiveLevel();
   }
 
-  public closeMenu(): void {
-    this.navMenu.close();
+  public closeMenu(restoreTriggerFocus = false): void {
+    this.menuOpen = false;
+    this.moreOpen = false;
+
+    if (restoreTriggerFocus) {
+      queueMicrotask(() => this.menuTrigger?.nativeElement.focus());
+    }
   }
 
   public openMore(): void {
-    this.navMenu.open();
+    this.menuOpen = true;
     this.moreOpen = true;
+    this.focusActiveLevel();
   }
 
   public closeMore(): void {
     this.moreOpen = false;
+    this.focusActiveLevel();
   }
 
   public onRailClick(): void {
@@ -198,7 +201,7 @@ export class MobileBottomNavComponent implements OnDestroy {
       return;
     }
 
-    this.closeMenu();
+    this.closeMenu(true);
   }
 
   public isMoreActive(): boolean {
@@ -208,6 +211,12 @@ export class MobileBottomNavComponent implements OnDestroy {
 
     const path = stripLocalePrefix(this.router.url).split(/[?#]/)[0];
     return this.moreSectionUrls.includes(path);
+  }
+
+  public internalDestinations(): string[] {
+    return [...this.links, ...this.moreLinks]
+      .map(item => item.url)
+      .filter((url): url is string => !!url);
   }
 
   @HostListener('document:keydown.escape')
@@ -221,6 +230,23 @@ export class MobileBottomNavComponent implements OnDestroy {
       return;
     }
 
-    this.closeMenu();
+    this.closeMenu(true);
+  }
+
+  private focusActiveLevel(): void {
+    queueMicrotask(() => {
+      const root = this.floatingNav?.nativeElement;
+      if (!root) {
+        return;
+      }
+
+      const level = this.moreOpen
+        ? '.floating-nav__level--more'
+        : '.floating-nav__level--primary';
+      const target = root.querySelector(
+        `${level} a, ${level} button`
+      ) as HTMLElement | null;
+      target?.focus();
+    });
   }
 }

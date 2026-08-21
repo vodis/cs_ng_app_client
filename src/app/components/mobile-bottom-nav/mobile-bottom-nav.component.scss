@@ -24,6 +24,17 @@
   visibility: hidden;
 }
 
+.floating-menu-button {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgb(254 108 0 / 40%);
+  border-radius: 50%;
+  background: var(--fn-bg);
+  box-shadow: 0 0 8px rgb(254 108 0 / 22%);
+  place-items: center;
+}
+
 .floating-trigger {
   position: fixed;
   z-index: 110;
@@ -45,15 +56,9 @@
   }
 }
 
-.floating-menu-button {
-  display: grid;
-  width: 58px;
-  height: 58px;
-  border: 1px solid rgb(254 108 0 / 40%);
-  border-radius: 50%;
-  background: var(--fn-bg);
-  box-shadow: 0 0 8px rgb(254 108 0 / 22%);
-  place-items: center;
+.floating-trigger:focus-visible .floating-menu-button {
+  outline: 2px solid var(--fn-accent);
+  outline-offset: 3px;
 }
 
 .floating-nav__chevron {
@@ -94,6 +99,7 @@
   background: var(--fn-bg);
   box-shadow: none;
   grid-template-columns: minmax(0, 1fr) 1.75rem;
+  grid-template-rows: minmax(0, 1fr);
   opacity: 0;
   pointer-events: none;
   transform: translateX(20px);
@@ -106,8 +112,11 @@
 }
 
 .floating-nav__viewport {
-  overflow: hidden;
+  overflow: hidden auto;
   min-width: 0;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .floating-nav__rail {
@@ -163,6 +172,11 @@
     opacity 200ms var(--fn-ease),
     transform var(--fn-duration) var(--fn-ease),
     color 160ms ease;
+
+  &:focus-visible {
+    outline: 2px solid var(--fn-accent);
+    outline-offset: -2px;
+  }
 
   &.active {
     color: var(--fn-accent);
