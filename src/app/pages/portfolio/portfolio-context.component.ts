@@ -15,10 +15,14 @@ export class PortfolioContextComponent {
   @Input() profile?: InvestmentProfile;
   @Input() config?: AgentIntegrationConfig;
   @Input() connections: AgentConnection[] = [];
+  @Input() connectionsLoading = false;
+  @Input() connectionsLoaded = false;
+  @Input() connectionsError = '';
   @Input() revokingId = '';
 
   @Output() editProfile = new EventEmitter<void>();
   @Output() connectAgent = new EventEmitter<void>();
+  @Output() retryConnections = new EventEmitter<void>();
   @Output() revokeAgent = new EventEmitter<AgentConnection>();
 
   label(value: string | undefined): string {

@@ -43,9 +43,13 @@
         [profile]="profile"
         [config]="config"
         [connections]="connections"
+        [connectionsLoading]="connectionsLoading"
+        [connectionsLoaded]="connectionsLoaded"
+        [connectionsError]="connectionsError"
         [revokingId]="revokingId"
         (editProfile)="openProfile()"
         (connectAgent)="openAgent()"
+        (retryConnections)="reloadConnections()"
         (revokeAgent)="revoke($event)"></app-portfolio-context>
     </div>
   </ng-container>
@@ -136,7 +140,7 @@
           color="primary"
           [disabled]="authorizationLoading"
           (click)="decide('approve')">
-          Allow for 30 days
+          Allow for {{ config?.grantLifetimeDays }} days
         </button>
       </div>
     </ng-container>

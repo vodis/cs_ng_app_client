@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { ProductEventsService } from '@core/product-events/product-events.service';
 import { PortfolioApiService } from './portfolio-api.service';
 import {
@@ -23,6 +24,9 @@ export class PortfolioComponent implements OnInit {
   profile?: InvestmentProfile;
   config?: AgentIntegrationConfig;
   connections: AgentConnection[] = [];
+  connectionsLoading = false;
+  connectionsLoaded = false;
+  connectionsError = '';
   loading = true;
   error = '';
   actionError = '';
@@ -42,10 +46,14 @@ export class PortfolioComponent implements OnInit {
 
   constructor(
     private readonly api: PortfolioApiService,
-    private readonly events: ProductEventsService
+    private readonly events: ProductEventsService,
+    private readonly route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    if (this.route.snapshot.queryParamMap.get('connect') === 'device') {
+      this.openAgent();
+    }
     void this.load();
   }
 
@@ -164,6 +172,9 @@ export class PortfolioComponent implements OnInit {
     this.actionError = '';
     try {
       await this.api.revokeConnection(connection.id);
+      this.connections = this.connections.filter(
+        candidate => candidate.id !== connection.id
+      );
       await this.reloadConnections();
     } catch (error) {
       this.actionError = this.message(
@@ -175,11 +186,21 @@ export class PortfolioComponent implements OnInit {
     }
   }
 
-  private async reloadConnections(): Promise<void> {
+  async reloadConnections(): Promise<void> {
+    this.connectionsLoading = true;
+    this.connectionsError = '';
     try {
-      this.connections = await this.api.loadConnections();
+      const connections = await this.api.loadConnections();
+      this.connections = connections.filter(
+        connection => connection.status === 'active'
+      );
+      this.connectionsLoaded = true;
     } catch {
-      this.connections = [];
+      this.connectionsLoaded = false;
+      this.connectionsError =
+        'Connected-agent status is temporarily unavailable.';
+    } finally {
+      this.connectionsLoading = false;
     }
   }
 

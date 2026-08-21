@@ -1,10 +1,13 @@
 import { ProductEventsService } from '@core/product-events/product-events.service';
+import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
 import { PortfolioApiService } from './portfolio-api.service';
 import { PortfolioComponent } from './portfolio.component';
 
 describe('PortfolioComponent', () => {
   let api: jasmine.SpyObj<PortfolioApiService>;
   let events: jasmine.SpyObj<ProductEventsService>;
+  let routeQueryParams: ParamMap;
+  let route: ActivatedRoute;
   let component: PortfolioComponent;
 
   beforeEach(() => {
@@ -23,6 +26,14 @@ describe('PortfolioComponent', () => {
       'ProductEventsService',
       ['record', 'recordFailure']
     );
+    routeQueryParams = convertToParamMap({});
+    route = {
+      snapshot: {
+        get queryParamMap(): ParamMap {
+          return routeQueryParams;
+        },
+      } as ActivatedRoute['snapshot'],
+    } as unknown as ActivatedRoute;
     api.loadPortfolio.and.resolveTo({
       asOf: '2026-08-19T12:00:00Z',
       valuationCurrency: 'USD',
@@ -56,7 +67,7 @@ describe('PortfolioComponent', () => {
       grantLifetimeDays: 30,
     });
     api.loadConnections.and.resolveTo([]);
-    component = new PortfolioComponent(api, events);
+    component = new PortfolioComponent(api, events, route);
   });
 
   it('loads portfolio, preferences, capability, and connections', async () => {
@@ -96,4 +107,48 @@ describe('PortfolioComponent', () => {
     });
     expect(component.profileOpen).toBeFalse();
   });
+
+  it('does not present a connection API failure as an empty access list', async () => {
+    api.loadConnections.and.rejectWith(new Error('network unavailable'));
+
+    await component.load();
+
+    expect(component.connectionsLoaded).toBeFalse();
+    expect(component.connectionsError).toContain('temporarily unavailable');
+  });
+
+  it('shows only active agent connections', async () => {
+    api.loadConnections.and.resolveTo([
+      connection('active', 'active-agent'),
+      connection('expired', 'expired-agent'),
+      connection('revoked', 'revoked-agent'),
+    ]);
+
+    await component.load();
+
+    expect(component.connections.map(item => item.id)).toEqual([
+      'active-agent',
+    ]);
+    expect(component.connectionsLoaded).toBeTrue();
+  });
+
+  it('opens the device-code flow from its verification URL', () => {
+    routeQueryParams = convertToParamMap({ connect: 'device' });
+
+    component.ngOnInit();
+
+    expect(component.agentOpen).toBeTrue();
+  });
+
+  function connection(status: 'active' | 'expired' | 'revoked', id: string) {
+    return {
+      id,
+      clientName: id,
+      scopes: ['portfolio:read'],
+      status,
+      createdAt: '2026-08-19T12:00:00Z',
+      expiresAt: '2026-09-18T12:00:00Z',
+      lastUsedAt: null,
+    };
+  }
 });

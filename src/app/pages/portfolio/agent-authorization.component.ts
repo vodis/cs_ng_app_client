@@ -25,8 +25,9 @@ import { AgentAuthorizationRequest } from './portfolio.models';
             }
           </ul>
           <p class="authorization-card__note">
-            Read-only access expires {{ expiresLabel() }}. The agent cannot
-            trade, move funds, or view your account login details.
+            Read-only access lasts for up to {{ grantLifetimeDays }} days unless
+            you revoke it. The agent cannot trade, move funds, or view your
+            account login details.
           </p>
           <div class="authorization-card__actions">
             <button
@@ -54,6 +55,7 @@ import { AgentAuthorizationRequest } from './portfolio.models';
 })
 export class AgentAuthorizationComponent implements OnInit {
   request?: AgentAuthorizationRequest;
+  grantLifetimeDays?: number;
   loading = true;
   busy = false;
   error = 'It may have expired or already been used.';
@@ -72,9 +74,22 @@ export class AgentAuthorizationComponent implements OnInit {
     }
     history.replaceState({}, document.title, location.pathname);
     try {
-      this.request = await this.api.loadAuthorization(id);
+      const [request, config] = await Promise.all([
+        this.api.loadAuthorization(id),
+        this.api.loadAgentConfig(),
+      ]);
+      if (
+        !config.enabled ||
+        !Number.isInteger(config.grantLifetimeDays) ||
+        config.grantLifetimeDays <= 0
+      ) {
+        throw new Error('Agent access is not available.');
+      }
+      this.request = request;
+      this.grantLifetimeDays = config.grantLifetimeDays;
     } catch {
       this.request = undefined;
+      this.grantLifetimeDays = undefined;
     } finally {
       this.loading = false;
     }
@@ -85,15 +100,9 @@ export class AgentAuthorizationComponent implements OnInit {
       'portfolio:read': 'View balances, allocation, and price timestamps',
       'investment_profile:read':
         'View your objective, risk tolerance, and horizon',
-      offline_access: 'Reconnect for up to 30 days unless you revoke access',
+      offline_access: `Reconnect for up to ${this.grantLifetimeDays} days unless you revoke access`,
     };
     return labels[scope] ?? scope;
-  }
-
-  expiresLabel(): string {
-    return this.request
-      ? new Date(this.request.expiresAt).toLocaleString()
-      : '';
   }
 
   async decide(decision: 'approve' | 'deny'): Promise<void> {
