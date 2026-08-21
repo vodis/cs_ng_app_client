@@ -131,7 +131,10 @@ export function recipientAddressError(
     valid = /^0x[a-fA-F0-9]{64}$/.test(address);
   else if (blockchain === 'starknet')
     valid = /^0x[a-fA-F0-9]{1,64}$/.test(address);
-  else valid = address.length >= 8 && address.length <= 128;
+  else
+    return `Recipient addresses for ${networkLabel(
+      blockchain
+    )} are not supported yet.`;
 
   return valid ? '' : `Enter a valid ${networkLabel(blockchain)} address.`;
 }

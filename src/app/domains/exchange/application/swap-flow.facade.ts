@@ -205,7 +205,7 @@ export class SwapFlowFacade {
       input.destinationAsset,
       input.amount,
       input.signerId.toLowerCase(),
-      input.recipient.toLowerCase(),
+      input.recipient,
       input.recipientType,
       input.slippageTolerance,
       input.authMethod,

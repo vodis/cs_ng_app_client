@@ -199,6 +199,8 @@ export class HomeComponent {
   public tokenSelectorSide: TokenSelectorSide | null = null;
   public isRecipientPanelOpen = false;
   public recipientAddress = '';
+  public crossNetworkRecipientIntentSignEnabled =
+    environment.crossNetworkRecipientIntentSignEnabled;
   public swapFlowState: SwapFlowState = 'idle';
   public quoteError = '';
   public quotePreview: SwapQuotePreview | undefined;
@@ -1045,9 +1047,21 @@ export class HomeComponent {
 
   public tokenSelectorTokens(): ExchangeToken[] {
     const blockchain = this.connectedWalletBlockchain();
-    if (this.tokenSelectorSide !== 'from' || !blockchain)
+    if (!blockchain) {
       return this.exchangeTokens;
-    return this.exchangeTokens.filter(token => token.blockchain === blockchain);
+    }
+
+    if (
+      this.tokenSelectorSide === 'from' ||
+      (this.tokenSelectorSide === 'to' &&
+        !this.crossNetworkRecipientIntentSignEnabled)
+    ) {
+      return this.exchangeTokens.filter(
+        token => token.blockchain === blockchain
+      );
+    }
+
+    return this.exchangeTokens;
   }
 
   public connectedWalletBlockchain(): string | undefined {
@@ -1408,6 +1422,9 @@ export class HomeComponent {
 
   private recipientValidationError(): string {
     if (!this.isForeignDestination()) return '';
+    if (!this.crossNetworkRecipientIntentSignEnabled) {
+      return 'Cross-network recipients are not available until the backend and wallet execution contracts are enabled.';
+    }
     return recipientAddressError(
       this.toToken.blockchain,
       this.recipientAddress

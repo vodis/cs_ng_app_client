@@ -28,12 +28,9 @@ describe('network utils', () => {
     );
   });
 
-  it('allows future API networks through safe generic validation', () => {
+  it('fails closed for networks without an address validator', () => {
     expect(recipientAddressError('future-chain', 'future-address-123')).toBe(
-      ''
-    );
-    expect(recipientAddressError('future-chain', 'bad address')).toContain(
-      'cannot contain spaces'
+      'Recipient addresses for Future-chain are not supported yet.'
     );
   });
 });

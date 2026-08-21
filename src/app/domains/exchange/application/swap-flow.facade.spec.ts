@@ -166,6 +166,23 @@ describe('SwapFlowFacade quote preview refresh', () => {
     expect(workflow.quoteCalls.length).toBe(1);
   }));
 
+  it('refreshes case-sensitive recipient addresses that differ only by case', fakeAsync(() => {
+    facade.watchQuotePreview(
+      input({ recipient: 'BYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z' })
+    );
+    tick(350);
+
+    facade.watchQuotePreview(
+      input({ recipient: 'bYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z' })
+    );
+    tick(350);
+
+    expect(workflow.quoteCalls.length).toBe(2);
+    expect(workflow.quoteCalls[1].input.recipient).toBe(
+      'bYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z'
+    );
+  }));
+
   function input(overrides: Partial<SwapFormInput> = {}): SwapFormInput {
     return {
       originAsset: 'nep141:usdc',

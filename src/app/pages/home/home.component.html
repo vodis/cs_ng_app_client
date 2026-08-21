@@ -152,7 +152,9 @@
             </div>
           </div>
 
-          @if (isForeignDestination()) {
+          @if (
+            isForeignDestination() && crossNetworkRecipientIntentSignEnabled
+          ) {
             <button
               type="button"
               class="recipient-row"
