@@ -1,0 +1,204 @@
+<main class="portfolio-page">
+  <header class="portfolio-page__header">
+    <div>
+      <p class="portfolio-page__eyebrow">
+        {{ 'Texts.portfolio-eyebrow' | csTranslate: 'Portfolio intelligence' }}
+      </p>
+      <h1>{{ 'Texts.portfolio-title' | csTranslate: 'Your portfolio' }}</h1>
+      <p class="portfolio-page__subtitle">
+        A private, read-only view for you and the agents you choose.
+      </p>
+    </div>
+    <button
+      mat-flat-button
+      color="primary"
+      (click)="openAgent()"
+      *ngIf="config?.enabled">
+      <mat-icon aria-hidden="true">auto_awesome</mat-icon>
+      Connect AI agent
+    </button>
+  </header>
+
+  <p class="portfolio-page__alert portfolio-page__alert--error" *ngIf="error">
+    {{ error }}
+    <button type="button" mat-button (click)="load()">Try again</button>
+  </p>
+  <p
+    class="portfolio-page__alert portfolio-page__alert--error"
+    *ngIf="actionError">
+    {{ actionError }}
+  </p>
+
+  <section class="portfolio-page__loading" *ngIf="loading" aria-live="polite">
+    <span class="portfolio-page__loading-dot"></span
+    ><span class="portfolio-page__loading-dot"></span
+    ><span class="portfolio-page__loading-dot"></span>
+    <p>Building your latest portfolio snapshot…</p>
+  </section>
+
+  <ng-container *ngIf="!loading && portfolio as snapshot">
+    <div class="portfolio-grid">
+      <app-portfolio-holdings [snapshot]="snapshot"></app-portfolio-holdings>
+      <app-portfolio-context
+        [profile]="profile"
+        [config]="config"
+        [connections]="connections"
+        [connectionsLoading]="connectionsLoading"
+        [connectionsLoaded]="connectionsLoaded"
+        [connectionsError]="connectionsError"
+        [revokingId]="revokingId"
+        (editProfile)="openProfile()"
+        (connectAgent)="openAgent()"
+        (retryConnections)="reloadConnections()"
+        (revokeAgent)="revoke($event)"></app-portfolio-context>
+    </div>
+  </ng-container>
+</main>
+
+<app-side-modal [isOpen]="profileOpen" (closeModal)="profileOpen = false">
+  <section class="portfolio-modal" *ngIf="profileOpen">
+    <header>
+      <p class="portfolio-modal__eyebrow">Agent context</p>
+      <h2>Investment preferences</h2>
+    </header>
+    <p class="portfolio-modal__intro">
+      These choices help your agent tailor its analysis. They are not a
+      suitability assessment.
+    </p>
+    <label>
+      <span>Primary objective</span>
+      <select [(ngModel)]="objective">
+        <option value="growth">Growth</option>
+        <option value="income">Income</option>
+        <option value="capital_preservation">Capital preservation</option>
+      </select>
+    </label>
+    <label>
+      <span>Risk tolerance</span>
+      <select [(ngModel)]="riskTolerance">
+        <option value="conservative">Conservative</option>
+        <option value="balanced">Balanced</option>
+        <option value="aggressive">Aggressive</option>
+      </select>
+    </label>
+    <label>
+      <span>Investment horizon</span>
+      <select [(ngModel)]="horizon">
+        <option value="under_1y">Under 1 year</option>
+        <option value="1_3y">1–3 years</option>
+        <option value="3_5y">3–5 years</option>
+        <option value="over_5y">Over 5 years</option>
+      </select>
+    </label>
+    <p class="portfolio-modal__error" *ngIf="actionError">{{ actionError }}</p>
+    <div class="portfolio-modal__actions">
+      <button mat-button (click)="profileOpen = false">Cancel</button>
+      <button
+        mat-flat-button
+        color="primary"
+        [disabled]="savingProfile"
+        (click)="saveProfile()">
+        Save preferences
+      </button>
+    </div>
+  </section>
+</app-side-modal>
+
+<app-side-modal [isOpen]="agentOpen" (closeModal)="agentOpen = false">
+  <section class="portfolio-modal agent-connect" *ngIf="agentOpen">
+    <header>
+      <p class="portfolio-modal__eyebrow">Bring your own capacity</p>
+      <h2>Connect an AI agent</h2>
+    </header>
+
+    <ng-container
+      *ngIf="pendingAuthorization as authorization; else connectInstructions">
+      <div class="agent-connect__request">
+        <span class="agent-connect__request-icon"
+          ><mat-icon aria-hidden="true">smart_toy</mat-icon></span
+        >
+        <div class="agent-connect__request-copy">
+          <small>Requesting access</small
+          ><strong>{{ authorization.clientName }}</strong>
+        </div>
+      </div>
+      <h3>Allow read-only access?</h3>
+      <ul class="agent-connect__permissions">
+        <li *ngFor="let scope of authorization.scopes">
+          <mat-icon>check</mat-icon>{{ scope }}
+        </li>
+      </ul>
+      <div class="portfolio-modal__actions">
+        <button
+          mat-stroked-button
+          [disabled]="authorizationLoading"
+          (click)="decide('deny')">
+          Deny
+        </button>
+        <button
+          mat-flat-button
+          color="primary"
+          [disabled]="authorizationLoading"
+          (click)="decide('approve')">
+          Allow for {{ config?.grantLifetimeDays }} days
+        </button>
+      </div>
+    </ng-container>
+
+    <ng-template #connectInstructions>
+      <div class="agent-connect__tested">
+        <mat-icon>verified</mat-icon>Tested with
+        {{ config?.testedClients?.join(' and ') || 'ChatGPT and Codex' }}
+      </div>
+      <ol>
+        <li>Add the CraftScript MCP server in your agent.</li>
+        <li>
+          Choose Connect and sign in to CraftScript in the opened browser.
+        </li>
+        <li>Review and approve the read-only permissions.</li>
+      </ol>
+      <div class="agent-connect__url">
+        <span class="agent-connect__url-copy"
+          ><small>MCP server URL</small><code>{{ config?.mcpUrl }}</code></span
+        >
+        <button
+          type="button"
+          mat-icon-button
+          aria-label="Copy MCP server URL"
+          (click)="copyMcpUrl()">
+          <mat-icon>{{ copying ? 'check' : 'content_copy' }}</mat-icon>
+        </button>
+      </div>
+      <div class="agent-connect__divider">
+        <span>or use a device code</span>
+      </div>
+      <label>
+        <span>Code shown by your agent</span>
+        <input
+          [(ngModel)]="deviceCode"
+          maxlength="9"
+          autocomplete="one-time-code"
+          placeholder="ABCD-EFGH" />
+      </label>
+      <p class="portfolio-modal__error" *ngIf="actionError">
+        {{ actionError }}
+      </p>
+      <button
+        mat-flat-button
+        color="primary"
+        class="agent-connect__continue"
+        [disabled]="deviceLoading"
+        (click)="findDeviceCode()">
+        Continue
+      </button>
+      <p class="agent-connect__disclaimer">
+        AI analysis can be wrong and cannot guarantee profit. Review every
+        suggestion independently.
+      </p>
+    </ng-template>
+    <p class="agent-connect__privacy">
+      Your provider login stays with your agent. CraftScript receives no OpenAI
+      or other model-provider credential.
+    </p>
+  </section>
+</app-side-modal>

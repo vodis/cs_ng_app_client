@@ -18,6 +18,11 @@ const localizedRoutes: Routes = [
       import('./pages/auth/auth.module').then(m => m.AuthModule),
   },
   {
+    path: 'portfolio',
+    loadChildren: () =>
+      import('./pages/portfolio/portfolio.module').then(m => m.PortfolioModule),
+  },
+  {
     path: '',
     loadChildren: () =>
       import('./pages/placeholder/placeholder-page.module').then(
