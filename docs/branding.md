@@ -1,4 +1,4 @@
-# CraftScript Branding Book
+# CraftScript branding guide
 
 This file is a quick visual reference for the app shell and dashboard UI.
 
@@ -192,4 +192,4 @@ Main files:
 - `@vodis/cs-foundation/styles/variables`
 - `@vodis/cs-foundation/styles/typography`
 - `src/app/components/layout/layout.component.scss`
-- `docs/design-system.md`
+- this guide (`docs/branding.md`)

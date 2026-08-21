@@ -1,4 +1,4 @@
-# DEVELOPMENT_GUIDE
+# Development guide
 
 This document describes daily development standards for `cs_ng_app_client` and its integration with `mfe-wallets`.
 
@@ -186,7 +186,7 @@ Keep local checks aligned with CI commands to reduce pipeline surprises.
 
 ## Documentation Requirements
 
-Update this guide and `AGENT_GUIDE.md` whenever one of the following changes:
+Update this guide and [`AGENTS.md`](../AGENTS.md) whenever one of the following changes:
 
 - Module Federation remote URL/module names.
 - Host/MFE communication contract.

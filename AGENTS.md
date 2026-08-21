@@ -1,6 +1,23 @@
-# AGENT_GUIDE
+# Repository agent instructions
 
 This guide is for AI/code agents and contributors working in `cs_ng_app_client`.
+
+Before designing, implementing, or reviewing changes, read this file and start
+documentation discovery from [`docs/README.md`](docs/README.md). Follow the
+relevant canonical guide for the task:
+
+- [`docs/architecture.md`](docs/architecture.md) for ownership boundaries,
+  layering, state, and integration contracts
+- [`docs/development.md`](docs/development.md) for local setup, implementation
+  standards, testing, and change management
+- [`docs/branding.md`](docs/branding.md) for user-facing layout, styling,
+  typography, and responsive behavior
+- [`src/app/mfe-contracts/README.md`](src/app/mfe-contracts/README.md) for the
+  host-side wallet MFE contract surface
+
+Keep the root [`README.md`](README.md) concise and onboarding-focused. Put
+detailed project guidance in `docs/` and update the documentation index when a
+guide is added, renamed, or removed.
 
 ## Branch and PR Workflow
 
@@ -24,7 +41,7 @@ This guide is for AI/code agents and contributors working in `cs_ng_app_client`.
 
 When working on UI interface, visual styling, layout, spacing, typography,
 responsive behavior, shell chrome, or any user-facing design detail, use
-`BRANDING_BOOK.md` as the primary reference.
+[`docs/branding.md`](docs/branding.md) as the primary reference.
 
 Use it for:
 
@@ -36,151 +53,9 @@ Use it for:
 
 ## Exchange Page UI Reference
 
-The default route (`/`) renders the **Token Exchange** screen inside the host shell. Treat the layout below as the product baseline when changing home-page UI or styles.
-
-### Shell frame
-
-```text
-+------------------------------------------------------------------+
-| [Logo]                                    [CONNECT WALLET]       |
-+----------+-------------------------------------------------------+
-| Sidebar  | Main content (HomeComponent / `.exchange-page`)       |
-|          |                                                       |
-| Inform.  |  TOKEN EXCHANGE intro banner                          |
-|  Board   |  +------------------+  +---------------------------+  |
-| Finance  |  | Swap Tokens      |  | Market Overview           |  |
-|  Farm    |  |                  |  |                           |  |
-| Dev Act. |  +------------------+  +---------------------------+  |
-| Proposals|  | Recent Activity (full-width table)                |  |
-+----------+-------------------------------------------------------+
-```
-
-| Shell area             | Route                      | Primary files                 |
-| ---------------------- | -------------------------- | ----------------------------- |
-| Header (logo + wallet) | global                     | `src/app/components/header/`  |
-| Sidebar navigation     | `/`, `/farm`, `/proposals` | `src/app/components/sidebar/` |
-| App frame              | global                     | `src/app/components/layout/`  |
-| Token Exchange page    | `/`                        | `src/app/pages/home/`         |
-
-Sidebar groups:
-
-- **Informations** → Board (`/`)
-- **Finance** → Farm (`/farm`)
-- **Dev Activity** → Proposals (`/proposals`)
-
-Wallet connect lives in the header (`app-wallet-bar`, wallets MFE). Swap panel submit also requires a connected wallet.
-
-### Page sections
-
-#### 1. Intro banner (`.intro`)
-
-- Title: `Token Exchange`
-- Subtitle: `Best routes. Best price. Powered by CraftScript.`
-
-#### 2. Swap Tokens (`.panel.swapPanel`)
-
-Left column (`gridTop` is `42% / 58%` on desktop).
-
-| Block        | Markup / classes   | Behavior                                                    |
-| ------------ | ------------------ | ----------------------------------------------------------- |
-| From row     | `.swapRow.first`   | Token selector, balance, amount input, USD estimate         |
-| Flip control | `.swapCircle`      | Swaps from/to tokens and reloads market comparison          |
-| To row       | `.swapRow`         | Token selector, balance, quoted/output amount, USD estimate |
-| Details grid | `.stats` / `.stat` | Rate, Price Impact, Slippage, Network Fee                   |
-| Primary CTA  | `.connectMain`     | Submits quote (`submitQuote()`); label follows wallet state |
-
-Token pickers open `app-side-modal` with `app-token-select-panel`. Amount editing, paste guards, and decimal validation stay in `HomeComponent`.
-
-#### 3. Market Overview (`.panel.marketPanel`)
-
-Right column.
-
-| Block          | Markup / classes                      | Behavior                                                                                                        |
-| -------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Header         | `.marketHead`                         | Title + tabs (Price / Volume / Liquidity) and timeframe buttons                                                 |
-| Timeframes     | `.range`                              | `1H`, `1D`, `1W` (active state switches comparison window; backend comparison currently has no `1M` contract)   |
-| Summary column | `.marketBody`, `.marketSummary`       | Narrow left column (`~104px`) for pair, price, and 24h change                                                   |
-| Pair           | `.pair`                               | Base/quote token icons and symbol pair                                                                          |
-| Price          | `.price`, `.change`                   | Quote token price and 24h change from comparison API                                                            |
-| Chart          | `.chart`                              | SVG relative-performance chart in the right grid column (`1fr`); line is quote-token move minus base-token move |
-| Footer         | `.marketFooter`, `.note`, `.advanced` | Hint (`margin-top: 16px`) + advanced link (`margin-top: 12px`) in normal flow below the chart                   |
-
-Market data loads from `GET ${environment.apiUrl}/api/v1/markets/comparison`.
-
-#### 4. Recent Activity (`.panel.activity`)
-
-Full-width table below the top grid.
-
-| Column  | Content                                       |
-| ------- | --------------------------------------------- |
-| Time    | Trade timestamp                               |
-| Pair    | Token icons with arrow (`.pairCell`, `.mini`) |
-| Amount  | Sold amount                                   |
-| You Get | Received amount                               |
-| Status  | Completion state (`.status`, `.external`)     |
-
-Row data is currently defined in `HomeComponent.recentActivity` (host-owned demo content until backend history is wired).
-
-### Styling contract
-
-Exchange page styles are scoped under `.exchange-page` in `src/styles/exchange-page.scss` (imported from `src/styles.scss`).
-
-| Token                  | Value                                   | Usage                             |
-| ---------------------- | --------------------------------------- | --------------------------------- |
-| `--exchange-orange`    | `var(--primary-text-color)` / `#fe6c00` | Labels, active tabs, CTAs, links  |
-| `--exchange-green`     | `#00d084`                               | Positive change, completed status |
-| `--exchange-line`      | `#2a3437`                               | Panel borders                     |
-| `--exchange-line-soft` | `#20292c`                               | Row dividers                      |
-| Page background        | `var(--main-bg-color)` / `#171c1f`      | Exchange content area             |
-| Panel background       | `rgba(12, 18, 20, 0.55)`                | Cards with inset highlight        |
-
-Typography and spacing targets:
-
-- Panel padding: `24px` (swap), `24px 28px` (market)
-- Swap row height: `112px`; stats row height: `70px`
-- Market panel height: `486px` on desktop (auto on `<= 1100px`)
-- Market body grid: `104px / 1fr` — keep the price column compact so the chart gets most of the width
-- Amount fields use `Aeonik Fono` via `.amount`
-
-Keep new exchange UI inside `.exchange-page` selectors. Avoid leaking exchange-specific rules into global shell styles.
-
-### Exchange APIs used by Home
-
-| Action                  | Endpoint                         | Owner      |
-| ----------------------- | -------------------------------- | ---------- |
-| Dry quote               | `POST /api/v1/quotes/one-click`  | NestJS BFF |
-| Market comparison chart | `GET /api/v1/markets/comparison` | NestJS BFF |
-
-Client token metadata in `HomeComponent.exchangeTokens` is display/bootstrap only. Authoritative tradability and quote validation remain on the backend.
-
-### UI change checklist (Exchange page)
-
-1. Update `home.component.html` structure only when the product layout actually changes.
-2. Mirror class renames in `src/styles/exchange-page.scss`.
-3. Preserve wallet gating, token modal flow, quote submission, and comparison reload on token swap.
-4. Verify desktop grid (`42% / 58%`) and mobile single-column breakpoint (`<= 1100px`).
-5. Run lint/tests/build before finishing.
-6. Run `pnpm run e2e` when changing shell layout, header, sidebar, or exchange page chrome.
-
-### Shell layout E2E (Playwright)
-
-Regression tests live in `e2e/shell-layout.spec.ts`. They guard:
-
-- 64px header height
-- Content flush below header (no grid row gap)
-- Persistent vertical divider after load animation
-- Sidebar width = 1/7 viewport column
-- Grid row alignment for sidebar / divider / router
-
-Commands:
-
-| Action                                         | Command                |
-| ---------------------------------------------- | ---------------------- |
-| Run E2E (reuses local `pnpm start` if running) | `pnpm run e2e`         |
-| Install Chromium for CI/local                  | `pnpm run e2e:install` |
-| Interactive debug                              | `pnpm run e2e:ui`      |
-
-CI (`/.github/workflows/build-dev.yml`) runs `pnpm run e2e` against a production build on every push/PR to `develop`.
+For changes to the default Token Exchange route, read
+[`docs/exchange-page.md`](docs/exchange-page.md). It defines the page structure,
+API ownership, styling boundaries, responsive expectations, and E2E coverage.
 
 ## Target Architecture Baseline
 
