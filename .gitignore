@@ -50,6 +50,5 @@ Thumbs.db
 # packages
 .npmrc
 
-# Documents & Agents
-docs/
+# Agent-specific local state
 .claude/
