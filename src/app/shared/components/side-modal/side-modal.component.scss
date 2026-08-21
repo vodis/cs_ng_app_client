@@ -17,6 +17,16 @@
       opacity: 1;
       pointer-events: auto;
     }
+
+    &--left {
+      right: auto;
+      left: 0;
+      transform: translateX(-100%);
+
+      &.open {
+        transform: translateX(0);
+      }
+    }
   }
 
   .side-modal {

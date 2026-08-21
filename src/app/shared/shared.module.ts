@@ -17,6 +17,7 @@ import { AvatarComponent } from '@shared/components/avatar/avatar.component';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
+import { RecipientAddressPanelComponent } from '@shared/components/recipient-address-panel/recipient-address-panel.component';
 
 const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
 
@@ -38,6 +39,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     WalletBarComponent,
     SideModalComponent,
     TokenSelectPanelComponent,
+    RecipientAddressPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
   ],
@@ -51,6 +53,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     WalletAccountComponent,
     SideModalComponent,
     TokenSelectPanelComponent,
+    RecipientAddressPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
     AvatarComponent,

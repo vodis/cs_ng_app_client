@@ -5,7 +5,9 @@
   </section>
 
   <section class="gridTop">
-    <div class="panel swapPanel">
+    <div
+      class="panel swapPanel"
+      [class.swapPanel--foreign]="isForeignDestination()">
       <div class="panelTitle">Swap Tokens</div>
 
       <form autocomplete="off" (ngSubmit)="submitQuote()">
@@ -37,9 +39,12 @@
                         >{{ tokenDisplay(tokenSymbolLabel(fromToken)) }}</span
                       >
                     }
-                    <span class="select__symbol">{{
-                      tokenSymbolLabel(fromToken)
-                    }}</span>
+                    <span class="select__token-meta">
+                      <span class="select__symbol">{{
+                        tokenSymbolLabel(fromToken)
+                      }}</span>
+                      <small>{{ tokenNetworkLabel(fromToken) }}</small>
+                    </span>
                     <span class="select__arrow" aria-hidden="true"
                       >&#9662;</span
                     >
@@ -76,6 +81,12 @@
               type="button"
               class="swapCircle"
               aria-label="Swap tokens"
+              [disabled]="isForeignDestination()"
+              [attr.title]="
+                isForeignDestination()
+                  ? 'Connect a wallet on the destination network to reverse this swap'
+                  : null
+              "
               (click)="swapTokens()">
               <span class="swapCircle__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -113,9 +124,12 @@
                         >{{ tokenDisplay(tokenSymbolLabel(toToken)) }}</span
                       >
                     }
-                    <span class="select__symbol">{{
-                      tokenSymbolLabel(toToken)
-                    }}</span>
+                    <span class="select__token-meta">
+                      <span class="select__symbol">{{
+                        tokenSymbolLabel(toToken)
+                      }}</span>
+                      <small>{{ tokenNetworkLabel(toToken) }}</small>
+                    </span>
                     <span class="select__arrow" aria-hidden="true"
                       >&#9662;</span
                     >
@@ -137,6 +151,23 @@
               </div>
             </div>
           </div>
+
+          @if (
+            isForeignDestination() && crossNetworkRecipientIntentSignEnabled
+          ) {
+            <button
+              type="button"
+              class="recipient-row"
+              (click)="openRecipientPanel()">
+              <span>
+                <small>RECIPIENT · {{ tokenNetworkLabel(toToken) }}</small>
+                <strong>{{ recipientAddressLabel() }}</strong>
+              </span>
+              <mat-icon>{{
+                recipientAddress ? 'edit' : 'arrow_forward'
+              }}</mat-icon>
+            </button>
+          }
         </div>
 
         <div class="stats" aria-label="Swap details">
@@ -397,13 +428,26 @@
     (closeRequested)="closeTokenSelector()">
     <app-token-select-panel
       [title]="tokenSelectorTitle()"
-      [tokens]="exchangeTokens"
+      [tokens]="tokenSelectorTokens()"
       [loading]="exchangeAssetsLoading"
       [loadError]="exchangeAssetsError"
-      [selectedSymbol]="tokenSelectorSelectedSymbol()"
-      [excludedSymbol]="tokenSelectorExcludedSymbol()"
+      [selectedAssetId]="tokenSelectorSelectedAssetId()"
+      [excludedAssetId]="tokenSelectorExcludedAssetId()"
+      [showNetworkStep]="tokenSelectorSide === 'to'"
       [isOpen]="isTokenSelectorOpen"
       (tokenSelected)="handleTokenSelected($event)"
       (closeRequested)="closeTokenSelector()" />
+  </app-side-modal>
+
+  <app-side-modal
+    placement="left"
+    [isOpen]="isRecipientPanelOpen"
+    (closeRequested)="closeRecipientPanel()">
+    <app-recipient-address-panel
+      [isOpen]="isRecipientPanelOpen"
+      [blockchain]="toToken.blockchain"
+      [address]="recipientAddress"
+      (addressSaved)="saveRecipientAddress($event)"
+      (closeRequested)="closeRecipientPanel()" />
   </app-side-modal>
 </div>

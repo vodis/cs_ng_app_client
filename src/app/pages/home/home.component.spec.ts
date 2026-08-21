@@ -151,6 +151,7 @@ describe('HomeComponent market overview', () => {
       displaySymbol: 'BTC',
       name: 'Wrapped Bitcoin',
       color: '#f7931a',
+      blockchain: 'near',
     };
 
     component.changeComparisonTimeframe('1D');
@@ -256,6 +257,7 @@ describe('HomeComponent market overview', () => {
       ...component.toToken,
       symbol: 'ETH',
       decimals: 6,
+      blockchain: 'eth',
     };
     component.quoteResult = { amountOut: '7385926' };
 
@@ -383,6 +385,90 @@ describe('HomeComponent market overview', () => {
     ]);
   });
 
+  it('uses a confirmed foreign-network recipient in quote previews', () => {
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.crossNetworkRecipientIntentSignEnabled = true;
+    walletsService.account.next({
+      account: '0x0000000000000000000000000000000000000001',
+      chainId: 1,
+    });
+    component.toToken = {
+      assetId: 'nep141:sol-usdc.omft.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+      blockchain: 'sol',
+    };
+    component.amount = '1';
+    component.saveRecipientAddress(
+      'BYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z'
+    );
+
+    expect(component.isForeignDestination()).toBeTrue();
+    expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        signerId: '0x0000000000000000000000000000000000000001',
+        recipient: 'BYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z',
+        recipientType: 'DESTINATION_CHAIN',
+      })
+    );
+  });
+
+  it('fails closed when the foreign-recipient backend contract is disabled', () => {
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({
+      account: '0x0000000000000000000000000000000000000001',
+      chainId: 1,
+    });
+    component.toToken = {
+      assetId: 'nep141:sol-usdc.omft.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+      blockchain: 'sol',
+    };
+    component.amount = '1';
+    component.recipientAddress = 'BYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z';
+    swapFlowFacade.watchQuotePreview.calls.reset();
+
+    component.submitQuote();
+
+    expect(component.quoteError).toContain(
+      'Cross-network recipients are not available'
+    );
+    expect(swapFlowFacade.watchQuotePreview).not.toHaveBeenCalled();
+    component.openTokenSelector('to');
+    expect(
+      component.tokenSelectorTokens().every(token => token.blockchain === 'eth')
+    ).toBeTrue();
+  });
+
   it('retries the quote preview after an asynchronous balance load', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
@@ -401,6 +487,7 @@ describe('HomeComponent market overview', () => {
       timeframe: '1H',
     }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
 
+    component.crossNetworkRecipientIntentSignEnabled = true;
     component.fromToken = {
       ...component.toToken,
       symbol: 'NEAR',
@@ -413,9 +500,11 @@ describe('HomeComponent market overview', () => {
       name: 'USD Coin',
       color: '#2f8cff',
       decimals: 6,
+      blockchain: 'eth',
     };
     component.amount = '1';
     walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.recipientAddress = '0x0000000000000000000000000000000000000002';
 
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(undefined);
 
@@ -438,7 +527,9 @@ describe('HomeComponent market overview', () => {
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
       jasmine.objectContaining({
         amount: '1000000000000000000000000',
-        userAddress: 'alice.near',
+        signerId: 'alice.near',
+        recipient: '0x0000000000000000000000000000000000000002',
+        recipientType: 'DESTINATION_CHAIN',
       })
     );
   });
