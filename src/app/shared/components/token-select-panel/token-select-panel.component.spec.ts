@@ -11,12 +11,14 @@ describe('TokenSelectPanelComponent', () => {
       name: 'USD Coin',
       assetId: 'usdc-asset',
       color: '#2f8cff',
+      blockchain: 'eth',
     },
     {
       symbol: 'NEAR',
       name: 'NEAR Protocol',
       assetId: 'near-asset',
       color: '#2fd17c',
+      blockchain: 'near',
     },
   ];
 
@@ -50,7 +52,7 @@ describe('TokenSelectPanelComponent', () => {
   });
 
   it('should exclude the provided symbol from available tokens', () => {
-    component.excludedSymbol = 'NEAR';
+    component.excludedAssetId = 'near-asset';
     fixture.detectChanges();
 
     expect(component.availableTokens).toEqual([tokens[0]]);
@@ -63,7 +65,7 @@ describe('TokenSelectPanelComponent', () => {
   });
 
   it('should mark the selected token in the list', () => {
-    component.selectedSymbol = 'USDC';
+    component.selectedAssetId = 'usdc-asset';
     fixture.detectChanges();
 
     const selected = fixture.nativeElement.querySelector(
@@ -80,6 +82,23 @@ describe('TokenSelectPanelComponent', () => {
     component.handleSelect(tokens[1]);
 
     expect(emitSpy).toHaveBeenCalledWith(tokens[1]);
+  });
+
+  it('requires a network selection for destination assets', () => {
+    const emitSpy = spyOn(component.tokenSelected, 'emit');
+    component.showNetworkStep = true;
+    component.tokens = [
+      tokens[0],
+      { ...tokens[0], assetId: 'usdc-near', blockchain: 'near' },
+    ];
+
+    component.handleSelect(tokens[0]);
+    expect(component.pendingSymbol).toBe('USDC');
+    expect(component.networkOptions.length).toBe(2);
+    expect(emitSpy).not.toHaveBeenCalled();
+
+    component.handleNetworkSelect(component.networkOptions[1]);
+    expect(emitSpy).toHaveBeenCalledWith(component.tokens[1]);
   });
 
   it('should emit closeRequested when close is clicked', () => {

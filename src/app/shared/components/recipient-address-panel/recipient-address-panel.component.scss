@@ -1,0 +1,151 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.recipient-panel {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  background: var(--main-bg-color, #171c1f);
+  color: #fff;
+}
+
+.recipient-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+}
+
+.recipient-panel__header p {
+  margin: 0 0 0.25rem;
+  color: #fe6c00;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+.recipient-panel__header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+
+.recipient-panel__header button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+
+.recipient-panel__body {
+  overflow: auto;
+  padding: 1.5rem;
+}
+
+.recipient-panel__network {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+}
+
+.recipient-panel__network > span {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgb(254 108 0 / 45%);
+  border-radius: 50%;
+  color: #fe6c00;
+  font-weight: 700;
+  place-items: center;
+}
+
+.recipient-panel__network div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.recipient-panel__network small,
+.recipient-panel__field-label {
+  color: rgb(255 255 255 / 50%);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.recipient-panel label {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.recipient-panel input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.9rem;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 0;
+  background: rgb(255 255 255 / 4%);
+  color: #fff;
+  font: inherit;
+  outline: none;
+}
+
+.recipient-panel input:focus {
+  border-color: rgb(254 108 0 / 60%);
+}
+
+.recipient-panel__error {
+  margin: 0.5rem 0 0;
+  color: #ff8f8f;
+  font-size: 0.75rem;
+}
+
+.recipient-panel__save {
+  width: 100%;
+  padding: 0.9rem;
+  border: 0;
+  margin-top: 1rem;
+  background: #fe6c00;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.recipient-panel__soon-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2rem 0 0.75rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.recipient-panel__soon-title span {
+  color: #fe6c00;
+  font-size: 0.6rem;
+}
+
+.recipient-panel__soon {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid rgb(255 255 255 / 8%);
+  margin-top: 0.75rem;
+  color: rgb(255 255 255 / 35%);
+  gap: 0.75rem;
+}
+
+.recipient-panel__soon div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.recipient-panel__soon small {
+  font-size: 0.7rem;
+}

@@ -6,4 +6,5 @@ export interface ExchangeToken {
   color: string;
   icon?: string;
   decimals?: number;
+  blockchain: string;
 }

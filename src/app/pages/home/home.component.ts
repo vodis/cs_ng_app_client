@@ -39,6 +39,11 @@ import {
   tokenAvatarLabel,
 } from '@shared/utils/token-avatar.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
+import {
+  networkLabel,
+  recipientAddressError,
+  walletBlockchain,
+} from '@shared/utils/network.utils';
 
 type TokenSelectorSide = 'from' | 'to';
 
@@ -172,6 +177,7 @@ export class HomeComponent {
       assetId:
         'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
       color: '#2f8cff',
+      blockchain: 'eth',
       icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png',
     },
     {
@@ -179,6 +185,7 @@ export class HomeComponent {
       name: 'NEAR Protocol',
       assetId: 'nep141:wrap.near',
       color: '#2fd17c',
+      blockchain: 'near',
       icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/6535.png',
     },
   ];
@@ -190,6 +197,10 @@ export class HomeComponent {
   public toToken = this.exchangeTokens[1];
   public isTokenSelectorOpen = false;
   public tokenSelectorSide: TokenSelectorSide | null = null;
+  public isRecipientPanelOpen = false;
+  public recipientAddress = '';
+  public crossNetworkRecipientIntentSignEnabled =
+    environment.crossNetworkRecipientIntentSignEnabled;
   public swapFlowState: SwapFlowState = 'idle';
   public quoteError = '';
   public quotePreview: SwapQuotePreview | undefined;
@@ -232,6 +243,8 @@ export class HomeComponent {
         ) {
           this.walletAddress = nextWalletAddress;
           this.walletChainId = nextWalletChainId;
+          this.recipientAddress = '';
+          this.alignSelectionsToWallet();
           this.loadWalletBalances();
           this.refreshSwapQuotePreview();
         }
@@ -281,6 +294,13 @@ export class HomeComponent {
     if (!authMethod) {
       this.quoteError =
         'This wallet is not supported for swaps yet. Connect an EVM or NEAR wallet.';
+      return;
+    }
+
+    const recipientError = this.recipientValidationError();
+    if (recipientError) {
+      this.quoteError = recipientError;
+      if (this.isForeignDestination()) this.openRecipientPanel();
       return;
     }
 
@@ -341,7 +361,12 @@ export class HomeComponent {
       originAsset: this.fromToken.assetId,
       destinationAsset: this.toToken.assetId,
       amount,
-      userAddress: this.walletAddress.toLowerCase(),
+      signerId: this.walletAddress.toLowerCase(),
+      recipient: this.effectiveRecipient(),
+      recipientType:
+        this.isForeignDestination() || authMethod === 'evm'
+          ? 'DESTINATION_CHAIN'
+          : 'INTENTS',
       slippageTolerance: 50,
       deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       authMethod,
@@ -392,6 +417,9 @@ export class HomeComponent {
   }
 
   public swapTokens(): void {
+    if (this.isForeignDestination()) {
+      return;
+    }
     const previousFrom = this.fromToken;
     this.fromToken = this.toToken;
     this.toToken = previousFrom;
@@ -850,6 +878,10 @@ export class HomeComponent {
       return undefined;
     }
 
+    if (this.recipientValidationError()) {
+      return undefined;
+    }
+
     const amount = this.toBaseUnits(this.amount, this.fromToken.decimals);
 
     if (!amount || /^0+$/.test(amount)) {
@@ -983,6 +1015,7 @@ export class HomeComponent {
       this.fromToken = selected;
     } else if (this.tokenSelectorSide === 'to') {
       this.toToken = selected;
+      this.recipientAddress = '';
     }
 
     this.refreshSwapQuotePreview();
@@ -996,28 +1029,74 @@ export class HomeComponent {
       : 'Select destination token';
   }
 
-  public tokenSelectorSelectedSymbol(): string {
+  public tokenSelectorSelectedAssetId(): string {
     if (this.tokenSelectorSide === 'from') {
-      return this.fromToken.symbol;
+      return this.fromToken.assetId;
     }
 
     if (this.tokenSelectorSide === 'to') {
-      return this.toToken.symbol;
+      return this.toToken.assetId;
     }
 
     return '';
   }
 
-  public tokenSelectorExcludedSymbol(): string {
-    if (this.tokenSelectorSide === 'from') {
-      return this.toToken.symbol;
+  public tokenSelectorExcludedAssetId(): string {
+    return this.tokenSelectorSide === 'to' ? this.fromToken.assetId : '';
+  }
+
+  public tokenSelectorTokens(): ExchangeToken[] {
+    const blockchain = this.connectedWalletBlockchain();
+    if (!blockchain) {
+      return this.exchangeTokens;
     }
 
-    if (this.tokenSelectorSide === 'to') {
-      return this.fromToken.symbol;
+    if (
+      this.tokenSelectorSide === 'from' ||
+      (this.tokenSelectorSide === 'to' &&
+        !this.crossNetworkRecipientIntentSignEnabled)
+    ) {
+      return this.exchangeTokens.filter(
+        token => token.blockchain === blockchain
+      );
     }
 
-    return '';
+    return this.exchangeTokens;
+  }
+
+  public connectedWalletBlockchain(): string | undefined {
+    return walletBlockchain(this.walletAddress, this.walletChainId);
+  }
+
+  public tokenNetworkLabel(token: ExchangeToken): string {
+    return networkLabel(token.blockchain);
+  }
+
+  public isForeignDestination(): boolean {
+    const walletNetwork = this.connectedWalletBlockchain();
+    return Boolean(walletNetwork && this.toToken.blockchain !== walletNetwork);
+  }
+
+  public openRecipientPanel(): void {
+    this.isRecipientPanelOpen = true;
+  }
+
+  public closeRecipientPanel(): void {
+    this.isRecipientPanelOpen = false;
+  }
+
+  public saveRecipientAddress(address: string): void {
+    this.recipientAddress = address;
+    this.isRecipientPanelOpen = false;
+    this.quoteError = '';
+    this.refreshSwapQuotePreview();
+  }
+
+  public recipientAddressLabel(): string {
+    if (!this.recipientAddress)
+      return `Add ${this.tokenNetworkLabel(this.toToken)} address`;
+    if (this.recipientAddress.length <= 18) return this.recipientAddress;
+    return `${this.recipientAddress.slice(0, 8)}…${this.recipientAddress.slice(-6)}`;
   }
 
   public tokenColor(symbol: string): string {
@@ -1124,6 +1203,8 @@ export class HomeComponent {
           this.resolveSelectedToken(previousTo, this.pickDefaultToToken()) ??
             tokens[Math.min(1, tokens.length - 1)]
         );
+
+        this.alignSelectionsToWallet();
 
         if (this.fromToken.assetId === this.toToken.assetId) {
           this.toToken =
@@ -1260,16 +1341,93 @@ export class HomeComponent {
   }
 
   private pickDefaultFromToken(): ExchangeToken | undefined {
-    return this.exchangeTokens.find(token => token.symbol === 'USDC');
+    const blockchain = this.connectedWalletBlockchain();
+    return (
+      this.exchangeTokens.find(
+        token =>
+          token.symbol === 'USDC' &&
+          (!blockchain || token.blockchain === blockchain)
+      ) ??
+      this.exchangeTokens.find(
+        token => !blockchain || token.blockchain === blockchain
+      )
+    );
   }
 
   private pickDefaultToToken(): ExchangeToken | undefined {
+    const blockchain = this.connectedWalletBlockchain();
     return (
-      this.exchangeTokens.find(token => token.assetId === 'nep141:wrap.near') ??
       this.exchangeTokens.find(
-        token => token.symbol === 'wNEAR' || token.symbol === 'NEAR'
+        token =>
+          token.assetId === 'nep141:wrap.near' &&
+          (!blockchain || token.blockchain === blockchain)
       ) ??
-      this.exchangeTokens.find(token => token.symbol !== this.fromToken.symbol)
+      this.exchangeTokens.find(
+        token =>
+          (token.symbol === 'wNEAR' || token.symbol === 'NEAR') &&
+          (!blockchain || token.blockchain === blockchain)
+      ) ??
+      this.exchangeTokens.find(
+        token =>
+          token.assetId !== this.fromToken.assetId &&
+          (!blockchain || token.blockchain === blockchain)
+      )
+    );
+  }
+
+  private alignSelectionsToWallet(): void {
+    const blockchain = this.connectedWalletBlockchain();
+    if (!blockchain || this.exchangeTokens.length === 0) return;
+
+    if (this.fromToken.blockchain !== blockchain) {
+      this.fromToken =
+        this.exchangeTokens.find(
+          token =>
+            token.blockchain === blockchain &&
+            token.symbol === this.fromToken.symbol
+        ) ??
+        this.exchangeTokens.find(
+          token => token.blockchain === blockchain && token.symbol === 'USDC'
+        ) ??
+        this.exchangeTokens.find(token => token.blockchain === blockchain) ??
+        this.fromToken;
+    }
+
+    if (
+      this.toToken.blockchain !== blockchain ||
+      this.toToken.assetId === this.fromToken.assetId
+    ) {
+      this.toToken =
+        this.exchangeTokens.find(
+          token =>
+            token.blockchain === blockchain &&
+            token.assetId !== this.fromToken.assetId &&
+            (token.displaySymbol || token.symbol) ===
+              (this.toToken.displaySymbol || this.toToken.symbol)
+        ) ??
+        this.exchangeTokens.find(
+          token =>
+            token.blockchain === blockchain &&
+            token.assetId !== this.fromToken.assetId
+        ) ??
+        this.toToken;
+    }
+  }
+
+  private effectiveRecipient(): string {
+    return (
+      this.isForeignDestination() ? this.recipientAddress : this.walletAddress
+    ).trim();
+  }
+
+  private recipientValidationError(): string {
+    if (!this.isForeignDestination()) return '';
+    if (!this.crossNetworkRecipientIntentSignEnabled) {
+      return 'Cross-network recipients are not available until the backend and wallet execution contracts are enabled.';
+    }
+    return recipientAddressError(
+      this.toToken.blockchain,
+      this.recipientAddress
     );
   }
 

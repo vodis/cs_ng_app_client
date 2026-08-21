@@ -8,6 +8,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 })
 export class SideModalComponent {
   @Input() isOpen = false;
+  @Input() placement: 'left' | 'right' = 'right';
   @Output() closeRequested = new EventEmitter<void>();
 
   public handleBackdropClick(): void {

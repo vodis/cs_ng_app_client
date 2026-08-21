@@ -174,6 +174,19 @@ Host-owned sequence for near-intents swaps:
 6. Host calls `POST /api/v1/swaps/execute` with `signature`, `quoteHashes`, and user context  
    (`prepareBroadcastRequest.prepareSwapSignedData` runs in the BFF execute handler)
 
+Quote and prepare requests keep the signing/refund account separate from the
+destination recipient. `signerId` always identifies the connected wallet;
+`recipient` may be a foreign-chain address and uses
+`recipientType: DESTINATION_CHAIN`. Older BFF clients may omit these recipient
+fields and retain the signer-as-recipient behavior.
+
+The host exposes foreign-recipient routes only when
+`environment.crossNetworkRecipientIntentSignEnabled` is enabled. Keep it
+disabled until the deployed BFF accepts `recipient` / `recipientType` on both
+quote and prepare requests and guarantees `intent_sign` execution packages for
+those routes. A BFF that strips the fields or returns `deposit_address` is not
+compatible with the current wallet gateway and must remain fail-closed.
+
 Host files:
 
 - `src/app/mfe-contracts/intent-prepare.contract.ts`

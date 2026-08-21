@@ -1,4 +1,4 @@
-# ARCHITECTURE_GUIDE
+# Architecture guide
 
 This guide defines the target architecture for `cs_ng_app_client` as an Angular dApp host shell integrated with `mfe-wallets` and NestJS backend APIs.
 

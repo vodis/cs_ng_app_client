@@ -142,4 +142,28 @@ describe('ProductEventsService', () => {
     );
     request.flush({});
   });
+
+  it('recursively removes credential-shaped telemetry fields', () => {
+    service.record({
+      eventName: 'agent.authorization',
+      status: 'failed',
+      metadata: {
+        decision: 'approve',
+        nested: {
+          authorizationCode: 'must-not-leak',
+          codeVerifier: 'must-not-leak',
+          safe: 'kept',
+        },
+      },
+    });
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/product-events`
+    );
+    expect(request.request.body.metadata).toEqual({
+      decision: 'approve',
+      nested: { safe: 'kept' },
+    });
+    request.flush({});
+  });
 });

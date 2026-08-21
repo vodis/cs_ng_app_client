@@ -64,6 +64,16 @@ describe('ExchangeAssetsService', () => {
 
     expect(tokens).toEqual([
       {
+        assetId: 'nep141:eth-usdc.omft.near',
+        symbol: 'USDC',
+        displaySymbol: 'USDC',
+        name: 'USD Coin',
+        icon: undefined,
+        decimals: 6,
+        color: '#2f8cff',
+        blockchain: 'eth',
+      },
+      {
         assetId:
           'nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1',
         symbol: 'USDC',
@@ -72,6 +82,7 @@ describe('ExchangeAssetsService', () => {
         icon: undefined,
         decimals: 6,
         color: '#2f8cff',
+        blockchain: 'near',
       },
       {
         assetId: 'nep141:wrap.near',
@@ -81,6 +92,7 @@ describe('ExchangeAssetsService', () => {
         icon: 'https://example.com/near.png',
         decimals: 24,
         color: '#2fd17c',
+        blockchain: 'near',
       },
     ]);
   });

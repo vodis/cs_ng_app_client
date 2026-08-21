@@ -112,7 +112,7 @@ export class SwapExecutionWorkflow {
         signature,
         quoteHashes: preparePackage.quoteHashes,
         user: {
-          userAddress: request.userAddress.toLowerCase(),
+          userAddress: request.signerId.toLowerCase(),
           userChainType: preparePackage.authMethod,
         },
       });

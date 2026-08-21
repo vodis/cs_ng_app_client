@@ -12,6 +12,7 @@ describe('tokenAvatarUtils', () => {
     name: 'dogwifhat',
     assetId: 'nep141:wif',
     color: 'hsl(280 58% 46%)',
+    blockchain: 'sol',
   };
 
   it('should keep the API icon when present', () => {
@@ -31,6 +32,7 @@ describe('tokenAvatarUtils', () => {
       name: 'USD Coin',
       assetId: 'nep141:usdc',
       color: '#2f8cff',
+      blockchain: 'eth',
     };
 
     expect(enrichExchangeToken(usdc).icon).toContain('coinmarketcap.com');

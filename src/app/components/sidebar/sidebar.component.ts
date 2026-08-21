@@ -25,6 +25,12 @@ export class SidebarComponent {
 
   public sidebarFinansialLinks = [
     {
+      name: 'Texts.sidebar-portfolio',
+      fallback: 'Portfolio',
+      url: '/portfolio',
+      isActive: true,
+    },
+    {
       name: 'Texts.sidebar-farm',
       fallback: 'Farm',
       url: '/farm',
