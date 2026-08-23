@@ -184,6 +184,17 @@ Use this structure as the baseline for new work:
 CI already validates lint, tests, and production build (`.github/workflows/build-dev.yml`).
 Keep local checks aligned with CI commands to reduce pipeline surprises.
 
+Merges to `develop` also publish `ghcr.io/vodis/cs_ng_app_client:staging` and
+the matching `:staging-metadata` artifact. That image uses Angular's `staging`
+configuration and sends API calls through the staging app's same-origin
+`/api/` gateway. It is deployed as `staging-cs-ng-app-client` at
+`https://staging-app.craftscript.com`.
+
+Until `staging-wallets.craftscript.com` is registered, staging continues to
+load the approved production wallet remote from `wallets.craftscript.com`, but
+passes `environment: staging` and the staging API base URL through the host/MFE
+contract.
+
 ## Documentation Requirements
 
 Update this guide and [`AGENTS.md`](../AGENTS.md) whenever one of the following changes:

@@ -195,7 +195,10 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
     return error instanceof Error ? error.message : String(error);
   }
 
-  private mfeEnvironment(): 'dev' | 'prod' {
+  private mfeEnvironment(): 'dev' | 'staging' | 'prod' {
+    if (environment.name === 'staging') {
+      return 'staging';
+    }
     return environment.production ? 'prod' : 'dev';
   }
 

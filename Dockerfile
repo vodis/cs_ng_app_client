@@ -18,10 +18,12 @@ FROM node:22-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
+ARG BUILD_SCRIPT=build-prod
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN pnpm run build-prod
+RUN pnpm run "${BUILD_SCRIPT}"
 
 FROM nginx:1.27-alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf

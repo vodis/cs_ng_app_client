@@ -8,6 +8,7 @@
     "build": "ng build",
     "build-dev": "node --max_old_space_size=6144 ./node_modules/@angular/cli/bin/ng build --configuration development  --aot && gulp compress",
     "build-prod": "node --max_old_space_size=6144 ./node_modules/@angular/cli/bin/ng build --configuration production  --aot && gulp compress",
+    "build-staging": "node --max_old_space_size=6144 ./node_modules/@angular/cli/bin/ng build --configuration staging --aot && gulp compress",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "eslint --ext .ts --ext .html ./ --fix",
