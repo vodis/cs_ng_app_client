@@ -1,0 +1,126 @@
+name: Build Staging - Orchestrator
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  group: staging-orchestrator-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GHCR_IMAGE: ghcr.io/vodis/cs_ng_app_client
+  METADATA_MEDIA_TYPE: application/vnd.craftscript.deploy-metadata.v1+json
+  ORAS_VERSION: 1.2.2
+
+jobs:
+  bundle:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push staging app image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.GHCR_IMAGE }}:staging
+            ${{ env.GHCR_IMAGE }}:staging-${{ github.sha }}
+          build-args: |
+            BUILD_SCRIPT=build-staging
+          secrets: |
+            npm_token=${{ secrets.GH_PACKAGES_TOKEN }}
+          provenance: true
+          sbom: true
+
+      - name: Verify build digest output
+        run: |
+          test -n "${{ steps.build.outputs.digest }}"
+          echo "build.digest=${{ steps.build.outputs.digest }}"
+
+      - name: Write deploy-metadata.json
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          mkdir -p artifacts
+          python3 <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+
+          server = "https://github.com"
+          gh_repo = "vodis/cs_ng_app_client"
+          run_id = os.environ["RUN_ID"]
+          digest = os.environ["DIGEST"]
+
+          meta = {
+              "schemaVersion": "1",
+              "service": "staging-cs-ng-app-client",
+              "environment": "staging",
+              "git": {
+                  "repository": "https://github.com/vodis/cs_ng_app_client.git",
+                  "commitSha": os.environ["SHA"],
+                  "branch": "develop",
+                  "actor": os.environ["ACTOR"],
+              },
+              "image": {
+                  "registry": "ghcr.io",
+                  "repository": "vodis/cs_ng_app_client",
+                  "digest": digest,
+              },
+              "security": {
+                  "sbomUri": f"{server}/{gh_repo}/actions/runs/{run_id}#docker-build-sbom",
+                  "scanSummaryUri": f"{server}/{gh_repo}/actions/runs/{run_id}#docker-build-provenance",
+                  "signatureRef": f"ghcr.io/vodis/cs_ng_app_client@{digest}",
+              },
+              "build": {
+                  "pipelineId": run_id,
+                  "pipelineUrl": f"{server}/{gh_repo}/actions/runs/{run_id}",
+                  "builtAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              },
+          }
+          with open("artifacts/deploy-metadata.json", "w", encoding="utf-8") as f:
+              json.dump(meta, f, indent=2)
+              f.write("\n")
+          PY
+
+      - name: Install ORAS
+        run: |
+          curl -sSfL "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin oras
+
+      - name: Push deploy-metadata to GHCR
+        run: |
+          oras push "${GHCR_IMAGE}:staging-metadata" \
+            "artifacts/deploy-metadata.json:${METADATA_MEDIA_TYPE}"
+
+      - name: Upload deploy metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-deploy-metadata-${{ github.sha }}
+          path: artifacts/deploy-metadata.json

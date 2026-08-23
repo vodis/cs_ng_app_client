@@ -40,6 +40,10 @@ wallet development, run `cs_mfe-wallets` separately and point
 `src/config/mf.manifest.json` to its local remote entry as described in the
 [development guide](docs/development.md).
 
+Merges to `develop` publish the staging image and orchestrator metadata used by
+<https://staging-app.craftscript.com>. The staging bundle is compiled against
+the isolated staging API.
+
 ## Validation
 
 Run the checks that match the scope of the change:
