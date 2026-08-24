@@ -70,6 +70,15 @@
               "extraWebpackConfig": "config/webpack.prod.config.js"
             },
             "staging": {
+              "assets": [
+                "src/favicon.ico",
+                "src/assets",
+                {
+                  "glob": "mf.manifest.json",
+                  "input": "src/config/staging",
+                  "output": "assets"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
