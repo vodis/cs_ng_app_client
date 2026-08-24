@@ -4,11 +4,7 @@
   gap: 1rem;
 
   &__header {
-    display: flex;
     min-width: 0;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
 
     h1 {
       margin: 0.25rem 0 0;
@@ -19,17 +15,272 @@
     }
   }
 
-  &__header-actions {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
   &__eyebrow {
     color: var(--secondary-text-color);
     font-size: 0.78rem;
     line-height: 1rem;
+  }
+
+  &__top {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  &__hero {
+    display: grid;
+    padding: 0.75rem 0 0.25rem;
+    justify-items: center;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  &__wallet-pill {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    padding: 0.35rem 0.85rem 0.35rem 0.55rem;
+    border: 1px solid rgb(255 255 255 / 14%);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 6%);
+    color: var(--gray-30);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.2;
+    gap: 0.5rem;
+  }
+
+  &__wallet-pill-mark {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex-shrink: 0;
+    border-radius: 0.2rem;
+    background: var(--primary-text-color);
+  }
+
+  &__balance {
+    margin: 0;
+    color: var(--main-text-color);
+    font-family: 'Aeonik Fono', monospace;
+    font-size: clamp(2.75rem, 12vw, 4.25rem);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  &__change {
+    display: inline-flex;
+    align-items: center;
+    color: var(--secondary-text-color);
+    font-size: 0.9rem;
+    line-height: 1.2;
+    gap: 0.75rem;
+  }
+
+  &__change-percent {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+
+  &__hero-action {
+    min-height: 3.25rem;
+    padding: 0 1rem;
+    border: 1px solid rgb(212 212 211 / 20%);
+    border-radius: 0.75rem;
+    background: rgb(255 255 255 / 6%);
+    color: var(--main-text-color);
+    cursor: pointer;
+    font-size: 0.98rem;
+    font-weight: 600;
+
+    &--primary {
+      border-color: transparent;
+      background: var(--primary-text-color);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
+  &__onboarding {
+    min-width: 0;
+    padding: 1.15rem 1.15rem 1.25rem;
+    border: 1px solid rgb(255 255 255 / 14%);
+    border-radius: 8px;
+    background: rgb(255 255 255 / 3%);
+  }
+
+  &__onboarding-title {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-transform: none;
+  }
+
+  &__onboarding-body {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  &__onboarding-focus {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 600;
+      line-height: 1.3;
+      text-transform: none;
+    }
+  }
+
+  &__onboarding-remaining {
+    margin: 0;
+    color: var(--secondary-text-color);
+    font-size: 0.85rem;
+    line-height: 1.3;
+  }
+
+  &__onboarding-track {
+    overflow: hidden;
+    width: 100%;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 10%);
+  }
+
+  &__onboarding-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--primary-text-color);
+  }
+
+  &__onboarding-steps {
+    display: grid;
+    padding: 0;
+    margin: 0;
+    gap: 0.15rem;
+    list-style: none;
+  }
+
+  &__onboarding-marker {
+    display: inline-flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(255 255 255 / 22%);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 4%);
+    color: var(--primary-text-color);
+
+    svg {
+      display: block;
+      width: 0.85rem;
+      height: 0.85rem;
+    }
+  }
+
+  &__onboarding-step-copy {
+    display: grid;
+    min-width: 0;
+    gap: 0.15rem;
+  }
+
+  &__onboarding-step-title {
+    color: var(--main-text-color);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  &__onboarding-step-hint {
+    color: var(--secondary-text-color);
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+
+  &__onboarding-chevron {
+    color: var(--gray-30);
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  &__onboarding-step {
+    display: grid;
+    width: 100%;
+    min-height: 3.5rem;
+    align-items: center;
+    padding: 0.7rem 0.15rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    gap: 0.75rem;
+    text-align: left;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+
+    &:disabled {
+      opacity: 0.6;
+    }
+
+    &--done {
+      .profile-shell__onboarding-marker {
+        border-color: rgb(126 231 135 / 40%);
+        background: rgb(126 231 135 / 16%);
+        color: var(--success, #7ee787);
+      }
+
+      .profile-shell__onboarding-chevron {
+        opacity: 0;
+      }
+    }
+
+    &--current:not(.profile-shell__onboarding-step--done) {
+      .profile-shell__onboarding-marker {
+        border-color: rgb(254 108 0 / 45%);
+        background: rgb(254 108 0 / 14%);
+      }
+    }
+  }
+
+  @media (width >= 768px) {
+    &__top {
+      align-items: start;
+      gap: 1.5rem;
+      grid-template-columns: minmax(0, 0.9fr) minmax(18rem, 1.1fr);
+    }
+
+    &__hero {
+      padding: 0.25rem 0 0.5rem;
+      justify-items: start;
+      text-align: left;
+    }
+
+    &__balance {
+      font-size: 4.5rem;
+    }
+
+    &__onboarding-focus {
+      .profile-shell__hero-action {
+        max-width: 18rem;
+      }
+    }
+  }
+
+  @media (width >= 1100px) {
+    &__onboarding-body {
+      align-items: start;
+      gap: 1.5rem;
+      grid-template-columns: minmax(14rem, 0.85fr) minmax(0, 1.15fr);
+    }
   }
 
   &__grid {
@@ -509,15 +760,38 @@
   &__error {
     color: #ffb085;
   }
+
+  &__account-footer {
+    display: grid;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgb(255 255 255 / 10%);
+    gap: 0.75rem;
+  }
+
+  &__account-footer-copy {
+    margin: 0;
+    color: var(--secondary-text-color);
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+
+  &__account-footer-actions {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: 1fr;
+  }
+
+  @media (width >= 768px) {
+    &__account-footer-actions {
+      max-width: 28rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
 }
 
 @media (width <= 720px) {
   .profile-shell {
-    &__header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
     &__grid {
       grid-template-columns: 1fr;
     }

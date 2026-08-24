@@ -161,7 +161,7 @@ describe('LoginComponent', () => {
     expect(component.showPasskeyLoginUnavailableNote(false)).toBeTrue();
   });
 
-  it('routes wallet-less logins to generate-wallet', async () => {
+  it('routes wallet-less logins to profile', async () => {
     authSession.login.and.resolveTo({
       user: {
         id: 'account-1',
@@ -174,9 +174,7 @@ describe('LoginComponent', () => {
 
     await component.continueWith('google');
 
-    expect(router.navigate).toHaveBeenCalledOnceWith(['/en/generate-wallet'], {
-      queryParams: { returnUrl: '/en' },
-    });
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/profile');
   });
 
   it('shows a coming soon message for telegram login', async () => {

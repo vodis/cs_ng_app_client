@@ -16,33 +16,27 @@ export class SidebarComponent {
 
   public sidebarBoardLinks = [
     {
-      name: 'Texts.sidebar-board',
-      fallback: 'Board',
-      url: '/',
+      name: 'Texts.sidebar-portfolio',
+      fallback: 'Portfolio',
+      url: '/portfolio',
       isActive: true,
     },
   ];
 
   public sidebarFinansialLinks = [
     {
-      name: 'Texts.sidebar-portfolio',
-      fallback: 'Portfolio',
-      url: '/portfolio',
-      isActive: true,
-    },
-    {
-      name: 'Texts.sidebar-farm',
-      fallback: 'Farm',
-      url: '/farm',
+      name: 'Texts.sidebar-trade',
+      fallback: 'Trade',
+      url: '/',
       isActive: true,
     },
   ];
 
   public sidebarWorkProposalLinks = [
     {
-      name: 'Texts.sidebar-proposals',
-      fallback: 'Proposals',
-      url: '/proposals',
+      name: 'Texts.sidebar-transactions',
+      fallback: 'Transactions',
+      url: '/transactions',
       isActive: true,
     },
   ];

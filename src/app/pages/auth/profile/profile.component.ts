@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type {
@@ -6,6 +7,7 @@ import type {
   BackendBalance,
   BackendWallet,
 } from '@core/auth/auth-session.types';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
@@ -25,6 +27,18 @@ type ProfileLoginSession = {
   authentication: string;
   application: string;
 };
+
+type OnboardingStepId = 'wallet' | 'security' | 'swaps';
+
+export type ProfileOnboardingStep = {
+  id: OnboardingStepId;
+  title: string;
+  hint: string;
+  done: boolean;
+  cta: string;
+};
+
+const REQUIRED_SWAP_COUNT = 5;
 
 const MOCK_LOGIN_SESSIONS: ProfileLoginSession[] = [
   {
@@ -73,16 +87,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public connectedAccount: string | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
   public walletActionBusy = false;
+  public walletLoading = false;
   public showAllSessions = false;
   public readonly loginSessions = MOCK_LOGIN_SESSIONS;
   public visibleLoginSessions = MOCK_LOGIN_SESSIONS.slice(0, 2);
+
+  public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
 
   private subscription?: Subscription;
 
   constructor(
     public readonly authSession: AuthSessionService,
     private readonly walletsService: WalletsService,
-    private readonly walletGatewayBridge: WalletGatewayBridgeService
+    private readonly walletGatewayBridge: WalletGatewayBridgeService,
+    private readonly router: Router,
+    private readonly localizedRouting: LocalizedRoutingService
   ) {}
 
   public ngOnInit(): void {
@@ -198,6 +217,190 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return (this.session?.wallets.length ?? 0) > 0;
   }
 
+  public showWalletSetupActions(): boolean {
+    return !this.hasLinkedWallets();
+  }
+
+  public completedSwapCount(): number {
+    return 0;
+  }
+
+  public isWalletStepDone(): boolean {
+    return this.hasLinkedWallets() || this.isLiveConnected();
+  }
+
+  public isSecurityStepDone(): boolean {
+    return this.isPasskeyLinked();
+  }
+
+  public isSwapsStepDone(): boolean {
+    return this.completedSwapCount() >= this.requiredSwapCount;
+  }
+
+  public onboardingSteps(): ProfileOnboardingStep[] {
+    const walletDone = this.isWalletStepDone();
+    const securityDone = this.isSecurityStepDone();
+    const swapsDone = this.isSwapsStepDone();
+
+    return [
+      {
+        id: 'wallet',
+        title: 'Connect or generate wallet',
+        hint: walletDone
+          ? this.walletPillLabel()
+          : 'Link a wallet to start trading',
+        done: walletDone,
+        cta: walletDone ? 'Manage' : 'Connect',
+      },
+      {
+        id: 'security',
+        title: 'Enable passkey or 2FA',
+        hint: securityDone
+          ? 'Passkey enabled'
+          : 'Faster, safer sign in next time',
+        done: securityDone,
+        cta: 'Enable',
+      },
+      {
+        id: 'swaps',
+        title: 'Complete 5 swaps',
+        hint: `${this.completedSwapCount()} of ${this.requiredSwapCount} completed`,
+        done: swapsDone,
+        cta: 'Trade',
+      },
+    ];
+  }
+
+  public onboardingRemainingCount(): number {
+    return this.onboardingSteps().filter(step => !step.done).length;
+  }
+
+  public onboardingProgressPercent(): number {
+    const steps = this.onboardingSteps();
+    if (steps.length === 0) {
+      return 0;
+    }
+
+    return Math.round(
+      (steps.filter(step => step.done).length / steps.length) * 100
+    );
+  }
+
+  public nextOnboardingStep(): ProfileOnboardingStep | null {
+    return this.onboardingSteps().find(step => !step.done) ?? null;
+  }
+
+  public nextOnboardingCta(): string {
+    const next = this.nextOnboardingStep();
+    if (!next) {
+      return 'Go to Exchange';
+    }
+
+    if (next.id === 'wallet') {
+      return 'Set up wallet';
+    }
+
+    if (next.id === 'security') {
+      return 'Enable passkey';
+    }
+
+    return 'Start swapping';
+  }
+
+  public nextOnboardingTitle(): string {
+    return this.nextOnboardingStep()?.title ?? "You're all set";
+  }
+
+  public onboardingRemainingLabel(): string {
+    const remaining = this.onboardingRemainingCount();
+    if (remaining === 0) {
+      return 'All steps complete';
+    }
+
+    return remaining === 1
+      ? '1 step remaining'
+      : `${remaining} steps remaining`;
+  }
+
+  public showOnboardingGenerateWallet(): boolean {
+    return this.nextOnboardingStep()?.id === 'wallet';
+  }
+
+  public isCurrentOnboardingStep(step: ProfileOnboardingStep): boolean {
+    return this.nextOnboardingStep()?.id === step.id;
+  }
+
+  public trackByOnboardingStep(
+    _index: number,
+    step: ProfileOnboardingStep
+  ): string {
+    return step.id;
+  }
+
+  public async runOnboardingStep(
+    step: ProfileOnboardingStep | null = this.nextOnboardingStep()
+  ): Promise<void> {
+    if (!step) {
+      await this.router.navigateByUrl(this.localizedRouting.path('/'));
+      return;
+    }
+
+    if (step.id === 'wallet') {
+      await this.openWalletModal();
+      return;
+    }
+
+    if (step.id === 'security') {
+      if (this.isPasskeyLinked()) {
+        return;
+      }
+
+      if (!this.canEnablePasskey()) {
+        this.error = 'Passkey linking is not enabled in this environment.';
+        return;
+      }
+
+      await this.enablePasskey();
+      return;
+    }
+
+    await this.router.navigateByUrl(this.localizedRouting.path('/'));
+  }
+
+  public usdBalanceLabel(): string {
+    return '$0.00';
+  }
+
+  public usdChangeLabel(): string {
+    return '+$0.00';
+  }
+
+  public usdChangePercentLabel(): string {
+    return '0.00%';
+  }
+
+  public walletPillLabel(): string {
+    if (this.connectedAccount) {
+      return this.shortAddress(this.connectedAccount);
+    }
+
+    const last = this.resolveLastConnectedWallet();
+    if (last) {
+      return this.isEmbeddedWallet(last)
+        ? 'CraftScript wallet'
+        : this.shortAddress(last.account);
+    }
+
+    const primary = this.primaryLinkedWallet();
+    if (primary) {
+      return this.isEmbeddedWallet(primary)
+        ? 'CraftScript wallet'
+        : this.shortAddress(primary.address);
+    }
+
+    return 'No wallet';
+  }
+
   public isLiveConnected(): boolean {
     return Boolean(this.connectedAccount);
   }
@@ -252,6 +455,28 @@ export class ProfileComponent implements OnInit, OnDestroy {
       await this.walletGatewayBridge.syncConnectedWallet();
     } catch {}
     this.walletsService.requestOpen();
+  }
+
+  public async generateWallet(): Promise<void> {
+    this.error = '';
+    this.walletMessage = '';
+    this.walletLoading = true;
+    try {
+      await this.authSession.ensureEmbeddedWallet();
+      const wallets = await this.authSession.reloadWallets();
+      if (wallets.length === 0) {
+        throw new Error(
+          'Wallet was created but profile refresh returned no wallets.'
+        );
+      }
+      this.walletMessage = 'Wallet generated';
+      await this.refreshBalances();
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Wallet setup failed';
+    } finally {
+      this.walletLoading = false;
+    }
   }
 
   public async disconnectWallet(): Promise<void> {

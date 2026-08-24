@@ -94,6 +94,15 @@ Flow direction:
 
 - `component -> facade/workflow -> domain service -> gateway/api`
 
+### Post-login navigation
+
+- Accounts with at least one linked wallet continue to the safe `returnUrl`.
+- First-time accounts with no linked or generated wallet go to `/profile`.
+- `/profile` shows a `$0.00` balance hero beside an Onboarding portfolio
+  card (wallet, passkey, five swaps). Wallet setup is not a blocking
+  interstitial.
+- Legacy `/generate-wallet` links redirect to `/profile`.
+
 ## 5. Execution Flows (Banking-grade approach)
 
 Complex flows (swap, transfer, payout, order execution) must be represented as explicit workflow services.
@@ -318,8 +327,8 @@ owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 
 | Route              | Guard       | Purpose                                           |
 | ------------------ | ----------- | ------------------------------------------------- |
-| `/profile`         | `AuthGuard` | Account settings, passkey enablement, wallet list |
-| `/generate-wallet` | `AuthGuard` | First-time wallet onboarding after auth           |
+| `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, sessions      |
+| `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                     |
 
 ### Login methods on `/login`
 
@@ -353,15 +362,16 @@ Logout clears host session state and navigates to `/login`.
 
 ### Post-auth wallet onboarding
 
-Account creation or login without linked wallets does not enter the dApp
-immediately. The host routes to `/generate-wallet?returnUrl=<safe-path>`.
+Account creation or login without linked wallets still enters the app shell.
+The host routes to `/profile`, which shows a `$0.00` balance hero and an
+Onboarding portfolio card.
 
-`/generate-wallet` owns first-time wallet setup:
+First-time setup on `/profile`:
 
-- Connect existing wallet (opens wallets MFE modal)
-- Generate embedded wallet (host bridge into wallets MFE)
-- Continue after wallet is connected
+- Connect or generate a wallet (MFE modal or host auth-session bridge)
+- Enable passkey or 2FA
+- Complete five swaps on Exchange
+- Stay on `/profile` after a wallet is created or linked
 
-`/profile` does not duplicate generate-wallet UI. It renders a Connect wallet
-button that opens the wallets MFE modal, which already contains generate/link
-flows for returning users.
+Legacy `/generate-wallet` links redirect to `/profile`. Returning users with
+linked wallets continue to the safe `returnUrl`.
