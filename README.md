@@ -31,14 +31,16 @@ Install dependencies and start the host:
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
+cp src/environments/environment.local.example.ts src/environments/environment.local.ts
+# edit apiUrl / mfeWalletsRemoteUrl if needed
 pnpm start
 ```
 
-The development server runs at <http://localhost:5002>. By default, the host
-uses the production CraftScript API and wallet remote. For coordinated local
-wallet development, run `cs_mfe-wallets` separately and point
-`src/config/mf.manifest.json` to its local remote entry as described in the
-[development guide](docs/development.md).
+`environment.local.ts` is gitignored, so private hosts never land in commits.
+
+The development server runs at <http://localhost:5001>. Defaults point at the
+local NestJS BFF (`apiUrl`) and wallet MFE (`mfeWalletsRemoteUrl`). For
+coordinated local wallet development, run `cs_mfe-wallets` on port `5002`.
 
 Merges to `develop` publish the staging image and orchestrator metadata used by
 <https://staging-app.craftscript.com>. The staging bundle is compiled against

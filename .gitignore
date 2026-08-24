@@ -8,6 +8,7 @@
 
 # Node
 /node_modules
+.pnpm-store/
 npm-debug.log
 yarn-error.log
 pnpm-debug.log
@@ -49,6 +50,9 @@ Thumbs.db
 
 # packages
 .npmrc
+
+# Local-only machine overrides (never commit private API hosts)
+src/environments/environment.local.ts
 
 # Agent-specific local state
 .claude/

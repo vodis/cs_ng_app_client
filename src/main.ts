@@ -1,6 +1,15 @@
-import { loadManifest } from '@angular-architects/module-federation';
+import { initFederation } from '@angular-architects/module-federation';
+import { WALLET_REMOTE_NAME } from './app/mfe-contracts/wallet-remote-entrypoints';
+import { environment } from './environments/environment';
 
-loadManifest('/assets/mf.manifest.json')
+// Register remotes from environment; do not fetch remoteEntry at bootstrap so
+// the shell still starts when the wallet MFE is down (load on demand later).
+initFederation(
+  {
+    [WALLET_REMOTE_NAME]: environment.mfeWalletsRemoteUrl,
+  },
+  true
+)
   .then(() => import('./bootstrap'))
   .catch(err => {
     console.error('Application bootstrap failed', err);

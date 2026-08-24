@@ -2,10 +2,11 @@ const {
   shareAll,
   withModuleFederationPlugin,
 } = require('@angular-architects/module-federation/webpack');
-const mfManifest = require('../src/config/mf.manifest.json');
 
+// Remotes are registered at runtime from `environment.mfeWalletsRemoteUrl`
+// via `initFederation` in `src/main.ts` (dynamic Module Federation).
 const mfConfig = withModuleFederationPlugin({
-  remotes: mfManifest,
+  remotes: {},
 
   shared: {
     ...shareAll({

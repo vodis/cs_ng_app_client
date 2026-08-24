@@ -27,12 +27,7 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [
               "src/favicon.ico",
-              "src/assets",
-              {
-                "glob": "mf.manifest.json",
-                "input": "src/config",
-                "output": "assets"
-              }
+              "src/assets"
             ],
             "styles": [
               "node_modules/@angular/material/prebuilt-themes/cyan-orange.css",
@@ -70,15 +65,6 @@
               "extraWebpackConfig": "config/webpack.prod.config.js"
             },
             "staging": {
-              "assets": [
-                "src/favicon.ico",
-                "src/assets",
-                {
-                  "glob": "mf.manifest.json",
-                  "input": "src/config/staging",
-                  "output": "assets"
-                }
-              ],
               "budgets": [
                 {
                   "type": "initial",
@@ -107,6 +93,20 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
+            },
+            "local": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.local.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -115,8 +115,8 @@
           "builder": "ngx-build-plus:dev-server",
           "options": {
             "buildTarget": "cs_ng_app_client:build:development",
-            "publicHost": "http://localhost:5002",
-            "port": 5002,
+            "publicHost": "http://localhost:5001",
+            "port": 5001,
             "extraWebpackConfig": "config/webpack.config.js"
           },
           "configurations": {
@@ -126,6 +126,9 @@
             },
             "development": {
               "buildTarget": "cs_ng_app_client:build:development"
+            },
+            "local": {
+              "buildTarget": "cs_ng_app_client:build:local"
             }
           },
           "defaultConfiguration": "development"

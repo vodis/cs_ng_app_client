@@ -84,11 +84,10 @@ When validating or documenting backend-dependent host behavior, treat `../cs_nes
 
 ## Current Runtime Integration
 
-- Host manifest file: `src/config/mf.manifest.json`
-- Production/default wallet entry: `"mfe-wallets": "https://wallets.craftscript.com/remoteEntry.js"`
-- Staging manifest file: `src/config/staging/mf.manifest.json`
-- Staging wallet entry: `"mfe-wallets": "https://staging-wallets.craftscript.com/remoteEntry.js"`
-- Local dev override can point to: `"mfe-wallets": "http://localhost:5001/remoteEntry.js"`
+- Wallet remote URL comes from `environment.mfeWalletsRemoteUrl` (bootstrapped in `src/main.ts` via `initFederation`)
+- Production: `https://wallets.craftscript.com/remoteEntry.js` (`environment.production.ts`)
+- Staging: `https://staging-wallets.craftscript.com/remoteEntry.js` (`environment.staging.ts`)
+- Local default: `http://localhost:5002/remoteEntry.js` (`environment.ts` / `environment.local.ts`)
 
 Production host rules:
 
@@ -220,7 +219,7 @@ Compatibility policy:
 
 1. Identify touched communication level(s).
 2. For home/exchange UI work, confirm changes still match **Exchange Page UI Reference** above.
-3. Verify host wiring in `src/config/mf.manifest.json`.
+3. Verify host wiring via `environment.mfeWalletsRemoteUrl` for the active build.
 4. Cross-check wallet side in `../mfe-wallets` (or remote repository when needed).
 5. Sync with latest wallets commit contract changes before editing host docs.
 6. Update docs/contracts in this repo when behavior changes.

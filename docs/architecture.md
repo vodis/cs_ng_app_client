@@ -14,13 +14,13 @@ This guide defines the target architecture for `cs_ng_app_client` as an Angular 
 - Host app (this repo): `cs_ng_app_client`
 - Wallet MFE local source: `../mfe-wallets`
 - Wallet MFE remote git: `git@github.com:vodis/cs_mfe-wallets.git`
-- Module Federation manifest: `src/config/mf.manifest.json`
+- Wallet remote URL: `environment.mfeWalletsRemoteUrl` (bootstrapped in `src/main.ts`)
 
 Remote entry expectations:
 
-- Production/default: `"mfe-wallets": "https://wallets.craftscript.com/remoteEntry.js"`
-- Staging: `"mfe-wallets": "https://staging-wallets.craftscript.com/remoteEntry.js"`
-- Local development override: `"mfe-wallets": "http://localhost:5001/remoteEntry.js"`
+- Production (`environment.production.ts`): `https://wallets.craftscript.com/remoteEntry.js`
+- Staging (`environment.staging.ts`): `https://staging-wallets.craftscript.com/remoteEntry.js`
+- Local default (`environment.ts` / `environment.local.ts`): `http://localhost:5002/remoteEntry.js`
 
 Production remote entries must come from approved CraftScript wallet origins
 only. The host should not load arbitrary external wallet bundles in the
