@@ -29,6 +29,8 @@ This host is the Angular shell for a dApp-style product (DEX-like interaction pa
 3. Run wallets MFE from local source `../mfe-wallets` (or matching branch from `git@github.com:vodis/cs_mfe-wallets.git`).
 4. Verify remote entry URL in `src/config/mf.manifest.json`:
    - Production/default: `"mfe-wallets": "https://wallets.craftscript.com/remoteEntry.js"`
+   - Staging builds use `src/config/staging/mf.manifest.json` with
+     `"mfe-wallets": "https://staging-wallets.craftscript.com/remoteEntry.js"`
    - Local dev testing override (when running local `../mfe-wallets`): `"mfe-wallets": "http://localhost:5001/remoteEntry.js"`
 
 Production wallet remote policy:

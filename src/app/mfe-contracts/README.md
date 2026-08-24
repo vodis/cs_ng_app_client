@@ -44,7 +44,8 @@ sessions and embedded wallets with the backend, and exposes only generic
 session/wallet results. The host owns guarded navigation and contains no
 provider-specific SDK, DTO, endpoint, or global bridge.
 
-- Runtime manifest: `src/config/mf.manifest.json`
+- Production/default runtime manifest: `src/config/mf.manifest.json`
+- Staging runtime manifest: `src/config/staging/mf.manifest.json`
 
 ## 1) Runtime Channel: Host <-> MFE
 

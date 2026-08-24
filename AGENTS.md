@@ -86,6 +86,8 @@ When validating or documenting backend-dependent host behavior, treat `../cs_nes
 
 - Host manifest file: `src/config/mf.manifest.json`
 - Production/default wallet entry: `"mfe-wallets": "https://wallets.craftscript.com/remoteEntry.js"`
+- Staging manifest file: `src/config/staging/mf.manifest.json`
+- Staging wallet entry: `"mfe-wallets": "https://staging-wallets.craftscript.com/remoteEntry.js"`
 - Local dev override can point to: `"mfe-wallets": "http://localhost:5001/remoteEntry.js"`
 
 Production host rules:
