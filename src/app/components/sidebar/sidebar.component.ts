@@ -10,39 +10,33 @@ import { LocalizedRoutingService } from '@core/routing/localized-routing.service
   styleUrls: ['sidebar.component.scss'],
 })
 export class SidebarComponent {
-  public isBoardPanelOpen = true;
-  public isFarmPanelOpen = true;
-  public isDevActivityPanelOpen = true;
+  public isInformationPanelOpen = true;
+  public isFinancePanelOpen = true;
+  public isActivityPanelOpen = true;
 
-  public sidebarBoardLinks = [
-    {
-      name: 'Texts.sidebar-board',
-      fallback: 'Board',
-      url: '/',
-      isActive: true,
-    },
-  ];
-
-  public sidebarFinansialLinks = [
+  public informationLinks = [
     {
       name: 'Texts.sidebar-portfolio',
       fallback: 'Portfolio',
       url: '/portfolio',
       isActive: true,
     },
+  ];
+
+  public financeLinks = [
     {
-      name: 'Texts.sidebar-farm',
-      fallback: 'Farm',
-      url: '/farm',
+      name: 'Texts.sidebar-trade',
+      fallback: 'Trade',
+      url: '/',
       isActive: true,
     },
   ];
 
-  public sidebarWorkProposalLinks = [
+  public activityLinks = [
     {
-      name: 'Texts.sidebar-proposals',
-      fallback: 'Proposals',
-      url: '/proposals',
+      name: 'Texts.sidebar-transactions',
+      fallback: 'Transactions',
+      url: '/transactions',
       isActive: true,
     },
   ];
@@ -63,7 +57,10 @@ export class SidebarComponent {
   }
 
   public handleToggleAccordion(
-    key: 'isFarmPanelOpen' | 'isDevActivityPanelOpen' | 'isBoardPanelOpen',
+    key:
+      | 'isInformationPanelOpen'
+      | 'isFinancePanelOpen'
+      | 'isActivityPanelOpen',
     value: boolean
   ): void {
     this[key] = value;

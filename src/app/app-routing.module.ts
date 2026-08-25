@@ -85,7 +85,7 @@ const routes: Routes = [
   {
     path: 'generate-wallet',
     pathMatch: 'full',
-    redirectTo: () => preferredLocalePath('/generate-wallet'),
+    redirectTo: () => preferredLocalePath('/profile'),
   },
   {
     path: 'profile',

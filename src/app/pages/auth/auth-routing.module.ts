@@ -4,7 +4,6 @@ import { LoginComponent } from './login/login.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AuthGuard } from '@core/auth/auth.guard';
 import { RegisterComponent } from './register/register.component';
-import { GenerateWalletComponent } from './generate-wallet/generate-wallet.component';
 
 const routes: Routes = [
   {
@@ -17,8 +16,8 @@ const routes: Routes = [
   },
   {
     path: 'generate-wallet',
-    component: GenerateWalletComponent,
-    canActivate: [AuthGuard],
+    redirectTo: 'profile',
+    pathMatch: 'full',
   },
   {
     path: 'profile',

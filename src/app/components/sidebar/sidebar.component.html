@@ -4,75 +4,75 @@
       <mat-accordion>
         <mat-expansion-panel
           hideToggle
-          [expanded]="isBoardPanelOpen"
-          (opened)="handleToggleAccordion('isBoardPanelOpen', true)"
-          (closed)="handleToggleAccordion('isBoardPanelOpen', false)">
+          [expanded]="isInformationPanelOpen"
+          (opened)="handleToggleAccordion('isInformationPanelOpen', true)"
+          (closed)="handleToggleAccordion('isInformationPanelOpen', false)">
           <mat-expansion-panel-header>
             <mat-panel-title class="menu-title">
               {{ 'Texts.sidebar-information' | csTranslate: 'Informations' }}
             </mat-panel-title>
             <mat-icon>{{
-              isBoardPanelOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'
-            }}</mat-icon>
-          </mat-expansion-panel-header>
-          <li
-            *ngFor="let item of sidebarBoardLinks; trackBy: trackById"
-            class="menu-item">
-            <a
-              class="menu-link"
-              [routerLinkActive]="'_is-active'"
-              (click)="handleRouteChanging(item.url)"
-              >{{ item.name | csTranslate: item.fallback }}</a
-            >
-          </li>
-        </mat-expansion-panel>
-      </mat-accordion>
-
-      <mat-accordion>
-        <mat-expansion-panel
-          hideToggle
-          [expanded]="isFarmPanelOpen"
-          (opened)="handleToggleAccordion('isFarmPanelOpen', true)"
-          (closed)="handleToggleAccordion('isFarmPanelOpen', false)">
-          <mat-expansion-panel-header>
-            <mat-panel-title class="menu-title">
-              {{ 'Texts.sidebar-finance' | csTranslate: 'Finance' }}
-            </mat-panel-title>
-            <mat-icon>{{
-              isFarmPanelOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'
-            }}</mat-icon>
-          </mat-expansion-panel-header>
-          <li
-            *ngFor="let item of sidebarFinansialLinks; trackBy: trackById"
-            class="menu-item">
-            <a
-              class="menu-link"
-              [routerLinkActive]="'_is-active'"
-              (click)="handleRouteChanging(item.url)"
-              >{{ item.name | csTranslate: item.fallback }}</a
-            >
-          </li>
-        </mat-expansion-panel>
-      </mat-accordion>
-
-      <mat-accordion>
-        <mat-expansion-panel
-          hideToggle
-          [expanded]="isDevActivityPanelOpen"
-          (opened)="handleToggleAccordion('isDevActivityPanelOpen', true)"
-          (closed)="handleToggleAccordion('isDevActivityPanelOpen', false)">
-          <mat-expansion-panel-header>
-            <mat-panel-title class="menu-title">
-              {{ 'Texts.sidebar-dev-activity' | csTranslate: 'Dev Activity' }}
-            </mat-panel-title>
-            <mat-icon>{{
-              isDevActivityPanelOpen
+              isInformationPanelOpen
                 ? 'keyboard_arrow_up'
                 : 'keyboard_arrow_down'
             }}</mat-icon>
           </mat-expansion-panel-header>
           <li
-            *ngFor="let item of sidebarWorkProposalLinks; trackBy: trackById"
+            *ngFor="let item of informationLinks; trackBy: trackById"
+            class="menu-item">
+            <a
+              class="menu-link"
+              [routerLinkActive]="'_is-active'"
+              (click)="handleRouteChanging(item.url)"
+              >{{ item.name | csTranslate: item.fallback }}</a
+            >
+          </li>
+        </mat-expansion-panel>
+      </mat-accordion>
+
+      <mat-accordion>
+        <mat-expansion-panel
+          hideToggle
+          [expanded]="isFinancePanelOpen"
+          (opened)="handleToggleAccordion('isFinancePanelOpen', true)"
+          (closed)="handleToggleAccordion('isFinancePanelOpen', false)">
+          <mat-expansion-panel-header>
+            <mat-panel-title class="menu-title">
+              {{ 'Texts.sidebar-finance' | csTranslate: 'Finance' }}
+            </mat-panel-title>
+            <mat-icon>{{
+              isFinancePanelOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'
+            }}</mat-icon>
+          </mat-expansion-panel-header>
+          <li
+            *ngFor="let item of financeLinks; trackBy: trackById"
+            class="menu-item">
+            <a
+              class="menu-link"
+              [routerLinkActive]="'_is-active'"
+              (click)="handleRouteChanging(item.url)"
+              >{{ item.name | csTranslate: item.fallback }}</a
+            >
+          </li>
+        </mat-expansion-panel>
+      </mat-accordion>
+
+      <mat-accordion>
+        <mat-expansion-panel
+          hideToggle
+          [expanded]="isActivityPanelOpen"
+          (opened)="handleToggleAccordion('isActivityPanelOpen', true)"
+          (closed)="handleToggleAccordion('isActivityPanelOpen', false)">
+          <mat-expansion-panel-header>
+            <mat-panel-title class="menu-title">
+              {{ 'Texts.sidebar-dev-activity' | csTranslate: 'Activity' }}
+            </mat-panel-title>
+            <mat-icon>{{
+              isActivityPanelOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'
+            }}</mat-icon>
+          </mat-expansion-panel-header>
+          <li
+            *ngFor="let item of activityLinks; trackBy: trackById"
             class="menu-item">
             <a
               class="menu-link"

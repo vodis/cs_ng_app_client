@@ -1,122 +1,232 @@
 <section class="profile-shell" *ngIf="session as activeSession">
+  <div class="profile-shell__top">
+    <section class="profile-shell__hero" aria-label="Portfolio balance">
+      <button
+        type="button"
+        class="profile-shell__wallet-pill"
+        (click)="openWalletModal()">
+        <span class="profile-shell__wallet-pill-mark" aria-hidden="true"></span>
+        {{ walletPillLabel() }}
+      </button>
+
+      <p class="profile-shell__balance">{{ usdBalanceLabel() }}</p>
+
+      <div class="profile-shell__change">
+        <span>{{ usdChangeLabel() }}</span>
+        <span class="profile-shell__change-percent">
+          <span aria-hidden="true">▾</span>
+          {{ usdChangePercentLabel() }}
+        </span>
+      </div>
+
+      <ng-container *ngIf="profile.providerSnapshot$ | async as provider">
+        <p class="profile-shell__empty" *ngIf="provider.status === 'disabled'">
+          Wallet setup is not enabled for this environment.
+        </p>
+        <p class="profile-shell__empty" *ngIf="provider.status === 'failed'">
+          {{ provider.error || 'Wallet setup is temporarily unavailable.' }}
+        </p>
+      </ng-container>
+    </section>
+
+    <section
+      class="profile-shell__onboarding"
+      aria-label="Onboarding portfolio">
+      <h2 class="profile-shell__onboarding-title">Onboarding portfolio</h2>
+
+      <div class="profile-shell__onboarding-body">
+        <div class="profile-shell__onboarding-focus">
+          <h3>{{ nextOnboardingTitle() }}</h3>
+          <p class="profile-shell__onboarding-remaining">
+            {{ onboardingRemainingLabel() }}
+          </p>
+          <div
+            class="profile-shell__onboarding-track"
+            role="progressbar"
+            [attr.aria-valuenow]="onboardingProgressPercent()"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            [attr.aria-label]="onboardingRemainingLabel()">
+            <span
+              class="profile-shell__onboarding-fill"
+              [style.width.%]="onboardingProgressPercent()"></span>
+          </div>
+          <button
+            class="profile-shell__hero-action profile-shell__hero-action--primary"
+            type="button"
+            [disabled]="walletLoading || walletActionBusy || passkeyLoading"
+            (click)="runOnboardingStep()">
+            {{ nextOnboardingCta() }}
+          </button>
+          <button
+            class="profile-shell__hero-action"
+            type="button"
+            *ngIf="showOnboardingGenerateWallet()"
+            [disabled]="walletLoading || walletActionBusy"
+            (click)="generateWallet()">
+            Generate wallet
+          </button>
+        </div>
+
+        <ul class="profile-shell__onboarding-steps">
+          <li
+            *ngFor="
+              let step of onboardingSteps();
+              trackBy: trackByOnboardingStep
+            ">
+            <button
+              type="button"
+              class="profile-shell__onboarding-step"
+              [class.profile-shell__onboarding-step--done]="step.done"
+              [class.profile-shell__onboarding-step--current]="
+                isCurrentOnboardingStep(step)
+              "
+              [disabled]="walletLoading || walletActionBusy || passkeyLoading"
+              (click)="runOnboardingStep(step)">
+              <span class="profile-shell__onboarding-marker" aria-hidden="true">
+                <svg *ngIf="step.done" viewBox="0 0 16 16" focusable="false">
+                  <path
+                    d="M3.4 8.4 6.3 11.2 12.6 4.8"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.8" />
+                </svg>
+              </span>
+              <span class="profile-shell__onboarding-step-copy">
+                <span class="profile-shell__onboarding-step-title">{{
+                  step.title
+                }}</span>
+                <span class="profile-shell__onboarding-step-hint">{{
+                  step.hint
+                }}</span>
+              </span>
+              <span
+                class="profile-shell__onboarding-chevron"
+                aria-hidden="true">
+                ›
+              </span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
   <div class="profile-shell__header">
-    <div>
-      <p class="profile-shell__eyebrow">Profile</p>
-      <h1>
-        {{ activeSession.user.email || activeSession.user.providerUserId }}
-      </h1>
-    </div>
-    <div class="profile-shell__header-actions">
-      <button
-        type="button"
-        mat-stroked-button
-        [disabled]="authSession.loading$ | async"
-        (click)="logout()">
-        Logout
-      </button>
-      <button
-        type="button"
-        mat-stroked-button
-        [disabled]="authSession.loading$ | async"
-        (click)="requestDeletion()">
-        Request deletion
-      </button>
-    </div>
+    <p class="profile-shell__eyebrow">Profile</p>
+    <h1>
+      {{ activeSession.user.email || activeSession.user.providerUserId }}
+    </h1>
   </div>
 
   <div class="profile-shell__grid">
-    <section class="profile-shell__panel">
-      <h2>Account</h2>
-      <dl>
-        <div>
-          <dt>Account ID</dt>
-          <dd>{{ activeSession.user.id }}</dd>
-        </div>
-        <div>
-          <dt>Identity provider subject</dt>
-          <dd>{{ activeSession.user.providerUserId }}</dd>
-        </div>
-        <div>
-          <dt>Auth method</dt>
-          <dd>{{ activeSession.user.authMethod || 'Provider account' }}</dd>
-        </div>
-      </dl>
-    </section>
-
-    <section class="profile-shell__panel">
-      <h2>Security</h2>
-
-      <div
-        class="profile-shell__passkey"
-        *ngIf="
-          isPasskeyLinked() && isPasskeyLoginAvailable();
-          else passkeyLinkedOnly
-        ">
-        <div
-          class="profile-shell__passkey-status profile-shell__passkey-status--enabled">
-          <span class="profile-shell__passkey-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
+    <section
+      class="profile-shell__panel profile-shell__panel--wide profile-shell__panel--activity"
+      aria-label="Activity">
+      <div class="profile-shell__activity">
+        <h2 class="profile-shell__activity-title">Activity</h2>
+        <div class="profile-shell__activity-actions">
+          <button
+            class="profile-shell__activity-action"
+            type="button"
+            (click)="openActivityPay()">
+            Pay
+          </button>
+          <button
+            class="profile-shell__activity-action"
+            type="button"
+            (click)="openActivityReceive()">
+            Receive
+          </button>
+          <button
+            class="profile-shell__activity-action profile-shell__activity-action--ai"
+            type="button"
+            (click)="openActivityAnalyze()">
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
               <path
                 fill="currentColor"
-                d="M12 12a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Zm-7 7.25v-1.1c0-2.2 3.13-3.65 7-3.65s7 1.45 7 3.65v1.1H5Z" />
-              <path
-                fill="currentColor"
-                d="M18.2 8.4a.75.75 0 0 1 1.06 0l1.34 1.34a3.25 3.25 0 0 1 0 4.6l-.47.47a.75.75 0 0 1-1.06-1.06l.47-.47a1.75 1.75 0 0 0 0-2.47l-1.34-1.34a.75.75 0 0 1 0-1.06Z" />
+                d="M8 1.2 8.9 5.1 12.8 6 8.9 6.9 8 10.8 7.1 6.9 3.2 6 7.1 5.1 8 1.2Zm4.4 7.1.5 2.1 2.1.5-2.1.5-.5 2.1-.5-2.1-2.1-.5 2.1-.5.5-2.1Z" />
             </svg>
-          </span>
-          <div class="profile-shell__passkey-copy">
-            <span class="profile-shell__passkey-label">Passkey enabled</span>
-            <p class="profile-shell__empty">
-              Use passkey authentication on your next sign in. Email code
-              remains available as a fallback.
-            </p>
-          </div>
+            Analyze AI
+          </button>
         </div>
-      </div>
-
-      <ng-template #passkeyLinkedOnly>
-        <div
-          class="profile-shell__passkey"
-          *ngIf="isPasskeyLinked(); else passkeyDisabled">
-          <div class="profile-shell__passkey-status">
-            <span class="profile-shell__passkey-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false">
-                <path
-                  fill="currentColor"
-                  d="M12 12a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Zm-7 7.25v-1.1c0-2.2 3.13-3.65 7-3.65s7 1.45 7 3.65v1.1H5Z" />
-                <path
-                  fill="currentColor"
-                  d="M18.2 8.4a.75.75 0 0 1 1.06 0l1.34 1.34a3.25 3.25 0 0 1 0 4.6l-.47.47a.75.75 0 0 1-1.06-1.06l.47-.47a1.75 1.75 0 0 0 0-2.47l-1.34-1.34a.75.75 0 0 1 0-1.06Z" />
-              </svg>
-            </span>
-            <div class="profile-shell__passkey-copy">
-              <span class="profile-shell__passkey-label">Passkey linked</span>
-              <p class="profile-shell__empty">
-                Your account has a passkey, but passkey sign-in is not enabled
-                in this environment yet. Continue signing in with email, Google,
-                or Apple.
-              </p>
+        <div class="profile-shell__activity-copy">
+          <p class="profile-shell__activity-label">Est. swap volume</p>
+          <p class="profile-shell__activity-value">
+            {{ activityVolumeLabel() }}
+            <span class="profile-shell__activity-unit">USD</span>
+          </p>
+          <p class="profile-shell__activity-fiat">
+            {{ activityFiatLabel() }}
+          </p>
+          <p
+            class="profile-shell__activity-today"
+            [class.profile-shell__activity-today--up]="isActivityTodayUp()">
+            Today's volume {{ activityTodayLabel() }}
+          </p>
+          <p class="profile-shell__activity-count">
+            {{ activitySwapCountLabel() }}
+          </p>
+        </div>
+        <div class="profile-shell__heatmap">
+          <div
+            class="profile-shell__heatmap-chart"
+            [style.--heatmap-weeks]="activity.weeks.length"
+            aria-label="Yearly activity">
+            <div class="profile-shell__heatmap-months" aria-hidden="true">
+              <span
+                *ngFor="let month of activity.months"
+                [style.grid-column]="month.weekIndex"
+                >{{ month.label }}</span
+              >
+            </div>
+            <div class="profile-shell__heatmap-weekdays" aria-hidden="true">
+              <span *ngFor="let label of activity.weekdays">{{ label }}</span>
+            </div>
+            <div class="profile-shell__heatmap-grid">
+              <div
+                class="profile-shell__heatmap-week"
+                *ngFor="
+                  let week of activity.weeks;
+                  trackBy: trackByHeatmapWeek
+                ">
+                <button
+                  type="button"
+                  class="profile-shell__heatmap-day"
+                  *ngFor="let day of week.days; trackBy: trackByHeatmapDay"
+                  [attr.data-level]="day.level"
+                  [attr.aria-label]="heatmapDayTooltip(day)"
+                  [attr.title]="heatmapDayTooltip(day)"
+                  [disabled]="!day.inRange"></button>
+              </div>
+            </div>
+            <div class="profile-shell__heatmap-legend">
+              <span>Less</span>
+              <span class="profile-shell__heatmap-day" data-level="0"></span>
+              <span class="profile-shell__heatmap-day" data-level="1"></span>
+              <span class="profile-shell__heatmap-day" data-level="2"></span>
+              <span class="profile-shell__heatmap-day" data-level="3"></span>
+              <span class="profile-shell__heatmap-day" data-level="4"></span>
+              <span>More</span>
             </div>
           </div>
-        </div>
-      </ng-template>
-
-      <ng-template #passkeyDisabled>
-        <div class="profile-shell__passkey">
-          <div class="profile-shell__passkey-copy">
-            <p class="profile-shell__empty">
-              Enable passkey authentication for faster sign in.
-            </p>
+          <nav class="profile-shell__heatmap-years" aria-label="Activity year">
             <button
               type="button"
-              mat-stroked-button
-              [disabled]="passkeyLoading || !canEnablePasskey()"
-              (click)="enablePasskey()">
-              Enable passkey
+              class="profile-shell__heatmap-year"
+              *ngFor="let year of activity.years; trackBy: trackByHeatmapYear"
+              [class.profile-shell__heatmap-year--active]="
+                year === activity.selectedYear
+              "
+              [attr.aria-pressed]="year === activity.selectedYear"
+              (click)="selectHeatmapYear(year)">
+              {{ year }}
             </button>
-          </div>
+          </nav>
         </div>
-      </ng-template>
+      </div>
     </section>
 
     <section class="profile-shell__panel">
@@ -310,6 +420,41 @@
       </div>
     </section>
 
+    <section class="profile-shell__panel">
+      <div class="profile-shell__panel-header">
+        <h2>Balances</h2>
+        <button
+          type="button"
+          mat-button
+          [disabled]="balancesLoading"
+          (click)="refreshBalances()">
+          Refresh
+        </button>
+      </div>
+      <div class="profile-shell__empty" *ngIf="balancesLoading">
+        Loading balances...
+      </div>
+      <div
+        class="profile-shell__empty"
+        *ngIf="!balancesLoading && balances.length === 0">
+        No cached balances yet.
+      </div>
+      <ul
+        class="profile-shell__balances"
+        *ngIf="!balancesLoading && balances.length > 0">
+        <li *ngFor="let balance of balances">
+          <div class="profile-shell__balance-asset">
+            <span>{{ balance.symbol }}</span>
+            <small>{{ balance.assetId }}</small>
+          </div>
+          <div class="profile-shell__balance-value">
+            <span>{{ balanceAmount(balance) }}</span>
+            <small>{{ balanceMeta(balance) }}</small>
+          </div>
+        </li>
+      </ul>
+    </section>
+
     <section class="profile-shell__panel profile-shell__panel--wide">
       <h2>Sessions</h2>
 
@@ -382,41 +527,6 @@
         {{ showAllSessions ? 'Show last 2' : 'See all past sessions' }}
       </button>
     </section>
-
-    <section class="profile-shell__panel profile-shell__panel--wide">
-      <div class="profile-shell__panel-header">
-        <h2>Balances</h2>
-        <button
-          type="button"
-          mat-button
-          [disabled]="balancesLoading"
-          (click)="refreshBalances()">
-          Refresh
-        </button>
-      </div>
-      <div class="profile-shell__empty" *ngIf="balancesLoading">
-        Loading balances...
-      </div>
-      <div
-        class="profile-shell__empty"
-        *ngIf="!balancesLoading && balances.length === 0">
-        No cached balances yet.
-      </div>
-      <ul
-        class="profile-shell__balances"
-        *ngIf="!balancesLoading && balances.length > 0">
-        <li *ngFor="let balance of balances">
-          <div class="profile-shell__balance-asset">
-            <span>{{ balance.symbol }}</span>
-            <small>{{ balance.assetId }}</small>
-          </div>
-          <div class="profile-shell__balance-value">
-            <span>{{ balanceAmount(balance) }}</span>
-            <small>{{ balanceMeta(balance) }}</small>
-          </div>
-        </li>
-      </ul>
-    </section>
   </div>
 
   <p class="profile-shell__message" *ngIf="walletMessage">
@@ -428,8 +538,28 @@
   <p class="profile-shell__message" *ngIf="passkeyMessage">
     {{ passkeyMessage }}
   </p>
-  <p class="profile-shell__message" *ngIf="deletionMessage">
-    {{ deletionMessage }}
-  </p>
   <p class="profile-shell__error" *ngIf="error">{{ error }}</p>
+
+  <footer class="profile-shell__account-footer">
+    <p class="profile-shell__account-footer-copy">Sign out of this device</p>
+    <div class="profile-shell__account-footer-actions">
+      <button
+        type="button"
+        mat-stroked-button
+        [disabled]="profile.loading$ | async"
+        (click)="logout()">
+        Logout
+      </button>
+      <button
+        type="button"
+        mat-stroked-button
+        [disabled]="profile.loading$ | async"
+        (click)="requestDeletion()">
+        Delete account
+      </button>
+    </div>
+    <p class="profile-shell__message" *ngIf="deletionMessage">
+      {{ deletionMessage }}
+    </p>
+  </footer>
 </section>

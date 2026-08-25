@@ -1,18 +1,27 @@
 /// <reference types="jasmine" />
 
 import { BehaviorSubject, of } from 'rxjs';
+import { Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession } from '@core/auth/auth-session.types';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import {
+  MockProfileActivitySource,
+  PROFILE_ACTIVITY_EXAMPLE_DATE,
+} from './profile-activity.source';
 import { ProfileComponent } from './profile.component';
+import { ProfileFacade } from './profile.facade';
 
 describe('ProfileComponent', () => {
   let component: ProfileComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let walletsService: jasmine.SpyObj<WalletsService>;
   let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
+  let router: jasmine.SpyObj<Router>;
+  let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
   let sessionSubject: BehaviorSubject<AuthSession | null>;
   let accountSubject: BehaviorSubject<
     { account: string; chainId: number | null } | undefined
@@ -81,6 +90,7 @@ describe('ProfileComponent', () => {
       'AuthSessionService',
       [
         'enablePasskey',
+        'ensureEmbeddedWallet',
         'reloadWallets',
         'loadBalances',
         'setPrimaryWallet',
@@ -118,12 +128,24 @@ describe('ProfileComponent', () => {
       isBypassed: false,
       executionState: 'operating.idle',
     });
+    router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
+    router.navigateByUrl.and.resolveTo(true);
+    localizedRouting = jasmine.createSpyObj<LocalizedRoutingService>(
+      'LocalizedRoutingService',
+      ['path']
+    );
+    localizedRouting.path.and.callFake((path: string) =>
+      path === '/' ? '/en' : `/en${path}`
+    );
 
-    component = new ProfileComponent(
+    const profile = new ProfileFacade(
       authSession,
       walletsService,
-      walletGatewayBridge
+      walletGatewayBridge,
+      router,
+      localizedRouting
     );
+    component = new ProfileComponent(profile, new MockProfileActivitySource());
     component.ngOnInit();
   });
 
@@ -162,6 +184,144 @@ describe('ProfileComponent', () => {
     sessionSubject.next(linkedWalletSession);
 
     expect(component.hasLinkedWallets()).toBeTrue();
+  });
+
+  it('shows mock swap volume beside a GitHub-style activity heatmap', () => {
+    const example = component.activity.weeks
+      .flatMap(week => week.days)
+      .find(day => day.isoDate === PROFILE_ACTIVITY_EXAMPLE_DATE);
+
+    expect(component.activityVolumeLabel()).toBe('$978.51');
+    expect(component.activityFiatLabel()).toBe('≈ $978.66');
+    expect(component.activityTodayLabel()).toBe('+$17.98 (1.87%)');
+    expect(component.isActivityTodayUp()).toBeTrue();
+    expect(component.activity.weeks.length).toBe(53);
+    expect(component.activity.years).toEqual([2026, 2025, 2024]);
+    expect(component.activity.selectedYear).toBe(2026);
+    expect(example).toBeDefined();
+    if (!example) {
+      fail('example heatmap day was missing');
+      return;
+    }
+
+    expect(component.heatmapDayTooltip(example)).toBe(
+      '5 swaps and 1 deposit on Apr 23, 2026'
+    );
+  });
+
+  it('switches the activity heatmap to a past calendar year', () => {
+    component.selectHeatmapYear(2025);
+
+    const inRangeDays = component.activity.weeks
+      .flatMap(week => week.days)
+      .filter(day => day.inRange);
+
+    expect(component.activity.selectedYear).toBe(2025);
+    expect(inRangeDays[0].isoDate).toBe('2025-01-01');
+    expect(inRangeDays[inRangeDays.length - 1].isoDate).toBe('2025-12-31');
+  });
+
+  it('routes Activity Pay and Analyze AI, and opens the wallet for Receive', async () => {
+    await component.openActivityPay();
+    expect(localizedRouting.path).toHaveBeenCalledWith('/');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/en');
+
+    await component.openActivityAnalyze();
+    expect(localizedRouting.path).toHaveBeenCalledWith('/portfolio');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/en/portfolio');
+
+    await component.openActivityReceive();
+    expect(walletsService.requestOpen).toHaveBeenCalled();
+  });
+
+  it('shows a zero USD balance hero until wallets are funded', () => {
+    expect(component.usdBalanceLabel()).toBe('$0.00');
+    expect(component.usdChangeLabel()).toBe('+$0.00');
+    expect(component.usdChangePercentLabel()).toBe('0.00%');
+    expect(component.walletPillLabel()).toBe('No wallet');
+    expect(component.showWalletSetupActions()).toBeTrue();
+  });
+
+  it('labels an embedded linked wallet in the balance hero', () => {
+    sessionSubject.next(linkedWalletSession);
+
+    expect(component.walletPillLabel()).toBe('CraftScript wallet');
+    expect(component.showWalletSetupActions()).toBeFalse();
+  });
+
+  it('generates an embedded wallet from onboarding', async () => {
+    authSession.ensureEmbeddedWallet.and.resolveTo();
+    authSession.reloadWallets.and.resolveTo(linkedWalletSession.wallets);
+
+    await component.generateWallet();
+
+    expect(authSession.ensureEmbeddedWallet).toHaveBeenCalledTimes(1);
+    expect(authSession.reloadWallets).toHaveBeenCalledTimes(1);
+    expect(component.walletMessage).toBe('Wallet generated');
+  });
+
+  it('counts remaining onboarding steps and progress from wallet and passkey state', () => {
+    expect(component.completedSwapCount()).toBe(
+      component.activity.completedSwapCount
+    );
+    expect(component.onboardingRemainingCount()).toBe(2);
+    expect(component.onboardingProgressPercent()).toBe(33);
+    expect(component.nextOnboardingCta()).toBe('Set up wallet');
+    expect(component.nextOnboardingTitle()).toBe('Connect or generate wallet');
+    expect(component.showOnboardingGenerateWallet()).toBeTrue();
+
+    sessionSubject.next(enabledSession);
+
+    expect(component.onboardingRemainingCount()).toBe(1);
+    expect(component.onboardingProgressPercent()).toBe(67);
+    expect(component.nextOnboardingCta()).toBe('Set up wallet');
+
+    sessionSubject.next(linkedWalletSession);
+
+    expect(component.onboardingRemainingCount()).toBe(0);
+    expect(component.onboardingProgressPercent()).toBe(100);
+    expect(component.nextOnboardingCta()).toBe('Go to Exchange');
+    expect(component.showOnboardingGenerateWallet()).toBeFalse();
+    expect(component.onboardingRemainingLabel()).toBe('All steps complete');
+  });
+
+  it('opens the wallet modal for the next wallet onboarding step', async () => {
+    await component.runOnboardingStep();
+
+    expect(walletGatewayBridge.syncConnectedWallet).toHaveBeenCalledTimes(1);
+    expect(walletsService.requestOpen).toHaveBeenCalledTimes(1);
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+  });
+
+  it('enables passkey from the security onboarding step', async () => {
+    sessionSubject.next(linkedWalletSession);
+    component.session = {
+      ...linkedWalletSession,
+      user: { ...linkedWalletSession.user, passkeyEnabled: false },
+    };
+
+    const securityStep = component
+      .onboardingSteps()
+      .find(step => step.id === 'security');
+
+    expect(securityStep).toBeDefined();
+    if (!securityStep) {
+      fail('security onboarding step was missing');
+      return;
+    }
+
+    await component.runOnboardingStep(securityStep);
+
+    expect(authSession.enablePasskey).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes swap onboarding to Exchange', async () => {
+    sessionSubject.next(linkedWalletSession);
+
+    await component.runOnboardingStep();
+
+    expect(localizedRouting.path).toHaveBeenCalledWith('/');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en');
   });
 
   it('syncs the connected wallet then opens the wallets MFE', async () => {

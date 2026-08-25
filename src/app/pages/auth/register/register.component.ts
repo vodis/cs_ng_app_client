@@ -166,15 +166,6 @@ export class RegisterComponent {
       return;
     }
 
-    await this.router.navigate(
-      [this.localizedRouting.path('/generate-wallet')],
-      {
-        queryParams: {
-          returnUrl: this.localizedRouting.path(
-            readReturnUrl(this.route.snapshot.queryParamMap)
-          ),
-        },
-      }
-    );
+    await this.router.navigateByUrl(this.localizedRouting.path('/profile'));
   }
 }

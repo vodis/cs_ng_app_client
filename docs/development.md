@@ -52,6 +52,18 @@ Production wallet remote policy:
 - If host and wallets both change, open coordinated PRs and cross-link them.
 - Document compatibility notes when one PR depends on the other.
 
+## Auth navigation
+
+- Login and register send wallet-less sessions to `/profile`, not a wallet
+  setup interstitial.
+- Users who already have a linked wallet still continue to `returnUrl`.
+- Keep wallet, passkey, and swap onboarding on `/profile` so first-time
+  users can enter the app shell immediately.
+- Keep profile integrations behind `ProfileFacade`; do not inject auth, wallet
+  gateway, or router services directly into `ProfileComponent`.
+- Supply activity through `ProfileActivitySource` so the activity panel and
+  onboarding progress cannot diverge.
+
 ## Architecture Rules (best practices)
 
 - Explicit boundaries:
@@ -216,8 +228,8 @@ Host auth routes live under `src/app/pages/auth/`.
 | ------------------ | ----------- | ------------------------------------------------------------------ |
 | `/login`           | Public      | Passkey, Google, Apple, Telegram always shown; email code fallback |
 | `/register`        | Public      | Account creation only; wallet setup is separate                    |
-| `/generate-wallet` | `AuthGuard` | First wallet onboarding after auth                                 |
-| `/profile`         | `AuthGuard` | Passkey enablement + Connect wallet button                         |
+| `/profile`         | `AuthGuard` | Balance hero, onboarding, activity, sessions, account footer       |
+| `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                                      |
 
 ### Login expectations
 
@@ -237,16 +249,21 @@ Host auth routes live under `src/app/pages/auth/`.
 
 ### Wallet onboarding split
 
-- `/generate-wallet` is the dedicated first-time setup page after register/login
-  when the account has no linked wallets.
-- `/profile` renders only a Connect wallet trigger (`app-wallet-bar`). Generate
-  wallet and external-wallet linking remain inside the wallets MFE modal.
-- Do not re-implement generate-wallet UI in profile; reuse the MFE modal flow.
+- Login/register without linked wallets routes to `/profile`, not a blocking
+  wallet interstitial.
+- `/profile` shows a `$0.00` balance hero plus an Onboarding portfolio card
+  for wallet, passkey, and five swaps.
+- Generate wallet uses the host auth-session bridge; connecting an existing
+  wallet still opens the wallets MFE modal. The swap step routes to
+  Exchange.
+- Legacy `/generate-wallet` links redirect to `/profile`.
 
 ### Local validation for auth changes
 
 1. Start host and wallets MFE together.
 2. Verify `/login` social buttons and passkey-not-enabled messaging.
 3. Verify protected-route redirect to `/login` without a session.
-4. Verify register/login without wallets routes to `/generate-wallet`.
-5. Verify profile Connect wallet opens the wallets MFE modal.
+4. Verify register/login without wallets routes to `/profile` with a `$0.00`
+   balance hero.
+5. Verify the Onboarding portfolio Set up wallet CTA opens the wallets MFE
+   modal, and Generate wallet creates an embedded wallet.

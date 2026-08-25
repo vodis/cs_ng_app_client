@@ -36,9 +36,7 @@ describe('LayoutComponent', () => {
 
     expect(component.hideShell).toBeTrue();
 
-    routerEvents.next(
-      new NavigationEnd(2, '/generate-wallet', '/generate-wallet')
-    );
+    routerEvents.next(new NavigationEnd(2, '/register', '/register'));
 
     expect(component.hideShell).toBeTrue();
 

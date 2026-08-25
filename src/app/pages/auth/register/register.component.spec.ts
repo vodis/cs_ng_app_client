@@ -95,7 +95,7 @@ describe('RegisterComponent', () => {
     expect(component.isOpenEmailCodeModal).toBeTrue();
   });
 
-  it('routes verified accounts without wallets to generate-wallet', async () => {
+  it('routes verified accounts without wallets to profile', async () => {
     component.codeEmail = 'user@example.com';
     component.emailCode = '123456';
 
@@ -106,9 +106,7 @@ describe('RegisterComponent', () => {
       '123456'
     );
     expect(component.isOpenEmailCodeModal).toBeFalse();
-    expect(router.navigate).toHaveBeenCalledOnceWith(['/en/generate-wallet'], {
-      queryParams: { returnUrl: '/en' },
-    });
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/profile');
   });
 
   it('navigates to a safe return URL when login already has wallets', async () => {
@@ -140,7 +138,7 @@ describe('RegisterComponent', () => {
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/farm');
   });
 
-  it('routes wallet-less social registration to generate-wallet', async () => {
+  it('routes wallet-less social registration to profile', async () => {
     component.agreedToPolicy = true;
     authSession.login.and.resolveTo({
       user: {
@@ -154,9 +152,7 @@ describe('RegisterComponent', () => {
     await component.continueWith('apple');
 
     expect(authSession.reloadWallets).toHaveBeenCalledTimes(1);
-    expect(router.navigate).toHaveBeenCalledOnceWith(['/en/generate-wallet'], {
-      queryParams: { returnUrl: '/en' },
-    });
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/profile');
   });
 
   function createComponent(): RegisterComponent {
