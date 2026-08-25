@@ -5,16 +5,24 @@ import {
   activityHeatmapSwapCount,
   activityHeatmapYears,
   activityMonthLabels,
+  buildActivityHeatmap,
+  buildActivityHeatmapForYear,
   formatActivityDayTooltip,
-  MOCK_ACTIVITY_EXAMPLE_DATE,
-  mockActivityHeatmap,
-  mockActivityHeatmapForYear,
 } from './activity-heatmap.utils';
 
 describe('activity-heatmap.utils', () => {
+  const latestIsoDate = '2026-08-25';
+  const exampleIsoDate = '2026-04-23';
+  const countsForDate = (isoDate: string) =>
+    isoDate === exampleIsoDate
+      ? { swaps: 5, deposits: 1 }
+      : { swaps: 0, deposits: 0 };
+
   it('builds a 53-week Sunday-start heatmap covering one year', () => {
-    const weeks = mockActivityHeatmap();
-    const inRangeDays = weeks.flatMap(week => week.days).filter(day => day.inRange);
+    const weeks = buildActivityHeatmap(latestIsoDate, undefined, countsForDate);
+    const inRangeDays = weeks
+      .flatMap(week => week.days)
+      .filter(day => day.inRange);
 
     expect(weeks.length).toBe(53);
     expect(weeks[0].days.length).toBe(7);
@@ -24,10 +32,10 @@ describe('activity-heatmap.utils', () => {
   });
 
   it('pins the example day to 5 swaps and 1 deposit', () => {
-    const weeks = mockActivityHeatmap();
+    const weeks = buildActivityHeatmap(latestIsoDate, undefined, countsForDate);
     const example = weeks
       .flatMap(week => week.days)
-      .find(day => day.isoDate === MOCK_ACTIVITY_EXAMPLE_DATE);
+      .find(day => day.isoDate === exampleIsoDate);
 
     expect(example).toBeDefined();
     if (!example) {
@@ -52,7 +60,7 @@ describe('activity-heatmap.utils', () => {
   });
 
   it('labels months and sums swaps across the year', () => {
-    const weeks = mockActivityHeatmap();
+    const weeks = buildActivityHeatmap(latestIsoDate, undefined, countsForDate);
     const months = activityMonthLabels(weeks);
 
     expect(months.length).toBeGreaterThan(6);
@@ -62,10 +70,16 @@ describe('activity-heatmap.utils', () => {
   });
 
   it('lists recent years and builds a calendar year when a past year is selected', () => {
-    expect(activityHeatmapYears()).toEqual([2026, 2025, 2024]);
+    expect(activityHeatmapYears(latestIsoDate)).toEqual([2026, 2025, 2024]);
 
-    const weeks = mockActivityHeatmapForYear(2025);
-    const inRangeDays = weeks.flatMap(week => week.days).filter(day => day.inRange);
+    const weeks = buildActivityHeatmapForYear(
+      2025,
+      latestIsoDate,
+      countsForDate
+    );
+    const inRangeDays = weeks
+      .flatMap(week => week.days)
+      .filter(day => day.inRange);
 
     expect(inRangeDays[0].isoDate).toBe('2025-01-01');
     expect(inRangeDays[inRangeDays.length - 1].isoDate).toBe('2025-12-31');

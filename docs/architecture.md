@@ -103,6 +103,16 @@ Flow direction:
   interstitial.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 
+Profile boundary rules:
+
+- `ProfileComponent` owns presentation state and formatting only.
+- `ProfileFacade` owns wallet, passkey, balance, and navigation workflows and is
+  the component's only integration dependency.
+- `ProfileActivitySource` supplies one activity snapshot for the activity panel
+  and swap-onboarding progress. The temporary mock implementation is
+  component-scoped and can be replaced by a backend adapter without changing
+  the component.
+
 ## 5. Execution Flows (Banking-grade approach)
 
 Complex flows (swap, transfer, payout, order execution) must be represented as explicit workflow services.
@@ -325,10 +335,10 @@ owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 
 ### Protected routes
 
-| Route              | Guard       | Purpose                                           |
-| ------------------ | ----------- | ------------------------------------------------- |
+| Route              | Guard       | Purpose                                                |
+| ------------------ | ----------- | ------------------------------------------------------ |
 | `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, sessions |
-| `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                     |
+| `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                          |
 
 ### Login methods on `/login`
 

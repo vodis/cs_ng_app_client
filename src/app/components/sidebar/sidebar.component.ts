@@ -10,11 +10,11 @@ import { LocalizedRoutingService } from '@core/routing/localized-routing.service
   styleUrls: ['sidebar.component.scss'],
 })
 export class SidebarComponent {
-  public isBoardPanelOpen = true;
-  public isFarmPanelOpen = true;
-  public isDevActivityPanelOpen = true;
+  public isInformationPanelOpen = true;
+  public isFinancePanelOpen = true;
+  public isActivityPanelOpen = true;
 
-  public sidebarBoardLinks = [
+  public informationLinks = [
     {
       name: 'Texts.sidebar-portfolio',
       fallback: 'Portfolio',
@@ -23,7 +23,7 @@ export class SidebarComponent {
     },
   ];
 
-  public sidebarFinansialLinks = [
+  public financeLinks = [
     {
       name: 'Texts.sidebar-trade',
       fallback: 'Trade',
@@ -32,7 +32,7 @@ export class SidebarComponent {
     },
   ];
 
-  public sidebarWorkProposalLinks = [
+  public activityLinks = [
     {
       name: 'Texts.sidebar-transactions',
       fallback: 'Transactions',
@@ -57,7 +57,10 @@ export class SidebarComponent {
   }
 
   public handleToggleAccordion(
-    key: 'isFarmPanelOpen' | 'isDevActivityPanelOpen' | 'isBoardPanelOpen',
+    key:
+      | 'isInformationPanelOpen'
+      | 'isFinancePanelOpen'
+      | 'isActivityPanelOpen',
     value: boolean
   ): void {
     this[key] = value;

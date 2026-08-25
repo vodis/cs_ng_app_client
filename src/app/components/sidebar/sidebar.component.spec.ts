@@ -45,9 +45,9 @@ describe('SidebarComponent', () => {
 
   it('does not expose profile in sidebar navigation', () => {
     const sidebarUrls = [
-      ...component.sidebarBoardLinks,
-      ...component.sidebarFinansialLinks,
-      ...component.sidebarWorkProposalLinks,
+      ...component.informationLinks,
+      ...component.financeLinks,
+      ...component.activityLinks,
     ].map(link => link.url);
 
     expect(sidebarUrls).not.toContain('/profile');

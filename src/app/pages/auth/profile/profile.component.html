@@ -19,7 +19,7 @@
         </span>
       </div>
 
-      <ng-container *ngIf="authSession.providerSnapshot$ | async as provider">
+      <ng-container *ngIf="profile.providerSnapshot$ | async as provider">
         <p class="profile-shell__empty" *ngIf="provider.status === 'disabled'">
           Wallet setup is not enabled for this environment.
         </p>
@@ -173,22 +173,25 @@
         <div class="profile-shell__heatmap">
           <div
             class="profile-shell__heatmap-chart"
-            [style.--heatmap-weeks]="heatmapWeeks.length"
+            [style.--heatmap-weeks]="activity.weeks.length"
             aria-label="Yearly activity">
             <div class="profile-shell__heatmap-months" aria-hidden="true">
               <span
-                *ngFor="let month of heatmapMonths"
+                *ngFor="let month of activity.months"
                 [style.grid-column]="month.weekIndex"
                 >{{ month.label }}</span
               >
             </div>
             <div class="profile-shell__heatmap-weekdays" aria-hidden="true">
-              <span *ngFor="let label of heatmapWeekdays">{{ label }}</span>
+              <span *ngFor="let label of activity.weekdays">{{ label }}</span>
             </div>
             <div class="profile-shell__heatmap-grid">
               <div
                 class="profile-shell__heatmap-week"
-                *ngFor="let week of heatmapWeeks; trackBy: trackByHeatmapWeek">
+                *ngFor="
+                  let week of activity.weeks;
+                  trackBy: trackByHeatmapWeek
+                ">
                 <button
                   type="button"
                   class="profile-shell__heatmap-day"
@@ -213,11 +216,11 @@
             <button
               type="button"
               class="profile-shell__heatmap-year"
-              *ngFor="let year of heatmapYears; trackBy: trackByHeatmapYear"
+              *ngFor="let year of activity.years; trackBy: trackByHeatmapYear"
               [class.profile-shell__heatmap-year--active]="
-                year === selectedHeatmapYear
+                year === activity.selectedYear
               "
-              [attr.aria-pressed]="year === selectedHeatmapYear"
+              [attr.aria-pressed]="year === activity.selectedYear"
               (click)="selectHeatmapYear(year)">
               {{ year }}
             </button>
@@ -543,14 +546,14 @@
       <button
         type="button"
         mat-stroked-button
-        [disabled]="authSession.loading$ | async"
+        [disabled]="profile.loading$ | async"
         (click)="logout()">
         Logout
       </button>
       <button
         type="button"
         mat-stroked-button
-        [disabled]="authSession.loading$ | async"
+        [disabled]="profile.loading$ | async"
         (click)="requestDeletion()">
         Delete account
       </button>

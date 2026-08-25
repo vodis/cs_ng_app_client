@@ -17,6 +17,9 @@ export type ActivityMonthLabel = {
   weekIndex: number;
 };
 
+export type ActivityCounts = { swaps: number; deposits: number };
+export type ActivityCountsProvider = (isoDate: string) => ActivityCounts;
+
 export const ACTIVITY_HEATMAP_WEEKDAY_LABELS = [
   '',
   'Mon',
@@ -27,8 +30,6 @@ export const ACTIVITY_HEATMAP_WEEKDAY_LABELS = [
   '',
 ] as const;
 
-export const MOCK_ACTIVITY_HEATMAP_END = '2026-08-25';
-export const MOCK_ACTIVITY_EXAMPLE_DATE = '2026-04-23';
 export const ACTIVITY_HEATMAP_YEAR_SPAN_DAYS = 365;
 export const ACTIVITY_HEATMAP_YEAR_COUNT = 3;
 
@@ -69,15 +70,10 @@ function addUtcDays(date: Date, days: number): Date {
   return next;
 }
 
-function hashIsoDate(isoDate: string): number {
-  let hash = 2166136261;
-  for (let i = 0; i < isoDate.length; i += 1) {
-    hash = Math.imul(hash ^ isoDate.charCodeAt(i), 16777619);
-  }
-  return hash >>> 0;
-}
-
-export function activityDayLevel(swaps: number, deposits: number): ActivityHeatmapLevel {
+export function activityDayLevel(
+  swaps: number,
+  deposits: number
+): ActivityHeatmapLevel {
   const total = swaps + deposits;
   if (total <= 0) {
     return 0;
@@ -92,22 +88,6 @@ export function activityDayLevel(swaps: number, deposits: number): ActivityHeatm
     return 3;
   }
   return 4;
-}
-
-function mockCountsForDate(isoDate: string): { swaps: number; deposits: number } {
-  if (isoDate === MOCK_ACTIVITY_EXAMPLE_DATE) {
-    return { swaps: 5, deposits: 1 };
-  }
-
-  const hash = hashIsoDate(isoDate);
-  const roll = hash % 100;
-  if (roll < 48) {
-    return { swaps: 0, deposits: 0 };
-  }
-
-  const swaps = (hash % 6) + 1;
-  const deposits = roll > 82 ? (hash % 3) + 1 : roll > 70 ? 1 : 0;
-  return { swaps, deposits };
 }
 
 export function formatActivityDayTooltip(day: ActivityHeatmapDay): string {
@@ -145,12 +125,13 @@ export function activityMonthLabels(
   let lastWeekIndex = Number.NEGATIVE_INFINITY;
 
   const firstInRange = weeks
-    .flatMap((week, weekIndex) =>
-      week.days.map(day => ({ day, weekIndex }))
-    )
+    .flatMap((week, weekIndex) => week.days.map(day => ({ day, weekIndex })))
     .find(item => item.day.inRange);
 
-  if (firstInRange && parseIsoDate(firstInRange.day.isoDate).getUTCDate() !== 1) {
+  if (
+    firstInRange &&
+    parseIsoDate(firstInRange.day.isoDate).getUTCDate() !== 1
+  ) {
     labels.push({
       label: MONTH_LABELS[parseIsoDate(firstInRange.day.isoDate).getUTCMonth()],
       weekIndex: firstInRange.weekIndex + 1,
@@ -177,16 +158,17 @@ export function activityMonthLabels(
 }
 
 export function activityHeatmapYears(
-  latestIsoDate = MOCK_ACTIVITY_HEATMAP_END,
+  latestIsoDate: string,
   yearCount = ACTIVITY_HEATMAP_YEAR_COUNT
 ): number[] {
   const latestYear = parseIsoDate(latestIsoDate).getUTCFullYear();
   return Array.from({ length: yearCount }, (_, index) => latestYear - index);
 }
 
-export function mockActivityHeatmap(
-  endIsoDate = MOCK_ACTIVITY_HEATMAP_END,
-  startIsoDate?: string
+export function buildActivityHeatmap(
+  endIsoDate: string,
+  startIsoDate: string | undefined,
+  countsForDate: ActivityCountsProvider
 ): ActivityHeatmapWeek[] {
   const end = parseIsoDate(endIsoDate);
   const yearStart = startIsoDate
@@ -195,8 +177,9 @@ export function mockActivityHeatmap(
   const startSunday = startOfSundayUtc(yearStart);
   const endSunday = startOfSundayUtc(end);
   const weekCount =
-    Math.round((endSunday.getTime() - startSunday.getTime()) / (7 * 86_400_000)) +
-    1;
+    Math.round(
+      (endSunday.getTime() - startSunday.getTime()) / (7 * 86_400_000)
+    ) + 1;
   const weeks: ActivityHeatmapWeek[] = [];
 
   for (let week = 0; week < weekCount; week += 1) {
@@ -205,9 +188,10 @@ export function mockActivityHeatmap(
       const date = addUtcDays(startSunday, week * 7 + weekday);
       const isoDate = toIsoDate(date);
       const inRange =
-        date.getTime() >= yearStart.getTime() && date.getTime() <= end.getTime();
+        date.getTime() >= yearStart.getTime() &&
+        date.getTime() <= end.getTime();
       const counts = inRange
-        ? mockCountsForDate(isoDate)
+        ? countsForDate(isoDate)
         : { swaps: 0, deposits: 0 };
 
       days.push({
@@ -224,20 +208,21 @@ export function mockActivityHeatmap(
   return weeks;
 }
 
-export function mockActivityHeatmapForYear(
+export function buildActivityHeatmapForYear(
   year: number,
-  latestIsoDate = MOCK_ACTIVITY_HEATMAP_END
+  latestIsoDate: string,
+  countsForDate: ActivityCountsProvider
 ): ActivityHeatmapWeek[] {
   const latest = parseIsoDate(latestIsoDate);
   const latestYear = latest.getUTCFullYear();
 
   if (year >= latestYear) {
-    return mockActivityHeatmap(latestIsoDate);
+    return buildActivityHeatmap(latestIsoDate, undefined, countsForDate);
   }
 
   const startIsoDate = toIsoDate(new Date(Date.UTC(year, 0, 1)));
   const endIsoDate = toIsoDate(new Date(Date.UTC(year, 11, 31)));
-  return mockActivityHeatmap(endIsoDate, startIsoDate);
+  return buildActivityHeatmap(endIsoDate, startIsoDate, countsForDate);
 }
 
 export function activityHeatmapSwapCount(

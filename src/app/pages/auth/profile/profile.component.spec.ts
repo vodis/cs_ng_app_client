@@ -9,10 +9,11 @@ import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import {
-  MOCK_ACTIVITY_EXAMPLE_DATE,
-  mockActivityHeatmap,
-} from '@shared/utils/activity-heatmap.utils';
+  MockProfileActivitySource,
+  PROFILE_ACTIVITY_EXAMPLE_DATE,
+} from './profile-activity.source';
 import { ProfileComponent } from './profile.component';
+import { ProfileFacade } from './profile.facade';
 
 describe('ProfileComponent', () => {
   let component: ProfileComponent;
@@ -137,13 +138,14 @@ describe('ProfileComponent', () => {
       path === '/' ? '/en' : `/en${path}`
     );
 
-    component = new ProfileComponent(
+    const profile = new ProfileFacade(
       authSession,
       walletsService,
       walletGatewayBridge,
       router,
       localizedRouting
     );
+    component = new ProfileComponent(profile, new MockProfileActivitySource());
     component.ngOnInit();
   });
 
@@ -185,18 +187,17 @@ describe('ProfileComponent', () => {
   });
 
   it('shows mock swap volume beside a GitHub-style activity heatmap', () => {
-    const weeks = mockActivityHeatmap();
-    const example = weeks
+    const example = component.activity.weeks
       .flatMap(week => week.days)
-      .find(day => day.isoDate === MOCK_ACTIVITY_EXAMPLE_DATE);
+      .find(day => day.isoDate === PROFILE_ACTIVITY_EXAMPLE_DATE);
 
     expect(component.activityVolumeLabel()).toBe('$978.51');
     expect(component.activityFiatLabel()).toBe('≈ $978.66');
     expect(component.activityTodayLabel()).toBe('+$17.98 (1.87%)');
     expect(component.isActivityTodayUp()).toBeTrue();
-    expect(component.heatmapWeeks.length).toBe(53);
-    expect(component.heatmapYears).toEqual([2026, 2025, 2024]);
-    expect(component.selectedHeatmapYear).toBe(2026);
+    expect(component.activity.weeks.length).toBe(53);
+    expect(component.activity.years).toEqual([2026, 2025, 2024]);
+    expect(component.activity.selectedYear).toBe(2026);
     expect(example).toBeDefined();
     if (!example) {
       fail('example heatmap day was missing');
@@ -211,11 +212,11 @@ describe('ProfileComponent', () => {
   it('switches the activity heatmap to a past calendar year', () => {
     component.selectHeatmapYear(2025);
 
-    const inRangeDays = component.heatmapWeeks
+    const inRangeDays = component.activity.weeks
       .flatMap(week => week.days)
       .filter(day => day.inRange);
 
-    expect(component.selectedHeatmapYear).toBe(2025);
+    expect(component.activity.selectedYear).toBe(2025);
     expect(inRangeDays[0].isoDate).toBe('2025-01-01');
     expect(inRangeDays[inRangeDays.length - 1].isoDate).toBe('2025-12-31');
   });
@@ -260,25 +261,28 @@ describe('ProfileComponent', () => {
   });
 
   it('counts remaining onboarding steps and progress from wallet and passkey state', () => {
-    expect(component.onboardingRemainingCount()).toBe(3);
-    expect(component.onboardingProgressPercent()).toBe(0);
+    expect(component.completedSwapCount()).toBe(
+      component.activity.completedSwapCount
+    );
+    expect(component.onboardingRemainingCount()).toBe(2);
+    expect(component.onboardingProgressPercent()).toBe(33);
     expect(component.nextOnboardingCta()).toBe('Set up wallet');
     expect(component.nextOnboardingTitle()).toBe('Connect or generate wallet');
     expect(component.showOnboardingGenerateWallet()).toBeTrue();
 
     sessionSubject.next(enabledSession);
 
-    expect(component.onboardingRemainingCount()).toBe(2);
-    expect(component.onboardingProgressPercent()).toBe(33);
+    expect(component.onboardingRemainingCount()).toBe(1);
+    expect(component.onboardingProgressPercent()).toBe(67);
     expect(component.nextOnboardingCta()).toBe('Set up wallet');
 
     sessionSubject.next(linkedWalletSession);
 
-    expect(component.onboardingRemainingCount()).toBe(1);
-    expect(component.onboardingProgressPercent()).toBe(67);
-    expect(component.nextOnboardingCta()).toBe('Start swapping');
+    expect(component.onboardingRemainingCount()).toBe(0);
+    expect(component.onboardingProgressPercent()).toBe(100);
+    expect(component.nextOnboardingCta()).toBe('Go to Exchange');
     expect(component.showOnboardingGenerateWallet()).toBeFalse();
-    expect(component.onboardingRemainingLabel()).toBe('1 step remaining');
+    expect(component.onboardingRemainingLabel()).toBe('All steps complete');
   });
 
   it('opens the wallet modal for the next wallet onboarding step', async () => {

@@ -59,6 +59,10 @@ Production wallet remote policy:
 - Users who already have a linked wallet still continue to `returnUrl`.
 - Keep wallet, passkey, and swap onboarding on `/profile` so first-time
   users can enter the app shell immediately.
+- Keep profile integrations behind `ProfileFacade`; do not inject auth, wallet
+  gateway, or router services directly into `ProfileComponent`.
+- Supply activity through `ProfileActivitySource` so the activity panel and
+  onboarding progress cannot diverge.
 
 ## Architecture Rules (best practices)
 

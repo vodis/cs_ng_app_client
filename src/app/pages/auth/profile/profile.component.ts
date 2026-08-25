@@ -1,27 +1,27 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { AuthSessionService } from '@core/auth/auth-session.service';
 import type {
   AuthSession,
   BackendBalance,
   BackendWallet,
 } from '@core/auth/auth-session.types';
-import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
-import { WalletsService } from '@shared/mfe/wallets/wallets.service';
-import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import {
-  ACTIVITY_HEATMAP_WEEKDAY_LABELS,
-  activityHeatmapSwapCount,
-  activityHeatmapYears,
-  activityMonthLabels,
   formatActivityDayTooltip,
-  mockActivityHeatmapForYear,
   type ActivityHeatmapDay,
   type ActivityHeatmapWeek,
 } from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
+import {
+  MockProfileActivitySource,
+  ProfileActivitySource,
+  type ProfileActivitySnapshot,
+} from './profile-activity.source';
+import {
+  ProfileFacade,
+  type ProfileOnboardingStep,
+  type ProfileOnboardingViewModel,
+} from './profile.facade';
 
 const CHAIN_ICON_URLS: Record<string, string> = {
   ethereum: EXCHANGE_TOKEN_ICON_URLS['ETH'],
@@ -38,22 +38,7 @@ type ProfileLoginSession = {
   application: string;
 };
 
-type OnboardingStepId = 'wallet' | 'security' | 'swaps';
-
-export type ProfileOnboardingStep = {
-  id: OnboardingStepId;
-  title: string;
-  hint: string;
-  done: boolean;
-  cta: string;
-};
-
 const REQUIRED_SWAP_COUNT = 5;
-const MOCK_ACTIVITY_VOLUME_USD = 978.51;
-const MOCK_ACTIVITY_FIAT_USD = 978.66;
-const MOCK_ACTIVITY_TODAY_DELTA = 17.98;
-const MOCK_ACTIVITY_TODAY_PERCENT = 1.87;
-const MOCK_ACTIVITY_HEATMAP_YEARS = activityHeatmapYears();
 
 function formatUsdAmount(value: number): string {
   return value.toFixed(2);
@@ -91,6 +76,10 @@ const MOCK_LOGIN_SESSIONS: ProfileLoginSession[] = [
   standalone: false,
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],
+  providers: [
+    ProfileFacade,
+    { provide: ProfileActivitySource, useClass: MockProfileActivitySource },
+  ],
 })
 export class ProfileComponent implements OnInit, OnDestroy {
   public session: AuthSession | null = null;
@@ -112,28 +101,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public visibleLoginSessions = MOCK_LOGIN_SESSIONS.slice(0, 2);
 
   public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
-  public readonly heatmapYears = MOCK_ACTIVITY_HEATMAP_YEARS;
-  public readonly heatmapWeekdays = ACTIVITY_HEATMAP_WEEKDAY_LABELS;
-  public selectedHeatmapYear = MOCK_ACTIVITY_HEATMAP_YEARS[0];
-  public heatmapWeeks: readonly ActivityHeatmapWeek[] = mockActivityHeatmapForYear(
-    this.selectedHeatmapYear
-  );
-  public heatmapMonths = activityMonthLabels(this.heatmapWeeks);
+  public activity: ProfileActivitySnapshot;
+  public onboarding: ProfileOnboardingViewModel;
 
   private subscription?: Subscription;
 
   constructor(
-    public readonly authSession: AuthSessionService,
-    private readonly walletsService: WalletsService,
-    private readonly walletGatewayBridge: WalletGatewayBridgeService,
-    private readonly router: Router,
-    private readonly localizedRouting: LocalizedRoutingService
-  ) {}
+    public readonly profile: ProfileFacade,
+    private readonly activitySource: ProfileActivitySource
+  ) {
+    this.activity = this.activitySource.snapshot();
+    this.onboarding = this.buildOnboardingViewModel();
+  }
 
   public ngOnInit(): void {
     this.subscription = new Subscription();
     this.subscription.add(
-      this.authSession.session$.subscribe(session => {
+      this.profile.session$.subscribe(session => {
         this.session = session;
         if (session) {
           this.seedLastConnectedFromBackend(session.wallets);
@@ -141,16 +125,19 @@ export class ProfileComponent implements OnInit, OnDestroy {
         } else {
           this.balances = [];
         }
+        this.refreshOnboarding();
       })
     );
     this.subscription.add(
-      this.walletsService.account.subscribe(account => {
+      this.profile.account$.subscribe(account => {
         this.connectedAccount = account?.account ?? null;
+        this.refreshOnboarding();
       })
     );
     this.subscription.add(
-      this.walletsService.lastConnected.subscribe(wallet => {
+      this.profile.lastConnected$.subscribe(wallet => {
         this.lastConnectedWallet = wallet ?? null;
+        this.refreshOnboarding();
       })
     );
   }
@@ -213,7 +200,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public canEnablePasskey(): boolean {
-    return this.authSession.passkeyLinkEnabled;
+    return this.profile.passkeyLinkEnabled;
   }
 
   public isPasskeyLinked(): boolean {
@@ -221,7 +208,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public isPasskeyLoginAvailable(): boolean {
-    return this.authSession.passkeyLoginEnabled;
+    return this.profile.passkeyLoginEnabled;
   }
 
   public async enablePasskey(): Promise<void> {
@@ -229,7 +216,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.passkeyMessage = '';
     this.passkeyLoading = true;
     try {
-      await this.authSession.enablePasskey();
+      await this.profile.enablePasskey();
       this.passkeyMessage = 'Passkey authentication enabled';
     } catch (error) {
       this.error =
@@ -248,104 +235,53 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public completedSwapCount(): number {
-    return 0;
+    return this.activity.completedSwapCount;
   }
 
   public isWalletStepDone(): boolean {
-    return this.hasLinkedWallets() || this.isLiveConnected();
-  }
-
-  public isSecurityStepDone(): boolean {
-    return this.isPasskeyLinked();
-  }
-
-  public isSwapsStepDone(): boolean {
-    return this.completedSwapCount() >= this.requiredSwapCount;
-  }
-
-  public onboardingSteps(): ProfileOnboardingStep[] {
-    const walletDone = this.isWalletStepDone();
-    const securityDone = this.isSecurityStepDone();
-    const swapsDone = this.isSwapsStepDone();
-
-    return [
-      {
-        id: 'wallet',
-        title: 'Connect or generate wallet',
-        hint: walletDone
-          ? this.walletPillLabel()
-          : 'Link a wallet to start trading',
-        done: walletDone,
-        cta: walletDone ? 'Manage' : 'Connect',
-      },
-      {
-        id: 'security',
-        title: 'Enable passkey or 2FA',
-        hint: securityDone
-          ? 'Passkey enabled'
-          : 'Faster, safer sign in next time',
-        done: securityDone,
-        cta: 'Enable',
-      },
-      {
-        id: 'swaps',
-        title: 'Complete 5 swaps',
-        hint: `${this.completedSwapCount()} of ${this.requiredSwapCount} completed`,
-        done: swapsDone,
-        cta: 'Trade',
-      },
-    ];
-  }
-
-  public onboardingRemainingCount(): number {
-    return this.onboardingSteps().filter(step => !step.done).length;
-  }
-
-  public onboardingProgressPercent(): number {
-    const steps = this.onboardingSteps();
-    if (steps.length === 0) {
-      return 0;
-    }
-
-    return Math.round(
-      (steps.filter(step => step.done).length / steps.length) * 100
+    return (
+      this.onboarding.steps.find(step => step.id === 'wallet')?.done ?? false
     );
   }
 
+  public isSecurityStepDone(): boolean {
+    return (
+      this.onboarding.steps.find(step => step.id === 'security')?.done ?? false
+    );
+  }
+
+  public isSwapsStepDone(): boolean {
+    return (
+      this.onboarding.steps.find(step => step.id === 'swaps')?.done ?? false
+    );
+  }
+
+  public onboardingSteps(): ProfileOnboardingStep[] {
+    return this.onboarding.steps;
+  }
+
+  public onboardingRemainingCount(): number {
+    return this.onboarding.remainingCount;
+  }
+
+  public onboardingProgressPercent(): number {
+    return this.onboarding.progressPercent;
+  }
+
   public nextOnboardingStep(): ProfileOnboardingStep | null {
-    return this.onboardingSteps().find(step => !step.done) ?? null;
+    return this.onboarding.nextStep;
   }
 
   public nextOnboardingCta(): string {
-    const next = this.nextOnboardingStep();
-    if (!next) {
-      return 'Go to Exchange';
-    }
-
-    if (next.id === 'wallet') {
-      return 'Set up wallet';
-    }
-
-    if (next.id === 'security') {
-      return 'Enable passkey';
-    }
-
-    return 'Start swapping';
+    return this.onboarding.nextCta;
   }
 
   public nextOnboardingTitle(): string {
-    return this.nextOnboardingStep()?.title ?? "You're all set";
+    return this.onboarding.nextTitle;
   }
 
   public onboardingRemainingLabel(): string {
-    const remaining = this.onboardingRemainingCount();
-    if (remaining === 0) {
-      return 'All steps complete';
-    }
-
-    return remaining === 1
-      ? '1 step remaining'
-      : `${remaining} steps remaining`;
+    return this.onboarding.remainingLabel;
   }
 
   public showOnboardingGenerateWallet(): boolean {
@@ -366,31 +302,33 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public async runOnboardingStep(
     step: ProfileOnboardingStep | null = this.nextOnboardingStep()
   ): Promise<void> {
-    if (!step) {
-      await this.router.navigateByUrl(this.localizedRouting.path('/'));
-      return;
+    this.error = '';
+    const enablesPasskey =
+      step?.id === 'security' &&
+      !this.isPasskeyLinked() &&
+      this.canEnablePasskey();
+    if (enablesPasskey) {
+      this.passkeyMessage = '';
+      this.passkeyLoading = true;
     }
-
-    if (step.id === 'wallet') {
-      await this.openWalletModal();
-      return;
-    }
-
-    if (step.id === 'security') {
-      if (this.isPasskeyLinked()) {
-        return;
-      }
-
-      if (!this.canEnablePasskey()) {
+    try {
+      const result = await this.profile.runOnboardingAction(
+        step?.id ?? null,
+        this.isPasskeyLinked()
+      );
+      if (result === 'passkey-enabled') {
+        this.passkeyMessage = 'Passkey authentication enabled';
+      } else if (result === 'passkey-unavailable') {
         this.error = 'Passkey linking is not enabled in this environment.';
-        return;
       }
-
-      await this.enablePasskey();
-      return;
+    } catch (error) {
+      this.error =
+        error instanceof Error ? error.message : 'Onboarding action failed';
+    } finally {
+      if (enablesPasskey) {
+        this.passkeyLoading = false;
+      }
     }
-
-    await this.router.navigateByUrl(this.localizedRouting.path('/'));
   }
 
   public usdBalanceLabel(): string {
@@ -406,23 +344,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public activityVolumeLabel(): string {
-    return `$${formatUsdAmount(MOCK_ACTIVITY_VOLUME_USD)}`;
+    return `$${formatUsdAmount(this.activity.volumeUsd)}`;
   }
 
   public activityFiatLabel(): string {
-    return `≈ $${formatUsdAmount(MOCK_ACTIVITY_FIAT_USD)}`;
+    return `≈ $${formatUsdAmount(this.activity.fiatUsd)}`;
   }
 
   public activityTodayLabel(): string {
-    return `+$${formatUsdAmount(MOCK_ACTIVITY_TODAY_DELTA)} (${MOCK_ACTIVITY_TODAY_PERCENT.toFixed(2)}%)`;
+    const sign = this.activity.todayDeltaUsd >= 0 ? '+' : '-';
+    return `${sign}$${formatUsdAmount(Math.abs(this.activity.todayDeltaUsd))} (${this.activity.todayPercent.toFixed(2)}%)`;
   }
 
   public isActivityTodayUp(): boolean {
-    return MOCK_ACTIVITY_TODAY_DELTA > 0;
+    return this.activity.todayDeltaUsd > 0;
   }
 
   public activitySwapCountLabel(): string {
-    return `${activityHeatmapSwapCount(this.heatmapWeeks)} swaps`;
+    return `${this.activity.completedSwapCount} swaps`;
   }
 
   public heatmapDayTooltip(day: ActivityHeatmapDay): string {
@@ -430,19 +369,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public selectHeatmapYear(year: number): void {
-    this.selectedHeatmapYear = year;
-    this.heatmapWeeks = mockActivityHeatmapForYear(year);
-    this.heatmapMonths = activityMonthLabels(this.heatmapWeeks);
+    this.activity = this.activitySource.snapshot(year);
+    this.refreshOnboarding();
   }
 
   public trackByHeatmapYear(_index: number, year: number): number {
     return year;
   }
 
-  public trackByHeatmapWeek(
-    index: number,
-    week: ActivityHeatmapWeek
-  ): string {
+  public trackByHeatmapWeek(index: number, week: ActivityHeatmapWeek): string {
     return week.days[0]?.isoDate ?? String(index);
   }
 
@@ -451,7 +386,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public async openActivityPay(): Promise<void> {
-    await this.router.navigateByUrl(this.localizedRouting.path('/'));
+    await this.profile.navigateTo('/');
   }
 
   public async openActivityReceive(): Promise<void> {
@@ -459,7 +394,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public async openActivityAnalyze(): Promise<void> {
-    await this.router.navigateByUrl(this.localizedRouting.path('/portfolio'));
+    await this.profile.navigateTo('/portfolio');
   }
 
   public walletPillLabel(): string {
@@ -534,10 +469,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public async openWalletModal(): Promise<void> {
-    try {
-      await this.walletGatewayBridge.syncConnectedWallet();
-    } catch {}
-    this.walletsService.requestOpen();
+    await this.profile.openWalletModal();
   }
 
   public async generateWallet(): Promise<void> {
@@ -545,15 +477,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.walletMessage = '';
     this.walletLoading = true;
     try {
-      await this.authSession.ensureEmbeddedWallet();
-      const wallets = await this.authSession.reloadWallets();
-      if (wallets.length === 0) {
-        throw new Error(
-          'Wallet was created but profile refresh returned no wallets.'
-        );
-      }
+      this.balances = await this.profile.generateWallet();
       this.walletMessage = 'Wallet generated';
-      await this.refreshBalances();
     } catch (error) {
       this.error =
         error instanceof Error ? error.message : 'Wallet setup failed';
@@ -568,23 +493,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.walletActionBusy = true;
     try {
       const current = this.connectedAccount;
-      if (current) {
-        const linked = this.findLinkedWallet(current);
-        this.walletsService.rememberConnectedWallet(
-          linked
-            ? this.toLastConnected(linked)
-            : {
-                account: current,
-                chainId: this.walletsService.account.value?.chainId ?? null,
-                walletType: this.lastConnectedWallet?.walletType ?? 'external',
-                source: this.lastConnectedWallet?.source,
-                connectorId: this.lastConnectedWallet?.connectorId,
-              }
-        );
-      }
-      this.walletGatewayBridge.disconnectWallet();
-      this.walletsService.setAccount(undefined);
-      this.walletsService.requestClose();
+      const linked = current ? this.findLinkedWallet(current) : undefined;
+      this.profile.disconnectWallet(
+        current,
+        linked ? this.toLastConnected(linked) : this.lastConnectedWallet
+      );
       this.walletMessage = 'Wallet disconnected';
     } catch (error) {
       this.error =
@@ -599,34 +512,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.walletMessage = '';
     this.walletActionBusy = true;
     try {
-      const snapshot = await this.walletGatewayBridge.syncConnectedWallet();
-      if (snapshot.account) {
-        this.walletsService.setAccount({
-          account: snapshot.account,
-          chainId: snapshot.chainId,
-        });
-        this.walletsService.rememberConnectedWallet({
-          account: snapshot.account,
-          chainId: snapshot.chainId,
-          walletType:
-            snapshot.identity?.walletType ??
-            this.lastConnectedWallet?.walletType ??
-            'external',
-          source:
-            snapshot.identity?.connectorId ?? this.lastConnectedWallet?.source,
-          connectorId:
-            snapshot.identity?.connectorId ??
-            this.lastConnectedWallet?.connectorId,
-        });
+      if (await this.profile.reconnectWallet(this.lastConnectedWallet)) {
         this.walletMessage = 'Wallet reconnected';
-        return;
       }
-
-      this.walletsService.requestOpen();
     } catch (error) {
       this.error =
         error instanceof Error ? error.message : 'Wallet reconnect failed';
-      this.walletsService.requestOpen();
     } finally {
       this.walletActionBusy = false;
     }
@@ -635,14 +526,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public connectAnotherWallet(): void {
     this.error = '';
     this.walletMessage = '';
-    this.walletsService.requestOpen();
+    this.profile.requestWalletOpen();
   }
 
   public async refreshWallets(): Promise<void> {
     this.error = '';
     this.walletMessage = '';
     try {
-      await this.authSession.reloadWallets();
+      await this.profile.reloadWallets();
       this.walletMessage = 'Wallets refreshed';
     } catch (error) {
       this.error =
@@ -655,7 +546,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.balanceMessage = '';
     this.balancesLoading = true;
     try {
-      this.balances = await this.authSession.loadBalances();
+      this.balances = await this.profile.loadBalances();
       this.balanceMessage =
         this.balances.length > 0 ? 'Balances refreshed' : '';
     } catch (error) {
@@ -675,7 +566,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.walletMessage = '';
     this.busyWalletId = wallet.id;
     try {
-      await this.authSession.setPrimaryWallet(wallet.id);
+      await this.profile.setPrimaryWallet(wallet.id);
       this.walletMessage = `${this.shortAddress(wallet.address)} is now active`;
     } catch (error) {
       this.error =
@@ -696,7 +587,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.walletMessage = '';
     this.busyWalletId = wallet.id;
     try {
-      await this.authSession.deleteWallet(wallet.id);
+      await this.profile.deleteWallet(wallet.id);
       this.walletMessage = `${this.shortAddress(wallet.address)} removed`;
     } catch (error) {
       this.error =
@@ -710,7 +601,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.error = '';
     this.deletionMessage = '';
     try {
-      const deletionAvailableAt = await this.authSession.requestDeletion();
+      const deletionAvailableAt = await this.profile.requestDeletion();
       this.deletionMessage = `Deletion available ${new Date(deletionAvailableAt).toLocaleDateString()}`;
     } catch (error) {
       this.error =
@@ -725,10 +616,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.deletionMessage = '';
     this.passkeyMessage = '';
     try {
-      await this.authSession.logout();
+      await this.profile.logout();
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Logout failed';
     }
+  }
+
+  private buildOnboardingViewModel(): ProfileOnboardingViewModel {
+    return this.profile.buildOnboardingViewModel({
+      walletDone: this.hasLinkedWallets() || this.isLiveConnected(),
+      passkeyDone: this.isPasskeyLinked(),
+      completedSwapCount: this.completedSwapCount(),
+      requiredSwapCount: this.requiredSwapCount,
+      walletLabel: this.walletPillLabel(),
+    });
+  }
+
+  private refreshOnboarding(): void {
+    this.onboarding = this.buildOnboardingViewModel();
   }
 
   private seedLastConnectedFromBackend(wallets: BackendWallet[]): void {
@@ -738,7 +643,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     const linked = this.primaryLinkedWallet(wallets);
     if (linked) {
-      this.walletsService.rememberConnectedWallet(this.toLastConnected(linked));
+      this.profile.rememberConnectedWallet(this.toLastConnected(linked));
     }
   }
 
