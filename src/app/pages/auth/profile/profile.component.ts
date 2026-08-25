@@ -11,6 +11,16 @@ import { LocalizedRoutingService } from '@core/routing/localized-routing.service
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import {
+  ACTIVITY_HEATMAP_WEEKDAY_LABELS,
+  activityHeatmapSwapCount,
+  activityHeatmapYears,
+  activityMonthLabels,
+  formatActivityDayTooltip,
+  mockActivityHeatmapForYear,
+  type ActivityHeatmapDay,
+  type ActivityHeatmapWeek,
+} from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
 
 const CHAIN_ICON_URLS: Record<string, string> = {
@@ -39,6 +49,15 @@ export type ProfileOnboardingStep = {
 };
 
 const REQUIRED_SWAP_COUNT = 5;
+const MOCK_ACTIVITY_VOLUME_USD = 978.51;
+const MOCK_ACTIVITY_FIAT_USD = 978.66;
+const MOCK_ACTIVITY_TODAY_DELTA = 17.98;
+const MOCK_ACTIVITY_TODAY_PERCENT = 1.87;
+const MOCK_ACTIVITY_HEATMAP_YEARS = activityHeatmapYears();
+
+function formatUsdAmount(value: number): string {
+  return value.toFixed(2);
+}
 
 const MOCK_LOGIN_SESSIONS: ProfileLoginSession[] = [
   {
@@ -93,6 +112,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public visibleLoginSessions = MOCK_LOGIN_SESSIONS.slice(0, 2);
 
   public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
+  public readonly heatmapYears = MOCK_ACTIVITY_HEATMAP_YEARS;
+  public readonly heatmapWeekdays = ACTIVITY_HEATMAP_WEEKDAY_LABELS;
+  public selectedHeatmapYear = MOCK_ACTIVITY_HEATMAP_YEARS[0];
+  public heatmapWeeks: readonly ActivityHeatmapWeek[] = mockActivityHeatmapForYear(
+    this.selectedHeatmapYear
+  );
+  public heatmapMonths = activityMonthLabels(this.heatmapWeeks);
 
   private subscription?: Subscription;
 
@@ -377,6 +403,63 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   public usdChangePercentLabel(): string {
     return '0.00%';
+  }
+
+  public activityVolumeLabel(): string {
+    return `$${formatUsdAmount(MOCK_ACTIVITY_VOLUME_USD)}`;
+  }
+
+  public activityFiatLabel(): string {
+    return `≈ $${formatUsdAmount(MOCK_ACTIVITY_FIAT_USD)}`;
+  }
+
+  public activityTodayLabel(): string {
+    return `+$${formatUsdAmount(MOCK_ACTIVITY_TODAY_DELTA)} (${MOCK_ACTIVITY_TODAY_PERCENT.toFixed(2)}%)`;
+  }
+
+  public isActivityTodayUp(): boolean {
+    return MOCK_ACTIVITY_TODAY_DELTA > 0;
+  }
+
+  public activitySwapCountLabel(): string {
+    return `${activityHeatmapSwapCount(this.heatmapWeeks)} swaps`;
+  }
+
+  public heatmapDayTooltip(day: ActivityHeatmapDay): string {
+    return formatActivityDayTooltip(day);
+  }
+
+  public selectHeatmapYear(year: number): void {
+    this.selectedHeatmapYear = year;
+    this.heatmapWeeks = mockActivityHeatmapForYear(year);
+    this.heatmapMonths = activityMonthLabels(this.heatmapWeeks);
+  }
+
+  public trackByHeatmapYear(_index: number, year: number): number {
+    return year;
+  }
+
+  public trackByHeatmapWeek(
+    index: number,
+    week: ActivityHeatmapWeek
+  ): string {
+    return week.days[0]?.isoDate ?? String(index);
+  }
+
+  public trackByHeatmapDay(_index: number, day: ActivityHeatmapDay): string {
+    return day.isoDate;
+  }
+
+  public async openActivityPay(): Promise<void> {
+    await this.router.navigateByUrl(this.localizedRouting.path('/'));
+  }
+
+  public async openActivityReceive(): Promise<void> {
+    await this.openWalletModal();
+  }
+
+  public async openActivityAnalyze(): Promise<void> {
+    await this.router.navigateByUrl(this.localizedRouting.path('/portfolio'));
   }
 
   public walletPillLabel(): string {

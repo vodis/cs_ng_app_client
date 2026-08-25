@@ -327,7 +327,7 @@ owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 
 | Route              | Guard       | Purpose                                           |
 | ------------------ | ----------- | ------------------------------------------------- |
-| `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, sessions      |
+| `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, sessions |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                     |
 
 ### Login methods on `/login`

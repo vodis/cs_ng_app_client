@@ -122,6 +122,111 @@
   </div>
 
   <div class="profile-shell__grid">
+    <section
+      class="profile-shell__panel profile-shell__panel--wide profile-shell__panel--activity"
+      aria-label="Activity">
+      <div class="profile-shell__activity">
+        <h2 class="profile-shell__activity-title">Activity</h2>
+        <div class="profile-shell__activity-actions">
+          <button
+            class="profile-shell__activity-action"
+            type="button"
+            (click)="openActivityPay()">
+            Pay
+          </button>
+          <button
+            class="profile-shell__activity-action"
+            type="button"
+            (click)="openActivityReceive()">
+            Receive
+          </button>
+          <button
+            class="profile-shell__activity-action profile-shell__activity-action--ai"
+            type="button"
+            (click)="openActivityAnalyze()">
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path
+                fill="currentColor"
+                d="M8 1.2 8.9 5.1 12.8 6 8.9 6.9 8 10.8 7.1 6.9 3.2 6 7.1 5.1 8 1.2Zm4.4 7.1.5 2.1 2.1.5-2.1.5-.5 2.1-.5-2.1-2.1-.5 2.1-.5.5-2.1Z" />
+            </svg>
+            Analyze AI
+          </button>
+        </div>
+        <div class="profile-shell__activity-copy">
+          <p class="profile-shell__activity-label">Est. swap volume</p>
+          <p class="profile-shell__activity-value">
+            {{ activityVolumeLabel() }}
+            <span class="profile-shell__activity-unit">USD</span>
+          </p>
+          <p class="profile-shell__activity-fiat">
+            {{ activityFiatLabel() }}
+          </p>
+          <p
+            class="profile-shell__activity-today"
+            [class.profile-shell__activity-today--up]="isActivityTodayUp()">
+            Today's volume {{ activityTodayLabel() }}
+          </p>
+          <p class="profile-shell__activity-count">
+            {{ activitySwapCountLabel() }}
+          </p>
+        </div>
+        <div class="profile-shell__heatmap">
+          <div
+            class="profile-shell__heatmap-chart"
+            [style.--heatmap-weeks]="heatmapWeeks.length"
+            aria-label="Yearly activity">
+            <div class="profile-shell__heatmap-months" aria-hidden="true">
+              <span
+                *ngFor="let month of heatmapMonths"
+                [style.grid-column]="month.weekIndex"
+                >{{ month.label }}</span
+              >
+            </div>
+            <div class="profile-shell__heatmap-weekdays" aria-hidden="true">
+              <span *ngFor="let label of heatmapWeekdays">{{ label }}</span>
+            </div>
+            <div class="profile-shell__heatmap-grid">
+              <div
+                class="profile-shell__heatmap-week"
+                *ngFor="let week of heatmapWeeks; trackBy: trackByHeatmapWeek">
+                <button
+                  type="button"
+                  class="profile-shell__heatmap-day"
+                  *ngFor="let day of week.days; trackBy: trackByHeatmapDay"
+                  [attr.data-level]="day.level"
+                  [attr.aria-label]="heatmapDayTooltip(day)"
+                  [attr.title]="heatmapDayTooltip(day)"
+                  [disabled]="!day.inRange">
+                </button>
+              </div>
+            </div>
+            <div class="profile-shell__heatmap-legend">
+              <span>Less</span>
+              <span class="profile-shell__heatmap-day" data-level="0"></span>
+              <span class="profile-shell__heatmap-day" data-level="1"></span>
+              <span class="profile-shell__heatmap-day" data-level="2"></span>
+              <span class="profile-shell__heatmap-day" data-level="3"></span>
+              <span class="profile-shell__heatmap-day" data-level="4"></span>
+              <span>More</span>
+            </div>
+          </div>
+          <nav class="profile-shell__heatmap-years" aria-label="Activity year">
+            <button
+              type="button"
+              class="profile-shell__heatmap-year"
+              *ngFor="let year of heatmapYears; trackBy: trackByHeatmapYear"
+              [class.profile-shell__heatmap-year--active]="
+                year === selectedHeatmapYear
+              "
+              [attr.aria-pressed]="year === selectedHeatmapYear"
+              (click)="selectHeatmapYear(year)">
+              {{ year }}
+            </button>
+          </nav>
+        </div>
+      </div>
+    </section>
+
     <section class="profile-shell__panel profile-shell__panel--wide">
       <h2>Sessions</h2>
 
@@ -193,41 +298,6 @@
         (click)="toggleSessions()">
         {{ showAllSessions ? 'Show last 2' : 'See all past sessions' }}
       </button>
-    </section>
-
-    <section class="profile-shell__panel profile-shell__panel--wide">
-      <div class="profile-shell__panel-header">
-        <h2>Balances</h2>
-        <button
-          type="button"
-          mat-button
-          [disabled]="balancesLoading"
-          (click)="refreshBalances()">
-          Refresh
-        </button>
-      </div>
-      <div class="profile-shell__empty" *ngIf="balancesLoading">
-        Loading balances...
-      </div>
-      <div
-        class="profile-shell__empty"
-        *ngIf="!balancesLoading && balances.length === 0">
-        No cached balances yet.
-      </div>
-      <ul
-        class="profile-shell__balances"
-        *ngIf="!balancesLoading && balances.length > 0">
-        <li *ngFor="let balance of balances">
-          <div class="profile-shell__balance-asset">
-            <span>{{ balance.symbol }}</span>
-            <small>{{ balance.assetId }}</small>
-          </div>
-          <div class="profile-shell__balance-value">
-            <span>{{ balanceAmount(balance) }}</span>
-            <small>{{ balanceMeta(balance) }}</small>
-          </div>
-        </li>
-      </ul>
     </section>
   </div>
 

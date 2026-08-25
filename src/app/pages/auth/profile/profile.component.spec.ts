@@ -8,6 +8,10 @@ import { LocalizedRoutingService } from '@core/routing/localized-routing.service
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import {
+  MOCK_ACTIVITY_EXAMPLE_DATE,
+  mockActivityHeatmap,
+} from '@shared/utils/activity-heatmap.utils';
 import { ProfileComponent } from './profile.component';
 
 describe('ProfileComponent', () => {
@@ -178,6 +182,55 @@ describe('ProfileComponent', () => {
     sessionSubject.next(linkedWalletSession);
 
     expect(component.hasLinkedWallets()).toBeTrue();
+  });
+
+  it('shows mock swap volume beside a GitHub-style activity heatmap', () => {
+    const weeks = mockActivityHeatmap();
+    const example = weeks
+      .flatMap(week => week.days)
+      .find(day => day.isoDate === MOCK_ACTIVITY_EXAMPLE_DATE);
+
+    expect(component.activityVolumeLabel()).toBe('$978.51');
+    expect(component.activityFiatLabel()).toBe('≈ $978.66');
+    expect(component.activityTodayLabel()).toBe('+$17.98 (1.87%)');
+    expect(component.isActivityTodayUp()).toBeTrue();
+    expect(component.heatmapWeeks.length).toBe(53);
+    expect(component.heatmapYears).toEqual([2026, 2025, 2024]);
+    expect(component.selectedHeatmapYear).toBe(2026);
+    expect(example).toBeDefined();
+    if (!example) {
+      fail('example heatmap day was missing');
+      return;
+    }
+
+    expect(component.heatmapDayTooltip(example)).toBe(
+      '5 swaps and 1 deposit on Apr 23, 2026'
+    );
+  });
+
+  it('switches the activity heatmap to a past calendar year', () => {
+    component.selectHeatmapYear(2025);
+
+    const inRangeDays = component.heatmapWeeks
+      .flatMap(week => week.days)
+      .filter(day => day.inRange);
+
+    expect(component.selectedHeatmapYear).toBe(2025);
+    expect(inRangeDays[0].isoDate).toBe('2025-01-01');
+    expect(inRangeDays[inRangeDays.length - 1].isoDate).toBe('2025-12-31');
+  });
+
+  it('routes Activity Pay and Analyze AI, and opens the wallet for Receive', async () => {
+    await component.openActivityPay();
+    expect(localizedRouting.path).toHaveBeenCalledWith('/');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/en');
+
+    await component.openActivityAnalyze();
+    expect(localizedRouting.path).toHaveBeenCalledWith('/portfolio');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/en/portfolio');
+
+    await component.openActivityReceive();
+    expect(walletsService.requestOpen).toHaveBeenCalled();
   });
 
   it('shows a zero USD balance hero until wallets are funded', () => {
