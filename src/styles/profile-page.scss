@@ -29,9 +29,9 @@
   &__hero {
     display: grid;
     padding: 0.75rem 0 0.25rem;
+    gap: 0.75rem;
     justify-items: center;
     text-align: center;
-    gap: 0.75rem;
   }
 
   &__wallet-pill {
@@ -46,8 +46,8 @@
     cursor: pointer;
     font-size: 0.85rem;
     font-weight: 600;
-    line-height: 1.2;
     gap: 0.5rem;
+    line-height: 1.2;
   }
 
   &__wallet-pill-mark {
@@ -73,8 +73,8 @@
     align-items: center;
     color: var(--secondary-text-color);
     font-size: 0.9rem;
-    line-height: 1.2;
     gap: 0.75rem;
+    line-height: 1.2;
   }
 
   &__change-percent {
@@ -224,8 +224,8 @@
     color: inherit;
     cursor: pointer;
     gap: 0.75rem;
-    text-align: left;
     grid-template-columns: auto minmax(0, 1fr) auto;
+    text-align: left;
 
     &:disabled {
       opacity: 0.6;
@@ -359,13 +359,13 @@
   &__last-wallet {
     display: grid;
     width: 100%;
+    align-items: center;
     padding: 0.9rem 1rem;
     border: 1px solid rgb(255 255 255 / 12%);
     border-radius: 8px;
     background: rgb(255 255 255 / 4%);
     gap: 0.85rem 1rem;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
   }
 
   &__wallet-identity {
@@ -524,19 +524,19 @@
     flex-shrink: 0;
     align-items: center;
     padding: 0.12rem 0.45rem;
-    gap: 0.3rem;
     border-radius: 999px;
     background: rgb(126 231 135 / 14%);
     color: var(--success, #7ee787);
     font-size: 0.72rem;
     font-weight: 600;
+    gap: 0.3rem;
     line-height: 1.2;
 
     &::before {
       width: 0.35rem;
       height: 0.35rem;
       border-radius: 999px;
-      background: currentColor;
+      background: currentcolor;
       content: '';
     }
   }
@@ -567,46 +567,46 @@
       white-space: nowrap;
     }
 
-    th:last-child,
-    td:last-child {
-      padding-right: 0;
-    }
-
     th {
+      border-bottom: 1px solid rgb(255 255 255 / 10%);
       color: var(--secondary-text-color);
       font-size: 0.78rem;
       font-weight: 600;
       line-height: 1.3;
-      border-bottom: 1px solid rgb(255 255 255 / 10%);
     }
 
     td {
+      border-bottom: 1px solid rgb(255 255 255 / 10%);
       color: var(--gray-30);
       font-size: 0.9rem;
       line-height: 1.35;
-      border-bottom: 1px solid rgb(255 255 255 / 10%);
-    }
-
-    tbody tr:last-child td {
-      border-bottom: 0;
-      padding-bottom: 0;
     }
 
     thead th {
       padding-top: 0;
     }
+
+    th:last-child,
+    td:last-child {
+      padding-right: 0;
+    }
+
+    tbody tr:last-child td {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
   }
 
   &__sessions-more {
     min-width: 0;
-    margin: 1.25rem 0 0;
     padding: 0;
+    margin: 1.25rem 0 0;
     font-weight: 600;
   }
 
   &__sessions-app {
-    max-width: 11.5rem;
     overflow: hidden;
+    max-width: 11.5rem;
     text-overflow: ellipsis;
   }
 
@@ -625,8 +625,8 @@
   &__session-status {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
     font-weight: 500;
+    gap: 0.45rem;
 
     &--active {
       color: var(--success, #7ee787);
@@ -642,7 +642,7 @@
     height: 0.45rem;
     flex-shrink: 0;
     border-radius: 999px;
-    background: currentColor;
+    background: currentcolor;
   }
 
   &__activity {
@@ -681,8 +681,8 @@
     font-family: 'Aeonik Fono', monospace;
     font-size: clamp(1.75rem, 6vw, 2.35rem);
     font-weight: 500;
-    letter-spacing: -0.03em;
     gap: 0.5rem;
+    letter-spacing: -0.03em;
     line-height: 1.1;
   }
 
@@ -750,50 +750,48 @@
 
   &__heatmap {
     display: flex;
-    align-items: flex-start;
     min-width: 0;
+    align-items: flex-start;
     gap: 0.75rem;
   }
 
   &__heatmap-chart {
     display: grid;
-    flex: 1 1 auto;
     min-width: 0;
-    overflow-x: auto;
+    flex: 1 1 auto;
     gap: 0.4rem 0.55rem;
-    grid-template-areas:
-      '. months'
-      'weekdays grid'
-      '. legend';
-    grid-template-columns: 1.7rem minmax(0, 1fr);
-    grid-template-rows: auto 1fr auto;
+    grid-template:
+      '. months' auto
+      'weekdays grid' 1fr
+      '. legend' auto / 1.7rem minmax(0, 1fr);
+    overflow-x: auto;
   }
 
   &__heatmap-months {
     display: grid;
-    grid-area: months;
-    gap: 3px;
-    grid-template-columns: repeat(var(--heatmap-weeks, 53), 0.7rem);
     color: var(--secondary-text-color);
     font-size: 0.68rem;
+    gap: 3px;
+    grid-area: months;
+    grid-template-columns: repeat(var(--heatmap-weeks, 53), 0.7rem);
     line-height: 1;
   }
 
   &__heatmap-weekdays {
     display: grid;
-    grid-area: weekdays;
     align-content: stretch;
-    gap: 3px;
-    grid-template-rows: repeat(7, 0.7rem);
     color: var(--secondary-text-color);
     font-size: 0.68rem;
+    gap: 3px;
+    grid-area: weekdays;
+    grid-template-rows: repeat(7, 0.7rem);
     line-height: 0.7rem;
   }
 
   &__heatmap-grid {
     display: flex;
-    grid-area: grid;
     gap: 3px;
+    grid-area: grid;
   }
 
   &__heatmap-week {
@@ -838,13 +836,13 @@
 
   &__heatmap-legend {
     display: flex;
-    grid-area: legend;
     align-items: center;
     justify-content: flex-end;
     color: var(--secondary-text-color);
     font-size: 0.68rem;
-    line-height: 1;
     gap: 0.25rem;
+    grid-area: legend;
+    line-height: 1;
 
     .profile-shell__heatmap-day {
       display: block;
@@ -857,8 +855,8 @@
     flex: 0 0 auto;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.2rem;
     padding-top: 0.85rem;
+    gap: 0.2rem;
   }
 
   &__heatmap-year {
@@ -883,10 +881,10 @@
   @media (width >= 768px) {
     &__activity {
       gap: 1.25rem 1.5rem;
-      grid-template-columns: minmax(12rem, 2fr) minmax(0, 3fr);
       grid-template-areas:
         'title actions'
         'copy heatmap';
+      grid-template-columns: minmax(12rem, 2fr) minmax(0, 3fr);
     }
 
     &__activity-title {
@@ -903,8 +901,8 @@
     }
 
     &__heatmap {
-      grid-area: heatmap;
       align-self: end;
+      grid-area: heatmap;
     }
   }
 
@@ -976,6 +974,14 @@
     }
   }
 
+  &__empty,
+  &__message,
+  &__error {
+    color: var(--gray-30);
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
+
   &__passkey-copy {
     display: grid;
     min-width: 0;
@@ -1018,23 +1024,15 @@
     }
   }
 
-  &__empty,
-  &__message,
-  &__error {
-    color: var(--gray-30);
-    font-size: 0.9rem;
-    line-height: 1.35;
-  }
-
   &__error {
     color: #ffb085;
   }
 
   &__account-footer {
     display: grid;
-    margin-top: 1.5rem;
     padding-top: 1.25rem;
     border-top: 1px solid rgb(255 255 255 / 10%);
+    margin-top: 1.5rem;
     gap: 0.75rem;
   }
 
@@ -1076,6 +1074,7 @@
       border-radius: 0;
       background: transparent;
       gap: 0.7rem;
+      grid-template-columns: 1fr;
     }
 
     &__last-wallet-actions {
@@ -1090,9 +1089,9 @@
 
     &__connect-another {
       min-width: 0;
-      justify-self: start;
       padding: 0;
       font-weight: 600;
+      justify-self: start;
     }
 
     &__refresh mat-icon {
@@ -1106,11 +1105,6 @@
         align-items: center;
         gap: 0.75rem;
       }
-    }
-
-    &__wallet-live,
-    &__last-wallet {
-      grid-template-columns: 1fr;
     }
 
     &__wallet-actions,
@@ -1163,14 +1157,14 @@
         display: grid;
         padding: 0;
         border-bottom: 0;
-        white-space: normal;
         gap: 0.2rem;
+        white-space: normal;
 
         &::before {
           color: var(--secondary-text-color);
+          content: attr(data-label);
           font-size: 0.78rem;
           font-weight: 500;
-          content: attr(data-label);
         }
       }
 
