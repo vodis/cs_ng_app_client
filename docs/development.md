@@ -30,10 +30,11 @@ This host is the Angular shell for a dApp-style product (DEX-like interaction pa
    `mfeWalletsRemoteUrl` if needed.
 3. Run host app with `pnpm start`.
 4. Run wallets MFE from local source `../mfe-wallets` (or matching branch from `git@github.com:vodis/cs_mfe-wallets.git`).
-5. Verify `mfeWalletsRemoteUrl` in the active environment file:
-   - Local serve (`environment.local.ts`): typically `http://localhost:5002/remoteEntry.js`
-   - Staging (`environment.staging.ts`): `https://staging-wallets.craftscript.com/remoteEntry.js`
-   - Production (`environment.production.ts`): `https://wallets.craftscript.com/remoteEntry.js`
+5. Verify `mfeWalletsRemoteUrl` in the active environment file (origin only;
+   the host appends `/remoteEntry.js`):
+   - Local serve (`environment.local.ts`): typically `http://localhost:5002`
+   - Staging (`environment.staging.ts`): `https://staging-wallets.craftscript.com`
+   - Production (`environment.production.ts`): `https://wallets.craftscript.com`
 
 Production wallet remote policy:
 

@@ -1,7 +1,10 @@
 import type { Page } from '@playwright/test';
 
-const AUTH_PROVIDER_REMOTE_ENTRY_URL =
-  'https://wallets.craftscript.com/remoteEntry.js';
+import { resolveWalletRemoteEntryUrl } from '../../src/app/mfe-contracts/wallet-remote-entrypoints';
+
+const AUTH_PROVIDER_REMOTE_ENTRY_URL = resolveWalletRemoteEntryUrl(
+  'https://wallets.craftscript.com'
+);
 const API_BASE_URL = 'https://api.craftscript.com';
 const E2E_ACCESS_TOKEN = 'e2e-access-token';
 const CROSS_ORIGIN_HEADERS = {

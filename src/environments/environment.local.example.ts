@@ -13,9 +13,9 @@ export const environment = {
   // apiUrl: 'http://localhost:5003',
   // apiUrl: 'https://your-private-staging-api.example.com',
   apiUrl: 'http://localhost:5003',
-  // Examples:
-  // mfeWalletsRemoteUrl: 'http://localhost:5002/remoteEntry.js',
-  // mfeWalletsRemoteUrl: 'https://staging-wallets.craftscript.com/remoteEntry.js',
-  mfeWalletsRemoteUrl: 'http://localhost:5002/remoteEntry.js',
+  // Origin only — host appends /remoteEntry.js
+  // mfeWalletsRemoteUrl: 'http://localhost:5002',
+  // mfeWalletsRemoteUrl: 'https://staging-wallets.craftscript.com',
+  mfeWalletsRemoteUrl: 'http://localhost:5002',
   crossNetworkRecipientIntentSignEnabled: false,
 };

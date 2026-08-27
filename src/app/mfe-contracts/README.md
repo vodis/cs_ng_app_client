@@ -44,8 +44,8 @@ sessions and embedded wallets with the backend, and exposes only generic
 session/wallet results. The host owns guarded navigation and contains no
 provider-specific SDK, DTO, endpoint, or global bridge.
 
-- Wallet remote URL: `environment.mfeWalletsRemoteUrl` (see `src/environments/`)
-- Runtime bootstrap: `initFederation` in `src/main.ts`
+- Wallet remote origin: `environment.mfeWalletsRemoteUrl` (see `src/environments/`)
+- Runtime bootstrap: `initFederation` in `src/main.ts` appends `/remoteEntry.js`
 
 ## 1) Runtime Channel: Host <-> MFE
 

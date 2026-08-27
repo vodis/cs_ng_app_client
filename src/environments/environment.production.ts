@@ -3,7 +3,7 @@ export const environment = {
   production: true,
   origin: 'https://craftscript.com/',
   apiUrl: 'https://api.craftscript.com',
-  mfeWalletsRemoteUrl: 'https://wallets.craftscript.com/remoteEntry.js',
+  mfeWalletsRemoteUrl: 'https://wallets.craftscript.com',
   // Production must stay disabled until BFF recipient support is deployed and
   // foreign-recipient prepares are guaranteed to use intent_sign.
   crossNetworkRecipientIntentSignEnabled: false,

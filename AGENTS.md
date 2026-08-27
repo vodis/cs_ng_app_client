@@ -84,10 +84,11 @@ When validating or documenting backend-dependent host behavior, treat `../cs_nes
 
 ## Current Runtime Integration
 
-- Wallet remote URL comes from `environment.mfeWalletsRemoteUrl` (bootstrapped in `src/main.ts` via `initFederation`)
-- Production: `https://wallets.craftscript.com/remoteEntry.js` (`environment.production.ts`)
-- Staging: `https://staging-wallets.craftscript.com/remoteEntry.js` (`environment.staging.ts`)
-- Local default: `http://localhost:5002/remoteEntry.js` (`environment.ts` / `environment.local.ts`)
+- Wallet remote origin comes from `environment.mfeWalletsRemoteUrl`; the host
+  appends `/remoteEntry.js` in `src/main.ts` via `initFederation`
+- Production: `https://wallets.craftscript.com` (`environment.production.ts`)
+- Staging: `https://staging-wallets.craftscript.com` (`environment.staging.ts`)
+- Local default: `http://localhost:5002` (`environment.ts` / `environment.local.ts`)
 
 Production host rules:
 
