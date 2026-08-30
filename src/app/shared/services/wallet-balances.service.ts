@@ -8,6 +8,7 @@ export type WalletBalance = {
   walletId: string;
   walletAddress: string;
   chainType: string;
+  network: string;
   assetId: string;
   symbol: string;
   decimals: number;
@@ -16,6 +17,14 @@ export type WalletBalance = {
   source: string;
   fetchedAt: string;
   expiresAt: string;
+  stale: boolean;
+};
+
+export type WalletBalancesRequest = {
+  walletAddress?: string;
+  network?: string;
+  assetId?: string;
+  assetIds?: string[];
 };
 
 type WalletBalancesResponse = {
@@ -31,11 +40,7 @@ export class WalletBalancesService {
     private readonly authProvider: AuthProviderService
   ) {}
 
-  loadBalances(params?: {
-    walletAddress?: string;
-    network?: string;
-    assetId?: string;
-  }): Observable<WalletBalance[]> {
+  loadBalances(params?: WalletBalancesRequest): Observable<WalletBalance[]> {
     return from(this.authProvider.getAccessToken()).pipe(
       switchMap(token => {
         if (!token) {

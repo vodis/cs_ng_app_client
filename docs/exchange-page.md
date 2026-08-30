@@ -66,10 +66,17 @@ until backend history is integrated.
 | ----------------- | -------------------------------- | ---------- |
 | Dry quote         | `POST /api/v1/quotes/one-click`  | NestJS BFF |
 | Market comparison | `GET /api/v1/markets/comparison` | NestJS BFF |
+| Wallet balances   | `POST /api/v1/balances`          | NestJS BFF |
 
 Client token metadata in `HomeComponent.exchangeTokens` is display and
 bootstrap data only. The backend is authoritative for tradability, chain
 mapping, quote validation, and execution eligibility.
+
+The host batches up to 20 backend-allowlisted asset ids for the connected
+wallet's CAIP-2 network. Balance responses are matched by exact `network` and
+`assetId`, never display symbol. Expired or `stale: true` values may be shown as
+stale context but must not authorize a swap. The UI must not substitute demo or
+zero balances when the backend has no fresh result.
 
 ## Styling contract
 

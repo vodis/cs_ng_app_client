@@ -23,6 +23,7 @@ export type BackendBalance = {
   walletId: string;
   walletAddress: string;
   chainType: string;
+  network: string;
   assetId: string;
   symbol: string;
   decimals: number;
@@ -31,6 +32,7 @@ export type BackendBalance = {
   source: string;
   fetchedAt: string;
   expiresAt: string;
+  stale: boolean;
 };
 
 export type AuthSession = {
