@@ -16,6 +16,7 @@ export default defineConfig({
   },
   use: {
     baseURL: BASE_URL,
+    locale: 'en-US',
     trace: 'on-first-retry',
   },
   projects: [

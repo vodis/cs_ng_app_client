@@ -4,11 +4,13 @@
   (click)="handleBackdropClick()"></div>
 
 <div
+  #dialog
   class="side-modal"
   [ngClass]="{ open: isOpen, 'side-modal--left': placement === 'left' }"
   role="dialog"
-  aria-modal="true"
+  [attr.aria-modal]="isOpen"
   [attr.aria-hidden]="!isOpen"
-  (click)="$event.stopPropagation()">
+  [inert]="!isOpen"
+  (click)="handleDialogClick($event)">
   <ng-content></ng-content>
 </div>

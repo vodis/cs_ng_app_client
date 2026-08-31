@@ -26,7 +26,8 @@ import { environment } from '../../../../environments/environment';
 @Component({
   selector: 'app-wallets',
   standalone: false,
-  template: ` <div #container></div> `,
+  template: ` <div #container class="wallets-host"></div> `,
+  styleUrls: ['wallets.component.scss'],
 })
 export class WalletsComponent implements AfterViewInit, OnDestroy {
   @ViewChild('container', { read: ElementRef })

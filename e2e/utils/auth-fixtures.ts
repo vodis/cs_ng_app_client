@@ -1,14 +1,17 @@
-import type { Page } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
 
 import { resolveWalletRemoteEntryUrl } from '../../src/app/mfe-contracts/wallet-remote-entrypoints';
+import { environment } from '../../src/environments/environment';
 
+export const API_BASE_URL = environment.apiUrl.replace(/\/+$/, '');
 const AUTH_PROVIDER_REMOTE_ENTRY_URL = resolveWalletRemoteEntryUrl(
-  'https://wallets.craftscript.com'
+  environment.mfeWalletsRemoteUrl
 );
-const API_BASE_URL = 'https://api.craftscript.com';
 const E2E_ACCESS_TOKEN = 'e2e-access-token';
 const CROSS_ORIGIN_HEADERS = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+  'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, PATCH, OPTIONS',
 };
 
 export type E2eAuthUser = {
@@ -71,17 +74,39 @@ export async function useAuthenticatedSession(
   await mockAuthSessionApi(page, session);
 }
 
+export async function mockJsonApi(
+  page: Page,
+  path: string,
+  body: unknown
+): Promise<void> {
+  await page.route(
+    url => matchesOriginPath(url, `${API_BASE_URL}${path}`),
+    route => fulfillJson(route, body)
+  );
+}
+
 async function mockAuthProviderRemote(
   page: Page,
   session: E2eAuthenticatedSession
 ): Promise<void> {
-  await page.route(AUTH_PROVIDER_REMOTE_ENTRY_URL, route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/javascript',
-      headers: CROSS_ORIGIN_HEADERS,
-      body: createAuthProviderRemoteEntry(session),
-    })
+  await page.route(
+    url => matchesOriginPath(url, AUTH_PROVIDER_REMOTE_ENTRY_URL),
+    async route => {
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({
+          status: 204,
+          headers: CROSS_ORIGIN_HEADERS,
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/javascript',
+        headers: CROSS_ORIGIN_HEADERS,
+        body: createAuthProviderRemoteEntry(session),
+      });
+    }
   );
 }
 
@@ -89,23 +114,34 @@ async function mockAuthSessionApi(
   page: Page,
   session: E2eAuthenticatedSession
 ): Promise<void> {
-  await page.route(`${API_BASE_URL}/api/v1/me`, route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      headers: CROSS_ORIGIN_HEADERS,
-      body: JSON.stringify({ user: session.user }),
-    })
-  );
+  await mockJsonApi(page, '/api/v1/me', { user: session.user });
+  await mockJsonApi(page, '/api/v1/wallets', { wallets: session.wallets });
+}
 
-  await page.route(`${API_BASE_URL}/api/v1/wallets`, route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
+async function fulfillJson(
+  route: Route,
+  body: unknown,
+  status = 200
+): Promise<void> {
+  if (route.request().method() === 'OPTIONS') {
+    await route.fulfill({
+      status: 204,
       headers: CROSS_ORIGIN_HEADERS,
-      body: JSON.stringify({ wallets: session.wallets }),
-    })
-  );
+    });
+    return;
+  }
+
+  await route.fulfill({
+    status,
+    contentType: 'application/json',
+    headers: CROSS_ORIGIN_HEADERS,
+    body: JSON.stringify(body),
+  });
+}
+
+function matchesOriginPath(url: URL, expected: string): boolean {
+  const target = new URL(expected);
+  return url.origin === target.origin && url.pathname === target.pathname;
 }
 
 function createAuthProviderRemoteEntry(

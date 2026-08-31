@@ -35,7 +35,7 @@ export class PortfolioHoldingsComponent {
     if (value === null) return 'Unpriced';
     const parsed = Number(value);
     return Number.isFinite(parsed)
-      ? parsed.toLocaleString(undefined, {
+      ? parsed.toLocaleString('en-US', {
           style: 'currency',
           currency: 'USD',
           maximumFractionDigits: 2,
@@ -46,7 +46,7 @@ export class PortfolioHoldingsComponent {
   quantity(position: PortfolioPosition): string {
     const value = Number(position.quantity);
     return Number.isFinite(value)
-      ? `${value.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${position.symbol}`
+      ? `${value.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${position.symbol}`
       : `${position.quantity} ${position.symbol}`;
   }
 
