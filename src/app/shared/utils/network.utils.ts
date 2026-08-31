@@ -72,8 +72,12 @@ export function walletBlockchain(
   account: string,
   chainId: number | null
 ): string | undefined {
-  if (/^[a-z0-9._-]+\.(?:near|testnet|tg)$/i.test(account)) return 'near';
+  if (isNearWalletAddress(account)) return 'near';
   return chainId == null ? undefined : CHAIN_ID_TO_BLOCKCHAIN[chainId];
+}
+
+export function isNearWalletAddress(address: string): boolean {
+  return /^(?:[a-z0-9._-]+\.(?:near|testnet|tg)|[a-f0-9]{64})$/i.test(address);
 }
 
 export function recipientAddressError(
@@ -87,10 +91,7 @@ export function recipientAddressError(
   let valid = true;
   if (EVM_BLOCKCHAINS.has(blockchain))
     valid = /^0x[a-fA-F0-9]{40}$/.test(address);
-  else if (blockchain === 'near')
-    valid = /^(?:[a-z0-9._-]+\.(?:near|testnet|tg)|[a-f0-9]{64})$/i.test(
-      address
-    );
+  else if (blockchain === 'near') valid = isNearWalletAddress(address);
   else if (blockchain === 'sol')
     valid = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
   else if (blockchain === 'btc')

@@ -196,7 +196,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const expiresAt = Number.isNaN(expiry.getTime())
       ? 'cache'
       : `cache until ${expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    return `${this.shortAddress(balance.walletAddress)} / ${balance.chainType} / ${expiresAt}`;
+    const freshness = balance.stale ? 'stale / ' : '';
+    return `${this.shortAddress(balance.walletAddress)} / ${balance.network} / ${freshness}${expiresAt}`;
   }
 
   public canEnablePasskey(): boolean {

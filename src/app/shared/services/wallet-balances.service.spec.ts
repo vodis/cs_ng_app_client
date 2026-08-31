@@ -42,6 +42,7 @@ describe('WalletBalancesService', () => {
       .loadBalances({
         walletAddress: 'alice.testnet',
         network: 'near:testnet',
+        assetIds: ['nep141:wrap.testnet', 'nep141:usdc.testnet'],
       })
       .subscribe(balances => {
         result = balances;
@@ -56,6 +57,7 @@ describe('WalletBalancesService', () => {
     expect(request.request.body).toEqual({
       walletAddress: 'alice.testnet',
       network: 'near:testnet',
+      assetIds: ['nep141:wrap.testnet', 'nep141:usdc.testnet'],
     });
 
     request.flush({ data: [] });

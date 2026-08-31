@@ -40,6 +40,7 @@ import {
 } from '@shared/utils/token-avatar.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 import {
+  isNearWalletAddress,
   networkLabel,
   recipientAddressError,
   walletBlockchain,
@@ -178,6 +179,7 @@ export class HomeComponent {
         'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
       color: '#2f8cff',
       blockchain: 'eth',
+      decimals: 6,
       icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png',
     },
     {
@@ -186,6 +188,7 @@ export class HomeComponent {
       assetId: 'nep141:wrap.near',
       color: '#2fd17c',
       blockchain: 'near',
+      decimals: 24,
       icon: 'https://s2.coinmarketcap.com/static/img/coins/128x128/6535.png',
     },
   ];
@@ -224,6 +227,7 @@ export class HomeComponent {
   public balancesError = '';
 
   private walletBalances: WalletBalance[] = [];
+  private balanceRequestId = 0;
 
   constructor(
     private readonly httpClient: HttpClient,
@@ -311,6 +315,15 @@ export class HomeComponent {
       return;
     }
 
+    const sourceBalance = this.balanceForToken(this.fromToken);
+    if (
+      sourceBalance &&
+      !this.isBalanceUsable(sourceBalance) &&
+      !this.balancesLoading
+    ) {
+      this.loadWalletBalances();
+    }
+
     const balanceError = this.validateSourceBalance(amount);
     if (balanceError) {
       this.quoteError = balanceError;
@@ -380,7 +393,7 @@ export class HomeComponent {
       return 'evm';
     }
 
-    if (/^[a-z0-9._-]+\.(?:near|testnet|tg)$/i.test(wallet.account)) {
+    if (isNearWalletAddress(wallet.account)) {
       return 'near';
     }
 
@@ -649,25 +662,19 @@ export class HomeComponent {
     return tokenAvatarFallback(symbol);
   }
 
-  public balanceLabel(symbol: string): string {
-    const balance = this.balanceForSymbol(symbol);
+  public balanceLabel(token: ExchangeToken): string {
+    const balance = this.balanceForToken(token);
     if (balance) {
-      return `Balance: ${this.formatBalance(balance)} ${this.displaySymbolFor(balance.symbol)}`;
+      const suffix =
+        balance.stale || this.isBalanceExpired(balance) ? ' (stale)' : '';
+      return `Balance: ${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}${suffix}`;
     }
 
-    if (this.balancesLoading && this.isNearTokenSymbol(symbol)) {
-      return `Balance: loading ${this.displaySymbolFor(symbol)}`;
+    if (this.balancesLoading && this.canFetchBalance(token)) {
+      return `Balance: loading ${this.tokenSymbolLabel(token)}`;
     }
 
-    if (symbol === 'USDC') {
-      return 'Balance: 1,250.00 USDC';
-    }
-
-    if (symbol === 'NEAR' || symbol === 'wNEAR') {
-      return 'Balance: 42.5000 NEAR';
-    }
-
-    return `Balance: — ${symbol}`;
+    return `Balance: — ${this.tokenSymbolLabel(token)}`;
   }
 
   public swapRateLabel(): string {
@@ -1021,6 +1028,7 @@ export class HomeComponent {
     this.refreshSwapQuotePreview();
     this.closeTokenSelector();
     this.loadMarketComparison();
+    this.loadWalletBalances();
   }
 
   public tokenSelectorTitle(): string {
@@ -1213,6 +1221,7 @@ export class HomeComponent {
         }
 
         this.loadMarketComparison();
+        this.loadWalletBalances();
       },
       error: () => {
         this.exchangeTokens = [];
@@ -1223,10 +1232,12 @@ export class HomeComponent {
   }
 
   private loadWalletBalances(): void {
+    const requestId = ++this.balanceRequestId;
     this.walletBalances = [];
     this.balancesError = '';
 
-    if (!this.walletAddress || !this.isNearWalletAddress(this.walletAddress)) {
+    const network = this.balanceNetwork();
+    if (!this.walletAddress || !network) {
       this.balancesLoading = false;
       return;
     }
@@ -1237,28 +1248,36 @@ export class HomeComponent {
     this.walletBalancesService
       .loadBalances({
         walletAddress: this.walletAddress,
-        network: this.nearNetworkForAddress(this.walletAddress),
+        network,
+        assetIds: this.balanceAssetIds(),
       })
       .subscribe({
         next: balances => {
-          if (this.walletAddress.toLowerCase() !== walletAddress) {
+          if (
+            requestId !== this.balanceRequestId ||
+            this.walletAddress.toLowerCase() !== walletAddress ||
+            this.balanceNetwork() !== network
+          ) {
             return;
           }
 
           this.walletBalances = balances.filter(
             balance =>
-              balance.chainType === 'near' &&
+              balance.network === network &&
               balance.walletAddress.toLowerCase() === walletAddress
           );
           this.balancesLoading = false;
-          if (
-            this.walletBalances.some(balance => !this.isBalanceExpired(balance))
-          ) {
+          const sourceBalance = this.balanceForToken(this.fromToken);
+          if (sourceBalance && this.isBalanceUsable(sourceBalance)) {
             this.refreshSwapQuotePreview();
           }
         },
         error: () => {
-          if (this.walletAddress.toLowerCase() !== walletAddress) {
+          if (
+            requestId !== this.balanceRequestId ||
+            this.walletAddress.toLowerCase() !== walletAddress ||
+            this.balanceNetwork() !== network
+          ) {
             return;
           }
 
@@ -1270,40 +1289,38 @@ export class HomeComponent {
   }
 
   private validateSourceBalance(amountRaw: string): string {
-    if (!this.isNearTokenSymbol(this.fromToken.symbol)) {
+    if (!this.canFetchBalance(this.fromToken)) {
       return '';
     }
 
-    const balance = this.balanceForSymbol(this.fromToken.symbol);
+    const balance = this.balanceForToken(this.fromToken);
     if (!balance) {
       return this.balancesLoading
-        ? 'NEAR balance is loading.'
-        : this.balancesError || 'NEAR balance is unavailable.';
+        ? `${this.tokenSymbolLabel(this.fromToken)} balance is loading.`
+        : this.balancesError ||
+            `${this.tokenSymbolLabel(this.fromToken)} balance is unavailable.`;
     }
 
-    if (this.isBalanceExpired(balance)) {
-      if (!this.balancesLoading) {
-        this.loadWalletBalances();
-      }
-      return 'NEAR balance is loading.';
+    if (!this.isBalanceUsable(balance)) {
+      return `${this.tokenSymbolLabel(this.fromToken)} balance is loading.`;
     }
 
     try {
       if (BigInt(amountRaw) > BigInt(balance.balanceRaw)) {
-        return `Insufficient ${this.displaySymbolFor(this.fromToken.symbol)} balance.`;
+        return `Insufficient ${this.tokenSymbolLabel(this.fromToken)} balance.`;
       }
     } catch {
-      return 'NEAR balance is unavailable.';
+      return `${this.tokenSymbolLabel(this.fromToken)} balance is unavailable.`;
     }
 
     return '';
   }
 
-  private balanceForSymbol(symbol: string): WalletBalance | undefined {
-    const displaySymbol = this.displaySymbolFor(symbol);
-
+  private balanceForToken(token: ExchangeToken): WalletBalance | undefined {
+    const network = this.balanceNetwork();
     return this.walletBalances.find(
-      balance => this.displaySymbolFor(balance.symbol) === displaySymbol
+      balance =>
+        balance.network === network && balance.assetId === token.assetId
     );
   }
 
@@ -1321,14 +1338,6 @@ export class HomeComponent {
     );
   }
 
-  private isNearTokenSymbol(symbol: string): boolean {
-    return this.displaySymbolFor(symbol) === 'NEAR';
-  }
-
-  private isNearWalletAddress(address: string): boolean {
-    return /^[a-z0-9._-]+\.(?:near|testnet|tg)$/i.test(address);
-  }
-
   private nearNetworkForAddress(
     address: string
   ): 'near:mainnet' | 'near:testnet' {
@@ -1338,6 +1347,44 @@ export class HomeComponent {
   private isBalanceExpired(balance: WalletBalance): boolean {
     const expiresAt = Date.parse(balance.expiresAt);
     return !Number.isFinite(expiresAt) || expiresAt <= Date.now();
+  }
+
+  private isBalanceUsable(balance: WalletBalance): boolean {
+    return !balance.stale && !this.isBalanceExpired(balance);
+  }
+
+  private balanceNetwork(): string | undefined {
+    if (isNearWalletAddress(this.walletAddress)) {
+      return this.nearNetworkForAddress(this.walletAddress);
+    }
+    if (/^0x[a-f0-9]{40}$/i.test(this.walletAddress)) {
+      return this.walletChainId == null
+        ? undefined
+        : `eip155:${this.walletChainId}`;
+    }
+    return undefined;
+  }
+
+  private canFetchBalance(token: ExchangeToken): boolean {
+    const blockchain = this.connectedWalletBlockchain();
+    return Boolean(
+      this.balanceNetwork() && blockchain && token.blockchain === blockchain
+    );
+  }
+
+  private balanceAssetIds(): string[] {
+    const blockchain = this.connectedWalletBlockchain();
+    if (!blockchain) return [];
+
+    const selected = [this.fromToken, this.toToken];
+    const candidates = [...selected, ...this.exchangeTokens].filter(
+      token => token.blockchain === blockchain
+    );
+    return [
+      ...new Set(
+        candidates.map(token => token.assetId).filter(assetId => assetId.trim())
+      ),
+    ].slice(0, 20);
   }
 
   private pickDefaultFromToken(): ExchangeToken | undefined {

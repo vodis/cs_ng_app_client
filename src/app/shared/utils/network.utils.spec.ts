@@ -10,6 +10,7 @@ describe('network utils', () => {
       walletBlockchain('0x0000000000000000000000000000000000000001', 42161)
     ).toBe('arb');
     expect(walletBlockchain('alice.near', null)).toBe('near');
+    expect(walletBlockchain('a'.repeat(64), null)).toBe('near');
     expect(networkLabel('bsc')).toBe('BNB Chain');
   });
 

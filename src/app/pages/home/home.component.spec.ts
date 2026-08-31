@@ -74,12 +74,14 @@ class WalletBalancesServiceStub {
     walletAddress?: string;
     network?: string;
     assetId?: string;
+    assetIds?: string[];
   }> = [];
 
   public loadBalances(params?: {
     walletAddress?: string;
     network?: string;
     assetId?: string;
+    assetIds?: string[];
   }) {
     this.calls.push(params ?? {});
     return this.balancesSubject ?? of(this.balances);
@@ -294,14 +296,16 @@ describe('HomeComponent market overview', () => {
         walletId: 'wallet-1',
         walletAddress: 'alice.near',
         chainType: 'near',
-        assetId: 'near:native',
-        symbol: 'NEAR',
+        network: 'near:mainnet',
+        assetId: 'nep141:wrap.near',
+        symbol: 'wNEAR',
         decimals: 24,
         balanceRaw: '1250000000000000000000000',
         balanceDecimal: '1.25',
         source: 'near_rpc',
         fetchedAt: '2026-08-12T12:00:00.000Z',
         expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
       },
     ];
     const walletsService = TestBed.inject(
@@ -316,7 +320,9 @@ describe('HomeComponent market overview', () => {
 
     walletsService.account.next({ account: 'alice.near', chainId: null });
 
-    expect(component.balanceLabel('NEAR')).toBe('Balance: 1,25 NEAR');
+    expect(component.balanceLabel(component.toToken)).toBe(
+      'Balance: 1,25 NEAR'
+    );
   });
 
   it('blocks NEAR quotes when entered amount exceeds live balance', () => {
@@ -328,14 +334,16 @@ describe('HomeComponent market overview', () => {
         walletId: 'wallet-1',
         walletAddress: 'alice.near',
         chainType: 'near',
-        assetId: 'near:native',
-        symbol: 'NEAR',
+        network: 'near:mainnet',
+        assetId: 'nep141:wrap.near',
+        symbol: 'wNEAR',
         decimals: 24,
         balanceRaw: '1000000000000000000000000',
         balanceDecimal: '1',
         source: 'near_rpc',
         fetchedAt: '2026-08-12T12:00:00.000Z',
         expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
       },
     ];
     const walletsService = TestBed.inject(
@@ -350,7 +358,7 @@ describe('HomeComponent market overview', () => {
 
     walletsService.account.next({ account: 'alice.near', chainId: null });
     component.fromToken = {
-      ...component.fromToken,
+      ...component.toToken,
       symbol: 'NEAR',
       decimals: 24,
     };
@@ -381,11 +389,15 @@ describe('HomeComponent market overview', () => {
       {
         walletAddress: 'alice.testnet',
         network: 'near:testnet',
+        assetIds: ['nep141:wrap.near'],
       },
     ]);
   });
 
   it('uses a confirmed foreign-network recipient in quote previews', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
     const walletsService = TestBed.inject(
       WalletsService
     ) as unknown as WalletsServiceStub;
@@ -399,6 +411,24 @@ describe('HomeComponent market overview', () => {
       timeframe: '1H',
     }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
 
+    balancesService.balances = [
+      {
+        walletId: 'wallet-evm',
+        walletAddress: '0x0000000000000000000000000000000000000001',
+        chainType: 'ethereum',
+        network: 'eip155:1',
+        assetId:
+          'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
+        symbol: 'USDC',
+        decimals: 6,
+        balanceRaw: '10000000',
+        balanceDecimal: '10',
+        source: 'evm_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
+      },
+    ];
     component.crossNetworkRecipientIntentSignEnabled = true;
     walletsService.account.next({
       account: '0x0000000000000000000000000000000000000001',
@@ -425,6 +455,155 @@ describe('HomeComponent market overview', () => {
         recipientType: 'DESTINATION_CHAIN',
       })
     );
+    expect(balancesService.calls).toContain(
+      jasmine.objectContaining({
+        walletAddress: '0x0000000000000000000000000000000000000001',
+        network: 'eip155:1',
+        assetIds: [
+          'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
+        ],
+      })
+    );
+  });
+
+  it('shows stale balances but does not use them to authorize a quote', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: 'nep141:wrap.near',
+        symbol: 'wNEAR',
+        decimals: 24,
+        balanceRaw: '2000000000000000000000000',
+        balanceDecimal: '2',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: true,
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.fromToken = { ...component.toToken, decimals: 24 };
+    component.amount = '1';
+
+    expect(component.balanceLabel(component.fromToken)).toBe(
+      'Balance: 2 NEAR (stale)'
+    );
+    component.submitQuote();
+    expect(component.quoteError).toBe('NEAR balance is loading.');
+  });
+
+  it('does not loop balance requests when the source is stale and another balance is fresh', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: 'nep141:wrap.near',
+        symbol: 'wNEAR',
+        decimals: 24,
+        balanceRaw: '2000000000000000000000000',
+        balanceDecimal: '2',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: true,
+      },
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: 'nep141:usdc.near',
+        symbol: 'USDC',
+        decimals: 6,
+        balanceRaw: '1000000',
+        balanceDecimal: '1',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.amount = '1';
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+
+    expect(balancesService.calls.length).toBe(1);
+  });
+
+  it('loads and authorizes balances for an implicit NEAR account', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const implicitAccount = 'a'.repeat(64);
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: implicitAccount,
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: 'nep141:wrap.near',
+        symbol: 'wNEAR',
+        decimals: 24,
+        balanceRaw: '2000000000000000000000000',
+        balanceDecimal: '2',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: implicitAccount, chainId: null });
+    component.amount = '1';
+    component.submitQuote();
+
+    expect(balancesService.calls).toEqual([
+      {
+        walletAddress: implicitAccount,
+        network: 'near:mainnet',
+        assetIds: ['nep141:wrap.near'],
+      },
+    ]);
+    expect(component.quoteError).toBe('');
   });
 
   it('fails closed when the foreign-recipient backend contract is disabled', () => {
@@ -513,14 +692,16 @@ describe('HomeComponent market overview', () => {
         walletId: 'wallet-1',
         walletAddress: 'alice.near',
         chainType: 'near',
-        assetId: 'near:native',
-        symbol: 'NEAR',
+        network: 'near:mainnet',
+        assetId: 'nep141:wrap.near',
+        symbol: 'wNEAR',
         decimals: 24,
         balanceRaw: '2000000000000000000000000',
         balanceDecimal: '2',
         source: 'near_rpc',
         fetchedAt: '2026-08-12T12:00:00.000Z',
         expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
       },
     ]);
 
@@ -546,14 +727,16 @@ describe('HomeComponent market overview', () => {
         walletId: 'wallet-1',
         walletAddress: 'alice.near',
         chainType: 'near',
-        assetId: 'near:native',
-        symbol: 'NEAR',
+        network: 'near:mainnet',
+        assetId: 'nep141:wrap.near',
+        symbol: 'wNEAR',
         decimals: 24,
         balanceRaw: '2000000000000000000000000',
         balanceDecimal: '2',
         source: 'near_rpc',
         fetchedAt: '2026-08-12T12:00:00.000Z',
         expiresAt: '2026-08-12T12:00:15.000Z',
+        stale: false,
       },
     ];
 
@@ -570,6 +753,10 @@ describe('HomeComponent market overview', () => {
       decimals: 24,
     };
     component.amount = '1';
+
+    expect(component.balanceLabel(component.fromToken)).toBe(
+      'Balance: 2 NEAR (stale)'
+    );
 
     component.submitQuote();
 
