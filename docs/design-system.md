@@ -6,19 +6,19 @@ TL;DR for contributors and agents working in `cs_ng_app_client` (the DeFi dashbo
 
 ## Grid
 
-| Breakpoint | Columns |
-|------------|---------|
-| Mobile (`< 768px`) | 4 |
-| Desktop (`≥ 768px`) | 7 |
+| Breakpoint          | Columns |
+| ------------------- | ------- |
+| Mobile (`< 768px`)  | 4       |
+| Desktop (`≥ 768px`) | 7       |
 
 Full viewport width, no max-width container. Header, sidebar, and content share the same column tracks.
 
-| Area | Desktop placement |
-|------|-------------------|
-| Logo | Column 1 |
-| Sidebar | Column 1 |
-| Main content | Columns 2–7 |
-| Connect Wallet | Columns 6–7 |
+| Area           | Desktop placement |
+| -------------- | ----------------- |
+| Logo           | Column 1          |
+| Sidebar        | Column 1          |
+| Main content   | Columns 2–7       |
+| Connect Wallet | Columns 6–7       |
 
 ## Chrome
 
@@ -27,13 +27,13 @@ Full viewport width, no max-width container. Header, sidebar, and content share 
 
 ## Colors
 
-| Token | Hex |
-|-------|-----|
-| Orange (primary) | `#FE6C00` |
+| Token              | Hex       |
+| ------------------ | --------- |
+| Orange (primary)   | `#FE6C00` |
 | Black (background) | `#171c1f` |
-| Grid lines | `#d4d4d3` |
-| Gray decorative | `#CFCBD2` |
-| White text | `#fff` |
+| Grid lines         | `#d4d4d3` |
+| Gray decorative    | `#CFCBD2` |
+| White text         | `#fff`    |
 
 Source of truth: `src/assets/styles/default-theme-colors.css`.
 
