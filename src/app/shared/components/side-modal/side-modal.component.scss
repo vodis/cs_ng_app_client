@@ -3,7 +3,7 @@
 :host {
   .side-modal-backdrop {
     position: fixed;
-    z-index: 2;
+    z-index: 200;
     top: 0;
     left: 0;
     width: 100%;
@@ -11,11 +11,18 @@
     background: rgb(0 0 0 / 35%);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease-in-out;
+    transition:
+      opacity 0.2s ease-in-out,
+      visibility 0s linear 0.2s;
+    visibility: hidden;
 
     &.open {
       opacity: 1;
       pointer-events: auto;
+      transition:
+        opacity 0.2s ease-in-out,
+        visibility 0s linear 0s;
+      visibility: visible;
     }
 
     &--left {
@@ -31,22 +38,31 @@
 
   .side-modal {
     position: fixed;
-    z-index: 3;
+    z-index: 201;
     top: 0;
     right: 0;
+    display: flex;
+    overflow: hidden;
     width: 100%;
     height: 100%;
+    flex-direction: column;
     background: var(--main-bg-color, #171c1f);
+    pointer-events: none;
     transform: translateX(100%);
-    transition: transform 0.3s ease-in-out;
-    will-change: transform;
+    visibility: hidden;
+
+    > * {
+      min-height: 0;
+      flex: 1 1 auto;
+    }
 
     &.open {
+      overflow: hidden auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      pointer-events: auto;
       transform: translateX(0);
-      transition:
-        transform 0.3s ease-in-out,
-        -webkit-transform 0.3s ease-in-out;
-      will-change: transform;
+      visibility: visible;
     }
 
     @include media-breakpoint-up(md) {

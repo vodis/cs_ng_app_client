@@ -2,9 +2,7 @@ import { Injectable } from '@angular/core';
 import {
   ActivatedRouteSnapshot,
   CanActivate,
-  Router,
   RouterStateSnapshot,
-  UrlTree,
 } from '@angular/router';
 import { AuthSessionService } from './auth-session.service';
 import { AuthProviderService } from './auth-provider.service';
@@ -13,29 +11,22 @@ import { AuthProviderService } from './auth-provider.service';
 export class AuthGuard implements CanActivate {
   constructor(
     private readonly authSession: AuthSessionService,
-    private readonly authProvider: AuthProviderService,
-    private readonly router: Router
+    private readonly authProvider: AuthProviderService
   ) {}
 
   async canActivate(
     _route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot
-  ): Promise<boolean | UrlTree> {
+    _state: RouterStateSnapshot
+  ): Promise<boolean> {
     if (this.authSession.session) {
       return true;
     }
 
     const provider = await this.authProvider.whenSettled();
-    const session =
-      provider.status === 'ready' ? await this.authSession.refresh() : null;
-    return session
-      ? true
-      : this.router.createUrlTree(['/login'], {
-          queryParams: { returnUrl: this.safeReturnUrl(state.url) },
-        });
-  }
+    if (provider.status === 'ready') {
+      await this.authSession.refresh();
+    }
 
-  private safeReturnUrl(url: string): string {
-    return url.startsWith('/') && !url.startsWith('//') ? url : '/';
+    return true;
   }
 }

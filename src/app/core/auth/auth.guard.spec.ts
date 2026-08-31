@@ -1,4 +1,3 @@
-import { Router, UrlTree } from '@angular/router';
 import { AuthProviderService } from './auth-provider.service';
 import { AuthSessionService } from './auth-session.service';
 import { AuthGuard } from './auth.guard';
@@ -6,7 +5,6 @@ import { AuthGuard } from './auth.guard';
 describe('AuthGuard', () => {
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let authProvider: jasmine.SpyObj<AuthProviderService>;
-  let router: jasmine.SpyObj<Router>;
   let guard: AuthGuard;
 
   beforeEach(() => {
@@ -19,9 +17,7 @@ describe('AuthGuard', () => {
       'AuthProviderService',
       ['whenSettled']
     );
-    router = jasmine.createSpyObj<Router>('Router', ['createUrlTree']);
-    router.createUrlTree.and.returnValue({} as UrlTree);
-    guard = new AuthGuard(authSession, authProvider, router);
+    guard = new AuthGuard(authSession, authProvider);
   });
 
   it('waits for provider readiness before restoring a direct protected navigation', async () => {
@@ -61,7 +57,7 @@ describe('AuthGuard', () => {
     expect(authSession.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('redirects without a session request when the provider is disabled', async () => {
+  it('allows navigation without a session request when the provider is disabled', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'disabled',
       loginMethods: [],
@@ -71,15 +67,13 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    await guard.canActivate({} as never, { url: '/farm' } as never);
-
+    expect(
+      await guard.canActivate({} as never, { url: '/farm' } as never)
+    ).toBeTrue();
     expect(authSession.refresh).not.toHaveBeenCalled();
-    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
-      queryParams: { returnUrl: '/farm' },
-    });
   });
 
-  it('uses root as the return URL when the requested URL is unsafe', async () => {
+  it('allows navigation when the provider failed and there is no session', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'failed',
       loginMethods: [],
@@ -89,10 +83,9 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    await guard.canActivate({} as never, { url: '//example.test' } as never);
-
-    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
-      queryParams: { returnUrl: '/' },
-    });
+    expect(
+      await guard.canActivate({} as never, { url: '/farm' } as never)
+    ).toBeTrue();
+    expect(authSession.refresh).not.toHaveBeenCalled();
   });
 });

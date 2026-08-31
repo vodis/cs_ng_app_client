@@ -1,4 +1,10 @@
-import { Component, DestroyRef, inject, Input } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  inject,
+  Input,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WalletAccount } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
@@ -13,6 +19,7 @@ export class WalletBarComponent {
   @Input() showTrigger = true;
   @Input() hostModal = false;
 
+  private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly walletsService = inject(WalletsService);
   public isOpenWalletConnectMenu = false;
@@ -25,7 +32,7 @@ export class WalletBarComponent {
         const hadAccount = Boolean(this.account?.account);
         this.account = account;
         if (this.hostModal && account && !hadAccount) {
-          this.isOpenWalletConnectMenu = false;
+          this.setWalletMenuOpen(false);
         }
       });
 
@@ -33,7 +40,7 @@ export class WalletBarComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(closeRequested => {
         if (this.hostModal && closeRequested) {
-          this.isOpenWalletConnectMenu = false;
+          this.setWalletMenuOpen(false);
           this.walletsService.clearCloseRequest();
         }
       });
@@ -42,7 +49,7 @@ export class WalletBarComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(openRequested => {
         if (this.hostModal && openRequested) {
-          this.isOpenWalletConnectMenu = true;
+          this.setWalletMenuOpen(true);
           this.walletsService.clearOpenRequest();
         }
       });
@@ -50,7 +57,7 @@ export class WalletBarComponent {
 
   public handleOpenWalletMenu(): void {
     if (this.hostModal) {
-      this.isOpenWalletConnectMenu = true;
+      this.setWalletMenuOpen(true);
       return;
     }
 
@@ -58,6 +65,12 @@ export class WalletBarComponent {
   }
 
   public handleCloseWalletMenu(): void {
-    this.isOpenWalletConnectMenu = false;
+    this.setWalletMenuOpen(false);
+  }
+
+  private setWalletMenuOpen(isOpen: boolean): void {
+    this.isOpenWalletConnectMenu = isOpen;
+    this.changeDetector.markForCheck();
+    this.changeDetector.detectChanges();
   }
 }
