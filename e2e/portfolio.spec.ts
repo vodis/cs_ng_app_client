@@ -1,72 +1,44 @@
 import { expect, test } from '@playwright/test';
-import { useAuthenticatedSession } from './utils/auth-fixtures';
+import { mockJsonApi, useAuthenticatedSession } from './utils/auth-fixtures';
 
 test.describe('Portfolio and agent access', () => {
   test.beforeEach(async ({ page }) => {
     await useAuthenticatedSession(page);
-    await page.route('https://api.craftscript.com/api/v1/portfolio', route =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          asOf: '2026-08-19T12:00:00Z',
-          valuationCurrency: 'USD',
-          totalValue: '1250.50',
-          unpricedPositionCount: 0,
-          positions: [
-            {
-              walletRef: 'opaque-1',
-              chain: 'near',
-              assetId: 'near',
-              symbol: 'NEAR',
-              quantity: '250.1',
-              priceUsd: '5',
-              valueUsd: '1250.50',
-              allocationPercent: '100.00',
-              priceUpdatedAt: '2026-08-19T12:00:00Z',
-              balanceUpdatedAt: '2026-08-19T12:00:00Z',
-            },
-          ],
-        }),
-      })
-    );
-    await page.route(
-      'https://api.craftscript.com/api/v1/investment-profile',
-      route =>
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            objective: 'growth',
-            riskTolerance: 'balanced',
-            horizon: '3_5y',
-            updatedAt: '2026-08-19T12:00:00Z',
-          }),
-        })
-    );
-    await page.route(
-      'https://api.craftscript.com/api/v1/agent-integrations/config',
-      route =>
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            enabled: true,
-            mcpUrl: 'https://api.craftscript.com/mcp',
-            testedClients: ['ChatGPT', 'Codex'],
-            grantLifetimeDays: 30,
-          }),
-        })
-    );
-    await page.route(
-      'https://api.craftscript.com/api/v1/agent-connections',
-      route =>
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ connections: [] }),
-        })
-    );
+    await mockJsonApi(page, '/api/v1/portfolio', {
+      asOf: '2026-08-19T12:00:00Z',
+      valuationCurrency: 'USD',
+      totalValue: '1250.50',
+      unpricedPositionCount: 0,
+      positions: [
+        {
+          walletRef: 'opaque-1',
+          chain: 'near',
+          assetId: 'near',
+          symbol: 'NEAR',
+          quantity: '250.1',
+          priceUsd: '5',
+          valueUsd: '1250.50',
+          allocationPercent: '100.00',
+          priceUpdatedAt: '2026-08-19T12:00:00Z',
+          balanceUpdatedAt: '2026-08-19T12:00:00Z',
+        },
+      ],
+    });
+    await mockJsonApi(page, '/api/v1/investment-profile', {
+      objective: 'growth',
+      riskTolerance: 'balanced',
+      horizon: '3_5y',
+      updatedAt: '2026-08-19T12:00:00Z',
+    });
+    await mockJsonApi(page, '/api/v1/agent-integrations/config', {
+      enabled: true,
+      mcpUrl: 'https://api.craftscript.com/mcp',
+      testedClients: ['ChatGPT', 'Codex'],
+      grantLifetimeDays: 30,
+    });
+    await mockJsonApi(page, '/api/v1/agent-connections', {
+      connections: [],
+    });
   });
 
   test('shows valued holdings and a provider-neutral connection flow', async ({

@@ -1,3 +1,4 @@
+import { Router, UrlTree } from '@angular/router';
 import { AuthProviderService } from './auth-provider.service';
 import { AuthSessionService } from './auth-session.service';
 import { AuthGuard } from './auth.guard';
@@ -5,6 +6,7 @@ import { AuthGuard } from './auth.guard';
 describe('AuthGuard', () => {
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let authProvider: jasmine.SpyObj<AuthProviderService>;
+  let router: jasmine.SpyObj<Router>;
   let guard: AuthGuard;
 
   beforeEach(() => {
@@ -17,7 +19,9 @@ describe('AuthGuard', () => {
       'AuthProviderService',
       ['whenSettled']
     );
-    guard = new AuthGuard(authSession, authProvider);
+    router = jasmine.createSpyObj<Router>('Router', ['createUrlTree']);
+    router.createUrlTree.and.returnValue({} as UrlTree);
+    guard = new AuthGuard(authSession, authProvider, router);
   });
 
   it('waits for provider readiness before restoring a direct protected navigation', async () => {
@@ -44,7 +48,12 @@ describe('AuthGuard', () => {
       wallets: [],
     });
 
-    const activation = guard.canActivate();
+    const activation = guard.canActivate(
+      {} as never,
+      {
+        url: '/profile',
+      } as never
+    );
     expect(authSession.refresh).not.toHaveBeenCalled();
     settleProvider?.('ready');
 
@@ -52,7 +61,7 @@ describe('AuthGuard', () => {
     expect(authSession.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('allows navigation without a session request when the provider is disabled', async () => {
+  it('redirects without a session request when the provider is disabled', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'disabled',
       loginMethods: [],
@@ -62,11 +71,15 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    expect(await guard.canActivate()).toBeTrue();
+    await guard.canActivate({} as never, { url: '/farm' } as never);
+
     expect(authSession.refresh).not.toHaveBeenCalled();
+    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
+      queryParams: { returnUrl: '/farm' },
+    });
   });
 
-  it('allows navigation when the provider failed and there is no session', async () => {
+  it('uses root as the return URL when the requested URL is unsafe', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'failed',
       loginMethods: [],
@@ -76,7 +89,10 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    expect(await guard.canActivate()).toBeTrue();
-    expect(authSession.refresh).not.toHaveBeenCalled();
+    await guard.canActivate({} as never, { url: '//example.test' } as never);
+
+    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
+      queryParams: { returnUrl: '/' },
+    });
   });
 });
