@@ -40,6 +40,7 @@ import {
 } from '@shared/utils/token-avatar.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 import {
+  isNearWalletAddress,
   networkLabel,
   recipientAddressError,
   walletBlockchain,
@@ -314,6 +315,15 @@ export class HomeComponent {
       return;
     }
 
+    const sourceBalance = this.balanceForToken(this.fromToken);
+    if (
+      sourceBalance &&
+      !this.isBalanceUsable(sourceBalance) &&
+      !this.balancesLoading
+    ) {
+      this.loadWalletBalances();
+    }
+
     const balanceError = this.validateSourceBalance(amount);
     if (balanceError) {
       this.quoteError = balanceError;
@@ -383,7 +393,7 @@ export class HomeComponent {
       return 'evm';
     }
 
-    if (/^[a-z0-9._-]+\.(?:near|testnet|tg)$/i.test(wallet.account)) {
+    if (isNearWalletAddress(wallet.account)) {
       return 'near';
     }
 
@@ -655,7 +665,8 @@ export class HomeComponent {
   public balanceLabel(token: ExchangeToken): string {
     const balance = this.balanceForToken(token);
     if (balance) {
-      const suffix = balance.stale ? ' (stale)' : '';
+      const suffix =
+        balance.stale || this.isBalanceExpired(balance) ? ' (stale)' : '';
       return `Balance: ${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}${suffix}`;
     }
 
@@ -1256,9 +1267,8 @@ export class HomeComponent {
               balance.walletAddress.toLowerCase() === walletAddress
           );
           this.balancesLoading = false;
-          if (
-            this.walletBalances.some(balance => this.isBalanceUsable(balance))
-          ) {
+          const sourceBalance = this.balanceForToken(this.fromToken);
+          if (sourceBalance && this.isBalanceUsable(sourceBalance)) {
             this.refreshSwapQuotePreview();
           }
         },
@@ -1292,9 +1302,6 @@ export class HomeComponent {
     }
 
     if (!this.isBalanceUsable(balance)) {
-      if (!this.balancesLoading) {
-        this.loadWalletBalances();
-      }
       return `${this.tokenSymbolLabel(this.fromToken)} balance is loading.`;
     }
 
@@ -1331,12 +1338,6 @@ export class HomeComponent {
     );
   }
 
-  private isNearWalletAddress(address: string): boolean {
-    return /^(?:[a-z0-9._-]+\.(?:near|testnet|tg)|[a-f0-9]{64})$/i.test(
-      address
-    );
-  }
-
   private nearNetworkForAddress(
     address: string
   ): 'near:mainnet' | 'near:testnet' {
@@ -1353,7 +1354,7 @@ export class HomeComponent {
   }
 
   private balanceNetwork(): string | undefined {
-    if (this.isNearWalletAddress(this.walletAddress)) {
+    if (isNearWalletAddress(this.walletAddress)) {
       return this.nearNetworkForAddress(this.walletAddress);
     }
     if (/^0x[a-f0-9]{40}$/i.test(this.walletAddress)) {
