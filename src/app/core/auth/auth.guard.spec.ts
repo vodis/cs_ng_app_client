@@ -44,12 +44,7 @@ describe('AuthGuard', () => {
       wallets: [],
     });
 
-    const activation = guard.canActivate(
-      {} as never,
-      {
-        url: '/profile',
-      } as never
-    );
+    const activation = guard.canActivate();
     expect(authSession.refresh).not.toHaveBeenCalled();
     settleProvider?.('ready');
 
@@ -67,9 +62,7 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    expect(
-      await guard.canActivate({} as never, { url: '/farm' } as never)
-    ).toBeTrue();
+    expect(await guard.canActivate()).toBeTrue();
     expect(authSession.refresh).not.toHaveBeenCalled();
   });
 
@@ -83,9 +76,7 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    expect(
-      await guard.canActivate({} as never, { url: '/farm' } as never)
-    ).toBeTrue();
+    expect(await guard.canActivate()).toBeTrue();
     expect(authSession.refresh).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,5 @@
 import { Injectable } from '@angular/core';
-import {
-  ActivatedRouteSnapshot,
-  CanActivate,
-  RouterStateSnapshot,
-} from '@angular/router';
+import { CanActivate } from '@angular/router';
 import { AuthSessionService } from './auth-session.service';
 import { AuthProviderService } from './auth-provider.service';
 
@@ -14,10 +10,7 @@ export class AuthGuard implements CanActivate {
     private readonly authProvider: AuthProviderService
   ) {}
 
-  async canActivate(
-    _route: ActivatedRouteSnapshot,
-    _state: RouterStateSnapshot
-  ): Promise<boolean> {
+  async canActivate(): Promise<boolean> {
     if (this.authSession.session) {
       return true;
     }
