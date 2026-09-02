@@ -28,7 +28,6 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   public DirectionType = Direction;
   public verticalLineAnimating = true;
   public contentHeight: number | null = null;
-  public lineResetKey = 0;
   public hideShell = isAuthShellRoute(window.location.pathname);
 
   private resizeObserver?: ResizeObserver;
@@ -46,8 +45,6 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(event => {
         this.updateShellVisibility(event.urlAfterRedirects);
-        this.verticalLineAnimating = true;
-        this.lineResetKey += 1;
         this.updateContentHeight();
       });
   }

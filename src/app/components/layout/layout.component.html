@@ -13,7 +13,6 @@
         *ngIf="verticalLineAnimating"
         [direction]="DirectionType.Row"
         size="100%"
-        [resetKey]="lineResetKey"
         (animationComplete)="onVerticalLineAnimationComplete()" />
       <div
         *ngIf="!verticalLineAnimating"

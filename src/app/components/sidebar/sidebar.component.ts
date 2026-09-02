@@ -2,7 +2,10 @@ import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
-import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import {
+  LocalizedRoutingService,
+  stripLocalePrefix,
+} from '@core/routing/localized-routing.service';
 
 const SIDEBAR_LINE_COUNT = 6;
 const SIDEBAR_LINE_DURATION_MS = 500;
@@ -51,7 +54,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   private animationFallbackId: ReturnType<typeof setTimeout> | null = null;
   private routerSubscription?: Subscription;
-  private skipNextNavigationReplay = true;
+  private lastAnimatedUrl: string | null = null;
+  private hasCompletedInitialAnimation = false;
 
   constructor(
     @Inject(DOCUMENT) private document: Document,
@@ -66,12 +70,19 @@ export class SidebarComponent implements OnInit, OnDestroy {
           (event): event is NavigationEnd => event instanceof NavigationEnd
         )
       )
-      .subscribe(() => {
-        if (this.skipNextNavigationReplay) {
-          this.skipNextNavigationReplay = false;
+      .subscribe(event => {
+        const url = this.navigationKey(event.urlAfterRedirects);
+
+        if (!this.hasCompletedInitialAnimation) {
+          this.lastAnimatedUrl = url;
           return;
         }
 
+        if (url === this.lastAnimatedUrl) {
+          return;
+        }
+
+        this.lastAnimatedUrl = url;
         this.replayAnimation();
       });
 
@@ -113,6 +124,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     }
 
     this.menuReady = true;
+    this.hasCompletedInitialAnimation = true;
     this.clearAnimationFallback();
   }
 
@@ -148,5 +160,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
     clearTimeout(this.animationFallbackId);
     this.animationFallbackId = null;
+  }
+
+  private navigationKey(url: string): string {
+    return stripLocalePrefix(url).split(/[?#]/)[0];
   }
 }
