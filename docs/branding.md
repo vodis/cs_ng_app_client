@@ -176,6 +176,13 @@ Protected shell layout requirements:
 - Sidebar width must match the first column of the `7`-column desktop grid
 - Vertical divider must stay aligned with the sidebar right edge
 - Sidebar, divider, and router content must share the same grid row
+- Desktop sidebar height is `calc(100vh - var(--shell-header-height))` and
+  does not scroll with routed content
+- Desktop routed content scrolls inside columns `2-7`
+- Desktop sidebar draws 4 interior horizontal grid lines from the top of the
+  column toward the bottom (no edge lines at the header or footer), then
+  reveals the nav menu. Replay that sequence on each route navigation. Use
+  `--main-border-color` for those lines.
 
 E2E coverage:
 

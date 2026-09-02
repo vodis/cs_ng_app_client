@@ -10,10 +10,12 @@
 
     &__content {
       display: grid;
+      overflow: hidden;
+      height: calc(100vh - var(--shell-header-height));
       min-height: calc(100vh - var(--shell-header-height));
       align-items: stretch;
       grid-template-columns: repeat(7, minmax(0, 1fr));
-      grid-template-rows: minmax(0, auto);
+      grid-template-rows: minmax(0, 1fr);
 
       app-sidebar,
       app-animate-line,
@@ -23,7 +25,9 @@
       }
 
       app-sidebar {
+        overflow: hidden;
         min-width: 0;
+        height: 100%;
         align-self: stretch;
         grid-column: 1;
       }
@@ -48,14 +52,18 @@
       &_router {
         position: relative;
         z-index: 1;
-        overflow: hidden;
         min-width: 0;
         max-width: 100%;
+        min-height: 0;
         grid-column: 2 / 8;
+        overflow: hidden auto;
+        overscroll-behavior: contain;
       }
 
       &.mobile {
         display: flex;
+        overflow: visible;
+        height: auto;
         min-height: calc(100vh - var(--shell-header-height));
         flex-direction: column;
 

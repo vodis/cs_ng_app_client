@@ -1,7 +1,18 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter, Subscription } from 'rxjs';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+
+const SIDEBAR_LINE_COUNT = 6;
+const SIDEBAR_LINE_DURATION_MS = 500;
+const SIDEBAR_LINE_FALLBACK_MS = SIDEBAR_LINE_DURATION_MS + 200;
+
+export interface SidebarLink {
+  name: string;
+  fallback: string;
+  url: string;
+}
 
 @Component({
   selector: 'app-sidebar',
@@ -9,60 +20,133 @@ import { LocalizedRoutingService } from '@core/routing/localized-routing.service
   templateUrl: './sidebar.component.html',
   styleUrls: ['sidebar.component.scss'],
 })
-export class SidebarComponent {
-  public isInformationPanelOpen = true;
-  public isFinancePanelOpen = true;
-  public isActivityPanelOpen = true;
+export class SidebarComponent implements OnInit, OnDestroy {
+  public readonly lineCount = SIDEBAR_LINE_COUNT;
+  public readonly lineIndexes = Array.from(
+    { length: SIDEBAR_LINE_COUNT },
+    (_, index) => index
+  ).slice(1, -1);
+  public readonly lineDurationSeconds = SIDEBAR_LINE_DURATION_MS / 1000;
 
-  public informationLinks = [
+  public menuReady = false;
+  public lineResetKey = 0;
+
+  public readonly menuItems: SidebarLink[] = [
     {
       name: 'Texts.sidebar-portfolio',
       fallback: 'Portfolio',
       url: '/portfolio',
-      isActive: true,
     },
-  ];
-
-  public financeLinks = [
     {
       name: 'Texts.sidebar-trade',
       fallback: 'Trade',
       url: '/',
-      isActive: true,
     },
-  ];
-
-  public activityLinks = [
     {
       name: 'Texts.sidebar-transactions',
       fallback: 'Transactions',
       url: '/transactions',
-      isActive: true,
     },
   ];
 
+  private animationFallbackId: ReturnType<typeof setTimeout> | null = null;
+  private routerSubscription?: Subscription;
+  private skipNextNavigationReplay = true;
+
   constructor(
     @Inject(DOCUMENT) private document: Document,
-    private router: Router,
-    private readonly localizedRouting: LocalizedRoutingService
+    private readonly router: Router,
+    public readonly localizedRouting: LocalizedRoutingService
   ) {}
+
+  public ngOnInit(): void {
+    this.routerSubscription = this.router.events
+      .pipe(
+        filter(
+          (event): event is NavigationEnd => event instanceof NavigationEnd
+        )
+      )
+      .subscribe(() => {
+        if (this.skipNextNavigationReplay) {
+          this.skipNextNavigationReplay = false;
+          return;
+        }
+
+        this.replayAnimation();
+      });
+
+    this.startAnimation();
+  }
+
+  public ngOnDestroy(): void {
+    this.clearAnimationFallback();
+    this.routerSubscription?.unsubscribe();
+  }
+
+  public lineTo(index: number): string {
+    return `calc(${index} * (100% - 1px) / ${this.lineCount - 1})`;
+  }
 
   public trackById(index: number): number {
     return index;
   }
 
-  public handleRouteChanging(url: string): void {
-    this.router.navigateByUrl(this.localizedRouting.path(url));
-    this.document.body.classList.toggle('_is-locked');
+  public onLineAnimationEnd(index: number, play = this.lineResetKey): void {
+    if (play !== this.lineResetKey) {
+      return;
+    }
+
+    if (index !== this.lineIndexes[this.lineIndexes.length - 1]) {
+      return;
+    }
+
+    this.revealMenu();
   }
 
-  public handleToggleAccordion(
-    key:
-      | 'isInformationPanelOpen'
-      | 'isFinancePanelOpen'
-      | 'isActivityPanelOpen',
-    value: boolean
-  ): void {
-    this[key] = value;
+  public replayAnimation(): void {
+    this.startAnimation(true);
+  }
+
+  public revealMenu(): void {
+    if (this.menuReady) {
+      return;
+    }
+
+    this.menuReady = true;
+    this.clearAnimationFallback();
+  }
+
+  private startAnimation(resetLines = false): void {
+    if (this.prefersReducedMotion()) {
+      this.menuReady = true;
+      return;
+    }
+
+    this.menuReady = false;
+    this.clearAnimationFallback();
+
+    if (resetLines) {
+      this.lineResetKey += 1;
+    }
+
+    this.animationFallbackId = setTimeout(() => {
+      this.revealMenu();
+    }, SIDEBAR_LINE_FALLBACK_MS);
+  }
+
+  private prefersReducedMotion(): boolean {
+    return (
+      this.document.defaultView?.matchMedia('(prefers-reduced-motion: reduce)')
+        .matches ?? false
+    );
+  }
+
+  private clearAnimationFallback(): void {
+    if (this.animationFallbackId === null) {
+      return;
+    }
+
+    clearTimeout(this.animationFallbackId);
+    this.animationFallbackId = null;
   }
 }
