@@ -110,6 +110,18 @@ describe('WalletGatewayBridgeService', () => {
     );
   });
 
+  it('resets the gateway when a connection is dismissed', () => {
+    service.registerMountApi(mountApi);
+
+    service.resetConnection();
+
+    expect(mountApi.sendGatewayEvent).toHaveBeenCalledOnceWith({ type: 'RESET' });
+  });
+
+  it('ignores connection reset when the wallet MFE is not mounted', () => {
+    expect(() => service.resetConnection()).not.toThrow();
+  });
+
   it('delegates connected-wallet sync to the mounted wallet MFE', async () => {
     const idleSnapshot: WalletConnectionSnapshot = {
       ...connectedSnapshot,

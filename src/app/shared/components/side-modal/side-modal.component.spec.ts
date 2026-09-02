@@ -41,6 +41,18 @@ describe('SideModalComponent', () => {
     ).toBeGreaterThan(110);
   });
 
+  it('slides the panel with a transform transition', () => {
+    component.isOpen = false;
+    fixture.detectChanges();
+
+    expect(getComputedStyle(panel()).transition).toContain('transform');
+
+    component.isOpen = true;
+    fixture.detectChanges();
+
+    expect(getComputedStyle(panel()).transition).toContain('transform');
+  });
+
   it('releases pointer events and is inert when closed', () => {
     component.isOpen = false;
     fixture.detectChanges();
@@ -50,6 +62,19 @@ describe('SideModalComponent', () => {
     expect(getComputedStyle(dialog).visibility).toBe('hidden');
     expect(dialog.inert).toBeTrue();
     expect(dialog.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('does not mark the open panel as inert', () => {
+    expect(panel().hasAttribute('inert')).toBeFalse();
+    expect(panel().inert).toBeFalse();
+  });
+
+  it('emits closeRequested when the open backdrop is clicked', () => {
+    const emitSpy = spyOn(component.closeRequested, 'emit');
+
+    backdrop().click();
+
+    expect(emitSpy).toHaveBeenCalledTimes(1);
   });
 
   it('emits closeRequested when the wallet close control is clicked', () => {

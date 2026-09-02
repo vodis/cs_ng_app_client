@@ -47,6 +47,9 @@ export class SideModalComponent implements AfterViewInit, OnDestroy {
   }
 
   public handleBackdropClick(): void {
+    if (!this.isOpen) {
+      return;
+    }
     this.closeRequested.emit();
   }
 

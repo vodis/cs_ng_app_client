@@ -49,6 +49,9 @@
     background: var(--main-bg-color, #171c1f);
     pointer-events: none;
     transform: translateX(100%);
+    transition:
+      transform 0.3s ease-in-out,
+      visibility 0s linear 0.3s;
     visibility: hidden;
 
     > * {
@@ -57,11 +60,15 @@
     }
 
     &.open {
+      /* Drawer owns scrolling so the MFE can stay overflow:visible during translateX. */
       overflow: hidden auto;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
       pointer-events: auto;
       transform: translateX(0);
+      transition:
+        transform 0.3s ease-in-out,
+        visibility 0s linear 0s;
       visibility: visible;
     }
 

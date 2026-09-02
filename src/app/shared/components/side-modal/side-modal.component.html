@@ -10,7 +10,7 @@
   role="dialog"
   [attr.aria-modal]="isOpen"
   [attr.aria-hidden]="!isOpen"
-  [inert]="!isOpen"
+  [attr.inert]="isOpen ? null : ''"
   (click)="handleDialogClick($event)">
   <ng-content></ng-content>
 </div>

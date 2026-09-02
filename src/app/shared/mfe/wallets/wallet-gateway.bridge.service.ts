@@ -169,6 +169,13 @@ export class WalletGatewayBridgeService {
     });
   }
 
+  resetConnection(): void {
+    if (!this.canSendGatewayEvent()) {
+      return;
+    }
+    this.sendGatewayEvent({ type: 'RESET' });
+  }
+
   disconnectWallet(): void {
     const disconnect = this.mountApi?.disconnectWallet;
     if (disconnect) {

@@ -220,13 +220,34 @@ const modules = {
     }
   },
   'mount': {
-    mount: function () {
+    mount: function (container) {
+      if (container) {
+        container.innerHTML = ${JSON.stringify(`<div class="wallets-mfe">
+  <div class="connect-wallet">
+    <div class="connect-wallet__header">
+      <h1 class="connect-wallet__title">Connect</h1>
+    </div>
+    <div class="connect-wallet__grid">
+      <button type="button" class="connect-wallet__grid-btn connect-wallet__grid-btn--disabled" disabled>
+        <span class="connect-wallet__grid-name">Jupiter</span>
+        <span class="connect-wallet__grid-desc">Solana super-app wallet</span>
+        <span class="connect-wallet__soon">Soon</span>
+      </button>
+    </div>
+  </div>
+</div>`)};
+      }
       return {
-        unmount: function () {},
+        unmount: function () {
+          if (container) {
+            container.innerHTML = '';
+          }
+        },
         subscribe: function () { return function () {}; },
         getSnapshot: function () { return walletSnapshot; },
         disconnectWallet: function () {},
-        sendGatewayEvent: function () {}
+        sendGatewayEvent: function () {},
+        syncConnectedWallet: function () { return Promise.resolve(walletSnapshot); }
       };
     }
   }
