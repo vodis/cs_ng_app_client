@@ -44,7 +44,6 @@
 <app-animate-line
   *ngIf="horizontalLineAnimating"
   class="header__animate-line"
-  [resetKey]="lineResetKey"
   (animationComplete)="onHorizontalLineAnimationComplete()" />
 <div
   *ngIf="!horizontalLineAnimating"

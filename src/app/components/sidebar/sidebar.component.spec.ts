@@ -1,6 +1,5 @@
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MatIconModule } from '@angular/material/icon';
 import { RouterTestingModule } from '@angular/router/testing';
 import {
   CsTranslationsModule,
@@ -15,8 +14,19 @@ describe('SidebarComponent', () => {
   let fixture: ComponentFixture<SidebarComponent>;
 
   beforeEach(() => {
+    spyOn(window, 'matchMedia').and.returnValue({
+      matches: false,
+      media: '(prefers-reduced-motion: reduce)',
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    } as MediaQueryList);
+
     TestBed.configureTestingModule({
-      imports: [RouterTestingModule, CsTranslationsModule, MatIconModule],
+      imports: [RouterTestingModule, CsTranslationsModule],
       declarations: [SidebarComponent],
       providers: [
         {
@@ -39,17 +49,63 @@ describe('SidebarComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    fixture.destroy();
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('does not expose profile in sidebar navigation', () => {
-    const sidebarUrls = [
-      ...component.informationLinks,
-      ...component.financeLinks,
-      ...component.activityLinks,
-    ].map(link => link.url);
+  it('exposes one-word desktop destinations without profile', () => {
+    expect(component.menuItems.map(item => item.fallback)).toEqual([
+      'Portfolio',
+      'Trade',
+      'Transactions',
+    ]);
+    expect(component.menuItems.map(item => item.url)).not.toContain('/profile');
+  });
 
-    expect(sidebarUrls).not.toContain('/profile');
+  it('draws interior lines and keeps the menu hidden until they finish', () => {
+    const lines: NodeListOf<HTMLElement> =
+      fixture.nativeElement.querySelectorAll('.sidebar__line');
+
+    expect(lines.length).toBe(4);
+    expect(component.menuReady).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.sidebar__nav')).toBeNull();
+
+    component.onLineAnimationEnd(1);
+    fixture.detectChanges();
+
+    expect(component.menuReady).toBeFalse();
+
+    component.onLineAnimationEnd(4);
+    fixture.detectChanges();
+
+    expect(component.menuReady).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.sidebar__nav')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelectorAll('.sidebar__line').length
+    ).toBe(4);
+    expect(
+      fixture.nativeElement.querySelector('.sidebar__watermark')
+    ).toBeNull();
+  });
+
+  it('replays the line animation and hides the menu on navigation', () => {
+    component.onLineAnimationEnd(4);
+    fixture.detectChanges();
+
+    expect(component.menuReady).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.sidebar__nav')).not.toBeNull();
+
+    component.replayAnimation();
+    fixture.detectChanges();
+
+    expect(component.menuReady).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.sidebar__nav')).toBeNull();
+    expect(
+      fixture.nativeElement.querySelectorAll('.sidebar__line').length
+    ).toBe(4);
   });
 });

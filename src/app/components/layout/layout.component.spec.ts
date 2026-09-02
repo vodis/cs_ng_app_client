@@ -44,4 +44,14 @@ describe('LayoutComponent', () => {
 
     expect(component.hideShell).toBeFalse();
   });
+
+  it('does not restart the vertical divider animation on in-app navigation', () => {
+    component.onVerticalLineAnimationComplete();
+
+    expect(component.verticalLineAnimating).toBeFalse();
+
+    routerEvents.next(new NavigationEnd(4, '/en/portfolio', '/en/portfolio'));
+
+    expect(component.verticalLineAnimating).toBeFalse();
+  });
 });

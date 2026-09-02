@@ -65,6 +65,57 @@ test.describe('Shell layout (desktop)', () => {
     expect(dividerRow).toBe('1');
   });
 
+  test('sidebar draws interior lines then reveals the menu', async ({
+    page,
+  }) => {
+    await expect(page.locator('app-sidebar .sidebar__line')).toHaveCount(4);
+    await expect(page.locator('app-sidebar .sidebar__nav')).toBeVisible({
+      timeout: 3000,
+    });
+    await expect(page.getByRole('link', { name: 'Portfolio' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Trade' })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Transactions' })
+    ).toBeVisible();
+    await expect(
+      page.locator('app-sidebar').getByText('Informations')
+    ).toHaveCount(0);
+    await expect(page.locator('app-sidebar').getByText('Finance')).toHaveCount(
+      0
+    );
+    await expect(page.locator('app-sidebar').getByText('Activity')).toHaveCount(
+      0
+    );
+    await page.getByRole('link', { name: 'Portfolio' }).click();
+    await expect(page).toHaveURL(/\/portfolio/);
+    await expect(page.locator('app-sidebar .sidebar__nav')).toBeVisible({
+      timeout: 3000,
+    });
+  });
+
+  test('sidebar fills the viewport below the header and stays put while content scrolls', async ({
+    page,
+  }) => {
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+
+    const sidebar = page.locator('app-sidebar');
+    const router = page.locator('.main-layout__content_router');
+    const before = await readBox(sidebar);
+    const expectedHeight = viewport!.height - SHELL_HEADER_HEIGHT_PX;
+
+    expect(before.height).toBeGreaterThanOrEqual(expectedHeight - 2);
+    expect(before.height).toBeLessThanOrEqual(expectedHeight + 2);
+
+    await router.evaluate(el => {
+      el.scrollTop = el.scrollHeight;
+    });
+
+    const after = await readBox(sidebar);
+    expect(after.y).toBe(before.y);
+    expect(after.height).toBe(before.height);
+  });
+
   test('sidebar width matches first column of 7-column grid', async ({
     page,
   }) => {
