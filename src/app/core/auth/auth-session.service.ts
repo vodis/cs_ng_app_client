@@ -197,7 +197,7 @@ export class AuthSessionService {
       this.walletGatewayBridge.disconnectWallet();
       this.walletsService.setAccount(undefined);
       this.clear();
-      await this.router.navigateByUrl(this.localizedRouting.path('/login'));
+      await this.router.navigateByUrl(this.localizedRouting.path('/'));
     } finally {
       this.loadingSubject.next(false);
     }
@@ -216,7 +216,7 @@ export class AuthSessionService {
       )
     );
     this.sessionSubject.next(null);
-    await this.router.navigateByUrl(this.localizedRouting.path('/login'));
+    await this.router.navigateByUrl(this.localizedRouting.path('/'));
     return response.deletionAvailableAt;
   }
 

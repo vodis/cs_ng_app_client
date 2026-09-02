@@ -66,6 +66,10 @@ const DEFAULT_AUTHENTICATED_SESSION: E2eAuthenticatedSession = {
   accessToken: E2E_ACCESS_TOKEN,
 };
 
+export async function useGuestSession(page: Page): Promise<void> {
+  await mockAuthProviderRemote(page, null);
+}
+
 export async function useAuthenticatedSession(
   page: Page,
   session: E2eAuthenticatedSession = DEFAULT_AUTHENTICATED_SESSION
@@ -87,7 +91,7 @@ export async function mockJsonApi(
 
 async function mockAuthProviderRemote(
   page: Page,
-  session: E2eAuthenticatedSession
+  session: E2eAuthenticatedSession | null
 ): Promise<void> {
   await page.route(
     url => matchesOriginPath(url, AUTH_PROVIDER_REMOTE_ENTRY_URL),
@@ -145,13 +149,17 @@ function matchesOriginPath(url: URL, expected: string): boolean {
 }
 
 function createAuthProviderRemoteEntry(
-  session: E2eAuthenticatedSession
+  session: E2eAuthenticatedSession | null
 ): string {
-  const serializedSession = JSON.stringify({
-    user: session.user,
-    wallets: session.wallets,
-  });
-  const serializedAccessToken = JSON.stringify(session.accessToken);
+  const serializedSession = JSON.stringify(
+    session
+      ? {
+          user: session.user,
+          wallets: session.wallets,
+        }
+      : null
+  );
+  const serializedAccessToken = JSON.stringify(session?.accessToken ?? null);
 
   return `
 const snapshot = {
@@ -183,12 +191,26 @@ const modules = {
           return function () {};
         },
         getSnapshot: function () { return snapshot; },
-        login: function () { return Promise.resolve(session); },
+        login: function () {
+          return session
+            ? Promise.resolve(session)
+            : Promise.reject(new Error('No e2e session'));
+        },
         sendEmailCode: function () { return Promise.resolve(); },
-        verifyEmailCode: function () { return Promise.resolve(session); },
-        linkPasskey: function () { return Promise.resolve(session); },
+        verifyEmailCode: function () {
+          return session
+            ? Promise.resolve(session)
+            : Promise.reject(new Error('No e2e session'));
+        },
+        linkPasskey: function () {
+          return session
+            ? Promise.resolve(session)
+            : Promise.reject(new Error('No e2e session'));
+        },
         ensureEmbeddedWallet: function () {
-          return Promise.resolve(session.wallets[0]);
+          return session && session.wallets[0]
+            ? Promise.resolve(session.wallets[0])
+            : Promise.reject(new Error('No e2e session'));
         },
         logout: function () { return Promise.resolve(); },
         getAccessToken: function () {

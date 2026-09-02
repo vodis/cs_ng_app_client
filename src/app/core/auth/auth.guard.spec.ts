@@ -71,11 +71,11 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    await guard.canActivate({} as never, { url: '/farm' } as never);
+    await guard.canActivate({} as never, { url: '/profile' } as never);
 
     expect(authSession.refresh).not.toHaveBeenCalled();
     expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
-      queryParams: { returnUrl: '/farm' },
+      queryParams: { returnUrl: '/profile' },
     });
   });
 

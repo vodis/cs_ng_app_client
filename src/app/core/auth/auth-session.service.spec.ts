@@ -232,7 +232,7 @@ describe('AuthSessionService', () => {
     expect(walletGatewayBridge.disconnectWallet).toHaveBeenCalledTimes(1);
     expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
     expect(service.session).toBeNull();
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/login');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en');
   }));
 
   it('syncs the wallet gateway after ensuring an embedded wallet', fakeAsync(() => {

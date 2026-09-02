@@ -1,6 +1,8 @@
 # Exchange page reference
 
 The default route (`/`) renders the Token Exchange screen inside the host shell.
+The page is public: guests can browse quotes and markets without a login
+session. Connecting a wallet is required only to submit a swap.
 Treat this document as the product baseline when changing the page structure,
 behavior, or styles.
 
