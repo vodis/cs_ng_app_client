@@ -227,9 +227,13 @@ Host auth routes live under `src/app/pages/auth/`.
 
 | Route              | Access      | Notes                                                              |
 | ------------------ | ----------- | ------------------------------------------------------------------ |
+| `/`                | Public      | Token Exchange; login is optional                                  |
+| `/farm`            | Public      | Product page; login is optional                                    |
+| `/proposals`       | Public      | Product page; login is optional                                    |
 | `/login`           | Public      | Passkey, Google, Apple, Telegram always shown; email code fallback |
 | `/register`        | Public      | Account creation only; wallet setup is separate                    |
 | `/profile`         | `AuthGuard` | Balance hero, onboarding, activity, sessions, account footer       |
+| `/portfolio`       | `AuthGuard` | Holdings and agent authorization                                   |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                                      |
 
 ### Login expectations
@@ -244,9 +248,12 @@ Host auth routes live under `src/app/pages/auth/`.
 
 ### Session redirect policy
 
-- Missing or non-renewable sessions redirect to `/login?returnUrl=<safe-path>`.
+- Login is optional for public shell routes. Do not redirect `/`, `/farm`,
+  `/proposals`, `/home`, or `/history` to `/login`.
+- Missing or non-renewable sessions redirect to `/login?returnUrl=<safe-path>`
+  only on protected account routes (`/profile`, `/portfolio`).
 - `AuthGuard` waits for auth-provider readiness before attempting refresh.
-- Logout navigates to `/login`.
+- Logout navigates to Token Exchange (`/`).
 
 ### Wallet onboarding split
 
@@ -263,7 +270,8 @@ Host auth routes live under `src/app/pages/auth/`.
 
 1. Start host and wallets MFE together.
 2. Verify `/login` social buttons and passkey-not-enabled messaging.
-3. Verify protected-route redirect to `/login` without a session.
+3. Verify `/` stays on Token Exchange without a session, and `/profile`
+   redirects to `/login`.
 4. Verify register/login without wallets routes to `/profile` with a `$0.00`
    balance hero.
 5. Verify the Onboarding portfolio Set up wallet CTA opens the wallets MFE

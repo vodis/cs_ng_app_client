@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WalletAccount } from '@domains/wallet/models/wallet.models';
+import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 
 @Component({
@@ -21,6 +22,7 @@ export class WalletBarComponent {
 
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly walletGatewayBridge = inject(WalletGatewayBridgeService);
   private readonly walletsService = inject(WalletsService);
   public isOpenWalletConnectMenu = false;
   public account: WalletAccount | undefined;
@@ -65,6 +67,7 @@ export class WalletBarComponent {
   }
 
   public handleCloseWalletMenu(): void {
+    this.walletGatewayBridge.resetConnection();
     this.setWalletMenuOpen(false);
   }
 

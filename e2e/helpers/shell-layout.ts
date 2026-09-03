@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { useAuthenticatedSession } from '../utils/auth-fixtures';
+import { useGuestSession } from '../utils/auth-fixtures';
 
 export const SHELL_HEADER_HEIGHT_PX = 64;
 export const DESKTOP_GRID_COLUMNS = 7;
@@ -10,7 +10,7 @@ export function exchangeIntroHeading(page: Page): Locator {
 }
 
 export async function gotoExchangePage(page: Page): Promise<void> {
-  await useAuthenticatedSession(page);
+  await useGuestSession(page);
   await page.goto('/');
 
   // Shell renders on bootstrap; home route is lazy-loaded in CI production builds.

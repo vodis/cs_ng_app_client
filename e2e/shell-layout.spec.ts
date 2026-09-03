@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   DESKTOP_GRID_COLUMNS,
+  exchangeIntroHeading,
   gotoExchangePage,
   readBox,
   readGridRowStart,
@@ -11,6 +12,14 @@ import {
 test.describe('Shell layout (desktop)', () => {
   test.beforeEach(async ({ page }) => {
     await gotoExchangePage(page);
+  });
+
+  test('stays on Token Exchange without redirecting guests to login', async ({
+    page,
+  }) => {
+    await expect(page).not.toHaveURL(/\/login(?:\?|$)/);
+    await expect(page).toHaveURL(/\/en\/?$/);
+    await expect(exchangeIntroHeading(page)).toBeVisible();
   });
 
   test('header height matches design system (64px)', async ({ page }) => {
@@ -86,8 +95,8 @@ test.describe('Shell layout (desktop)', () => {
     await expect(page.locator('app-sidebar').getByText('Activity')).toHaveCount(
       0
     );
-    await page.getByRole('link', { name: 'Portfolio' }).click();
-    await expect(page).toHaveURL(/\/portfolio/);
+    await page.goto('/en/farm');
+    await expect(page).toHaveURL(/\/farm/);
     await expect(page.locator('app-sidebar .sidebar__nav')).toBeVisible({
       timeout: 3000,
     });

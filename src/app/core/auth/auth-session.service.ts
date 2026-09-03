@@ -193,11 +193,8 @@ export class AuthSessionService {
   async logout(): Promise<void> {
     this.loadingSubject.next(true);
     try {
-      await this.authProvider.logout().catch(() => undefined);
-      this.walletGatewayBridge.disconnectWallet();
-      this.walletsService.setAccount(undefined);
-      this.clear();
-      await this.router.navigateByUrl(this.localizedRouting.path('/login'));
+      await this.clearAuthenticatedState();
+      await this.router.navigateByUrl(this.localizedRouting.path('/'));
     } finally {
       this.loadingSubject.next(false);
     }
@@ -215,8 +212,8 @@ export class AuthSessionService {
         { headers: this.authHeaders(token) }
       )
     );
-    this.sessionSubject.next(null);
-    await this.router.navigateByUrl(this.localizedRouting.path('/login'));
+    await this.clearAuthenticatedState();
+    await this.router.navigateByUrl(this.localizedRouting.path('/'));
     return response.deletionAvailableAt;
   }
 
@@ -293,6 +290,13 @@ export class AuthSessionService {
   clear(): void {
     this.accessToken = null;
     this.sessionSubject.next(null);
+  }
+
+  private async clearAuthenticatedState(): Promise<void> {
+    await this.authProvider.logout().catch(() => undefined);
+    this.walletGatewayBridge.disconnectWallet();
+    this.walletsService.setAccount(undefined);
+    this.clear();
   }
 
   private updateWallets(wallets: BackendWallet[]): void {

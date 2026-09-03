@@ -325,21 +325,27 @@ provider login, passkey linking, and wallet modal workflows.
 
 ### Public routes
 
-| Route       | Purpose                |
-| ----------- | ---------------------- |
-| `/login`    | Returning-user sign in |
-| `/register` | New account creation   |
+Login is optional. Guests can browse the shell without a session.
 
-Both routes render outside the main shell (no header/sidebar). Route prefixes are
-owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
+| Route                    | Purpose                                      |
+| ------------------------ | -------------------------------------------- |
+| `/`                      | Token Exchange                               |
+| `/farm`, `/proposals`    | Product pages                                |
+| `/home`, `/history`      | Placeholder shell pages                      |
+| `/login`                 | Returning-user sign in                       |
+| `/register`              | New account creation                         |
+
+`/login` and `/register` render outside the main shell (no header/sidebar). Route
+prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 `LayoutComponent` via `*ngIf` — do not duplicate them in `index.html`.
 
 ### Protected routes
 
-| Route              | Guard       | Purpose                                                |
-| ------------------ | ----------- | ------------------------------------------------------ |
-| `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, sessions |
-| `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                          |
+| Route                       | Guard       | Purpose                                                |
+| --------------------------- | ----------- | ------------------------------------------------------ |
+| `/profile`                  | `AuthGuard` | Balance hero, onboarding portfolio, activity, sessions |
+| `/portfolio`                | `AuthGuard` | Holdings and agent authorization                       |
+| `/generate-wallet`          | `AuthGuard` | Legacy redirect to `/profile`                          |
 
 ### Login methods on `/login`
 
@@ -361,6 +367,9 @@ Passkey UX rule:
 
 ### Session policy
 
+`AuthGuard` applies only to protected account routes. Public shell routes must
+not wait on the provider or redirect to `/login`.
+
 `AuthGuard` behavior:
 
 1. Allow navigation when `AuthSessionService.session` is already populated.
@@ -369,7 +378,7 @@ Passkey UX rule:
 4. Redirect to `/login?returnUrl=<safe-path>` when there is no valid session and
    refresh cannot restore one.
 
-Logout clears host session state and navigates to `/login`.
+Logout clears host session state and navigates to Token Exchange (`/`).
 
 ### Post-auth wallet onboarding
 

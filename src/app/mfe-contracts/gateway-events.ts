@@ -8,11 +8,13 @@ export type WalletGatewayEvent =
       request: ApprovedIntentPrepareRequest;
     }
   | { type: 'SIGN_REQUESTED' }
-  | { type: 'ABORT' };
+  | { type: 'ABORT' }
+  | { type: 'RESET' };
 
 export const WALLET_GATEWAY_EVENTS = {
   verifyRequested: 'VERIFY_REQUESTED',
   prepareIntentMessageRequested: 'PREPARE_INTENT_MESSAGE_REQUESTED',
   signRequested: 'SIGN_REQUESTED',
   abort: 'ABORT',
+  reset: 'RESET',
 } as const;
