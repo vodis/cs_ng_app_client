@@ -198,6 +198,10 @@ Host files:
 Wallet MFE must expose `sendGatewayEvent` on `WalletsMfeMountApi` and
 `onIntentSigned` callback for the full flow to complete.
 
+When the host dismisses the connection drawer, it sends `RESET`. The MFE must
+abort any active provider pairing request before returning the gateway to idle,
+so a dismissed QR code or wallet prompt cannot connect later.
+
 ## 7) Connected Wallet Restore
 
 For linked-wallet profile flows, the host may request a best-effort restore of

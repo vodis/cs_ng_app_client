@@ -115,7 +115,9 @@ describe('WalletGatewayBridgeService', () => {
 
     service.resetConnection();
 
-    expect(mountApi.sendGatewayEvent).toHaveBeenCalledOnceWith({ type: 'RESET' });
+    expect(mountApi.sendGatewayEvent).toHaveBeenCalledOnceWith({
+      type: 'RESET',
+    });
   });
 
   it('ignores connection reset when the wallet MFE is not mounted', () => {

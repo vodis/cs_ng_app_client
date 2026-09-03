@@ -235,6 +235,33 @@ describe('AuthSessionService', () => {
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en');
   }));
 
+  it('clears credentials and wallet state after requesting account deletion', fakeAsync(() => {
+    let deletionAvailableAt: string | undefined;
+
+    service.requestDeletion().then(value => {
+      deletionAvailableAt = value;
+    });
+    flushMicrotasks();
+
+    const deletion = httpMock.expectOne(`${environment.apiUrl}/api/v1/me`);
+    expect(deletion.request.method).toBe('DELETE');
+    expect(deletion.request.headers.get('Authorization')).toBe(
+      'Bearer provider-token'
+    );
+    deletion.flush({
+      status: 'pending',
+      deletionAvailableAt: '2026-09-10T00:00:00.000Z',
+    });
+    flushMicrotasks();
+
+    expect(authProvider.logout).toHaveBeenCalledTimes(1);
+    expect(walletGatewayBridge.disconnectWallet).toHaveBeenCalledTimes(1);
+    expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
+    expect(service.session).toBeNull();
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en');
+    expect(deletionAvailableAt).toBe('2026-09-10T00:00:00.000Z');
+  }));
+
   it('syncs the wallet gateway after ensuring an embedded wallet', fakeAsync(() => {
     service.ensureEmbeddedWallet();
     flushMicrotasks();
