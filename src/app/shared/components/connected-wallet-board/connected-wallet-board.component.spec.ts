@@ -3,9 +3,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject } from 'rxjs';
 import {
-  IDLE_WALLET_BALANCES_SNAPSHOT,
-  type WalletBalancesSnapshot,
-} from '@mfe-contracts/wallet-balances.types';
+  ConnectedWalletBalancesFacade,
+  type ConnectedWalletBalancesState,
+} from '@domains/wallet/application/connected-wallet-balances.facade';
 import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import { SparklineComponent } from '@shared/components/sparkline/sparkline.component';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
@@ -39,21 +39,33 @@ describe('ConnectedWalletBoardComponent', () => {
       walletType: 'external',
     },
   };
-  const readyBalances: WalletBalancesSnapshot = {
+  const tonSnapshot: WalletConnectionSnapshot = {
+    ...evmSnapshot,
+    account: `EQ${'a'.repeat(46)}`,
+    chainId: -3,
+    identity: {
+      connectorId: 'tonkeeper',
+      address: `EQ${'a'.repeat(46)}`,
+      chainType: 'ton',
+      walletType: 'external',
+    },
+  };
+  const readyBalances: ConnectedWalletBalancesState = {
     status: 'ready',
     account,
-    chainId: 1,
+    network: 'eip155:1',
     rows: [
       {
+        walletId: null,
         walletAddress: account,
         chainType: 'ethereum',
         network: 'eip155:1',
-        chainId: 1,
         assetId: 'eth',
         symbol: 'ETH',
         decimals: 18,
         balanceRaw: '1000000000000000000',
         balanceDecimal: '1.25',
+        source: 'rpc_batch',
         fetchedAt: '2026-01-01T00:00:00Z',
         expiresAt: '2026-01-01T00:01:00Z',
         stale: false,
@@ -63,18 +75,23 @@ describe('ConnectedWalletBoardComponent', () => {
 
   let fixture: ComponentFixture<ConnectedWalletBoardComponent>;
   let snapshot$: BehaviorSubject<WalletConnectionSnapshot | undefined>;
-  let balances$: BehaviorSubject<WalletBalancesSnapshot>;
-  let requestBalancesSync: jasmine.Spy;
+  let balances$: BehaviorSubject<ConnectedWalletBalancesState>;
+  let loadBalances: jasmine.Spy;
   let disconnectWallet: jasmine.Spy;
 
   beforeEach(async () => {
     snapshot$ = new BehaviorSubject<WalletConnectionSnapshot | undefined>(
       evmSnapshot
     );
-    balances$ = new BehaviorSubject<WalletBalancesSnapshot>(
-      IDLE_WALLET_BALANCES_SNAPSHOT
-    );
-    requestBalancesSync = jasmine.createSpy('requestBalancesSync');
+    balances$ = new BehaviorSubject<ConnectedWalletBalancesState>({
+      status: 'loading',
+      account,
+      network: 'eip155:1',
+      rows: [],
+    });
+    loadBalances = jasmine
+      .createSpy('load')
+      .and.returnValue(balances$.asObservable());
     disconnectWallet = jasmine.createSpy('disconnectWallet');
 
     await TestBed.configureTestingModule({
@@ -84,10 +101,12 @@ describe('ConnectedWalletBoardComponent', () => {
           provide: WalletGatewayBridgeService,
           useValue: {
             snapshot$,
-            balances$,
-            requestBalancesSync,
             disconnectWallet,
           },
+        },
+        {
+          provide: ConnectedWalletBalancesFacade,
+          useValue: { load: loadBalances },
         },
       ],
     }).compileComponents();
@@ -96,8 +115,11 @@ describe('ConnectedWalletBoardComponent', () => {
     fixture.detectChanges();
   });
 
-  it('asks the gateway for EVM balances and paints BFF rows', () => {
-    expect(requestBalancesSync).toHaveBeenCalledWith(1);
+  it('asks the host facade for EVM balances and paints BFF rows', () => {
+    expect(loadBalances).toHaveBeenCalledWith({
+      account,
+      network: 'eip155:1',
+    });
 
     balances$.next(readyBalances);
     fixture.detectChanges();
@@ -113,7 +135,7 @@ describe('ConnectedWalletBoardComponent', () => {
     );
   });
 
-  it('asks the gateway to sync the selected EVM network', () => {
+  it('reloads balances for the selected EVM network', () => {
     const chips = fixture.nativeElement.querySelectorAll(
       '.connected-wallet-board__chip'
     ) as NodeListOf<HTMLButtonElement>;
@@ -121,21 +143,59 @@ describe('ConnectedWalletBoardComponent', () => {
     chips[1].click();
     fixture.detectChanges();
 
-    expect(requestBalancesSync).toHaveBeenCalledWith(42161);
+    expect(loadBalances).toHaveBeenCalledWith({
+      account,
+      network: 'eip155:42161',
+    });
   });
 
-  it('does not invent NEAR amounts while the gateway has no balance feed', () => {
+  it('loads balances for a connected NEAR account', () => {
     snapshot$.next(nearSnapshot);
     fixture.detectChanges();
 
+    expect(loadBalances).toHaveBeenCalledWith({
+      account: 'alice.near',
+      network: 'near:mainnet',
+    });
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('alice.near');
-    expect(text).toContain('Balances for this network are not available yet.');
-    expect(text).not.toContain('84.1200');
+    expect(text).toContain('Loading balances...');
     expect(
       fixture.nativeElement.querySelectorAll('.connected-wallet-board__chip')
         .length
     ).toBe(0);
+  });
+
+  it('does not reuse a response after the account changes', () => {
+    const firstRequest = balances$;
+    const secondRequest = new BehaviorSubject<ConnectedWalletBalancesState>({
+      status: 'loading',
+      account: '0x2222222222222222222222222222222222222222',
+      network: 'eip155:1',
+      rows: [],
+    });
+    loadBalances.and.returnValue(secondRequest.asObservable());
+
+    snapshot$.next({
+      ...evmSnapshot,
+      account: '0x2222222222222222222222222222222222222222',
+    });
+    firstRequest.next(readyBalances);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).not.toContain('1.25');
+    expect(text).toContain('Loading balances...');
+  });
+
+  it('uses the Tonkeeper network identity for TON testnet', () => {
+    snapshot$.next(tonSnapshot);
+    fixture.detectChanges();
+
+    expect(loadBalances).toHaveBeenCalledWith({
+      account: tonSnapshot.account,
+      network: 'ton:testnet',
+    });
   });
 
   it('disconnects through the wallet gateway', () => {

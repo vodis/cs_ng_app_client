@@ -5,7 +5,7 @@ import { Observable, from, map, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type WalletBalance = {
-  walletId: string;
+  walletId: string | null;
   walletAddress: string;
   chainType: string;
   network: string;
@@ -28,7 +28,7 @@ export type WalletBalancesRequest = {
 };
 
 type WalletBalancesResponse = {
-  data?: WalletBalance[];
+  data?: unknown;
 };
 
 @Injectable({
@@ -55,7 +55,65 @@ export class WalletBalancesService {
           }
         );
       }),
-      map(response => response.data ?? [])
+      map(response => this.parseBalances(response.data))
     );
+  }
+
+  private parseBalances(value: unknown): WalletBalance[] {
+    if (!Array.isArray(value)) {
+      throw new Error('Balance response is invalid');
+    }
+    return value.map(item => this.parseBalance(item));
+  }
+
+  private parseBalance(value: unknown): WalletBalance {
+    if (!this.isRecord(value)) {
+      throw new Error('Balance row is invalid');
+    }
+
+    const walletId = value['walletId'];
+    const balanceDecimal = value['balanceDecimal'];
+    const requiredStrings = [
+      'walletAddress',
+      'chainType',
+      'network',
+      'assetId',
+      'symbol',
+      'balanceRaw',
+      'source',
+      'fetchedAt',
+      'expiresAt',
+    ] as const;
+
+    if (
+      !(walletId === null || typeof walletId === 'string') ||
+      !requiredStrings.every(key => typeof value[key] === 'string') ||
+      typeof value['decimals'] !== 'number' ||
+      !Number.isFinite(value['decimals']) ||
+      !(balanceDecimal === null || typeof balanceDecimal === 'string') ||
+      typeof value['stale'] !== 'boolean'
+    ) {
+      throw new Error('Balance row is invalid');
+    }
+
+    return {
+      walletId: walletId as string | null,
+      walletAddress: value['walletAddress'] as string,
+      chainType: value['chainType'] as string,
+      network: value['network'] as string,
+      assetId: value['assetId'] as string,
+      symbol: value['symbol'] as string,
+      decimals: value['decimals'] as number,
+      balanceRaw: value['balanceRaw'] as string,
+      balanceDecimal: balanceDecimal as string | null,
+      source: value['source'] as string,
+      fetchedAt: value['fetchedAt'] as string,
+      expiresAt: value['expiresAt'] as string,
+      stale: value['stale'],
+    };
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
   }
 }

@@ -26,6 +26,11 @@ export const EVM_CHAINS: EvmChainMock[] = [
   { chainId: 42161, name: 'Arbitrum', shortName: 'ARB' },
   { chainId: 8453, name: 'Base', shortName: 'BASE' },
   { chainId: 137, name: 'Polygon', shortName: 'POL' },
+  { chainId: 10, name: 'Optimism', shortName: 'OP' },
+  { chainId: 56, name: 'BNB Chain', shortName: 'BSC' },
+  { chainId: 100, name: 'Gnosis', shortName: 'GNO' },
+  { chainId: 43114, name: 'Avalanche', shortName: 'AVAX' },
+  { chainId: 534352, name: 'Scroll', shortName: 'SCR' },
 ];
 
 const ETHEREUM_BALANCES: Record<number, TokenBalanceMockSeed[]> = {
