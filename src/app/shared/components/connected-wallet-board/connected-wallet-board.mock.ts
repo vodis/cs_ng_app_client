@@ -278,6 +278,17 @@ export function getMockTotalUsd(tokens: TokenBalanceMock[]): string {
   });
 }
 
+export function findMockMarket(
+  symbol: string,
+  family: SupportedChainFamily,
+  evmChainId: number
+): TokenBalanceMock | undefined {
+  const needle = symbol.trim().toUpperCase();
+  return getMockBalances(family, evmChainId).find(
+    token => token.symbol.toUpperCase() === needle
+  );
+}
+
 export function formatChangePercent(change: number): string {
   const abs = Math.abs(change).toFixed(2);
   return `${change >= 0 ? '▲' : '▼'} ${abs}%`;

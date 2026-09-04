@@ -74,6 +74,7 @@ export type WalletsMfeContext = {
   locale?: string;
   theme?: 'light' | 'dark';
   environment?: 'dev' | 'staging' | 'prod';
+  getAccessToken?: () => Promise<string | null>;
 };
 
 export type WalletsMfeCallbacks = {

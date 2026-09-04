@@ -21,6 +21,7 @@ import { WalletAccountChangedPayload } from '@mfe-contracts/payloads';
 import { AppLoggerService } from '@core/logging/app-logger.service';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import { AuthProviderService } from '@core/auth/auth-provider.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -42,6 +43,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
     private walletsService: WalletsService,
     private walletGatewayBridge: WalletGatewayBridgeService,
     private authSession: AuthSessionService,
+    private authProvider: AuthProviderService,
     private logger: AppLoggerService,
     private ngZone: NgZone
   ) {}
@@ -90,6 +92,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
             contractVersion: '2.1.0',
             apiBaseUrl: environment.apiUrl,
             environment: this.mfeEnvironment(),
+            getAccessToken: () => this.authProvider.getAccessToken(),
           },
           callbacks: {
             onAccountChanged: (account: WalletAccountChangedPayload) => {

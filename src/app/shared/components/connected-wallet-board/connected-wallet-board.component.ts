@@ -1,18 +1,30 @@
 import { Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  IDLE_WALLET_BALANCES_SNAPSHOT,
+  type WalletBalanceRow,
+  type WalletBalancesSnapshot,
+} from '@mfe-contracts/wallet-balances.types';
 import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import {
   EVM_CHAINS,
+  findMockMarket,
   formatChangePercent,
-  getMockBalances,
-  getMockTotalUsd,
   resolveDefaultEvmChainId,
   sparklineIsUp,
   type EvmChainMock,
   type SupportedChainFamily,
   type TokenBalanceMock,
 } from './connected-wallet-board.mock';
+
+export type ConnectedWalletBoardRow = {
+  id: string;
+  symbol: string;
+  amount: string;
+  stale: boolean;
+  market?: TokenBalanceMock;
+};
 
 @Component({
   selector: 'app-connected-wallet-board',
@@ -26,8 +38,10 @@ export class ConnectedWalletBoardComponent {
   private hasPickedChain = false;
 
   public snapshot: WalletConnectionSnapshot | undefined;
+  public balances: WalletBalancesSnapshot = IDLE_WALLET_BALANCES_SNAPSHOT;
   public selectedEvmChainId = 1;
   public readonly networks = EVM_CHAINS;
+  private lastSyncedAccount: string | undefined;
 
   constructor() {
     this.walletGatewayBridge.snapshot$
@@ -37,6 +51,12 @@ export class ConnectedWalletBoardComponent {
         if (!this.hasPickedChain) {
           this.selectedEvmChainId = resolveDefaultEvmChainId(snapshot?.chainId);
         }
+        this.syncBalancesIfConnected(snapshot);
+      });
+    this.walletGatewayBridge.balances$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(balances => {
+        this.balances = balances;
       });
   }
 
@@ -69,12 +89,43 @@ export class ConnectedWalletBoardComponent {
     return `${this.chainFamily} / ${walletType}`;
   }
 
-  public get mockTokens(): TokenBalanceMock[] {
-    return getMockBalances(this.chainFamily, this.selectedEvmChainId);
+  public get rows(): ConnectedWalletBoardRow[] {
+    if (!this.isEvm) {
+      return [];
+    }
+    return this.balances.rows
+      .filter(row => row.chainId === this.selectedEvmChainId)
+      .map(row => ({
+        id: `${row.network}:${row.assetId}`,
+        symbol: row.symbol,
+        amount: this.amountLabel(row),
+        stale: row.stale,
+        market: findMockMarket(
+          row.symbol,
+          this.chainFamily,
+          this.selectedEvmChainId
+        ),
+      }));
   }
 
-  public get mockTotalUsd(): string {
-    return getMockTotalUsd(this.mockTokens);
+  public get balancesCopy(): string {
+    if (!this.isEvm) {
+      return 'Balances for this network are not available yet.';
+    }
+    const status = this.balances.status;
+    if (status === 'error') {
+      return this.balances.errorMessage ?? 'Failed to load balances.';
+    }
+    if (status === 'unavailable') {
+      return 'Balances for this network are not available yet.';
+    }
+    if (status === 'loading' || status === 'idle') {
+      return 'Loading balances...';
+    }
+    if (status === 'ready' && this.rows.length === 0) {
+      return 'No balances yet.';
+    }
+    return '';
   }
 
   public activeNetworkLabel(): string {
@@ -103,15 +154,45 @@ export class ConnectedWalletBoardComponent {
     this.walletGatewayBridge.disconnectWallet();
   }
 
-  public changeLabel(token: TokenBalanceMock): string {
-    return formatChangePercent(token.change24h);
+  public changeLabel(market: TokenBalanceMock): string {
+    return formatChangePercent(market.change24h);
   }
 
-  public isTokenUp(token: TokenBalanceMock): boolean {
-    return sparklineIsUp(token.sparkline7d);
+  public isTokenUp(market: TokenBalanceMock): boolean {
+    return sparklineIsUp(market.sparkline7d);
   }
 
-  public sparklineLabel(token: TokenBalanceMock): string {
-    return `${token.symbol} 7-day price trend`;
+  public sparklineLabel(row: ConnectedWalletBoardRow): string {
+    return `${row.symbol} 7-day price trend`;
+  }
+
+  private syncBalancesIfConnected(
+    snapshot: WalletConnectionSnapshot | undefined
+  ): void {
+    const account =
+      snapshot?.status === 'connected' ? snapshot.account ?? undefined : undefined;
+    const chainType = snapshot?.identity?.chainType;
+    const isEvmAccount =
+      Boolean(account?.startsWith('0x')) &&
+      chainType !== 'near' &&
+      chainType !== 'ton';
+
+    if (!account || !isEvmAccount) {
+      this.lastSyncedAccount = undefined;
+      return;
+    }
+
+    if (account === this.lastSyncedAccount) {
+      return;
+    }
+
+    this.lastSyncedAccount = account;
+    this.walletGatewayBridge.requestBalancesSync(this.selectedEvmChainId);
+  }
+
+  private amountLabel(row: WalletBalanceRow): string {
+    const amount = row.balanceDecimal ?? row.balanceRaw;
+    const suffix = row.stale ? ' (stale)' : '';
+    return `${amount}${suffix}`;
   }
 }
