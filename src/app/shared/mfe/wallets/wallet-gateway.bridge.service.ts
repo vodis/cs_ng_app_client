@@ -55,6 +55,7 @@ export class WalletGatewayBridgeService {
 
   readonly snapshot$: Observable<WalletConnectionSnapshot | undefined> =
     this.snapshotSubject.asObservable();
+  /** @deprecated Use ConnectedWalletBalancesFacade for product balance reads. */
   readonly balances$: Observable<WalletBalancesSnapshot> =
     this.balancesSubject.asObservable();
 
@@ -90,6 +91,7 @@ export class WalletGatewayBridgeService {
     this.balancesSubject.next(snapshot);
   }
 
+  /** @deprecated Balance requests are owned by the authenticated host API layer. */
   requestBalancesSync(chainId?: number): void {
     if (!this.canSendGatewayEvent()) {
       return;

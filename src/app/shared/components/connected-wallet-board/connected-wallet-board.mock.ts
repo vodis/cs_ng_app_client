@@ -26,6 +26,11 @@ export const EVM_CHAINS: EvmChainMock[] = [
   { chainId: 42161, name: 'Arbitrum', shortName: 'ARB' },
   { chainId: 8453, name: 'Base', shortName: 'BASE' },
   { chainId: 137, name: 'Polygon', shortName: 'POL' },
+  { chainId: 10, name: 'Optimism', shortName: 'OP' },
+  { chainId: 56, name: 'BNB Chain', shortName: 'BSC' },
+  { chainId: 100, name: 'Gnosis', shortName: 'GNO' },
+  { chainId: 43114, name: 'Avalanche', shortName: 'AVAX' },
+  { chainId: 534352, name: 'Scroll', shortName: 'SCR' },
 ];
 
 const ETHEREUM_BALANCES: Record<number, TokenBalanceMockSeed[]> = {
@@ -276,6 +281,17 @@ export function getMockTotalUsd(tokens: TokenBalanceMock[]): string {
     currency: 'USD',
     maximumFractionDigits: 2,
   });
+}
+
+export function findMockMarket(
+  symbol: string,
+  family: SupportedChainFamily,
+  evmChainId: number
+): TokenBalanceMock | undefined {
+  const needle = symbol.trim().toUpperCase();
+  return getMockBalances(family, evmChainId).find(
+    token => token.symbol.toUpperCase() === needle
+  );
 }
 
 export function formatChangePercent(change: number): string {

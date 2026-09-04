@@ -145,11 +145,6 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
               this.applyConnectionSnapshot(event.payload);
             });
           }
-          if (event.type === 'balances.updated') {
-            this.ngZone.run(() => {
-              this.walletGatewayBridge.updateBalances(event.payload);
-            });
-          }
         });
       } else {
         this.unmountMfe =

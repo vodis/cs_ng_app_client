@@ -38,51 +38,66 @@
     <div class="connected-wallet-board__header">
       <div>
         <div class="connected-wallet-board__title">Balances</div>
-        <div class="connected-wallet-board__value">{{ mockTotalUsd }}</div>
+        @if (balancesCopy; as copy) {
+          <div class="connected-wallet-board__value">{{ copy }}</div>
+        }
       </div>
-      <span class="connected-wallet-board__soon">Mock</span>
+      <span class="connected-wallet-board__soon">Mock markets</span>
     </div>
-    <div class="connected-wallet-board__token-list">
-      <div class="connected-wallet-board__token-header" aria-hidden="true">
-        <span>Name</span>
-        <span>Price</span>
-        <span>Market Cap</span>
-        <span>Volume(24h)</span>
-        <span>7d</span>
-      </div>
-      @for (token of mockTokens; track token.id) {
-        <div class="connected-wallet-board__token-row">
-          <span class="connected-wallet-board__token-symbol">{{
-            token.symbol
-          }}</span>
-          <span
-            class="connected-wallet-board__token-metric connected-wallet-board__token-metric--price">
-            {{ token.priceUsd }}
-            <span
-              class="connected-wallet-board__token-change"
-              [class.connected-wallet-board__token-change--up]="
-                isTokenUp(token)
-              "
-              [class.connected-wallet-board__token-change--down]="
-                !isTokenUp(token)
-              ">
-              {{ changeLabel(token) }}
-            </span>
-          </span>
-          <span class="connected-wallet-board__token-metric">{{
-            token.marketCap
-          }}</span>
-          <span class="connected-wallet-board__token-metric">{{
-            token.volume24h
-          }}</span>
-          <app-sparkline
-            class="connected-wallet-board__token-sparkline"
-            [values]="token.sparkline7d"
-            [positive]="isTokenUp(token)"
-            [label]="sparklineLabel(token)" />
+    @if (rows.length > 0) {
+      <div class="connected-wallet-board__token-list">
+        <div class="connected-wallet-board__token-header" aria-hidden="true">
+          <span>Name</span>
+          <span>Amount</span>
+          <span>Price</span>
+          <span>Market Cap</span>
+          <span>Volume(24h)</span>
+          <span>7d</span>
         </div>
-      }
-    </div>
+        @for (token of rows; track token.id) {
+          <div class="connected-wallet-board__token-row">
+            <span class="connected-wallet-board__token-symbol">{{
+              token.symbol
+            }}</span>
+            <span class="connected-wallet-board__token-metric">{{
+              token.amount
+            }}</span>
+            @if (token.market; as market) {
+              <span
+                class="connected-wallet-board__token-metric connected-wallet-board__token-metric--price">
+                {{ market.priceUsd }}
+                <span
+                  class="connected-wallet-board__token-change"
+                  [class.connected-wallet-board__token-change--up]="
+                    isTokenUp(market)
+                  "
+                  [class.connected-wallet-board__token-change--down]="
+                    !isTokenUp(market)
+                  ">
+                  {{ changeLabel(market) }}
+                </span>
+              </span>
+              <span class="connected-wallet-board__token-metric">{{
+                market.marketCap
+              }}</span>
+              <span class="connected-wallet-board__token-metric">{{
+                market.volume24h
+              }}</span>
+              <app-sparkline
+                class="connected-wallet-board__token-sparkline"
+                [values]="market.sparkline7d"
+                [positive]="isTokenUp(market)"
+                [label]="sparklineLabel(token)" />
+            } @else {
+              <span class="connected-wallet-board__token-metric">—</span>
+              <span class="connected-wallet-board__token-metric">—</span>
+              <span class="connected-wallet-board__token-metric">—</span>
+              <span></span>
+            }
+          </div>
+        }
+      </div>
+    }
   </div>
 
   <div class="connected-wallet-board__card connected-wallet-board__card--soon">

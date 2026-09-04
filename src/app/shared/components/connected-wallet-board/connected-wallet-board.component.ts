@@ -1,18 +1,31 @@
 import { Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
+import {
+  ConnectedWalletBalancesFacade,
+  type ConnectedWalletBalancesState,
+} from '@domains/wallet/application/connected-wallet-balances.facade';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import type { WalletBalance } from '@shared/services/wallet-balances.service';
+import type { Subscription } from 'rxjs';
 import {
   EVM_CHAINS,
+  findMockMarket,
   formatChangePercent,
-  getMockBalances,
-  getMockTotalUsd,
   resolveDefaultEvmChainId,
   sparklineIsUp,
   type EvmChainMock,
   type SupportedChainFamily,
   type TokenBalanceMock,
 } from './connected-wallet-board.mock';
+
+export type ConnectedWalletBoardRow = {
+  id: string;
+  symbol: string;
+  amount: string;
+  stale: boolean;
+  market?: TokenBalanceMock;
+};
 
 @Component({
   selector: 'app-connected-wallet-board',
@@ -23,11 +36,15 @@ import {
 export class ConnectedWalletBoardComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly walletGatewayBridge = inject(WalletGatewayBridgeService);
+  private readonly balancesFacade = inject(ConnectedWalletBalancesFacade);
   private hasPickedChain = false;
 
   public snapshot: WalletConnectionSnapshot | undefined;
+  public balances: ConnectedWalletBalancesState | undefined;
   public selectedEvmChainId = 1;
   public readonly networks = EVM_CHAINS;
+  private balanceRequestKey: string | undefined;
+  private balanceSubscription: Subscription | undefined;
 
   constructor() {
     this.walletGatewayBridge.snapshot$
@@ -37,6 +54,7 @@ export class ConnectedWalletBoardComponent {
         if (!this.hasPickedChain) {
           this.selectedEvmChainId = resolveDefaultEvmChainId(snapshot?.chainId);
         }
+        this.loadBalancesIfConnected(snapshot);
       });
   }
 
@@ -69,12 +87,32 @@ export class ConnectedWalletBoardComponent {
     return `${this.chainFamily} / ${walletType}`;
   }
 
-  public get mockTokens(): TokenBalanceMock[] {
-    return getMockBalances(this.chainFamily, this.selectedEvmChainId);
+  public get rows(): ConnectedWalletBoardRow[] {
+    return (this.balances?.rows ?? []).map(row => ({
+      id: `${row.network}:${row.assetId}`,
+      symbol: row.symbol,
+      amount: this.amountLabel(row),
+      stale: row.stale,
+      market: findMockMarket(
+        row.symbol,
+        this.chainFamily,
+        this.selectedEvmChainId
+      ),
+    }));
   }
 
-  public get mockTotalUsd(): string {
-    return getMockTotalUsd(this.mockTokens);
+  public get balancesCopy(): string {
+    const status = this.balances?.status;
+    if (status === 'error') {
+      return this.balances?.errorMessage ?? 'Failed to load balances.';
+    }
+    if (!status || status === 'loading') {
+      return 'Loading balances...';
+    }
+    if (status === 'ready' && this.rows.length === 0) {
+      return 'No balances yet.';
+    }
+    return '';
   }
 
   public activeNetworkLabel(): string {
@@ -96,22 +134,78 @@ export class ConnectedWalletBoardComponent {
   public selectNetwork(chain: EvmChainMock): void {
     this.hasPickedChain = true;
     this.selectedEvmChainId = chain.chainId;
-    this.walletGatewayBridge.requestBalancesSync(chain.chainId);
+    this.loadBalancesIfConnected(this.snapshot, true);
   }
 
   public disconnect(): void {
     this.walletGatewayBridge.disconnectWallet();
   }
 
-  public changeLabel(token: TokenBalanceMock): string {
-    return formatChangePercent(token.change24h);
+  public changeLabel(market: TokenBalanceMock): string {
+    return formatChangePercent(market.change24h);
   }
 
-  public isTokenUp(token: TokenBalanceMock): boolean {
-    return sparklineIsUp(token.sparkline7d);
+  public isTokenUp(market: TokenBalanceMock): boolean {
+    return sparklineIsUp(market.sparkline7d);
   }
 
-  public sparklineLabel(token: TokenBalanceMock): string {
-    return `${token.symbol} 7-day price trend`;
+  public sparklineLabel(row: ConnectedWalletBoardRow): string {
+    return `${row.symbol} 7-day price trend`;
+  }
+
+  private loadBalancesIfConnected(
+    snapshot: WalletConnectionSnapshot | undefined,
+    force = false
+  ): void {
+    const account =
+      snapshot?.status === 'connected'
+        ? (snapshot.account ?? undefined)
+        : undefined;
+    const network = account ? this.balanceNetwork(account) : undefined;
+
+    if (!account || !network) {
+      this.balanceSubscription?.unsubscribe();
+      this.balanceSubscription = undefined;
+      this.balanceRequestKey = undefined;
+      this.balances = undefined;
+      return;
+    }
+
+    const requestKey = `${account.toLowerCase()}|${network}`;
+    if (!force && requestKey === this.balanceRequestKey) {
+      return;
+    }
+
+    this.balanceRequestKey = requestKey;
+    this.balanceSubscription?.unsubscribe();
+    this.balanceSubscription = this.balancesFacade
+      .load({ account, network })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        if (this.balanceRequestKey === requestKey) {
+          this.balances = state;
+        }
+      });
+  }
+
+  private balanceNetwork(account: string): string | undefined {
+    if (this.chainFamily === 'near') {
+      return /\.(?:testnet|tg)$/i.test(account)
+        ? 'near:testnet'
+        : 'near:mainnet';
+    }
+    if (this.chainFamily === 'ton') {
+      return this.snapshot?.chainId === -3 ? 'ton:testnet' : 'ton:mainnet';
+    }
+    if (/^0x[a-f0-9]{40}$/i.test(account)) {
+      return `eip155:${this.selectedEvmChainId}`;
+    }
+    return undefined;
+  }
+
+  private amountLabel(row: WalletBalance): string {
+    const amount = row.balanceDecimal ?? row.balanceRaw;
+    const suffix = row.stale ? ' (stale)' : '';
+    return `${amount}${suffix}`;
   }
 }

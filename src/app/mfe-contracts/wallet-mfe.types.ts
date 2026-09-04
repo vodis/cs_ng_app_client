@@ -65,6 +65,7 @@ export type WalletsMfeEvent =
   | { type: 'wallet.account.changed'; payload: { account: string } }
   | { type: 'wallet.chain.changed'; payload: { chainId: number } }
   | { type: 'connection.snapshot.updated'; payload: WalletConnectionSnapshot }
+  /** @deprecated Balances are fetched by the authenticated Angular host. */
   | { type: 'balances.updated'; payload: WalletBalancesSnapshot };
 
 export type WalletsMfeContext = {
