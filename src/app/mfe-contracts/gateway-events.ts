@@ -9,7 +9,8 @@ export type WalletGatewayEvent =
     }
   | { type: 'SIGN_REQUESTED' }
   | { type: 'ABORT' }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'BALANCES_SYNC_REQUESTED'; chainId?: number };
 
 export const WALLET_GATEWAY_EVENTS = {
   verifyRequested: 'VERIFY_REQUESTED',
@@ -17,4 +18,5 @@ export const WALLET_GATEWAY_EVENTS = {
   signRequested: 'SIGN_REQUESTED',
   abort: 'ABORT',
   reset: 'RESET',
+  balancesSyncRequested: 'BALANCES_SYNC_REQUESTED',
 } as const;

@@ -17,6 +17,10 @@ import type {
   WalletOnboardingResult,
   WalletsMfeMountApi,
 } from '@mfe-contracts/wallet-mfe.types';
+import {
+  IDLE_WALLET_BALANCES_SNAPSHOT,
+  type WalletBalancesSnapshot,
+} from '@mfe-contracts/wallet-balances.types';
 import { AppLoggerService } from '@core/logging/app-logger.service';
 
 const SIGNATURE_WAIT_MS = 120_000;
@@ -42,6 +46,8 @@ export class WalletGatewayBridgeService {
   private readonly snapshotSubject = new BehaviorSubject<
     WalletConnectionSnapshot | undefined
   >(undefined);
+  private readonly balancesSubject =
+    new BehaviorSubject<WalletBalancesSnapshot>(IDLE_WALLET_BALANCES_SNAPSHOT);
   private pendingSignature?: {
     resolve: (signature: DefuseWalletSignatureResult) => void;
     reject: (error: WalletExecutionFailure) => void;
@@ -49,6 +55,8 @@ export class WalletGatewayBridgeService {
 
   readonly snapshot$: Observable<WalletConnectionSnapshot | undefined> =
     this.snapshotSubject.asObservable();
+  readonly balances$: Observable<WalletBalancesSnapshot> =
+    this.balancesSubject.asObservable();
 
   constructor(private readonly logger: AppLoggerService) {}
 
@@ -59,6 +67,7 @@ export class WalletGatewayBridgeService {
 
   clearMountApi(): void {
     this.mountApi = undefined;
+    this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
     this.rejectPendingSignature({
       code: 'GATEWAY_UNAVAILABLE',
       message: 'Wallet gateway unmounted',
@@ -68,6 +77,24 @@ export class WalletGatewayBridgeService {
 
   updateSnapshot(snapshot: WalletConnectionSnapshot): void {
     this.snapshotSubject.next(snapshot);
+    if (snapshot.status !== 'connected' || !snapshot.account) {
+      this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
+    }
+  }
+
+  updateBalances(snapshot: WalletBalancesSnapshot): void {
+    if (this.snapshotSubject.value?.status !== 'connected') {
+      this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
+      return;
+    }
+    this.balancesSubject.next(snapshot);
+  }
+
+  requestBalancesSync(chainId?: number): void {
+    if (!this.canSendGatewayEvent()) {
+      return;
+    }
+    this.sendGatewayEvent({ type: 'BALANCES_SYNC_REQUESTED', chainId });
   }
 
   handleExecutionStateChanged(payload: {
@@ -185,6 +212,7 @@ export class WalletGatewayBridgeService {
     }
 
     this.snapshotSubject.next(DISCONNECTED_SNAPSHOT);
+    this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
   }
 
   async createEmbeddedWallet(): Promise<WalletOnboardingResult> {

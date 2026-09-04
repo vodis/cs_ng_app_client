@@ -1,4 +1,5 @@
 import { AppLoggerService } from '@core/logging/app-logger.service';
+import { IDLE_WALLET_BALANCES_SNAPSHOT } from '@mfe-contracts/wallet-balances.types';
 import {
   WalletConnectionSnapshot,
   WalletsMfeMountApi,
@@ -14,6 +15,12 @@ describe('WalletGatewayBridgeService', () => {
     status: 'connected',
     account,
     chainId: 1,
+    identity: {
+      connectorId: 'metamask',
+      address: account,
+      chainType: 'ethereum',
+      walletType: 'external',
+    },
     isVerified: true,
     safetyStatus: 'safe',
     isBypassed: false,
@@ -132,7 +139,9 @@ describe('WalletGatewayBridgeService', () => {
       chainId: null,
       isVerified: false,
     };
-    (mountApi.getSnapshot as jasmine.Spy).and.returnValue(idleSnapshot);
+    mountApi.getSnapshot = jasmine
+      .createSpy('getSnapshot')
+      .and.returnValue(idleSnapshot);
     const syncConnectedWallet = jasmine
       .createSpy('syncConnectedWallet')
       .and.resolveTo(connectedSnapshot);
@@ -143,5 +152,117 @@ describe('WalletGatewayBridgeService', () => {
       connectedSnapshot
     );
     expect(syncConnectedWallet).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps gateway-sourced EVM rows only while the snapshot is connected', () => {
+    mountApi.disconnectWallet = jasmine.createSpy('disconnectWallet');
+    service.registerMountApi(mountApi);
+    service.updateSnapshot(connectedSnapshot);
+    service.updateBalances({
+      status: 'ready',
+      account,
+      chainId: 1,
+      rows: [
+        {
+          walletAddress: account,
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          chainId: 1,
+          assetId: 'eth',
+          symbol: 'ETH',
+          decimals: 18,
+          balanceRaw: '1',
+          balanceDecimal: '1',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+
+    let latest = IDLE_WALLET_BALANCES_SNAPSHOT;
+    const subscription = service.balances$.subscribe(snapshot => {
+      latest = snapshot;
+    });
+    expect(latest.rows.length).toBe(1);
+
+    service.disconnectWallet();
+    expect(latest).toEqual(IDLE_WALLET_BALANCES_SNAPSHOT);
+    subscription.unsubscribe();
+  });
+
+  it('asks the gateway to sync balances for a selected EVM chain', () => {
+    service.registerMountApi(mountApi);
+    service.requestBalancesSync(42161);
+    expect(mountApi.sendGatewayEvent).toHaveBeenCalledOnceWith({
+      type: 'BALANCES_SYNC_REQUESTED',
+      chainId: 42161,
+    });
+  });
+
+  it('clears gateway-sourced balances when the wallet MFE unmounts', () => {
+    service.registerMountApi(mountApi);
+    service.updateSnapshot(connectedSnapshot);
+    service.updateBalances({
+      status: 'ready',
+      account,
+      chainId: 1,
+      rows: [
+        {
+          walletAddress: account,
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          chainId: 1,
+          assetId: 'eth',
+          symbol: 'ETH',
+          decimals: 18,
+          balanceRaw: '1',
+          balanceDecimal: '1',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+
+    let latest = IDLE_WALLET_BALANCES_SNAPSHOT;
+    const subscription = service.balances$.subscribe(snapshot => {
+      latest = snapshot;
+    });
+
+    service.clearMountApi();
+    expect(latest).toEqual(IDLE_WALLET_BALANCES_SNAPSHOT);
+    subscription.unsubscribe();
+  });
+
+  it('ignores balance updates while the gateway snapshot is not connected', () => {
+    service.updateBalances({
+      status: 'ready',
+      account,
+      chainId: 1,
+      rows: [
+        {
+          walletAddress: account,
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          chainId: 1,
+          assetId: 'eth',
+          symbol: 'ETH',
+          decimals: 18,
+          balanceRaw: '1',
+          balanceDecimal: '1',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+
+    let latest = IDLE_WALLET_BALANCES_SNAPSHOT;
+    const subscription = service.balances$.subscribe(snapshot => {
+      latest = snapshot;
+    });
+    expect(latest).toEqual(IDLE_WALLET_BALANCES_SNAPSHOT);
+    subscription.unsubscribe();
   });
 });

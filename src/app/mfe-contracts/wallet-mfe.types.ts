@@ -1,4 +1,5 @@
 import type { WalletGatewayEvent } from './gateway-events';
+import type { WalletBalancesSnapshot } from './wallet-balances.types';
 import {
   WalletAccountChangedPayload,
   WalletIntentSignedPayload,
@@ -63,10 +64,11 @@ export type WalletsMfeEvent =
   | { type: 'wallet.disconnected'; payload: { reason?: string } }
   | { type: 'wallet.account.changed'; payload: { account: string } }
   | { type: 'wallet.chain.changed'; payload: { chainId: number } }
-  | { type: 'connection.snapshot.updated'; payload: WalletConnectionSnapshot };
+  | { type: 'connection.snapshot.updated'; payload: WalletConnectionSnapshot }
+  | { type: 'balances.updated'; payload: WalletBalancesSnapshot };
 
 export type WalletsMfeContext = {
-  contractVersion?: '2.0.0';
+  contractVersion?: '2.0.0' | '2.1.0';
   apiBaseUrl?: string;
   sessionId?: string;
   locale?: string;

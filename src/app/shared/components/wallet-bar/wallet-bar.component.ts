@@ -14,7 +14,7 @@ import { WalletsService } from '@shared/mfe/wallets/wallets.service';
   selector: 'app-wallet-bar',
   standalone: false,
   templateUrl: 'wallet-bar.component.html',
-  styleUrls: [],
+  styleUrls: ['wallet-bar.component.scss'],
 })
 export class WalletBarComponent {
   @Input() showTrigger = true;
@@ -26,8 +26,16 @@ export class WalletBarComponent {
   private readonly walletsService = inject(WalletsService);
   public isOpenWalletConnectMenu = false;
   public account: WalletAccount | undefined;
+  public isGatewayConnected = false;
 
   constructor() {
+    this.walletGatewayBridge.snapshot$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(snapshot => {
+        this.isGatewayConnected = snapshot?.status === 'connected';
+        this.changeDetector.markForCheck();
+      });
+
     this.walletsService.account
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(account => {

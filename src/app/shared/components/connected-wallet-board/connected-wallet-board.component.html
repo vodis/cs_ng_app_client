@@ -1,0 +1,114 @@
+<section class="connected-wallet-board" aria-live="polite">
+  <div class="connected-wallet-board__card">
+    <div class="connected-wallet-board__title">Connected wallet</div>
+    <div class="connected-wallet-board__value" [title]="account">
+      {{ shortAddress(account) }}
+    </div>
+    <div class="connected-wallet-board__meta">{{ networkMeta }}</div>
+  </div>
+
+  @if (isEvm) {
+    <div class="connected-wallet-board__card">
+      <div class="connected-wallet-board__title">Network</div>
+      <div
+        class="connected-wallet-board__chips"
+        role="tablist"
+        aria-label="EVM networks">
+        @for (chain of networks; track chain.chainId) {
+          <button
+            type="button"
+            role="tab"
+            class="connected-wallet-board__chip"
+            [class.connected-wallet-board__chip--active]="
+              isActiveNetwork(chain)
+            "
+            [attr.aria-selected]="isActiveNetwork(chain)"
+            (click)="selectNetwork(chain)">
+            {{ chain.shortName }}
+          </button>
+        }
+      </div>
+      <div class="connected-wallet-board__meta">
+        {{ activeNetworkLabel() }}
+      </div>
+    </div>
+  }
+
+  <div class="connected-wallet-board__card">
+    <div class="connected-wallet-board__header">
+      <div>
+        <div class="connected-wallet-board__title">Balances</div>
+        <div class="connected-wallet-board__value">{{ mockTotalUsd }}</div>
+      </div>
+      <span class="connected-wallet-board__soon">Mock</span>
+    </div>
+    <div class="connected-wallet-board__token-list">
+      <div class="connected-wallet-board__token-header" aria-hidden="true">
+        <span>Name</span>
+        <span>Price</span>
+        <span>Market Cap</span>
+        <span>Volume(24h)</span>
+        <span>7d</span>
+      </div>
+      @for (token of mockTokens; track token.id) {
+        <div class="connected-wallet-board__token-row">
+          <span class="connected-wallet-board__token-symbol">{{
+            token.symbol
+          }}</span>
+          <span
+            class="connected-wallet-board__token-metric connected-wallet-board__token-metric--price">
+            {{ token.priceUsd }}
+            <span
+              class="connected-wallet-board__token-change"
+              [class.connected-wallet-board__token-change--up]="
+                isTokenUp(token)
+              "
+              [class.connected-wallet-board__token-change--down]="
+                !isTokenUp(token)
+              ">
+              {{ changeLabel(token) }}
+            </span>
+          </span>
+          <span class="connected-wallet-board__token-metric">{{
+            token.marketCap
+          }}</span>
+          <span class="connected-wallet-board__token-metric">{{
+            token.volume24h
+          }}</span>
+          <app-sparkline
+            class="connected-wallet-board__token-sparkline"
+            [values]="token.sparkline7d"
+            [positive]="isTokenUp(token)"
+            [label]="sparklineLabel(token)" />
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="connected-wallet-board__card connected-wallet-board__card--soon">
+    <div class="connected-wallet-board__header">
+      <div class="connected-wallet-board__title">Activity</div>
+      <span class="connected-wallet-board__soon">Soon</span>
+    </div>
+    <div class="connected-wallet-board__meta">
+      Recent transfers and intent history
+    </div>
+  </div>
+
+  <div class="connected-wallet-board__card connected-wallet-board__card--soon">
+    <div class="connected-wallet-board__header">
+      <div class="connected-wallet-board__title">Send &amp; receive</div>
+      <span class="connected-wallet-board__soon">Soon</span>
+    </div>
+    <div class="connected-wallet-board__meta">
+      Move assets in and out of this wallet
+    </div>
+  </div>
+
+  <button
+    type="button"
+    class="connected-wallet-board__disconnect"
+    (click)="disconnect()">
+    Disconnect
+  </button>
+</section>

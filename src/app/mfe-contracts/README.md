@@ -202,7 +202,16 @@ When the host dismisses the connection drawer, it sends `RESET`. The MFE must
 abort any active provider pairing request before returning the gateway to idle,
 so a dismissed QR code or wallet prompt cannot connect later.
 
-## 7) Connected Wallet Restore
+## 7) Connected wallet dialog (balances board)
+
+Ownership decision (follow this): `cs_mfe-wallets` **Gateway boundary** in
+`AGENT_GUIDE.md`. Angular draws the board; the MFE is the gateway; the BFF
+owns the numbers. Do not show a balance unless the gateway is `connected`.
+
+Internal wiring sketch (event names, modal split): `connected-wallet-dialog.md`.
+That file is not the agent source of truth.
+
+## 8) Connected Wallet Restore
 
 For linked-wallet profile flows, the host may request a best-effort restore of
 an already connected wallet before opening the wallet modal:
@@ -223,7 +232,7 @@ export type WalletConnectionSnapshot = {
 remote does not expose it, or if restore fails, the host should still open the
 wallet modal so the user can connect manually.
 
-## 8) Suggested file placement
+## 9) Suggested file placement
 
 If/when extracting typed contracts into code, place them under:
 

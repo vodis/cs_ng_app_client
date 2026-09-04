@@ -19,7 +19,14 @@
     <app-side-modal
       [isOpen]="isOpenWalletConnectMenu"
       (closeRequested)="handleCloseWalletMenu()">
-      <app-wallets />
+      @if (isGatewayConnected) {
+        <app-connected-wallet-board />
+      }
+      <div
+        class="wallet-bar__mfe-host"
+        [class.wallet-bar__mfe-host--hidden]="isGatewayConnected">
+        <app-wallets />
+      </div>
     </app-side-modal>
   }
 </div>

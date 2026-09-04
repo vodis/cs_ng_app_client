@@ -8,6 +8,8 @@ import { WalletsComponent } from '@shared/mfe/wallets/wallets.component';
 import { WalletBarComponent } from '@shared/components/wallet-bar/wallet-bar.component';
 import { WalletMenuComponent } from '@shared/components/wallet-menu/wallet-menu.component';
 import { WalletAccountComponent } from '@shared/components/wallet-account/wallet-account.component';
+import { ConnectedWalletBoardComponent } from '@shared/components/connected-wallet-board/connected-wallet-board.component';
+import { SparklineComponent } from '@shared/components/sparkline/sparkline.component';
 import { SideModalComponent } from '@shared/components/side-modal/side-modal.component';
 import { TokenSelectPanelComponent } from '@shared/components/token-select-panel/token-select-panel.component';
 import { LiveChartComponent } from '@shared/components/live-chart/live-chart.component';
@@ -37,6 +39,8 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     AnimateTitleComponent,
     WalletsComponent,
     WalletBarComponent,
+    ConnectedWalletBoardComponent,
+    SparklineComponent,
     SideModalComponent,
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
@@ -49,6 +53,8 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     AnimateTitleComponent,
     WalletsComponent,
     WalletBarComponent,
+    ConnectedWalletBoardComponent,
+    SparklineComponent,
     WalletMenuComponent,
     WalletAccountComponent,
     SideModalComponent,

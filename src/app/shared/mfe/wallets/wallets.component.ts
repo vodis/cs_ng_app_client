@@ -84,49 +84,51 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         throw new Error('MFE mount function is not available');
       }
 
-      const mountResult = mfeModule.mount(container, {
-        context: {
-          contractVersion: '2.0.0',
-          apiBaseUrl: environment.apiUrl,
-          environment: this.mfeEnvironment(),
-        },
-        callbacks: {
-          onAccountChanged: (account: WalletAccountChangedPayload) => {
-            this.ngZone.run(() => {
-              this.walletsService.setAccount({
-                account: account.account,
-                chainId: this.walletsService.account.value?.chainId ?? null,
+      const mountResult = this.ngZone.runOutsideAngular(() =>
+        mfeModule.mount(container, {
+          context: {
+            contractVersion: '2.1.0',
+            apiBaseUrl: environment.apiUrl,
+            environment: this.mfeEnvironment(),
+          },
+          callbacks: {
+            onAccountChanged: (account: WalletAccountChangedPayload) => {
+              this.ngZone.run(() => {
+                this.walletsService.setAccount({
+                  account: account.account,
+                  chainId: this.walletsService.account.value?.chainId ?? null,
+                });
+                this.walletsService.rememberConnectedWallet({
+                  account: account.account,
+                  chainId: this.walletsService.account.value?.chainId ?? null,
+                  walletType:
+                    this.walletsService.lastConnected.value?.walletType ??
+                    'external',
+                  source: this.walletsService.lastConnected.value?.source,
+                  connectorId:
+                    this.walletsService.lastConnected.value?.connectorId,
+                });
+                this.refreshBackendWallets();
               });
-              this.walletsService.rememberConnectedWallet({
-                account: account.account,
-                chainId: this.walletsService.account.value?.chainId ?? null,
-                walletType:
-                  this.walletsService.lastConnected.value?.walletType ??
-                  'external',
-                source: this.walletsService.lastConnected.value?.source,
-                connectorId:
-                  this.walletsService.lastConnected.value?.connectorId,
+            },
+            onCloseRequested: () => {
+              this.ngZone.run(() => {
+                this.walletsService.requestClose();
               });
-              this.refreshBackendWallets();
-            });
+            },
+            onExecutionStateChanged: payload => {
+              this.ngZone.run(() => {
+                this.walletGatewayBridge.handleExecutionStateChanged(payload);
+              });
+            },
+            onIntentSigned: payload => {
+              this.ngZone.run(() => {
+                this.walletGatewayBridge.handleIntentSigned(payload);
+              });
+            },
           },
-          onCloseRequested: () => {
-            this.ngZone.run(() => {
-              this.walletsService.requestClose();
-            });
-          },
-          onExecutionStateChanged: payload => {
-            this.ngZone.run(() => {
-              this.walletGatewayBridge.handleExecutionStateChanged(payload);
-            });
-          },
-          onIntentSigned: payload => {
-            this.ngZone.run(() => {
-              this.walletGatewayBridge.handleIntentSigned(payload);
-            });
-          },
-        },
-      });
+        })
+      );
       this.unsubscribeEvents?.();
       this.unsubscribeEvents = undefined;
 
@@ -141,6 +143,11 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
             this.ngZone.run(() => {
               this.walletGatewayBridge.updateSnapshot(event.payload);
               this.applyConnectionSnapshot(event.payload);
+            });
+          }
+          if (event.type === 'balances.updated') {
+            this.ngZone.run(() => {
+              this.walletGatewayBridge.updateBalances(event.payload);
             });
           }
         });
