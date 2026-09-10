@@ -50,6 +50,9 @@ export class ExchangeAssetsService {
       icon: asset.icon,
       decimals: asset.decimals,
       blockchain: asset.blockchain?.trim().toLowerCase() || 'unknown',
+      ...(asset.contractAddress?.trim()
+        ? { contractAddress: asset.contractAddress.trim() }
+        : {}),
       color: this.colorForSymbol(asset.symbol),
     };
   }

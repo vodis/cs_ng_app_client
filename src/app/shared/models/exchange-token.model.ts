@@ -7,4 +7,5 @@ export interface ExchangeToken {
   icon?: string;
   decimals?: number;
   blockchain: string;
+  contractAddress?: string;
 }

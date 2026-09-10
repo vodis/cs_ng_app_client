@@ -15,8 +15,16 @@ describe('WalletBalancesService', () => {
   beforeEach(() => {
     authProvider = jasmine.createSpyObj<AuthProviderService>(
       'AuthProviderService',
-      ['getAccessToken']
+      ['whenSettled', 'getAccessToken']
     );
+    authProvider.whenSettled.and.resolveTo({
+      status: 'ready',
+      loginMethods: [],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
+      embeddedWalletEnabled: false,
+    });
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
@@ -62,5 +70,121 @@ describe('WalletBalancesService', () => {
 
     request.flush({ data: [] });
     expect(result).toEqual([]);
+  }));
+
+  it('accepts an explicitly unlinked read-only balance', fakeAsync(() => {
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+    let result: unknown;
+
+    service
+      .loadBalances({
+        walletAddress: '0x1111111111111111111111111111111111111111',
+        network: 'eip155:1',
+      })
+      .subscribe(balances => {
+        result = balances;
+      });
+    tick();
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`);
+    request.flush({
+      data: [
+        {
+          walletId: null,
+          walletAddress: '0x1111111111111111111111111111111111111111',
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          assetId: 'eth',
+          symbol: 'ETH',
+          decimals: 18,
+          balanceRaw: '1',
+          balanceDecimal: '0.000000000000000001',
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+
+    expect(result).toEqual([
+      jasmine.objectContaining({
+        walletId: null,
+        network: 'eip155:1',
+        assetId: 'eth',
+      }),
+    ]);
+  }));
+
+  it('preserves partial response metadata', fakeAsync(() => {
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+    let result: unknown;
+
+    service.loadBalancesWithMeta().subscribe(value => (result = value));
+    tick();
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`);
+    request.flush({ data: [], meta: { partial: true } });
+
+    expect(result).toEqual({ balances: [], partial: true });
+  }));
+
+  it('waits for provider initialization before requesting a token', fakeAsync(() => {
+    let settleProvider: (() => void) | undefined;
+    authProvider.whenSettled.and.returnValue(
+      new Promise(resolve => {
+        settleProvider = () =>
+          resolve({
+            status: 'ready',
+            loginMethods: [],
+            passkeyLoginEnabled: false,
+            passkeySignupEnabled: false,
+            passkeyLinkEnabled: false,
+            embeddedWalletEnabled: false,
+          });
+      })
+    );
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+
+    service.loadBalances().subscribe();
+    tick();
+    expect(authProvider.getAccessToken).not.toHaveBeenCalled();
+
+    settleProvider?.();
+    tick();
+    expect(authProvider.getAccessToken).toHaveBeenCalledTimes(1);
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`);
+    request.flush({ data: [] });
+  }));
+
+  it('rejects rows that omit network provenance', fakeAsync(() => {
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+    let error: unknown;
+
+    service.loadBalances().subscribe({ error: value => (error = value) });
+    tick();
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`);
+    request.flush({
+      data: [
+        {
+          walletId: null,
+          walletAddress: '0x1111111111111111111111111111111111111111',
+          chainType: 'ethereum',
+          assetId: 'eth',
+          symbol: 'ETH',
+          decimals: 18,
+          balanceRaw: '1',
+          balanceDecimal: null,
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+
+    expect(error).toEqual(jasmine.any(Error));
   }));
 });

@@ -76,9 +76,12 @@ mapping, quote validation, and execution eligibility.
 
 The host batches up to 20 backend-allowlisted asset ids for the connected
 wallet's CAIP-2 network. Balance responses are matched by exact `network` and
-`assetId`, never display symbol. Expired or `stale: true` values may be shown as
-stale context but must not authorize a swap. The UI must not substitute demo or
-zero balances when the backend has no fresh result.
+`assetId`, never display symbol, and a response containing a different wallet or
+network is rejected. A response with `meta.partial: true` is shown as incomplete
+even when it contains usable rows. Expired or `stale: true` values may be shown
+as stale context but must not authorize a swap. The UI must not substitute demo
+or zero balances when the backend has no fresh result, and failed requests remain
+retryable after provider initialization or a transient backend failure.
 
 ## Styling contract
 

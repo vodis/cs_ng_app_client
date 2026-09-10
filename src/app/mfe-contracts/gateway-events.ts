@@ -10,6 +10,7 @@ export type WalletGatewayEvent =
   | { type: 'SIGN_REQUESTED' }
   | { type: 'ABORT' }
   | { type: 'RESET' }
+  /** @deprecated The MFE accepts this only as a migration no-op. */
   | { type: 'BALANCES_SYNC_REQUESTED'; chainId?: number };
 
 export const WALLET_GATEWAY_EVENTS = {
@@ -18,5 +19,6 @@ export const WALLET_GATEWAY_EVENTS = {
   signRequested: 'SIGN_REQUESTED',
   abort: 'ABORT',
   reset: 'RESET',
+  /** @deprecated Use the host balance facade. */
   balancesSyncRequested: 'BALANCES_SYNC_REQUESTED',
 } as const;

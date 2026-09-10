@@ -5,7 +5,7 @@ import { Observable, from, map, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type WalletBalance = {
-  walletId: string;
+  walletId: string | null;
   walletAddress: string;
   chainType: string;
   network: string;
@@ -27,8 +27,14 @@ export type WalletBalancesRequest = {
   assetIds?: string[];
 };
 
+export type WalletBalancesResult = {
+  balances: WalletBalance[];
+  partial: boolean;
+};
+
 type WalletBalancesResponse = {
-  data?: WalletBalance[];
+  data?: unknown;
+  meta?: unknown;
 };
 
 @Injectable({
@@ -41,7 +47,16 @@ export class WalletBalancesService {
   ) {}
 
   loadBalances(params?: WalletBalancesRequest): Observable<WalletBalance[]> {
-    return from(this.authProvider.getAccessToken()).pipe(
+    return this.loadBalancesWithMeta(params).pipe(
+      map(result => result.balances)
+    );
+  }
+
+  loadBalancesWithMeta(
+    params?: WalletBalancesRequest
+  ): Observable<WalletBalancesResult> {
+    return from(this.authProvider.whenSettled()).pipe(
+      switchMap(() => this.authProvider.getAccessToken()),
       switchMap(token => {
         if (!token) {
           return throwError(() => new Error('No active session'));
@@ -55,7 +70,78 @@ export class WalletBalancesService {
           }
         );
       }),
-      map(response => response.data ?? [])
+      map(response => ({
+        balances: this.parseBalances(response.data),
+        partial: this.parsePartial(response.meta),
+      }))
     );
+  }
+
+  private parsePartial(value: unknown): boolean {
+    if (value === undefined) {
+      return false;
+    }
+    if (!this.isRecord(value) || typeof value['partial'] !== 'boolean') {
+      throw new Error('Balance response metadata is invalid');
+    }
+    return value['partial'];
+  }
+
+  private parseBalances(value: unknown): WalletBalance[] {
+    if (!Array.isArray(value)) {
+      throw new Error('Balance response is invalid');
+    }
+    return value.map(item => this.parseBalance(item));
+  }
+
+  private parseBalance(value: unknown): WalletBalance {
+    if (!this.isRecord(value)) {
+      throw new Error('Balance row is invalid');
+    }
+
+    const walletId = value['walletId'];
+    const balanceDecimal = value['balanceDecimal'];
+    const requiredStrings = [
+      'walletAddress',
+      'chainType',
+      'network',
+      'assetId',
+      'symbol',
+      'balanceRaw',
+      'source',
+      'fetchedAt',
+      'expiresAt',
+    ] as const;
+
+    if (
+      !(walletId === null || typeof walletId === 'string') ||
+      !requiredStrings.every(key => typeof value[key] === 'string') ||
+      typeof value['decimals'] !== 'number' ||
+      !Number.isFinite(value['decimals']) ||
+      !(balanceDecimal === null || typeof balanceDecimal === 'string') ||
+      typeof value['stale'] !== 'boolean'
+    ) {
+      throw new Error('Balance row is invalid');
+    }
+
+    return {
+      walletId: walletId as string | null,
+      walletAddress: value['walletAddress'] as string,
+      chainType: value['chainType'] as string,
+      network: value['network'] as string,
+      assetId: value['assetId'] as string,
+      symbol: value['symbol'] as string,
+      decimals: value['decimals'] as number,
+      balanceRaw: value['balanceRaw'] as string,
+      balanceDecimal: balanceDecimal as string | null,
+      source: value['source'] as string,
+      fetchedAt: value['fetchedAt'] as string,
+      expiresAt: value['expiresAt'] as string,
+      stale: value['stale'],
+    };
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
   }
 }
