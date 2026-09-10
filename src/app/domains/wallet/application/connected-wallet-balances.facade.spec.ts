@@ -38,7 +38,7 @@ describe('ConnectedWalletBalancesFacade', () => {
     );
     balances = jasmine.createSpyObj<WalletBalancesService>(
       'WalletBalancesService',
-      ['loadBalances']
+      ['loadBalancesWithMeta']
     );
 
     TestBed.configureTestingModule({
@@ -79,15 +79,18 @@ describe('ConnectedWalletBalancesFacade', () => {
         },
       ])
     );
-    balances.loadBalances.and.callFake(request =>
-      of(request?.assetIds ? [] : [nativeBalance])
+    balances.loadBalancesWithMeta.and.callFake(request =>
+      of({
+        balances: request?.assetIds ? [] : [nativeBalance],
+        partial: false,
+      })
     );
 
     const result = await firstValueFrom(
       facade.load({ account, network: 'eip155:1' }).pipe(skip(1))
     );
 
-    expect(balances.loadBalances.calls.allArgs()).toEqual([
+    expect(balances.loadBalancesWithMeta.calls.allArgs()).toEqual([
       [{ walletAddress: account, network: 'eip155:1' }],
       [
         {
@@ -108,12 +111,80 @@ describe('ConnectedWalletBalancesFacade', () => {
 
     expect(result.status).toBe('error');
     expect(assets.loadAssets).not.toHaveBeenCalled();
-    expect(balances.loadBalances).not.toHaveBeenCalled();
+    expect(balances.loadBalancesWithMeta).not.toHaveBeenCalled();
   });
 
   it('reports an error when asset discovery fails', async () => {
     assets.loadAssets.and.returnValue(
       throwError(() => new Error('assets unavailable'))
+    );
+
+    const result = await firstValueFrom(
+      facade.load({ account, network: 'eip155:1' }).pipe(skip(1))
+    );
+
+    expect(result.status).toBe('error');
+    expect(result.rows).toEqual([]);
+  });
+
+  it('reports incomplete results when an empty response is partial', async () => {
+    assets.loadAssets.and.returnValue(of([]));
+    balances.loadBalancesWithMeta.and.returnValue(
+      of({ balances: [], partial: true })
+    );
+
+    const result = await firstValueFrom(
+      facade.load({ account, network: 'eip155:1' }).pipe(skip(1))
+    );
+
+    expect(result.status).toBe('partial');
+    expect(result.rows).toEqual([]);
+    expect(result.errorMessage).toBe('Some balances could not be loaded.');
+  });
+
+  it('keeps returned rows while reporting a partial response', async () => {
+    assets.loadAssets.and.returnValue(of([]));
+    balances.loadBalancesWithMeta.and.returnValue(
+      of({ balances: [nativeBalance], partial: true })
+    );
+
+    const result = await firstValueFrom(
+      facade.load({ account, network: 'eip155:1' }).pipe(skip(1))
+    );
+
+    expect(result.status).toBe('partial');
+    expect(result.rows).toEqual([nativeBalance]);
+  });
+
+  it('rejects a balance returned for another network', async () => {
+    assets.loadAssets.and.returnValue(of([]));
+    balances.loadBalancesWithMeta.and.returnValue(
+      of({
+        balances: [{ ...nativeBalance, network: 'eip155:42161' }],
+        partial: false,
+      })
+    );
+
+    const result = await firstValueFrom(
+      facade.load({ account, network: 'eip155:1' }).pipe(skip(1))
+    );
+
+    expect(result.status).toBe('error');
+    expect(result.rows).toEqual([]);
+  });
+
+  it('rejects a balance returned for another wallet', async () => {
+    assets.loadAssets.and.returnValue(of([]));
+    balances.loadBalancesWithMeta.and.returnValue(
+      of({
+        balances: [
+          {
+            ...nativeBalance,
+            walletAddress: '0x2222222222222222222222222222222222222222',
+          },
+        ],
+        partial: false,
+      })
     );
 
     const result = await firstValueFrom(

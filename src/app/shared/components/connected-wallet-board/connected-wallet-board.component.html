@@ -41,6 +41,15 @@
         @if (balancesCopy; as copy) {
           <div class="connected-wallet-board__value">{{ copy }}</div>
         }
+        @if (balances?.status === 'error' || balances?.status === 'partial') {
+          <button
+            type="button"
+            class="connected-wallet-board__chip"
+            aria-label="Retry balances"
+            (click)="retryBalances()">
+            Retry
+          </button>
+        }
       </div>
       <span class="connected-wallet-board__soon">Mock markets</span>
     </div>

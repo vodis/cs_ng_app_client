@@ -103,7 +103,7 @@ export class ConnectedWalletBoardComponent {
 
   public get balancesCopy(): string {
     const status = this.balances?.status;
-    if (status === 'error') {
+    if (status === 'error' || status === 'partial') {
       return this.balances?.errorMessage ?? 'Failed to load balances.';
     }
     if (!status || status === 'loading') {
@@ -134,6 +134,10 @@ export class ConnectedWalletBoardComponent {
   public selectNetwork(chain: EvmChainMock): void {
     this.hasPickedChain = true;
     this.selectedEvmChainId = chain.chainId;
+    this.loadBalancesIfConnected(this.snapshot, true);
+  }
+
+  public retryBalances(): void {
     this.loadBalancesIfConnected(this.snapshot, true);
   }
 
@@ -171,7 +175,10 @@ export class ConnectedWalletBoardComponent {
       return;
     }
 
-    const requestKey = `${account.toLowerCase()}|${network}`;
+    const requestAccount = network.startsWith('eip155:')
+      ? account.toLowerCase()
+      : account;
+    const requestKey = `${requestAccount}|${network}`;
     if (!force && requestKey === this.balanceRequestKey) {
       return;
     }
@@ -184,6 +191,9 @@ export class ConnectedWalletBoardComponent {
       .subscribe(state => {
         if (this.balanceRequestKey === requestKey) {
           this.balances = state;
+          if (state.status === 'error' || state.status === 'partial') {
+            this.balanceRequestKey = undefined;
+          }
         }
       });
   }

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import {
   WalletBalance,
+  WalletBalancesResult,
   WalletBalancesService,
 } from '@shared/services/wallet-balances.service';
 import {
@@ -46,7 +47,7 @@ const NATIVE_SYMBOL_BY_BLOCKCHAIN: Readonly<Record<string, string>> = {
 };
 
 export type ConnectedWalletBalancesState = {
-  status: 'loading' | 'ready' | 'error';
+  status: 'loading' | 'ready' | 'partial' | 'error';
   account: string;
   network: string;
   rows: WalletBalance[];
@@ -69,7 +70,6 @@ export class ConnectedWalletBalancesFacade {
     request: ConnectedWalletBalancesRequest
   ): Observable<ConnectedWalletBalancesState> {
     const account = request.account.trim();
-    const normalizedAccount = account.toLowerCase();
     const blockchain = BLOCKCHAIN_BY_NETWORK[request.network];
 
     if (!account || !blockchain) {
@@ -99,8 +99,8 @@ export class ConnectedWalletBalancesFacade {
       ),
       switchMap(assetIds => {
         const uniqueAssetIds = [...new Set(assetIds)];
-        const requests: Observable<WalletBalance[]>[] = [
-          this.balances.loadBalances({
+        const requests: Observable<WalletBalancesResult>[] = [
+          this.balances.loadBalancesWithMeta({
             walletAddress: account,
             network: request.network,
           }),
@@ -112,7 +112,7 @@ export class ConnectedWalletBalancesFacade {
           index += MAX_BALANCE_ASSETS_PER_REQUEST
         ) {
           requests.push(
-            this.balances.loadBalances({
+            this.balances.loadBalancesWithMeta({
               walletAddress: account,
               network: request.network,
               assetIds: uniqueAssetIds.slice(
@@ -127,19 +127,23 @@ export class ConnectedWalletBalancesFacade {
       }),
       map(resultSets => {
         const byAsset = new Map<string, WalletBalance>();
-        for (const balance of resultSets.flat()) {
-          if (
-            balance.network === request.network &&
-            balance.walletAddress.toLowerCase() === normalizedAccount
-          ) {
+        for (const result of resultSets) {
+          for (const balance of result.balances) {
+            if (!this.matchesRequest(balance, account, request.network)) {
+              throw new Error('Balance response provenance does not match');
+            }
             byAsset.set(balance.assetId, balance);
           }
         }
+        const partial = resultSets.some(result => result.partial);
         return {
-          status: 'ready' as const,
+          status: partial ? ('partial' as const) : ('ready' as const),
           account,
           network: request.network,
           rows: [...byAsset.values()],
+          errorMessage: partial
+            ? 'Some balances could not be loaded.'
+            : undefined,
         };
       }),
       catchError(() =>
@@ -158,5 +162,19 @@ export class ConnectedWalletBalancesFacade {
         rows: [],
       })
     );
+  }
+
+  private matchesRequest(
+    balance: WalletBalance,
+    account: string,
+    network: string
+  ): boolean {
+    if (balance.network !== network) {
+      return false;
+    }
+    if (network.startsWith('eip155:')) {
+      return balance.walletAddress.toLowerCase() === account.toLowerCase();
+    }
+    return balance.walletAddress === account;
   }
 }

@@ -198,6 +198,43 @@ describe('ConnectedWalletBoardComponent', () => {
     });
   });
 
+  it('allows the same balance request to retry after an error', () => {
+    balances$.next({
+      status: 'error',
+      account,
+      network: 'eip155:1',
+      rows: [],
+      errorMessage: 'Failed to load balances.',
+    });
+    fixture.detectChanges();
+
+    const retry = fixture.nativeElement.querySelector(
+      '[aria-label="Retry balances"]'
+    ) as HTMLButtonElement;
+    retry.click();
+
+    expect(loadBalances).toHaveBeenCalledTimes(2);
+    expect(loadBalances).toHaveBeenCalledWith({
+      account,
+      network: 'eip155:1',
+    });
+  });
+
+  it('shows partial balance failures instead of an empty-state message', () => {
+    balances$.next({
+      status: 'partial',
+      account,
+      network: 'eip155:1',
+      rows: [],
+      errorMessage: 'Some balances could not be loaded.',
+    });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Some balances could not be loaded.');
+    expect(text).not.toContain('No balances yet.');
+  });
+
   it('disconnects through the wallet gateway', () => {
     const button = fixture.nativeElement.querySelector(
       '.connected-wallet-board__disconnect'

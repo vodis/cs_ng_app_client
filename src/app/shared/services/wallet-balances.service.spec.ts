@@ -15,8 +15,16 @@ describe('WalletBalancesService', () => {
   beforeEach(() => {
     authProvider = jasmine.createSpyObj<AuthProviderService>(
       'AuthProviderService',
-      ['getAccessToken']
+      ['whenSettled', 'getAccessToken']
     );
+    authProvider.whenSettled.and.resolveTo({
+      status: 'ready',
+      loginMethods: [],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
+      embeddedWalletEnabled: false,
+    });
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
@@ -106,6 +114,48 @@ describe('WalletBalancesService', () => {
         assetId: 'eth',
       }),
     ]);
+  }));
+
+  it('preserves partial response metadata', fakeAsync(() => {
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+    let result: unknown;
+
+    service.loadBalancesWithMeta().subscribe(value => (result = value));
+    tick();
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`);
+    request.flush({ data: [], meta: { partial: true } });
+
+    expect(result).toEqual({ balances: [], partial: true });
+  }));
+
+  it('waits for provider initialization before requesting a token', fakeAsync(() => {
+    let settleProvider: (() => void) | undefined;
+    authProvider.whenSettled.and.returnValue(
+      new Promise(resolve => {
+        settleProvider = () =>
+          resolve({
+            status: 'ready',
+            loginMethods: [],
+            passkeyLoginEnabled: false,
+            passkeySignupEnabled: false,
+            passkeyLinkEnabled: false,
+            embeddedWalletEnabled: false,
+          });
+      })
+    );
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+
+    service.loadBalances().subscribe();
+    tick();
+    expect(authProvider.getAccessToken).not.toHaveBeenCalled();
+
+    settleProvider?.();
+    tick();
+    expect(authProvider.getAccessToken).toHaveBeenCalledTimes(1);
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`);
+    request.flush({ data: [] });
   }));
 
   it('rejects rows that omit network provenance', fakeAsync(() => {

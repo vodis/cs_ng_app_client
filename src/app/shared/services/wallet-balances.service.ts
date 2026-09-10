@@ -27,8 +27,14 @@ export type WalletBalancesRequest = {
   assetIds?: string[];
 };
 
+export type WalletBalancesResult = {
+  balances: WalletBalance[];
+  partial: boolean;
+};
+
 type WalletBalancesResponse = {
   data?: unknown;
+  meta?: unknown;
 };
 
 @Injectable({
@@ -41,7 +47,16 @@ export class WalletBalancesService {
   ) {}
 
   loadBalances(params?: WalletBalancesRequest): Observable<WalletBalance[]> {
-    return from(this.authProvider.getAccessToken()).pipe(
+    return this.loadBalancesWithMeta(params).pipe(
+      map(result => result.balances)
+    );
+  }
+
+  loadBalancesWithMeta(
+    params?: WalletBalancesRequest
+  ): Observable<WalletBalancesResult> {
+    return from(this.authProvider.whenSettled()).pipe(
+      switchMap(() => this.authProvider.getAccessToken()),
       switchMap(token => {
         if (!token) {
           return throwError(() => new Error('No active session'));
@@ -55,8 +70,21 @@ export class WalletBalancesService {
           }
         );
       }),
-      map(response => this.parseBalances(response.data))
+      map(response => ({
+        balances: this.parseBalances(response.data),
+        partial: this.parsePartial(response.meta),
+      }))
     );
+  }
+
+  private parsePartial(value: unknown): boolean {
+    if (value === undefined) {
+      return false;
+    }
+    if (!this.isRecord(value) || typeof value['partial'] !== 'boolean') {
+      throw new Error('Balance response metadata is invalid');
+    }
+    return value['partial'];
   }
 
   private parseBalances(value: unknown): WalletBalance[] {
