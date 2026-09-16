@@ -57,13 +57,16 @@ describe('SidebarComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('exposes one-word desktop destinations without profile', () => {
+  it('exposes one-word desktop destinations with profile', () => {
     expect(component.menuItems.map(item => item.fallback)).toEqual([
-      'Portfolio',
+      'Profile',
       'Trade',
       'Transactions',
     ]);
-    expect(component.menuItems.map(item => item.url)).not.toContain('/profile');
+    expect(component.menuItems.map(item => item.url)).toContain('/profile');
+    expect(component.menuItems.map(item => item.url)).not.toContain(
+      '/portfolio'
+    );
   });
 
   it('draws interior lines and keeps the menu hidden until they finish', () => {

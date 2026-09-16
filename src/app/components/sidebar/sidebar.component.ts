@@ -36,9 +36,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   public readonly menuItems: SidebarLink[] = [
     {
-      name: 'Texts.sidebar-portfolio',
-      fallback: 'Portfolio',
-      url: '/portfolio',
+      name: 'Texts.sidebar-profile',
+      fallback: 'Profile',
+      url: '/profile',
     },
     {
       name: 'Texts.sidebar-trade',

@@ -81,10 +81,10 @@ export class MobileBottomNavComponent implements OnDestroy {
       exact: true,
     },
     {
-      name: 'Texts.sidebar-portfolio',
-      fallback: 'Portfolio',
-      url: '/portfolio',
-      icon: 'portfolio',
+      name: 'Texts.sidebar-profile',
+      fallback: 'Profile',
+      url: '/profile',
+      icon: 'settings',
       exact: true,
     },
     {
@@ -114,10 +114,10 @@ export class MobileBottomNavComponent implements OnDestroy {
       icon: 'history',
     },
     {
-      name: 'Texts.sidebar-settings',
-      fallback: 'Settings',
-      url: '/profile',
-      icon: 'settings',
+      name: 'Texts.sidebar-portfolio',
+      fallback: 'Portfolio',
+      url: '/portfolio',
+      icon: 'portfolio',
     },
     {
       name: 'Texts.sidebar-website',
@@ -137,7 +137,7 @@ export class MobileBottomNavComponent implements OnDestroy {
     '/farm',
     '/proposals',
     '/history',
-    '/profile',
+    '/portfolio',
   ];
 
   private routerSubscription?: Subscription;

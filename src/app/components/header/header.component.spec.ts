@@ -87,7 +87,7 @@ describe('HeaderComponent', () => {
       '.header__account-link'
     ) as HTMLElement;
 
-    expect(link.getAttribute('aria-label')).toBe('Profile');
+    expect(link.getAttribute('aria-label')).toBe('Portfolio');
     expect(link.classList.contains('header__account-link--icon')).toBeTrue();
     expect(link.querySelector('mat-icon')?.textContent?.trim()).toBe('person');
   });
