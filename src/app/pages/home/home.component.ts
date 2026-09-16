@@ -41,6 +41,7 @@ import {
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 import {
   isNearWalletAddress,
+  nearNetworkForAddress,
   networkLabel,
   recipientAddressError,
   walletBlockchain,
@@ -1338,12 +1339,6 @@ export class HomeComponent {
     );
   }
 
-  private nearNetworkForAddress(
-    address: string
-  ): 'near:mainnet' | 'near:testnet' {
-    return /\.testnet$/i.test(address) ? 'near:testnet' : 'near:mainnet';
-  }
-
   private isBalanceExpired(balance: WalletBalance): boolean {
     const expiresAt = Date.parse(balance.expiresAt);
     return !Number.isFinite(expiresAt) || expiresAt <= Date.now();
@@ -1355,7 +1350,7 @@ export class HomeComponent {
 
   private balanceNetwork(): string | undefined {
     if (isNearWalletAddress(this.walletAddress)) {
-      return this.nearNetworkForAddress(this.walletAddress);
+      return nearNetworkForAddress(this.walletAddress);
     }
     if (/^0x[a-f0-9]{40}$/i.test(this.walletAddress)) {
       return this.walletChainId == null

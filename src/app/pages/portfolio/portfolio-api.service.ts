@@ -11,19 +11,25 @@ import {
   PortfolioSnapshot,
 } from './portfolio.models';
 
-@Injectable()
+@Injectable({
+  providedIn: 'root',
+})
 export class PortfolioApiService {
   constructor(
     private readonly http: HttpClient,
     private readonly authProvider: AuthProviderService
   ) {}
 
-  async loadPortfolio(): Promise<PortfolioSnapshot> {
+  async loadPortfolio(params?: {
+    walletAddress?: string;
+    network?: string;
+  }): Promise<PortfolioSnapshot> {
     return firstValueFrom(
       this.http.get<PortfolioSnapshot>(
         `${environment.apiUrl}/api/v1/portfolio`,
         {
           headers: await this.headers(),
+          params: params ?? {},
         }
       )
     );

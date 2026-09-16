@@ -6,12 +6,14 @@ import type {
   BackendWallet,
 } from '@core/auth/auth-session.types';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
+import type { PortfolioSnapshot } from '../../portfolio/portfolio.models';
 import {
   formatActivityDayTooltip,
   type ActivityHeatmapDay,
   type ActivityHeatmapWeek,
 } from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
+import { isNearWalletAddress } from '@shared/utils/network.utils';
 import {
   MockProfileActivitySource,
   ProfileActivitySource,
@@ -92,7 +94,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public passkeyLoading = false;
   public balances: BackendBalance[] = [];
   public balancesLoading = false;
+  public portfolio: PortfolioSnapshot | null = null;
   public connectedAccount: string | null = null;
+  public connectedChainId: number | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
   public walletActionBusy = false;
   public walletLoading = false;
@@ -122,8 +126,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
         if (session) {
           this.seedLastConnectedFromBackend(session.wallets);
           void this.refreshBalances();
+          void this.refreshPortfolio();
         } else {
           this.balances = [];
+          this.portfolio = null;
         }
         this.refreshOnboarding();
       })
@@ -131,7 +137,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.subscription.add(
       this.profile.account$.subscribe(account => {
         this.connectedAccount = account?.account ?? null;
+        this.connectedChainId = account?.chainId ?? null;
         this.refreshOnboarding();
+        if (this.session) {
+          void this.refreshPortfolio();
+        }
       })
     );
     this.subscription.add(
@@ -333,7 +343,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public usdBalanceLabel(): string {
-    return '$0.00';
+    const total = Number(this.portfolio?.totalValue ?? 0);
+    return Number.isFinite(total)
+      ? total.toLocaleString('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 2,
+        })
+      : '$0.00';
   }
 
   public usdChangeLabel(): string {
@@ -480,6 +497,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     try {
       this.balances = await this.profile.generateWallet();
       this.walletMessage = 'Wallet generated';
+      await this.refreshPortfolio();
     } catch (error) {
       this.error =
         error instanceof Error ? error.message : 'Wallet setup failed';
@@ -555,6 +573,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
         error instanceof Error ? error.message : 'Balance refresh failed';
     } finally {
       this.balancesLoading = false;
+    }
+  }
+
+  public async refreshPortfolio(): Promise<void> {
+    if (!this.session) {
+      this.portfolio = null;
+      return;
+    }
+    try {
+      this.portfolio = await this.profile.loadPortfolio(
+        this.connectedAccount,
+        this.connectedChainId
+      );
+    } catch {
+      this.portfolio = null;
     }
   }
 
@@ -697,7 +730,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   ): string | undefined {
     return (
       this.findLinkedWallet(wallet.account)?.chainType ||
-      this.chainTypeFromId(wallet.chainId)
+      this.chainTypeFromId(wallet.chainId) ||
+      (isNearWalletAddress(wallet.account) ? 'near' : undefined)
     );
   }
 

@@ -23,7 +23,7 @@ export type PortfolioPosition = {
 };
 
 export type PortfolioSnapshot = {
-  asOf: string;
+  asOf: string | null;
   valuationCurrency: 'USD';
   totalValue: string;
   unpricedPositionCount: number;

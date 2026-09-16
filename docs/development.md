@@ -259,8 +259,9 @@ Host auth routes live under `src/app/pages/auth/`.
 
 - Login/register without linked wallets routes to `/profile`, not a blocking
   wallet interstitial.
-- `/profile` shows a `$0.00` balance hero plus an Onboarding portfolio card
-  for wallet, passkey, and five swaps.
+- `/profile` shows a BFF-valued USD balance hero plus an Onboarding
+  portfolio card for wallet, passkey, and five swaps. The hero stays
+  `$0.00` until `GET /api/v1/portfolio` returns priced holdings.
 - Generate wallet uses the host auth-session bridge; connecting an existing
   wallet still opens the wallets MFE modal. The swap step routes to
   Exchange.
@@ -273,6 +274,6 @@ Host auth routes live under `src/app/pages/auth/`.
 3. Verify `/` stays on Token Exchange without a session, and `/profile`
    redirects to `/login`.
 4. Verify register/login without wallets routes to `/profile` with a `$0.00`
-   balance hero.
+   balance hero until holdings are priced.
 5. Verify the Onboarding portfolio Set up wallet CTA opens the wallets MFE
    modal, and Generate wallet creates an embedded wallet.

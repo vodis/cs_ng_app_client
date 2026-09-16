@@ -14,6 +14,7 @@ import {
 } from './profile-activity.source';
 import { ProfileComponent } from './profile.component';
 import { ProfileFacade } from './profile.facade';
+import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
 
 describe('ProfileComponent', () => {
   let component: ProfileComponent;
@@ -22,6 +23,7 @@ describe('ProfileComponent', () => {
   let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
   let router: jasmine.SpyObj<Router>;
   let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
+  let portfolioApi: jasmine.SpyObj<PortfolioApiService>;
   let sessionSubject: BehaviorSubject<AuthSession | null>;
   let accountSubject: BehaviorSubject<
     { account: string; chainId: number | null } | undefined
@@ -137,13 +139,25 @@ describe('ProfileComponent', () => {
     localizedRouting.path.and.callFake((path: string) =>
       path === '/' ? '/en' : `/en${path}`
     );
+    portfolioApi = jasmine.createSpyObj<PortfolioApiService>(
+      'PortfolioApiService',
+      ['loadPortfolio']
+    );
+    portfolioApi.loadPortfolio.and.resolveTo({
+      asOf: null,
+      valuationCurrency: 'USD',
+      totalValue: '0',
+      unpricedPositionCount: 0,
+      positions: [],
+    });
 
     const profile = new ProfileFacade(
       authSession,
       walletsService,
       walletGatewayBridge,
       router,
-      localizedRouting
+      localizedRouting,
+      portfolioApi
     );
     component = new ProfileComponent(profile, new MockProfileActivitySource());
     component.ngOnInit();
@@ -240,6 +254,21 @@ describe('ProfileComponent', () => {
     expect(component.usdChangePercentLabel()).toBe('0.00%');
     expect(component.walletPillLabel()).toBe('No wallet');
     expect(component.showWalletSetupActions()).toBeTrue();
+  });
+
+  it('renders the BFF portfolio total in the balance hero', async () => {
+    portfolioApi.loadPortfolio.and.resolveTo({
+      asOf: '2026-08-19T12:00:00Z',
+      valuationCurrency: 'USD',
+      totalValue: '125.5',
+      unpricedPositionCount: 0,
+      positions: [],
+    });
+
+    await component.refreshPortfolio();
+
+    expect(portfolioApi.loadPortfolio).toHaveBeenCalled();
+    expect(component.usdBalanceLabel()).toBe('$125.50');
   });
 
   it('labels an embedded linked wallet in the balance hero', () => {

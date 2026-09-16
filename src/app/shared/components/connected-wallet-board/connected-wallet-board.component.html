@@ -32,6 +32,27 @@
         {{ activeNetworkLabel() }}
       </div>
     </div>
+  } @else {
+    <div class="connected-wallet-board__card">
+      <div class="connected-wallet-board__title">Network</div>
+      <div
+        class="connected-wallet-board__chips"
+        role="tablist"
+        [attr.aria-label]="
+          chainFamily === 'near' ? 'NEAR network' : 'TON network'
+        ">
+        <button
+          type="button"
+          role="tab"
+          class="connected-wallet-board__chip connected-wallet-board__chip--active"
+          aria-selected="true">
+          {{ chainFamily === 'near' ? 'NEAR' : 'TON' }}
+        </button>
+      </div>
+      <div class="connected-wallet-board__meta">
+        {{ activeNetworkLabel() }}
+      </div>
+    </div>
   }
 
   <div class="connected-wallet-board__card">

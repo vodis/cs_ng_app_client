@@ -99,9 +99,10 @@ Flow direction:
 
 - Accounts with at least one linked wallet continue to the safe `returnUrl`.
 - First-time accounts with no linked or generated wallet go to `/profile`.
-- `/profile` shows a `$0.00` balance hero beside an Onboarding portfolio
-  card (wallet, passkey, five swaps). Wallet setup is not a blocking
-  interstitial.
+- `/profile` shows a BFF-valued USD balance hero beside an Onboarding
+  portfolio card (wallet, passkey, five swaps). The hero reads
+  `GET /api/v1/portfolio` and stays `$0.00` when there are no priced
+  holdings. Wallet setup is not a blocking interstitial.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 
 Profile boundary rules:

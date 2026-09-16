@@ -1,5 +1,6 @@
 import {
   networkLabel,
+  nearNetworkForAddress,
   recipientAddressError,
   walletBlockchain,
 } from './network.utils';
@@ -11,6 +12,10 @@ describe('network utils', () => {
     ).toBe('arb');
     expect(walletBlockchain('alice.near', null)).toBe('near');
     expect(walletBlockchain('a'.repeat(64), null)).toBe('near');
+    expect(walletBlockchain('vodis_craftscript.tg', null)).toBe('near');
+    expect(nearNetworkForAddress('vodis_craftscript.tg')).toBe('near:mainnet');
+    expect(nearNetworkForAddress('alice.near')).toBe('near:mainnet');
+    expect(nearNetworkForAddress('alice.testnet')).toBe('near:testnet');
     expect(networkLabel('bsc')).toBe('BNB Chain');
   });
 
