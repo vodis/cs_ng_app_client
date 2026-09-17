@@ -39,6 +39,7 @@ import {
   tokenAvatarLabel,
 } from '@shared/utils/token-avatar.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
+import type { WalletTokenOption } from '@shared/components/token-select-panel/token-select-panel.models';
 import {
   isNearWalletAddress,
   nearNetworkForAddress,
@@ -1073,6 +1074,23 @@ export class HomeComponent {
     return this.exchangeTokens;
   }
 
+  public tokenSelectorWalletTokens(): WalletTokenOption[] {
+    if (this.tokenSelectorSide !== 'from') return [];
+
+    return this.tokenSelectorTokens().flatMap(token => {
+      const balance = this.balanceForToken(token);
+      if (!balance || /^0+$/.test(balance.balanceRaw)) return [];
+
+      return [
+        {
+          token,
+          balanceLabel: `${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}`,
+          stale: balance.stale || this.isBalanceExpired(balance),
+        },
+      ];
+    });
+  }
+
   public connectedWalletBlockchain(): string | undefined {
     return walletBlockchain(this.walletAddress, this.walletChainId);
   }
@@ -1379,7 +1397,7 @@ export class HomeComponent {
       ...new Set(
         candidates.map(token => token.assetId).filter(assetId => assetId.trim())
       ),
-    ].slice(0, 20);
+    ];
   }
 
   private pickDefaultFromToken(): ExchangeToken | undefined {

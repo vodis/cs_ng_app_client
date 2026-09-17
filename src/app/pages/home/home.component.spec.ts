@@ -325,6 +325,63 @@ describe('HomeComponent market overview', () => {
     );
   });
 
+  it('exposes every non-zero connected-network balance to the source selector', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const tokens = Array.from(
+      { length: 21 },
+      (_, index): ExchangeToken => ({
+        assetId: `nep141:token-${index}.near`,
+        symbol: index === 20 ? 'ZEC' : `T${index}`,
+        name: index === 20 ? 'Zcash' : `Token ${index}`,
+        color: '#2fd17c',
+        decimals: 8,
+        blockchain: 'near',
+      })
+    );
+    component.exchangeTokens = tokens;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: tokens[20].assetId,
+        symbol: 'ZEC',
+        decimals: 8,
+        balanceRaw: '100000',
+        balanceDecimal: '0.001',
+        source: 'near_rpc',
+        fetchedAt: '2026-09-17T12:00:00.000Z',
+        expiresAt: '2099-09-17T12:00:15.000Z',
+        stale: false,
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.openTokenSelector('from');
+
+    expect(balancesService.calls[0].assetIds?.length).toBeGreaterThan(20);
+    expect(balancesService.calls[0].assetIds).toContain(tokens[20].assetId);
+    expect(component.tokenSelectorWalletTokens()).toEqual([
+      {
+        token: tokens[20],
+        balanceLabel: '0,001 ZEC',
+        stale: false,
+      },
+    ]);
+  });
+
   it('blocks NEAR quotes when entered amount exceeds live balance', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService

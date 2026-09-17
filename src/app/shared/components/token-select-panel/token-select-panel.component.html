@@ -41,6 +41,87 @@
             [(ngModel)]="filterQuery"
             (keydown.escape)="handleClose()" />
         </label>
+
+        @if (showWalletTokens) {
+          <section
+            class="token-select-panel__wallet-tokens"
+            aria-labelledby="wallet-token-list-title">
+            <p
+              id="wallet-token-list-title"
+              class="token-select-panel__section-label">
+              Your tokens
+            </p>
+            @if (walletTokensLoading) {
+              <p class="token-select-panel__section-status">
+                Loading wallet balances...
+              </p>
+            } @else if (walletTokensError) {
+              <p
+                class="token-select-panel__section-status token-select-panel__section-status--error">
+                {{ walletTokensError }}
+              </p>
+            } @else if (filteredWalletTokens.length > 0) {
+              <ul
+                class="token-select-panel__list token-select-panel__list--wallet"
+                role="listbox"
+                aria-label="Tokens in connected wallet">
+                @for (
+                  option of filteredWalletTokens;
+                  track option.token.assetId
+                ) {
+                  <li role="presentation">
+                    <button
+                      type="button"
+                      class="token-select-panel__item token-select-panel__item--wallet"
+                      role="option"
+                      [attr.aria-selected]="
+                        option.token.assetId === selectedAssetId
+                      "
+                      [class.token-select-panel__item--selected]="
+                        option.token.assetId === selectedAssetId
+                      "
+                      (click)="handleWalletTokenSelect(option)">
+                      <span
+                        class="token-select-panel__icon"
+                        [style.backgroundColor]="option.token.color">
+                        @if (resolveTokenIcon(option.token); as icon) {
+                          <img [src]="icon" [alt]="option.token.symbol" />
+                        } @else {
+                          {{ avatarFallback(option.token) }}
+                        }
+                      </span>
+                      <span class="token-select-panel__meta">
+                        <strong>{{ tokenNetworkLabel(option.token) }}</strong>
+                        <span>{{ option.token.name }}</span>
+                      </span>
+                      <span class="token-select-panel__wallet-balance">
+                        <strong>{{ option.balanceLabel }}</strong>
+                        @if (option.stale) {
+                          <span>Stale</span>
+                        } @else {
+                          <span>Available</span>
+                        }
+                      </span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="token-select-panel__section-status">
+                {{
+                  filterQuery
+                    ? 'No matching wallet tokens.'
+                    : 'No token balances found.'
+                }}
+              </p>
+            }
+          </section>
+
+          <p
+            class="token-select-panel__section-label token-select-panel__section-label--all">
+            All tokens
+          </p>
+        }
       }
 
       @if (pendingSymbol) {

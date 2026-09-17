@@ -180,6 +180,67 @@ describe('TokenSelectPanelComponent', () => {
     expect(options[0].textContent).toContain('NEAR');
   });
 
+  it('shows wallet tokens between search and the full token list', () => {
+    component.showWalletTokens = true;
+    component.walletTokens = [
+      { token: tokens[1], balanceLabel: '1.25 NEAR', stale: false },
+    ];
+    fixture.detectChanges();
+
+    const search = fixture.nativeElement.querySelector(
+      '.token-select-panel__search'
+    ) as HTMLElement;
+    const walletSection = fixture.nativeElement.querySelector(
+      '.token-select-panel__wallet-tokens'
+    ) as HTMLElement;
+    const fullList = fixture.nativeElement.querySelector(
+      '.token-select-panel__section-label--all'
+    ) as HTMLElement;
+
+    expect(
+      search.compareDocumentPosition(walletSection) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      walletSection.compareDocumentPosition(fullList) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(walletSection.textContent).toContain('NEAR_NEAR');
+    expect(walletSection.textContent).toContain('1.25 NEAR');
+    expect(walletSection.textContent).toContain('Available');
+  });
+
+  it('selects the exact network asset from the wallet-token section', () => {
+    const emitSpy = spyOn(component.tokenSelected, 'emit');
+    component.showWalletTokens = true;
+    component.walletTokens = [
+      { token: tokens[1], balanceLabel: '1.25 NEAR', stale: false },
+    ];
+    fixture.detectChanges();
+
+    const option = fixture.nativeElement.querySelector(
+      '.token-select-panel__item--wallet'
+    ) as HTMLButtonElement;
+    option.click();
+
+    expect(emitSpy).toHaveBeenCalledWith(tokens[1]);
+  });
+
+  it('filters wallet tokens with the shared search query', () => {
+    component.showWalletTokens = true;
+    component.walletTokens = [
+      { token: tokens[1], balanceLabel: '1.25 NEAR', stale: false },
+    ];
+    component.filterQuery = 'usdc';
+    fixture.detectChanges();
+
+    expect(component.filteredWalletTokens).toEqual([]);
+    expect(
+      fixture.nativeElement.querySelector('.token-select-panel__wallet-tokens')
+        ?.textContent
+    ).toContain('No matching wallet tokens.');
+  });
+
   it('should show no matching tokens message when filter has no results', () => {
     component.filterQuery = 'btc';
     fixture.detectChanges();

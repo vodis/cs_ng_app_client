@@ -74,14 +74,22 @@ Client token metadata in `HomeComponent.exchangeTokens` is display and
 bootstrap data only. The backend is authoritative for tradability, chain
 mapping, quote validation, and execution eligibility.
 
-The host batches up to 20 backend-allowlisted asset ids for the connected
-wallet's CAIP-2 network. Balance responses are matched by exact `network` and
-`assetId`, never display symbol, and a response containing a different wallet or
-network is rejected. A response with `meta.partial: true` is shown as incomplete
-even when it contains usable rows. Expired or `stale: true` values may be shown
-as stale context but must not authorize a swap. The UI must not substitute demo
-or zero balances when the backend has no fresh result, and failed requests remain
-retryable after provider initialization or a transient backend failure.
+The host requests every backend-allowlisted asset for the connected wallet's
+CAIP-2 network, splitting the catalog into API requests of at most 20 asset ids.
+Balance responses are matched by exact `network` and `assetId`, never display
+symbol, and a response containing a different wallet or network is rejected. A
+response with `meta.partial: true` is shown as incomplete even when it contains
+usable rows. Expired or `stale: true` values may be shown as stale context but
+must not authorize a swap. The UI must not substitute demo or zero balances when
+the backend has no fresh result, and failed requests remain retryable after
+provider initialization or a transient backend failure.
+
+The source-token selector shows a **Your tokens** section between search and the
+full token catalog when a wallet is connected. It includes only non-zero,
+network-specific balances for the connected wallet, renders each entry as
+`Token_Network` with its available token amount, and selects the exact 1Click
+asset id. Destination-token selection continues to use the full supported asset
+and network flow.
 
 ## Styling contract
 
