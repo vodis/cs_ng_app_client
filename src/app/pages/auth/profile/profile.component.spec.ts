@@ -248,8 +248,8 @@ describe('ProfileComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalled();
   });
 
-  it('shows a zero USD balance hero until wallets are funded', () => {
-    expect(component.usdBalanceLabel()).toBe('$0.00');
+  it('shows portfolio loading without presenting it as a zero balance', () => {
+    expect(component.usdBalanceLabel()).toBe('Loading…');
     expect(component.usdChangeLabel()).toBe('+$0.00');
     expect(component.usdChangePercentLabel()).toBe('0.00%');
     expect(component.walletPillLabel()).toBe('No wallet');
@@ -262,13 +262,88 @@ describe('ProfileComponent', () => {
       valuationCurrency: 'USD',
       totalValue: '125.5',
       unpricedPositionCount: 0,
-      positions: [],
+      positions: [
+        {
+          walletRef: 'wallet-ref',
+          chain: 'near:mainnet',
+          assetId: 'near:native',
+          symbol: 'NEAR',
+          quantity: '50.125',
+          priceUsd: '2.503740648379052369',
+          valueUsd: '125.5',
+          allocationPercent: '100',
+          priceUpdatedAt: '2026-08-19T12:00:00Z',
+          balanceUpdatedAt: '2026-08-19T12:00:00Z',
+        },
+      ],
     });
 
     await component.refreshPortfolio();
 
     expect(portfolioApi.loadPortfolio).toHaveBeenCalled();
     expect(component.usdBalanceLabel()).toBe('$125.50');
+    expect(component.tokenBalanceLabel()).toBe('50.125 NEAR');
+  });
+
+  it('shows an unavailable state when portfolio valuation fails', async () => {
+    portfolioApi.loadPortfolio.and.rejectWith(new Error('RPC unavailable'));
+
+    await component.refreshPortfolio();
+
+    expect(component.portfolio).toBeNull();
+    expect(component.usdBalanceLabel()).toBe('Unavailable');
+  });
+
+  it('ignores a stale portfolio response after a newer request completes', async () => {
+    await Promise.resolve();
+    let resolveFirst!: (
+      value: Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
+    ) => void;
+    let resolveSecond!: (
+      value: Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
+    ) => void;
+    const first = new Promise<
+      Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
+    >(resolve => {
+      resolveFirst = resolve;
+    });
+    const second = new Promise<
+      Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
+    >(resolve => {
+      resolveSecond = resolve;
+    });
+    portfolioApi.loadPortfolio.and.returnValues(first, second);
+
+    const olderRequest = component.refreshPortfolio();
+    const newerRequest = component.refreshPortfolio();
+    resolveSecond({
+      asOf: null,
+      valuationCurrency: 'USD',
+      totalValue: '20',
+      unpricedPositionCount: 0,
+      positions: [],
+    });
+    await newerRequest;
+    resolveFirst({
+      asOf: null,
+      valuationCurrency: 'USD',
+      totalValue: '10',
+      unpricedPositionCount: 0,
+      positions: [],
+    });
+    await olderRequest;
+
+    expect(component.usdBalanceLabel()).toBe('$20.00');
+  });
+
+  it('requests live mainnet valuation for a connected .tg account', async () => {
+    accountSubject.next({ account: 'alice.tg', chainId: null });
+    await Promise.resolve();
+
+    expect(portfolioApi.loadPortfolio).toHaveBeenCalledWith({
+      walletAddress: 'alice.tg',
+      network: 'near:mainnet',
+    });
   });
 
   it('labels an embedded linked wallet in the balance hero', () => {

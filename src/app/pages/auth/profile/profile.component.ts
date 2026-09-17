@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { combineLatest, Subscription } from 'rxjs';
 import type {
   AuthSession,
   BackendBalance,
@@ -95,6 +95,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public balances: BackendBalance[] = [];
   public balancesLoading = false;
   public portfolio: PortfolioSnapshot | null = null;
+  public portfolioStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
   public connectedAccount: string | null = null;
   public connectedChainId: number | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
@@ -109,6 +110,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public onboarding: ProfileOnboardingViewModel;
 
   private subscription?: Subscription;
+  private portfolioRequestId = 0;
 
   constructor(
     public readonly profile: ProfileFacade,
@@ -121,28 +123,27 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public ngOnInit(): void {
     this.subscription = new Subscription();
     this.subscription.add(
-      this.profile.session$.subscribe(session => {
-        this.session = session;
-        if (session) {
-          this.seedLastConnectedFromBackend(session.wallets);
-          void this.refreshBalances();
-          void this.refreshPortfolio();
-        } else {
-          this.balances = [];
-          this.portfolio = null;
+      combineLatest([this.profile.session$, this.profile.account$]).subscribe(
+        ([session, account]) => {
+          const previousSession = this.session;
+          this.connectedAccount = account?.account ?? null;
+          this.connectedChainId = account?.chainId ?? null;
+          this.session = session;
+          if (session) {
+            this.seedLastConnectedFromBackend(session.wallets);
+            if (session !== previousSession) {
+              void this.refreshBalances();
+            }
+            void this.refreshPortfolio();
+          } else {
+            this.balances = [];
+            this.portfolio = null;
+            this.portfolioStatus = 'idle';
+            this.portfolioRequestId += 1;
+          }
+          this.refreshOnboarding();
         }
-        this.refreshOnboarding();
-      })
-    );
-    this.subscription.add(
-      this.profile.account$.subscribe(account => {
-        this.connectedAccount = account?.account ?? null;
-        this.connectedChainId = account?.chainId ?? null;
-        this.refreshOnboarding();
-        if (this.session) {
-          void this.refreshPortfolio();
-        }
-      })
+      )
     );
     this.subscription.add(
       this.profile.lastConnected$.subscribe(wallet => {
@@ -153,6 +154,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    this.portfolioRequestId += 1;
     this.subscription?.unsubscribe();
   }
 
@@ -343,6 +345,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public usdBalanceLabel(): string {
+    if (this.portfolioStatus === 'loading') {
+      return 'Loading…';
+    }
+    if (this.portfolioStatus === 'error') {
+      return 'Unavailable';
+    }
     const total = Number(this.portfolio?.totalValue ?? 0);
     return Number.isFinite(total)
       ? total.toLocaleString('en-US', {
@@ -351,6 +359,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
           maximumFractionDigits: 2,
         })
       : '$0.00';
+  }
+
+  public tokenBalanceLabel(): string {
+    if (this.portfolioStatus !== 'ready' || !this.portfolio?.positions.length) {
+      return '';
+    }
+    const visible = this.portfolio.positions.slice(0, 2).map(position => {
+      const quantity = Number(position.quantity);
+      const amount = Number.isFinite(quantity)
+        ? quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })
+        : position.quantity;
+      return `${amount} ${position.symbol}`;
+    });
+    const remaining = this.portfolio.positions.length - visible.length;
+    return remaining > 0
+      ? `${visible.join(' · ')} · +${remaining} more`
+      : visible.join(' · ');
   }
 
   public usdChangeLabel(): string {
@@ -577,17 +602,29 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public async refreshPortfolio(): Promise<void> {
+    const requestId = ++this.portfolioRequestId;
     if (!this.session) {
       this.portfolio = null;
+      this.portfolioStatus = 'idle';
       return;
     }
+    this.portfolioStatus = 'loading';
     try {
-      this.portfolio = await this.profile.loadPortfolio(
+      const portfolio = await this.profile.loadPortfolio(
         this.connectedAccount,
         this.connectedChainId
       );
+      if (requestId !== this.portfolioRequestId) {
+        return;
+      }
+      this.portfolio = portfolio;
+      this.portfolioStatus = 'ready';
     } catch {
+      if (requestId !== this.portfolioRequestId) {
+        return;
+      }
       this.portfolio = null;
+      this.portfolioStatus = 'error';
     }
   }
 
