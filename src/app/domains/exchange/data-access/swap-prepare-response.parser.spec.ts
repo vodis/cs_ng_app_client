@@ -22,6 +22,10 @@ describe('parseApprovedSwapPrepareResponse', () => {
       signerId: 'signer.near',
       authMethod: 'near',
       deadlineTimestamp: 1_800_000_000,
+      amountIn: '1',
+      amountOut: '2',
+      quoteExpiration: '2099-01-01T00:00:00.000Z',
+      slippageTolerance: 50,
       tokenDeltas: [{ assetId: 'near', amount: '-1' }],
     });
   });
@@ -122,6 +126,10 @@ function validPrepareData(): Record<string, unknown> {
     signerId: 'signer.near',
     authMethod: 'near',
     deadlineTimestamp: 1_800_000_000,
+    amountIn: '1',
+    amountOut: '2',
+    quoteExpiration: '2099-01-01T00:00:00.000Z',
+    slippageTolerance: 50,
     tokenDeltas: [{ assetId: 'near', amount: '-1' }],
     transportOnlyField: 'discard me',
   };

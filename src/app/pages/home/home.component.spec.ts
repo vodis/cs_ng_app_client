@@ -6,7 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { BehaviorSubject, Subject, of } from 'rxjs';
+import { BehaviorSubject, Subject, map, of } from 'rxjs';
 import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
 import {
   SwapFlowError,
@@ -16,6 +16,7 @@ import {
 import { WalletAccount } from '@domains/wallet/models/wallet.models';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import {
   WalletBalance,
@@ -26,6 +27,12 @@ import { HomeComponent } from './home.component';
 
 class WalletsServiceStub {
   public account = new BehaviorSubject<WalletAccount | undefined>(undefined);
+  public swapSubmitted = new BehaviorSubject<
+    { traceId: string; intentHash: string } | undefined
+  >(undefined);
+  public swapPreviewRefreshRequested = new BehaviorSubject<string | undefined>(
+    undefined
+  );
   public requestOpen = jasmine.createSpy('requestOpen');
 }
 
@@ -53,6 +60,11 @@ class SwapFlowFacadeStub {
     return undefined;
   }
 
+  public emitQuote(preview: SwapQuotePreview): void {
+    this.quotePreviewSubject.next(preview);
+    this.stateSubject.next('idle');
+  }
+
   public reset(): void {
     this.quotePreviewSubject.next(undefined);
     this.errorSubject.next(undefined);
@@ -62,8 +74,10 @@ class SwapFlowFacadeStub {
 }
 
 class ExchangeAssetsServiceStub {
+  public tokens: ExchangeToken[] = [];
+
   public loadAssets() {
-    return of<ExchangeToken[]>([]);
+    return of(this.tokens);
   }
 }
 
@@ -85,6 +99,21 @@ class WalletBalancesServiceStub {
   }) {
     this.calls.push(params ?? {});
     return this.balancesSubject ?? of(this.balances);
+  }
+
+  public loadBalancesWithMeta(params?: {
+    walletAddress?: string;
+    network?: string;
+    assetId?: string;
+    assetIds?: string[];
+  }) {
+    this.calls.push(params ?? {});
+    if (this.balancesSubject) {
+      return this.balancesSubject.pipe(
+        map(balances => ({ balances, partial: false }))
+      );
+    }
+    return of({ balances: this.balances, partial: false });
   }
 }
 
@@ -287,6 +316,33 @@ describe('HomeComponent market overview', () => {
     expect(component.toAmountFormatted()).toBe('0,4503');
   });
 
+  it('labels the connected-wallet action Review before any signing starts', () => {
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    expect(component.primaryActionLabel()).toBe('Connect wallet');
+    walletsService.account.next({
+      account: 'alice.near',
+      chainId: null,
+      identity: {
+        connectorId: 'near',
+        address: 'alice.near',
+        chainType: 'near',
+        walletType: 'external',
+      },
+    });
+
+    expect(component.primaryActionLabel()).toBe('Review');
+    expect(component.canReviewSwap()).toBeFalse();
+  });
+
   it('shows live NEAR balance for the connected NEAR wallet', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
@@ -297,8 +353,8 @@ describe('HomeComponent market overview', () => {
         walletAddress: 'alice.near',
         chainType: 'near',
         network: 'near:mainnet',
-        assetId: 'nep141:wrap.near',
-        symbol: 'wNEAR',
+        assetId: 'near:native',
+        symbol: 'NEAR',
         decimals: 24,
         balanceRaw: '1250000000000000000000000',
         balanceDecimal: '1.25',
@@ -344,6 +400,10 @@ describe('HomeComponent market overview', () => {
       })
     );
     component.exchangeTokens = tokens;
+    const assetsService = TestBed.inject(
+      ExchangeAssetsService
+    ) as unknown as ExchangeAssetsServiceStub;
+    assetsService.tokens = tokens;
     balancesService.balances = [
       {
         walletId: 'wallet-1',
@@ -371,8 +431,11 @@ describe('HomeComponent market overview', () => {
     walletsService.account.next({ account: 'alice.near', chainId: null });
     component.openTokenSelector('from');
 
-    expect(balancesService.calls[0].assetIds?.length).toBeGreaterThan(20);
-    expect(balancesService.calls[0].assetIds).toContain(tokens[20].assetId);
+    const tokenRequests = balancesService.calls.filter(call => call.assetIds);
+    expect(tokenRequests.flatMap(call => call.assetIds ?? []).length).toBe(21);
+    expect(tokenRequests.flatMap(call => call.assetIds ?? [])).toContain(
+      tokens[20].assetId
+    );
     expect(component.tokenSelectorWalletTokens()).toEqual([
       {
         token: tokens[20],
@@ -392,8 +455,8 @@ describe('HomeComponent market overview', () => {
         walletAddress: 'alice.near',
         chainType: 'near',
         network: 'near:mainnet',
-        assetId: 'nep141:wrap.near',
-        symbol: 'wNEAR',
+        assetId: 'near:native',
+        symbol: 'NEAR',
         decimals: 24,
         balanceRaw: '1000000000000000000000000',
         balanceDecimal: '1',
@@ -446,7 +509,6 @@ describe('HomeComponent market overview', () => {
       {
         walletAddress: 'alice.testnet',
         network: 'near:testnet',
-        assetIds: ['nep141:wrap.near'],
       },
     ]);
   });
@@ -461,6 +523,9 @@ describe('HomeComponent market overview', () => {
     const swapFlowFacade = TestBed.inject(
       SwapFlowFacade
     ) as unknown as SwapFlowFacadeStub;
+    const assetsService = TestBed.inject(
+      ExchangeAssetsService
+    ) as unknown as ExchangeAssetsServiceStub;
 
     expectComparisonRequest({
       base: 'USDC',
@@ -484,6 +549,18 @@ describe('HomeComponent market overview', () => {
         fetchedAt: '2026-08-12T12:00:00.000Z',
         expiresAt: '2099-08-12T12:00:15.000Z',
         stale: false,
+      },
+    ];
+    assetsService.tokens = [
+      {
+        assetId:
+          'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
+        symbol: 'USDC',
+        name: 'USD Coin',
+        color: '#2f8cff',
+        decimals: 6,
+        blockchain: 'eth',
+        contractAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
       },
     ];
     component.crossNetworkRecipientIntentSignEnabled = true;
@@ -536,8 +613,8 @@ describe('HomeComponent market overview', () => {
         walletAddress: 'alice.near',
         chainType: 'near',
         network: 'near:mainnet',
-        assetId: 'nep141:wrap.near',
-        symbol: 'wNEAR',
+        assetId: 'near:native',
+        symbol: 'NEAR',
         decimals: 24,
         balanceRaw: '2000000000000000000000000',
         balanceDecimal: '2',
@@ -578,8 +655,8 @@ describe('HomeComponent market overview', () => {
         walletAddress: 'alice.near',
         chainType: 'near',
         network: 'near:mainnet',
-        assetId: 'nep141:wrap.near',
-        symbol: 'wNEAR',
+        assetId: 'near:native',
+        symbol: 'NEAR',
         decimals: 24,
         balanceRaw: '2000000000000000000000000',
         balanceDecimal: '2',
@@ -631,8 +708,8 @@ describe('HomeComponent market overview', () => {
         walletAddress: implicitAccount,
         chainType: 'near',
         network: 'near:mainnet',
-        assetId: 'nep141:wrap.near',
-        symbol: 'wNEAR',
+        assetId: 'near:native',
+        symbol: 'NEAR',
         decimals: 24,
         balanceRaw: '2000000000000000000000000',
         balanceDecimal: '2',
@@ -657,10 +734,95 @@ describe('HomeComponent market overview', () => {
       {
         walletAddress: implicitAccount,
         network: 'near:mainnet',
-        assetIds: ['nep141:wrap.near'],
       },
     ]);
     expect(component.quoteError).toBe('');
+  });
+
+  it('opens MFE review with separate native and execution asset ids', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    const walletGateway = TestBed.inject(WalletGatewayBridgeService);
+    const openReview = spyOn(walletGateway, 'openSwapReview');
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: '2000000000000000000000000',
+        balanceDecimal: '2',
+        source: 'near_rpc',
+        fetchedAt: '2026-09-17T12:00:00.000Z',
+        expiresAt: '2099-09-17T12:00:15.000Z',
+        stale: false,
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.fromToken = {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    component.toToken = {
+      assetId: 'nep141:usdc.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+      blockchain: 'near',
+    };
+    component.amount = '1';
+    walletsService.account.next({
+      account: 'alice.near',
+      chainId: null,
+      identity: {
+        connectorId: 'near',
+        address: 'alice.near',
+        chainType: 'near',
+        walletType: 'external',
+      },
+    });
+    swapFlowFacade.emitQuote({
+      amountOut: '1000000',
+      amountOutAtomic: '1000000',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      traceId: 'trace-review',
+      raw: { amountOut: '1000000' },
+    });
+
+    component.submitQuote();
+
+    expect(openReview).toHaveBeenCalledOnceWith(
+      jasmine.objectContaining({
+        traceId: 'trace-review',
+        source: jasmine.objectContaining({
+          assetId: 'near:native',
+          executionAssetId: 'nep141:wrap.near',
+        }),
+      })
+    );
+    expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('swap-review');
   });
 
   it('fails closed when the foreign-recipient backend contract is disabled', () => {
@@ -750,8 +912,8 @@ describe('HomeComponent market overview', () => {
         walletAddress: 'alice.near',
         chainType: 'near',
         network: 'near:mainnet',
-        assetId: 'nep141:wrap.near',
-        symbol: 'wNEAR',
+        assetId: 'near:native',
+        symbol: 'NEAR',
         decimals: 24,
         balanceRaw: '2000000000000000000000000',
         balanceDecimal: '2',
@@ -761,6 +923,7 @@ describe('HomeComponent market overview', () => {
         stale: false,
       },
     ]);
+    balancesService.balancesSubject.complete();
 
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
       jasmine.objectContaining({
@@ -785,8 +948,8 @@ describe('HomeComponent market overview', () => {
         walletAddress: 'alice.near',
         chainType: 'near',
         network: 'near:mainnet',
-        assetId: 'nep141:wrap.near',
-        symbol: 'wNEAR',
+        assetId: 'near:native',
+        symbol: 'NEAR',
         decimals: 24,
         balanceRaw: '2000000000000000000000000',
         balanceDecimal: '2',

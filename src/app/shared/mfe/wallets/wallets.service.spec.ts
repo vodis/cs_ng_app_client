@@ -133,8 +133,9 @@ describe('WalletsService', () => {
   });
 
   it('manages open and close request flags', () => {
-    service.requestOpen();
+    service.requestOpen('swap-review');
     expect(service.openRequested.value).toBeTrue();
+    expect(service.drawerMode.value).toBe('swap-review');
     service.clearOpenRequest();
     expect(service.openRequested.value).toBeFalse();
 

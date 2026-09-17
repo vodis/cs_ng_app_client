@@ -22,6 +22,12 @@ import { AppLoggerService } from '@core/logging/app-logger.service';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { environment } from '../../../../environments/environment';
+import { SwapApiClient } from '@domains/exchange/data-access/swap-api.client';
+import { IntentRelayService } from '@domains/exchange/data-access/intent-relay.service';
+import type {
+  SwapReviewPrepareRequest,
+  SwapReviewPrepareResult,
+} from '@mfe-contracts/swap-review.types';
 
 @Component({
   selector: 'app-wallets',
@@ -42,6 +48,8 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
     private walletsService: WalletsService,
     private walletGatewayBridge: WalletGatewayBridgeService,
     private authSession: AuthSessionService,
+    private swapApi: SwapApiClient,
+    private intentRelay: IntentRelayService,
     private logger: AppLoggerService,
     private ngZone: NgZone
   ) {}
@@ -87,7 +95,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       const mountResult = this.ngZone.runOutsideAngular(() =>
         mfeModule.mount(container, {
           context: {
-            contractVersion: '2.1.0',
+            contractVersion: '2.2.0',
             apiBaseUrl: environment.apiUrl,
             environment: this.mfeEnvironment(),
           },
@@ -126,6 +134,40 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
                 this.walletGatewayBridge.handleIntentSigned(payload);
               });
             },
+            onSwapSubmitted: payload => {
+              this.ngZone.run(() => {
+                this.walletsService.publishSwapSubmitted(payload);
+              });
+            },
+            onSwapPreviewRefreshRequested: payload => {
+              this.ngZone.run(() => {
+                this.walletsService.requestSwapPreviewRefresh(payload.traceId);
+                this.walletsService.requestClose();
+              });
+            },
+          },
+          services: {
+            prepareSwap: (request, options) =>
+              this.prepareSwap(request, options.signal),
+            signSwap: input =>
+              this.walletGatewayBridge.runIntentSignFlow(input),
+            submitSwap: async request => ({
+              intentHash: await this.intentRelay.submitIntent({
+                traceId: request.traceId,
+                providerId: request.providerId,
+                executionMode:
+                  request.executionMode === 'intent_sign'
+                    ? 'intent_sign'
+                    : undefined,
+                executionPayload: request.executionPayload,
+                signature: request.signature,
+                quoteHashes: request.quoteHashes,
+                user: {
+                  userAddress: request.userAddress,
+                  userChainType: request.userChainType,
+                },
+              }),
+            }),
           },
         })
       );
@@ -169,6 +211,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       this.walletsService.setAccount({
         account: snapshot.account,
         chainId: snapshot.chainId,
+        identity: snapshot.identity,
       });
       this.walletsService.rememberConnectedWallet({
         account: snapshot.account,
@@ -182,6 +225,52 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
     }
 
     this.walletsService.setAccount(undefined);
+  }
+
+  private prepareSwap(
+    request: SwapReviewPrepareRequest,
+    signal: AbortSignal
+  ): Promise<SwapReviewPrepareResult> {
+    if (signal.aborted) {
+      return Promise.reject(
+        new DOMException('Swap preparation cancelled', 'AbortError')
+      );
+    }
+
+    return new Promise((resolve, reject) => {
+      const subscription = this.swapApi
+        .requestApprovedPreparePackage(request)
+        .subscribe({
+          next: result => {
+            if (result.executionPackage.mode !== 'intent_sign') {
+              reject(
+                new Error(
+                  `Execution mode ${result.executionPackage.mode} is not supported in wallet review yet.`
+                )
+              );
+              return;
+            }
+            resolve({
+              prepareRequest: result,
+              providerId: result.providerId,
+              executionMode: result.executionPackage.mode,
+              amountIn: result.amountIn,
+              amountOut: result.amountOut,
+              quoteExpiration: result.quoteExpiration,
+            });
+          },
+          error: reject,
+        });
+
+      signal.addEventListener(
+        'abort',
+        () => {
+          subscription.unsubscribe();
+          reject(new DOMException('Swap preparation cancelled', 'AbortError'));
+        },
+        { once: true }
+      );
+    });
   }
 
   private isMountApi(value: unknown): value is WalletsMfeMountApi {

@@ -3,12 +3,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
-import {
-  WalletBalance,
-  WalletBalancesService,
-} from '@shared/services/wallet-balances.service';
+import { WalletBalance } from '@shared/services/wallet-balances.service';
+import { Subscription } from 'rxjs';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
-import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
+import {
+  SwapFlowFacade,
+  type SwapFormInput,
+} from '@domains/exchange/application/swap-flow.facade';
 import type {
   SwapFlowState,
   SwapPrepareRequest,
@@ -47,6 +48,10 @@ import {
   recipientAddressError,
   walletBlockchain,
 } from '@shared/utils/network.utils';
+import { ConnectedWalletBalancesFacade } from '@domains/wallet/application/connected-wallet-balances.facade';
+import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import type { SwapReviewIntent } from '@mfe-contracts/swap-review.types';
+import { createTraceId } from '@core/trace/create-trace-id';
 
 type TokenSelectorSide = 'from' | 'to';
 
@@ -187,7 +192,8 @@ export class HomeComponent {
     {
       symbol: 'NEAR',
       name: 'NEAR Protocol',
-      assetId: 'nep141:wrap.near',
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
       color: '#2fd17c',
       blockchain: 'near',
       decimals: 24,
@@ -198,6 +204,7 @@ export class HomeComponent {
   public amount = '';
   public walletAddress = '';
   public walletChainId: number | null = null;
+  public walletChainType: 'ethereum' | 'near' | 'ton' | undefined;
   public fromToken = this.exchangeTokens[0];
   public toToken = this.exchangeTokens[1];
   public isTokenSelectorOpen = false;
@@ -230,30 +237,54 @@ export class HomeComponent {
 
   private walletBalances: WalletBalance[] = [];
   private balanceRequestId = 0;
+  private balanceSubscription?: Subscription;
+  private activeReviewTraceId = '';
 
   constructor(
     private readonly httpClient: HttpClient,
     private readonly walletsService: WalletsService,
     private readonly swapFlowFacade: SwapFlowFacade,
     private readonly exchangeAssetsService: ExchangeAssetsService,
-    private readonly walletBalancesService: WalletBalancesService
+    private readonly connectedBalances: ConnectedWalletBalancesFacade,
+    private readonly walletGatewayBridge: WalletGatewayBridgeService
   ) {
     this.walletsService.account
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(account => {
         const nextWalletAddress = account?.account ?? '';
         const nextWalletChainId = account?.chainId ?? null;
+        const nextWalletChainType = account?.identity?.chainType;
         if (
           this.walletAddress !== nextWalletAddress ||
-          this.walletChainId !== nextWalletChainId
+          this.walletChainId !== nextWalletChainId ||
+          this.walletChainType !== nextWalletChainType
         ) {
           this.walletAddress = nextWalletAddress;
           this.walletChainId = nextWalletChainId;
+          this.walletChainType = nextWalletChainType;
           this.recipientAddress = '';
           this.alignSelectionsToWallet();
           this.loadWalletBalances();
           this.refreshSwapQuotePreview();
         }
+      });
+
+    this.walletsService.swapSubmitted
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(result => {
+        if (!result || result.traceId !== this.activeReviewTraceId) return;
+        this.intentHash = result.intentHash;
+        this.activeReviewTraceId = '';
+        this.swapFlowFacade.reset();
+        this.loadWalletBalances();
+      });
+
+    this.walletsService.swapPreviewRefreshRequested
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(traceId => {
+        if (!traceId || traceId !== this.activeReviewTraceId) return;
+        this.activeReviewTraceId = '';
+        this.refreshSwapQuotePreview();
       });
 
     this.swapFlowFacade.state$
@@ -332,8 +363,8 @@ export class HomeComponent {
       return;
     }
 
-    if (this.quoteResult && this.canExecuteSwap()) {
-      void this.executeSwap(amount, authMethod);
+    if (this.quoteResult && this.canReviewSwap()) {
+      this.openSwapReview(amount, authMethod);
       return;
     }
 
@@ -351,30 +382,23 @@ export class HomeComponent {
     );
   }
 
-  private canExecuteSwap(): boolean {
+  public canReviewSwap(): boolean {
     return (
-      this.swapFlowState === 'idle' ||
-      this.swapFlowState === 'completed' ||
-      this.swapFlowState === 'failed'
-    );
-  }
-
-  private async executeSwap(
-    amount: string,
-    authMethod: SupportedSwapAuthMethod
-  ): Promise<void> {
-    await this.swapFlowFacade.executeSwap(
-      this.buildSwapInput(amount, authMethod)
+      this.swapFlowState === 'idle' &&
+      Boolean(this.quotePreview?.amountOutAtomic) &&
+      Boolean(this.quotePreview?.expiresAt) &&
+      Date.parse(this.quotePreview?.expiresAt ?? '') > Date.now() &&
+      Boolean(this.buildQuotePreviewInput())
     );
   }
 
   private buildSwapInput(
     amount: string,
     authMethod: SupportedSwapAuthMethod
-  ): Omit<SwapPrepareRequest, 'traceId'> {
+  ): SwapFormInput {
     return {
-      originAsset: this.fromToken.assetId,
-      destinationAsset: this.toToken.assetId,
+      originAsset: this.executionAssetId(this.fromToken),
+      destinationAsset: this.executionAssetId(this.toToken),
       amount,
       signerId: this.walletAddress.toLowerCase(),
       recipient: this.effectiveRecipient(),
@@ -382,20 +406,115 @@ export class HomeComponent {
         this.isForeignDestination() || authMethod === 'evm'
           ? 'DESTINATION_CHAIN'
           : 'INTENTS',
-      slippageTolerance: 50,
+      slippageTolerance: this.slippageToleranceBps,
       deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       authMethod,
+      network: this.balanceNetwork() ?? '',
     };
+  }
+
+  private openSwapReview(
+    amount: string,
+    authMethod: SupportedSwapAuthMethod
+  ): void {
+    const preview = this.quotePreview;
+    const network = this.balanceNetwork();
+    const chainType =
+      this.walletChainType ?? (authMethod === 'near' ? 'near' : 'ethereum');
+    if (!preview || !network || !this.canReviewSwap()) return;
+
+    const input = this.buildSwapInput(amount, authMethod);
+    const traceId = preview.traceId ?? createTraceId();
+    const minimumAtomic = (
+      (BigInt(preview.amountOutAtomic) *
+        BigInt(10_000 - this.slippageToleranceBps)) /
+      10_000n
+    ).toString();
+    const intent: SwapReviewIntent = {
+      contractVersion: '1.0.0',
+      traceId,
+      source: {
+        ...this.reviewToken(this.fromToken),
+        amountAtomic: amount,
+        amountDisplay: this.amount,
+        fiatValue: this.fromFiatEstimate(),
+      },
+      destination: this.reviewToken(this.toToken),
+      preview: {
+        amountOutAtomic: preview.amountOutAtomic,
+        amountOutDisplay: this.toAmountDisplay(),
+        fiatValue: this.toFiatEstimate(),
+        expiresAt: preview.expiresAt,
+        rate: this.swapRateLabel(),
+        minimumReceived: `${this.formatSwapAmount(
+          this.fromBaseUnits(
+            minimumAtomic,
+            this.tokenDecimals(this.toToken.decimals)
+          ),
+          this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken))
+        )} ${this.tokenSymbolLabel(this.toToken)}`,
+        ...(preview.quoteReference
+          ? { quoteReference: preview.quoteReference }
+          : {}),
+      },
+      signer: {
+        account: this.walletAddress,
+        chainType,
+      },
+      network: {
+        id: network,
+        label: this.tokenNetworkLabel(this.fromToken),
+      },
+      recipient: input.recipient,
+      recipientType: input.recipientType,
+      authMethod,
+      slippageToleranceBps: this.slippageToleranceBps,
+    };
+
+    try {
+      this.walletGatewayBridge.openSwapReview(intent);
+      this.activeReviewTraceId = traceId;
+      this.walletsService.requestOpen('swap-review');
+      this.quoteError = '';
+    } catch (error) {
+      this.quoteError =
+        error instanceof Error
+          ? error.message
+          : 'Swap review is temporarily unavailable.';
+    }
+  }
+
+  private reviewToken(token: ExchangeToken) {
+    return {
+      assetId: token.assetId,
+      executionAssetId: this.executionAssetId(token),
+      symbol: this.tokenSymbolLabel(token),
+      name: token.name,
+      ...(this.resolveTokenIcon(token)
+        ? { icon: this.resolveTokenIcon(token) }
+        : {}),
+      decimals: this.tokenDecimals(token.decimals),
+    };
+  }
+
+  private executionAssetId(token: ExchangeToken): string {
+    return token.executionAssetId ?? token.assetId;
   }
 
   private resolveSwapAuthMethod(
     wallet: WalletAccount
   ): SupportedSwapAuthMethod | undefined {
-    if (/^0x[a-fA-F0-9]{40}$/.test(wallet.account)) {
+    if (
+      wallet.identity?.chainType === 'ethereum' ||
+      /^0x[a-fA-F0-9]{40}$/.test(wallet.account)
+    ) {
       return 'evm';
     }
 
-    if (isNearWalletAddress(wallet.account)) {
+    if (
+      wallet.identity?.chainType === 'near' ||
+      isNearWalletAddress(wallet.account)
+    ) {
       return 'near';
     }
 
@@ -653,11 +772,7 @@ export class HomeComponent {
       return 'Connect wallet';
     }
 
-    if (this.quoteResult) {
-      return this.isQuoteLoading() ? 'Signing swap...' : 'Sign & swap';
-    }
-
-    return this.isQuoteLoading() ? 'Quoting...' : 'Get quote';
+    return 'Review';
   }
 
   public tokenDisplay(symbol: string): string {
@@ -871,9 +986,7 @@ export class HomeComponent {
     this.swapFlowFacade.watchQuotePreview(input);
   }
 
-  private buildQuotePreviewInput():
-    | Omit<SwapPrepareRequest, 'traceId'>
-    | undefined {
+  private buildQuotePreviewInput(): SwapFormInput | undefined {
     if (!this.walletAddress) {
       return undefined;
     }
@@ -1066,9 +1179,13 @@ export class HomeComponent {
       (this.tokenSelectorSide === 'to' &&
         !this.crossNetworkRecipientIntentSignEnabled)
     ) {
-      return this.exchangeTokens.filter(
-        token => token.blockchain === blockchain
-      );
+      return this.exchangeTokens.filter(token => {
+        if (token.blockchain !== blockchain) return false;
+        if (this.tokenSelectorSide !== 'to') return true;
+        return (
+          this.executionAssetId(token) !== this.executionAssetId(this.fromToken)
+        );
+      });
     }
 
     return this.exchangeTokens;
@@ -1092,6 +1209,11 @@ export class HomeComponent {
   }
 
   public connectedWalletBlockchain(): string | undefined {
+    if (this.walletChainType === 'near') return 'near';
+    if (this.walletChainType === 'ethereum') {
+      return walletBlockchain(this.walletAddress, this.walletChainId);
+    }
+    if (this.walletChainType === 'ton') return 'ton';
     return walletBlockchain(this.walletAddress, this.walletChainId);
   }
 
@@ -1252,6 +1374,8 @@ export class HomeComponent {
 
   private loadWalletBalances(): void {
     const requestId = ++this.balanceRequestId;
+    this.balanceSubscription?.unsubscribe();
+    this.balanceSubscription = undefined;
     this.walletBalances = [];
     this.balancesError = '';
 
@@ -1261,31 +1385,39 @@ export class HomeComponent {
       return;
     }
 
-    const walletAddress = this.walletAddress.toLowerCase();
+    const walletAddress = this.walletAddress;
     this.balancesLoading = true;
 
-    this.walletBalancesService
-      .loadBalances({
-        walletAddress: this.walletAddress,
+    this.balanceSubscription = this.connectedBalances
+      .load({
+        account: this.walletAddress,
         network,
-        assetIds: this.balanceAssetIds(),
       })
       .subscribe({
-        next: balances => {
+        next: state => {
           if (
             requestId !== this.balanceRequestId ||
-            this.walletAddress.toLowerCase() !== walletAddress ||
+            this.walletAddress !== walletAddress ||
             this.balanceNetwork() !== network
           ) {
             return;
           }
 
-          this.walletBalances = balances.filter(
-            balance =>
-              balance.network === network &&
-              balance.walletAddress.toLowerCase() === walletAddress
-          );
+          if (state.status === 'loading') {
+            this.balancesLoading = true;
+            return;
+          }
+          if (state.status === 'error') {
+            this.walletBalances = [];
+            this.balancesLoading = false;
+            this.balancesError =
+              state.errorMessage ?? 'Failed to load wallet balance.';
+            return;
+          }
+
+          this.walletBalances = state.rows;
           this.balancesLoading = false;
+          this.balancesError = state.errorMessage ?? '';
           const sourceBalance = this.balanceForToken(this.fromToken);
           if (sourceBalance && this.isBalanceUsable(sourceBalance)) {
             this.refreshSwapQuotePreview();
@@ -1294,7 +1426,7 @@ export class HomeComponent {
         error: () => {
           if (
             requestId !== this.balanceRequestId ||
-            this.walletAddress.toLowerCase() !== walletAddress ||
+            this.walletAddress !== walletAddress ||
             this.balanceNetwork() !== network
           ) {
             return;
@@ -1367,7 +1499,10 @@ export class HomeComponent {
   }
 
   private balanceNetwork(): string | undefined {
-    if (isNearWalletAddress(this.walletAddress)) {
+    if (
+      this.walletChainType === 'near' ||
+      isNearWalletAddress(this.walletAddress)
+    ) {
       return nearNetworkForAddress(this.walletAddress);
     }
     if (/^0x[a-f0-9]{40}$/i.test(this.walletAddress)) {
@@ -1383,21 +1518,6 @@ export class HomeComponent {
     return Boolean(
       this.balanceNetwork() && blockchain && token.blockchain === blockchain
     );
-  }
-
-  private balanceAssetIds(): string[] {
-    const blockchain = this.connectedWalletBlockchain();
-    if (!blockchain) return [];
-
-    const selected = [this.fromToken, this.toToken];
-    const candidates = [...selected, ...this.exchangeTokens].filter(
-      token => token.blockchain === blockchain
-    );
-    return [
-      ...new Set(
-        candidates.map(token => token.assetId).filter(assetId => assetId.trim())
-      ),
-    ];
   }
 
   private pickDefaultFromToken(): ExchangeToken | undefined {
@@ -1419,7 +1539,7 @@ export class HomeComponent {
     return (
       this.exchangeTokens.find(
         token =>
-          token.assetId === 'nep141:wrap.near' &&
+          token.assetId === 'near:native' &&
           (!blockchain || token.blockchain === blockchain)
       ) ??
       this.exchangeTokens.find(

@@ -44,6 +44,7 @@ const NATIVE_SYMBOL_BY_BLOCKCHAIN: Readonly<Record<string, string>> = {
   pol: 'POL',
   scroll: 'ETH',
   ton: 'TON',
+  near: 'NEAR',
 };
 
 export type ConnectedWalletBalancesState = {

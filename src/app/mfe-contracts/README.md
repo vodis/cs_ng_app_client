@@ -198,6 +198,26 @@ Host files:
 Wallet MFE must expose `sendGatewayEvent` on `WalletsMfeMountApi` and
 `onIntentSigned` callback for the full flow to complete.
 
+### Final swap review contract (2.2)
+
+`WalletsMfeMountApi.openSwapReview(intent)` switches the existing right-side
+drawer to the executable review surface. The host supplies canonical display
+asset ids, separate execution asset ids, exact atomic input, account/network,
+slippage, and the current dry preview. It also supplies typed transport ports
+for prepare, signing, and submission.
+
+The MFE calls the prepare port for the final `dry: false` package, rejects
+results whose amount/account/auth context does not match the immutable intent,
+and ignores any response that is not from its latest request. It owns quote
+expiry, refreshed-output disclosure, slippage-bound reconfirmation, and
+single-flight `Confirm & sign` submission. It reports completion through
+`onSwapSubmitted` and requests a new host preview through
+`onSwapPreviewRefreshRequested` when the executable change is outside policy.
+
+The host remains responsible for the Trade form, shared balance source, dry
+quote cancellation/versioning, and opening/closing the drawer. The MFE must not
+fetch token catalogs or dry quotes.
+
 When the host dismisses the connection drawer, it sends `RESET`. The MFE must
 abort any active provider pairing request before returning the gateway to idle,
 so a dismissed QR code or wallet prompt cannot connect later.

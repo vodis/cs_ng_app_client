@@ -28,6 +28,7 @@ export type SwapFormInput = {
   slippageTolerance: number;
   deadline: string;
   authMethod: 'evm' | 'near';
+  network: string;
 };
 
 type SwapExecutionWorkflowPort = Pick<
@@ -133,10 +134,7 @@ export class SwapFlowFacade {
 
     try {
       const result = await this.workflow.executeSwap(input, this.activeTraceId);
-      this.quotePreviewSubject.next({
-        amountOut: this.quotePreview?.amountOut ?? '',
-        raw: this.quotePreview?.raw ?? {},
-      });
+      this.quotePreviewSubject.next(currentQuotePreview);
       this.intentHashSubject.next(result.intentHash);
       this.setState('completed');
     } catch (error) {
@@ -155,7 +153,7 @@ export class SwapFlowFacade {
   }
 
   private watchQuoteInput(input: SwapFormInput | undefined) {
-    const requestVersion = ++this.quoteRequestVersion;
+    ++this.quoteRequestVersion;
     this.errorSubject.next(undefined);
     this.intentHashSubject.next(undefined);
     this.quotePreviewSubject.next(undefined);
@@ -167,6 +165,7 @@ export class SwapFlowFacade {
 
     return timer(this.quoteDebounceMs, this.quoteRefreshMs).pipe(
       switchMap(() => {
+        const requestVersion = ++this.quoteRequestVersion;
         const traceId = createTraceId();
         this.activeTraceId = traceId;
         this.setState('requestingQuote');
@@ -208,7 +207,9 @@ export class SwapFlowFacade {
       input.recipient,
       input.recipientType,
       input.slippageTolerance,
+      input.deadline,
       input.authMethod,
+      input.network,
     ].join('|');
   }
 

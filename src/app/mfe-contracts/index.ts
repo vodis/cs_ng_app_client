@@ -7,4 +7,5 @@ export * from './intent-prepare.contract';
 export * from './payloads';
 export * from './wallet-execution.types';
 export * from './wallet-mfe.types';
+export * from './swap-review.types';
 export * from './wallet-balances.types';
