@@ -7,6 +7,10 @@ import {
 } from '@domains/wallet/application/connected-wallet-balances.facade';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import type { WalletBalance } from '@shared/services/wallet-balances.service';
+import {
+  isNearWalletAddress,
+  nearNetworkForAddress,
+} from '@shared/utils/network.utils';
 import type { Subscription } from 'rxjs';
 import {
   EVM_CHAINS,
@@ -63,7 +67,19 @@ export class ConnectedWalletBoardComponent {
   }
 
   public get chainFamily(): SupportedChainFamily {
-    return this.snapshot?.identity?.chainType ?? 'ethereum';
+    const fromIdentity = this.snapshot?.identity?.chainType;
+    if (
+      fromIdentity === 'near' ||
+      fromIdentity === 'ton' ||
+      fromIdentity === 'ethereum'
+    ) {
+      return fromIdentity;
+    }
+    const account = this.snapshot?.account ?? '';
+    if (isNearWalletAddress(account)) {
+      return 'near';
+    }
+    return 'ethereum';
   }
 
   public get isEvm(): boolean {
@@ -103,10 +119,13 @@ export class ConnectedWalletBoardComponent {
 
   public get balancesCopy(): string {
     const status = this.balances?.status;
+    if (!status) {
+      return '';
+    }
     if (status === 'error' || status === 'partial') {
       return this.balances?.errorMessage ?? 'Failed to load balances.';
     }
-    if (!status || status === 'loading') {
+    if (status === 'loading') {
       return 'Loading balances...';
     }
     if (status === 'ready' && this.rows.length === 0) {
@@ -116,6 +135,15 @@ export class ConnectedWalletBoardComponent {
   }
 
   public activeNetworkLabel(): string {
+    if (this.chainFamily === 'near') {
+      const account = this.snapshot?.account ?? '';
+      return nearNetworkForAddress(account) === 'near:testnet'
+        ? 'NEAR · testnet'
+        : 'NEAR · mainnet';
+    }
+    if (this.chainFamily === 'ton') {
+      return this.snapshot?.chainId === -3 ? 'TON · testnet' : 'TON · mainnet';
+    }
     const chain = this.activeNetwork;
     return `${chain.name} · chain ${chain.chainId}`;
   }
@@ -200,9 +228,7 @@ export class ConnectedWalletBoardComponent {
 
   private balanceNetwork(account: string): string | undefined {
     if (this.chainFamily === 'near') {
-      return /\.(?:testnet|tg)$/i.test(account)
-        ? 'near:testnet'
-        : 'near:mainnet';
+      return nearNetworkForAddress(account);
     }
     if (this.chainFamily === 'ton') {
       return this.snapshot?.chainId === -3 ? 'ton:testnet' : 'ton:mainnet';

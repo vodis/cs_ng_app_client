@@ -159,11 +159,33 @@ describe('ConnectedWalletBoardComponent', () => {
     });
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('alice.near');
+    expect(text).toContain('NEAR');
+    expect(text).toContain('NEAR · mainnet');
+    expect(text).not.toContain('Ethereum · chain 1');
     expect(text).toContain('Loading balances...');
     expect(
       fixture.nativeElement.querySelectorAll('.connected-wallet-board__chip')
         .length
-    ).toBe(0);
+    ).toBe(1);
+  });
+
+  it('treats a HOT .tg account as NEAR mainnet even without identity', () => {
+    snapshot$.next({
+      ...nearSnapshot,
+      account: 'vodis_craftscript.tg',
+      identity: null,
+    });
+    fixture.detectChanges();
+
+    expect(loadBalances).toHaveBeenCalledWith({
+      account: 'vodis_craftscript.tg',
+      network: 'near:mainnet',
+    });
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('NEAR');
+    expect(text).toContain('NEAR · mainnet');
+    expect(text).not.toContain('ETH');
+    expect(text).not.toContain('Ethereum · chain 1');
   });
 
   it('does not reuse a response after the account changes', () => {

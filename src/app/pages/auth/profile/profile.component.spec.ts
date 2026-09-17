@@ -14,6 +14,7 @@ import {
 } from './profile-activity.source';
 import { ProfileComponent } from './profile.component';
 import { ProfileFacade } from './profile.facade';
+import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
 
 describe('ProfileComponent', () => {
   let component: ProfileComponent;
@@ -22,6 +23,7 @@ describe('ProfileComponent', () => {
   let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
   let router: jasmine.SpyObj<Router>;
   let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
+  let portfolioApi: jasmine.SpyObj<PortfolioApiService>;
   let sessionSubject: BehaviorSubject<AuthSession | null>;
   let accountSubject: BehaviorSubject<
     { account: string; chainId: number | null } | undefined
@@ -137,13 +139,25 @@ describe('ProfileComponent', () => {
     localizedRouting.path.and.callFake((path: string) =>
       path === '/' ? '/en' : `/en${path}`
     );
+    portfolioApi = jasmine.createSpyObj<PortfolioApiService>(
+      'PortfolioApiService',
+      ['loadPortfolio']
+    );
+    portfolioApi.loadPortfolio.and.resolveTo({
+      asOf: null,
+      valuationCurrency: 'USD',
+      totalValue: '0',
+      unpricedPositionCount: 0,
+      positions: [],
+    });
 
     const profile = new ProfileFacade(
       authSession,
       walletsService,
       walletGatewayBridge,
       router,
-      localizedRouting
+      localizedRouting,
+      portfolioApi
     );
     component = new ProfileComponent(profile, new MockProfileActivitySource());
     component.ngOnInit();
@@ -234,12 +248,102 @@ describe('ProfileComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalled();
   });
 
-  it('shows a zero USD balance hero until wallets are funded', () => {
-    expect(component.usdBalanceLabel()).toBe('$0.00');
+  it('shows portfolio loading without presenting it as a zero balance', () => {
+    expect(component.usdBalanceLabel()).toBe('Loading…');
     expect(component.usdChangeLabel()).toBe('+$0.00');
     expect(component.usdChangePercentLabel()).toBe('0.00%');
     expect(component.walletPillLabel()).toBe('No wallet');
     expect(component.showWalletSetupActions()).toBeTrue();
+  });
+
+  it('renders the BFF portfolio total in the balance hero', async () => {
+    portfolioApi.loadPortfolio.and.resolveTo({
+      asOf: '2026-08-19T12:00:00Z',
+      valuationCurrency: 'USD',
+      totalValue: '125.5',
+      unpricedPositionCount: 0,
+      positions: [
+        {
+          walletRef: 'wallet-ref',
+          chain: 'near:mainnet',
+          assetId: 'near:native',
+          symbol: 'NEAR',
+          quantity: '50.125',
+          priceUsd: '2.503740648379052369',
+          valueUsd: '125.5',
+          allocationPercent: '100',
+          priceUpdatedAt: '2026-08-19T12:00:00Z',
+          balanceUpdatedAt: '2026-08-19T12:00:00Z',
+        },
+      ],
+    });
+
+    await component.refreshPortfolio();
+
+    expect(portfolioApi.loadPortfolio).toHaveBeenCalled();
+    expect(component.usdBalanceLabel()).toBe('$125.50');
+    expect(component.tokenBalanceLabel()).toBe('50.125 NEAR');
+  });
+
+  it('shows an unavailable state when portfolio valuation fails', async () => {
+    portfolioApi.loadPortfolio.and.rejectWith(new Error('RPC unavailable'));
+
+    await component.refreshPortfolio();
+
+    expect(component.portfolio).toBeNull();
+    expect(component.usdBalanceLabel()).toBe('Unavailable');
+  });
+
+  it('ignores a stale portfolio response after a newer request completes', async () => {
+    await Promise.resolve();
+    let resolveFirst!: (
+      value: Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
+    ) => void;
+    let resolveSecond!: (
+      value: Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
+    ) => void;
+    const first = new Promise<
+      Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
+    >(resolve => {
+      resolveFirst = resolve;
+    });
+    const second = new Promise<
+      Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
+    >(resolve => {
+      resolveSecond = resolve;
+    });
+    portfolioApi.loadPortfolio.and.returnValues(first, second);
+
+    const olderRequest = component.refreshPortfolio();
+    const newerRequest = component.refreshPortfolio();
+    resolveSecond({
+      asOf: null,
+      valuationCurrency: 'USD',
+      totalValue: '20',
+      unpricedPositionCount: 0,
+      positions: [],
+    });
+    await newerRequest;
+    resolveFirst({
+      asOf: null,
+      valuationCurrency: 'USD',
+      totalValue: '10',
+      unpricedPositionCount: 0,
+      positions: [],
+    });
+    await olderRequest;
+
+    expect(component.usdBalanceLabel()).toBe('$20.00');
+  });
+
+  it('requests live mainnet valuation for a connected .tg account', async () => {
+    accountSubject.next({ account: 'alice.tg', chainId: null });
+    await Promise.resolve();
+
+    expect(portfolioApi.loadPortfolio).toHaveBeenCalledWith({
+      walletAddress: 'alice.tg',
+      network: 'near:mainnet',
+    });
   });
 
   it('labels an embedded linked wallet in the balance hero', () => {

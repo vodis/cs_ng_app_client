@@ -3,7 +3,6 @@ import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from '@core/auth/auth.guard';
 import { SharedModule } from '@shared/shared.module';
 import { AgentAuthorizationComponent } from './agent-authorization.component';
-import { PortfolioApiService } from './portfolio-api.service';
 import { PortfolioContextComponent } from './portfolio-context.component';
 import { PortfolioComponent } from './portfolio.component';
 import { PortfolioHoldingsComponent } from './portfolio-holdings.component';
@@ -25,6 +24,5 @@ const routes: Routes = [
     PortfolioContextComponent,
     AgentAuthorizationComponent,
   ],
-  providers: [PortfolioApiService],
 })
 export class PortfolioModule {}

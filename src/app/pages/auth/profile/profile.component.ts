@@ -1,17 +1,19 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { combineLatest, Subscription } from 'rxjs';
 import type {
   AuthSession,
   BackendBalance,
   BackendWallet,
 } from '@core/auth/auth-session.types';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
+import type { PortfolioSnapshot } from '../../portfolio/portfolio.models';
 import {
   formatActivityDayTooltip,
   type ActivityHeatmapDay,
   type ActivityHeatmapWeek,
 } from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
+import { isNearWalletAddress } from '@shared/utils/network.utils';
 import {
   MockProfileActivitySource,
   ProfileActivitySource,
@@ -92,7 +94,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public passkeyLoading = false;
   public balances: BackendBalance[] = [];
   public balancesLoading = false;
+  public portfolio: PortfolioSnapshot | null = null;
+  public portfolioStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
   public connectedAccount: string | null = null;
+  public connectedChainId: number | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
   public walletActionBusy = false;
   public walletLoading = false;
@@ -105,6 +110,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public onboarding: ProfileOnboardingViewModel;
 
   private subscription?: Subscription;
+  private portfolioRequestId = 0;
 
   constructor(
     public readonly profile: ProfileFacade,
@@ -117,22 +123,27 @@ export class ProfileComponent implements OnInit, OnDestroy {
   public ngOnInit(): void {
     this.subscription = new Subscription();
     this.subscription.add(
-      this.profile.session$.subscribe(session => {
-        this.session = session;
-        if (session) {
-          this.seedLastConnectedFromBackend(session.wallets);
-          void this.refreshBalances();
-        } else {
-          this.balances = [];
+      combineLatest([this.profile.session$, this.profile.account$]).subscribe(
+        ([session, account]) => {
+          const previousSession = this.session;
+          this.connectedAccount = account?.account ?? null;
+          this.connectedChainId = account?.chainId ?? null;
+          this.session = session;
+          if (session) {
+            this.seedLastConnectedFromBackend(session.wallets);
+            if (session !== previousSession) {
+              void this.refreshBalances();
+            }
+            void this.refreshPortfolio();
+          } else {
+            this.balances = [];
+            this.portfolio = null;
+            this.portfolioStatus = 'idle';
+            this.portfolioRequestId += 1;
+          }
+          this.refreshOnboarding();
         }
-        this.refreshOnboarding();
-      })
-    );
-    this.subscription.add(
-      this.profile.account$.subscribe(account => {
-        this.connectedAccount = account?.account ?? null;
-        this.refreshOnboarding();
-      })
+      )
     );
     this.subscription.add(
       this.profile.lastConnected$.subscribe(wallet => {
@@ -143,6 +154,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    this.portfolioRequestId += 1;
     this.subscription?.unsubscribe();
   }
 
@@ -333,7 +345,37 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public usdBalanceLabel(): string {
-    return '$0.00';
+    if (this.portfolioStatus === 'loading') {
+      return 'Loading…';
+    }
+    if (this.portfolioStatus === 'error') {
+      return 'Unavailable';
+    }
+    const total = Number(this.portfolio?.totalValue ?? 0);
+    return Number.isFinite(total)
+      ? total.toLocaleString('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 2,
+        })
+      : '$0.00';
+  }
+
+  public tokenBalanceLabel(): string {
+    if (this.portfolioStatus !== 'ready' || !this.portfolio?.positions.length) {
+      return '';
+    }
+    const visible = this.portfolio.positions.slice(0, 2).map(position => {
+      const quantity = Number(position.quantity);
+      const amount = Number.isFinite(quantity)
+        ? quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })
+        : position.quantity;
+      return `${amount} ${position.symbol}`;
+    });
+    const remaining = this.portfolio.positions.length - visible.length;
+    return remaining > 0
+      ? `${visible.join(' · ')} · +${remaining} more`
+      : visible.join(' · ');
   }
 
   public usdChangeLabel(): string {
@@ -480,6 +522,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     try {
       this.balances = await this.profile.generateWallet();
       this.walletMessage = 'Wallet generated';
+      await this.refreshPortfolio();
     } catch (error) {
       this.error =
         error instanceof Error ? error.message : 'Wallet setup failed';
@@ -555,6 +598,33 @@ export class ProfileComponent implements OnInit, OnDestroy {
         error instanceof Error ? error.message : 'Balance refresh failed';
     } finally {
       this.balancesLoading = false;
+    }
+  }
+
+  public async refreshPortfolio(): Promise<void> {
+    const requestId = ++this.portfolioRequestId;
+    if (!this.session) {
+      this.portfolio = null;
+      this.portfolioStatus = 'idle';
+      return;
+    }
+    this.portfolioStatus = 'loading';
+    try {
+      const portfolio = await this.profile.loadPortfolio(
+        this.connectedAccount,
+        this.connectedChainId
+      );
+      if (requestId !== this.portfolioRequestId) {
+        return;
+      }
+      this.portfolio = portfolio;
+      this.portfolioStatus = 'ready';
+    } catch {
+      if (requestId !== this.portfolioRequestId) {
+        return;
+      }
+      this.portfolio = null;
+      this.portfolioStatus = 'error';
     }
   }
 
@@ -697,7 +767,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   ): string | undefined {
     return (
       this.findLinkedWallet(wallet.account)?.chainType ||
-      this.chainTypeFromId(wallet.chainId)
+      this.chainTypeFromId(wallet.chainId) ||
+      (isNearWalletAddress(wallet.account) ? 'near' : undefined)
     );
   }
 

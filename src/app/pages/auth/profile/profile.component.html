@@ -9,9 +9,14 @@
         {{ walletPillLabel() }}
       </button>
 
-      <p class="profile-shell__balance">{{ usdBalanceLabel() }}</p>
+      <p class="profile-shell__balance" aria-live="polite">
+        {{ usdBalanceLabel() }}
+        <small *ngIf="tokenBalanceLabel() as tokenBalance">
+          · {{ tokenBalance }}
+        </small>
+      </p>
 
-      <div class="profile-shell__change">
+      <div class="profile-shell__change" *ngIf="portfolioStatus === 'ready'">
         <span>{{ usdChangeLabel() }}</span>
         <span class="profile-shell__change-percent">
           <span aria-hidden="true">▾</span>

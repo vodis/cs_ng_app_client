@@ -38,3 +38,8 @@ The board may display a result only when its returned `walletAddress` and
 `network` exactly match the active request. Missing provenance is an invalid
 response, not a value to fill from UI state. Empty results remain empty; do not
 invent token amounts or label cached rows as another network.
+
+NEAR connections must use `identity.chainType: 'near'`. HOT / `.tg` accounts
+are mainnet NEAR wallets (`near:mainnet`), not EVM and not testnet. The board
+falls back to address-shape detection only when identity is missing so a stale
+wallet remote cannot keep showing Ethereum chips for a `.tg` account.

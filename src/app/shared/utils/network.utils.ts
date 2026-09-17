@@ -80,6 +80,12 @@ export function isNearWalletAddress(address: string): boolean {
   return /^(?:[a-z0-9._-]+\.(?:near|testnet|tg)|[a-f0-9]{64})$/i.test(address);
 }
 
+export function nearNetworkForAddress(
+  address: string
+): 'near:mainnet' | 'near:testnet' {
+  return /\.testnet$/i.test(address) ? 'near:testnet' : 'near:mainnet';
+}
+
 export function recipientAddressError(
   blockchain: string,
   rawAddress: string

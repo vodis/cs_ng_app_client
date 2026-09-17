@@ -62,7 +62,10 @@ export class PortfolioHoldingsComponent {
       .replace(/\b\w/g, char => char.toUpperCase());
   }
 
-  date(value: string): string {
+  date(value: string | null): string {
+    if (!value) {
+      return '—';
+    }
     return new Date(value).toLocaleString();
   }
 
