@@ -4,6 +4,7 @@ import {
   LastConnectedWallet,
   WalletAccount,
 } from '@domains/wallet/models/wallet.models';
+export type WalletDrawerMode = 'wallet' | 'swap-review';
 import { ProductEventsService } from '@core/product-events/product-events.service';
 
 const LAST_CONNECTED_STORAGE_KEY = 'cs-host.last-connected-wallet.v1';
@@ -79,6 +80,13 @@ export class WalletsService {
   );
   public closeRequested = new BehaviorSubject<boolean>(false);
   public openRequested = new BehaviorSubject<boolean>(false);
+  public drawerMode = new BehaviorSubject<WalletDrawerMode>('wallet');
+  public swapSubmitted = new BehaviorSubject<
+    { traceId: string; intentHash: string } | undefined
+  >(undefined);
+  public swapPreviewRefreshRequested = new BehaviorSubject<string | undefined>(
+    undefined
+  );
 
   constructor(private readonly productEvents: ProductEventsService) {}
 
@@ -127,11 +135,20 @@ export class WalletsService {
     this.closeRequested.next(false);
   }
 
-  requestOpen(): void {
+  requestOpen(mode: WalletDrawerMode = 'wallet'): void {
+    this.drawerMode.next(mode);
     this.openRequested.next(true);
   }
 
   clearOpenRequest(): void {
     this.openRequested.next(false);
+  }
+
+  publishSwapSubmitted(result: { traceId: string; intentHash: string }): void {
+    this.swapSubmitted.next(result);
+  }
+
+  requestSwapPreviewRefresh(traceId: string): void {
+    this.swapPreviewRefreshRequested.next(traceId);
   }
 }

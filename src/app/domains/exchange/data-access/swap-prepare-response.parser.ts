@@ -59,6 +59,16 @@ export function parseApprovedSwapPrepareResponse(
       payload['deadlineTimestamp'],
       'data.deadlineTimestamp'
     ),
+    amountIn: readNonEmptyString(payload['amountIn'], 'data.amountIn'),
+    amountOut: readNonEmptyString(payload['amountOut'], 'data.amountOut'),
+    quoteExpiration: readNonEmptyString(
+      payload['quoteExpiration'],
+      'data.quoteExpiration'
+    ),
+    slippageTolerance: readFiniteNumber(
+      payload['slippageTolerance'],
+      'data.slippageTolerance'
+    ),
     tokenDeltas: readTokenDeltas(payload['tokenDeltas'], 'data.tokenDeltas'),
     ...(nonce !== undefined ? { nonce } : {}),
     ...(referral !== undefined ? { referral } : {}),

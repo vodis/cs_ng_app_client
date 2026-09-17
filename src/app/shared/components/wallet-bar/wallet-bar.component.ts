@@ -9,6 +9,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WalletAccount } from '@domains/wallet/models/wallet.models';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import type { WalletDrawerMode } from '@shared/mfe/wallets/wallets.service';
 
 @Component({
   selector: 'app-wallet-bar',
@@ -27,6 +28,7 @@ export class WalletBarComponent {
   public isOpenWalletConnectMenu = false;
   public account: WalletAccount | undefined;
   public isGatewayConnected = false;
+  public drawerMode: WalletDrawerMode = 'wallet';
 
   constructor() {
     this.walletGatewayBridge.snapshot$
@@ -63,9 +65,17 @@ export class WalletBarComponent {
           this.walletsService.clearOpenRequest();
         }
       });
+
+    this.walletsService.drawerMode
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(mode => {
+        this.drawerMode = mode;
+        this.changeDetector.markForCheck();
+      });
   }
 
   public handleOpenWalletMenu(): void {
+    this.walletsService.drawerMode.next('wallet');
     if (this.hostModal) {
       this.setWalletMenuOpen(true);
       return;
@@ -75,7 +85,12 @@ export class WalletBarComponent {
   }
 
   public handleCloseWalletMenu(): void {
-    this.walletGatewayBridge.resetConnection();
+    if (this.drawerMode === 'swap-review') {
+      this.walletGatewayBridge.closeSwapReview();
+      this.walletsService.drawerMode.next('wallet');
+    } else {
+      this.walletGatewayBridge.resetConnection();
+    }
     this.setWalletMenuOpen(false);
   }
 

@@ -22,6 +22,7 @@ import {
   type WalletBalancesSnapshot,
 } from '@mfe-contracts/wallet-balances.types';
 import { AppLoggerService } from '@core/logging/app-logger.service';
+import type { SwapReviewIntent } from '@mfe-contracts/swap-review.types';
 
 const SIGNATURE_WAIT_MS = 120_000;
 
@@ -215,6 +216,22 @@ export class WalletGatewayBridgeService {
 
     this.snapshotSubject.next(DISCONNECTED_SNAPSHOT);
     this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
+  }
+
+  openSwapReview(intent: SwapReviewIntent): void {
+    const open = this.mountApi?.openSwapReview;
+    if (!open) {
+      throw this.executionFailure(
+        'GATEWAY_UNAVAILABLE',
+        'Swap review is not available in the loaded wallet remote',
+        true
+      );
+    }
+    open(intent);
+  }
+
+  closeSwapReview(): void {
+    this.mountApi?.closeSwapReview?.();
   }
 
   async createEmbeddedWallet(): Promise<WalletOnboardingResult> {

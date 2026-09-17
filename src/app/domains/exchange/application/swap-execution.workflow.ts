@@ -49,7 +49,16 @@ export class SwapExecutionWorkflow {
         traceId,
         dry: true,
       })
-      .pipe(map(preview => ({ traceId, preview })));
+      .pipe(
+        map(preview => ({
+          traceId,
+          preview: {
+            ...preview,
+            traceId,
+            expiresAt: preview.expiresAt || request.deadline,
+          },
+        }))
+      );
   }
 
   async executeSwap(

@@ -18,22 +18,42 @@ export function mapQuotePreviewResponse(
 ): SwapQuotePreview {
   const payload = unwrapData(envelope);
   const quote = isRecord(payload['quote']) ? payload['quote'] : undefined;
-  const amountOut =
+  const amountOutFormatted =
     readString(payload, 'amountOutFormatted') ??
     readString(payload, 'destinationAmountFormatted') ??
     readString(payload, 'toAmountFormatted') ??
     (quote ? readString(quote, 'amountOutFormatted') : undefined) ??
     (quote ? readString(quote, 'destinationAmountFormatted') : undefined) ??
-    (quote ? readString(quote, 'toAmountFormatted') : undefined) ??
+    (quote ? readString(quote, 'toAmountFormatted') : undefined);
+  const amountOutAtomic =
     readString(payload, 'amountOut') ??
     readString(payload, 'destinationAmount') ??
     readString(payload, 'toAmount') ??
     (quote ? readString(quote, 'amountOut') : undefined) ??
     (quote ? readString(quote, 'amount_out') : undefined) ??
     '';
+  const amountOut = amountOutFormatted ?? amountOutAtomic;
+  const expiresAt =
+    readString(payload, 'quoteExpiration') ??
+    readString(payload, 'expiresAt') ??
+    readString(payload, 'deadline') ??
+    readString(payload, 'expiration_time') ??
+    (quote ? readString(quote, 'quoteExpiration') : undefined) ??
+    (quote ? readString(quote, 'expiresAt') : undefined) ??
+    (quote ? readString(quote, 'deadline') : undefined) ??
+    (quote ? readString(quote, 'expiration_time') : undefined) ??
+    '';
+  const quoteReference =
+    readString(payload, 'quoteId') ??
+    readString(payload, 'quote_id') ??
+    (quote ? readString(quote, 'quoteId') : undefined) ??
+    (quote ? readString(quote, 'quote_id') : undefined);
 
   return {
     amountOut,
+    amountOutAtomic,
+    expiresAt,
+    ...(quoteReference ? { quoteReference } : {}),
     raw: payload,
   };
 }

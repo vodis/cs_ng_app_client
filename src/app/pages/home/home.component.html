@@ -189,10 +189,11 @@
           </div>
         </div>
 
-        <button class="connectMain" type="submit" [disabled]="isQuoteLoading()">
-          {{
-            isQuoteLoading() ? 'QUOTING...' : primaryActionLabel().toUpperCase()
-          }}
+        <button
+          class="connectMain"
+          type="submit"
+          [disabled]="!!walletAddress && !canReviewSwap()">
+          {{ primaryActionLabel().toUpperCase() }}
         </button>
 
         @if (quoteError) {

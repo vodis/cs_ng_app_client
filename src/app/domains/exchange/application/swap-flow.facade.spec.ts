@@ -55,6 +55,8 @@ class SwapExecutionWorkflowStub implements Pick<
 function preview(amountOut: string): SwapQuotePreview {
   return {
     amountOut,
+    amountOutAtomic: amountOut,
+    expiresAt: '2099-01-01T00:00:00.000Z',
     raw: { amountOut },
   };
 }
@@ -77,6 +79,10 @@ function approvedPreparePackage(): ApprovedSwapPreparePackage {
     signerId: '0x0000000000000000000000000000000000000001',
     authMethod: 'evm',
     deadlineTimestamp: 1_765_497_600,
+    amountIn: '1000000',
+    amountOut: '1000000',
+    quoteExpiration: '2099-01-01T00:00:00.000Z',
+    slippageTolerance: 50,
     tokenDeltas: [
       {
         assetId: 'nep141:usdc',
@@ -183,6 +189,40 @@ describe('SwapFlowFacade quote preview refresh', () => {
     );
   }));
 
+  it('refreshes when a quote deadline changes', fakeAsync(() => {
+    facade.watchQuotePreview(input());
+    tick(350);
+
+    facade.watchQuotePreview(input({ deadline: '2026-06-17T00:20:00.000Z' }));
+    tick(350);
+
+    expect(workflow.quoteCalls.length).toBe(2);
+  }));
+
+  it('requests a new quote when either asset or network context changes', fakeAsync(() => {
+    facade.watchQuotePreview(input());
+    tick(350);
+    facade.watchQuotePreview(input({ originAsset: 'nep141:usdt' }));
+    tick(350);
+    facade.watchQuotePreview(
+      input({
+        originAsset: 'nep141:usdt',
+        destinationAsset: 'nep141:btc',
+      })
+    );
+    tick(350);
+    facade.watchQuotePreview(
+      input({
+        originAsset: 'nep141:usdt',
+        destinationAsset: 'nep141:btc',
+        network: 'eip155:8453',
+      })
+    );
+    tick(350);
+
+    expect(workflow.quoteCalls.length).toBe(4);
+  }));
+
   function input(overrides: Partial<SwapFormInput> = {}): SwapFormInput {
     return {
       originAsset: 'nep141:usdc',
@@ -194,6 +234,7 @@ describe('SwapFlowFacade quote preview refresh', () => {
       slippageTolerance: 50,
       deadline: '2026-06-17T00:15:00.000Z',
       authMethod: 'evm',
+      network: 'eip155:1',
       ...overrides,
     };
   }

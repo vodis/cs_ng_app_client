@@ -13,6 +13,10 @@ export type SwapFlowState =
 
 export type SwapQuotePreview = {
   amountOut: string;
+  amountOutAtomic: string;
+  expiresAt: string;
+  traceId?: string;
+  quoteReference?: string;
   raw: Record<string, unknown>;
 };
 
@@ -27,6 +31,7 @@ export type SwapQuoteRequest = {
   slippageTolerance: number;
   deadline: string;
   authMethod: 'evm' | 'near';
+  network?: string;
   dry: boolean;
 };
 
@@ -75,6 +80,10 @@ export type ApprovedSwapPreparePackage = Omit<
   'executionPackage'
 > & {
   executionPackage: ApprovedSwapExecutionPackage;
+  amountIn: string;
+  amountOut: string;
+  quoteExpiration: string;
+  slippageTolerance: number;
 };
 
 export type SwapExecutionOutcome = {

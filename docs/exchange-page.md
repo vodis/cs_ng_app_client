@@ -41,7 +41,7 @@ panels. At `1100px` and below, it changes to a single-column layout.
 | Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison  |
 | To row         | `.swapRow`        | Token selector, balance, quoted amount, and USD estimate |
 | Details        | `.stats`, `.stat` | Rate, price impact, slippage, and network fee            |
-| Primary action | `.connectMain`    | Submits through `submitQuote()` and follows wallet state |
+| Primary action | `.connectMain`    | Opens final MFE review after a current dry quote         |
 
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
@@ -64,11 +64,13 @@ until backend history is integrated.
 
 ## API and asset ownership
 
-| Action            | Endpoint                         | Owner      |
-| ----------------- | -------------------------------- | ---------- |
-| Dry quote         | `POST /api/v1/quotes/one-click`  | NestJS BFF |
-| Market comparison | `GET /api/v1/markets/comparison` | NestJS BFF |
-| Wallet balances   | `POST /api/v1/balances`          | NestJS BFF |
+| Action            | Endpoint                         | Owner                             |
+| ----------------- | -------------------------------- | --------------------------------- |
+| Dry quote         | `POST /api/v1/quotes/one-click`  | NestJS BFF                        |
+| Market comparison | `GET /api/v1/markets/comparison` | NestJS BFF                        |
+| Wallet balances   | `POST /api/v1/balances`          | NestJS BFF                        |
+| Final preparation | `POST /api/v1/swaps/prepare`     | Wallet MFE through host transport |
+| Swap submission   | `POST /api/v1/swaps/execute`     | Wallet MFE through host transport |
 
 Client token metadata in `HomeComponent.exchangeTokens` is display and
 bootstrap data only. The backend is authoritative for tradability, chain
@@ -90,6 +92,43 @@ network-specific balances for the connected wallet, renders each entry as
 `Token_Network` with its available token amount, and selects the exact 1Click
 asset id. Destination-token selection continues to use the full supported asset
 and network flow.
+
+### Native NEAR identity
+
+Balance/display identity and execution identity are intentionally separate:
+
+- Native NEAR uses canonical balance asset id `near:native` and symbol `NEAR`.
+- Wrapped NEAR uses NEP-141 asset id `nep141:wrap.near` and symbol `wNEAR`.
+- `PUBLIC_NEAR` remains its own NEP-141 token and is never a native-balance
+  fallback.
+- The current intents backend executes native NEAR routes through
+  `nep141:wrap.near`, represented by `ExchangeToken.executionAssetId`; this
+  does not change the balance/display identity.
+
+The missing native balance was caused by mapping the backend wrapped-NEAR asset
+to a display token named NEAR and then matching balances against that NEP-141
+id. Portfolio used the shared connected-wallet balance feed, whose native row is
+`near:native`, so Trade could not match the known native row and displayed an
+unavailable/zero-like balance. Trade now consumes the same
+`ConnectedWalletBalancesFacade`, preserves exact asset ids during filtering and
+deduplication, and invalidates its balance subscription on account or network
+changes.
+
+### Quote and review lifecycle
+
+The host owns amount/token/settings input, balance gating, and debounced dry
+quotes. Every quote-affecting value is part of the request key. Changing or
+invalidating input clears the preview and cancels the active observable; a
+monotonic request version additionally prevents late responses from updating
+state. The connected-wallet action is `Review` and is enabled only for a current,
+unexpired preview with no newer request pending.
+
+`Review` opens the wallet MFE in the existing right-side drawer and passes a
+versioned immutable swap intent. The MFE owns the non-dry prepare request, final
+amount disclosure, expiry/retry state, reconfirmation within slippage policy,
+wallet signing, single-flight submission, and success callback. Authenticated
+BFF calls remain host transport services so the MFE does not duplicate session
+or API-client logic.
 
 ## Styling contract
 

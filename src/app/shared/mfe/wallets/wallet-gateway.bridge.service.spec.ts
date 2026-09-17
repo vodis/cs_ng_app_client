@@ -1,5 +1,6 @@
 import { AppLoggerService } from '@core/logging/app-logger.service';
 import { IDLE_WALLET_BALANCES_SNAPSHOT } from '@mfe-contracts/wallet-balances.types';
+import type { SwapReviewIntent } from '@mfe-contracts/swap-review.types';
 import {
   WalletConnectionSnapshot,
   WalletsMfeMountApi,
@@ -129,6 +130,38 @@ describe('WalletGatewayBridgeService', () => {
 
   it('ignores connection reset when the wallet MFE is not mounted', () => {
     expect(() => service.resetConnection()).not.toThrow();
+  });
+
+  it('opens and closes swap review through the mounted wallet MFE', () => {
+    mountApi.openSwapReview = jasmine.createSpy('openSwapReview');
+    mountApi.closeSwapReview = jasmine.createSpy('closeSwapReview');
+    service.registerMountApi(mountApi);
+    const intent = swapReviewIntent();
+
+    service.openSwapReview(intent);
+    service.closeSwapReview();
+
+    expect(mountApi.openSwapReview).toHaveBeenCalledOnceWith(intent);
+    expect(mountApi.closeSwapReview).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed when the mounted wallet MFE cannot open swap review', () => {
+    service.registerMountApi(mountApi);
+    let thrown: unknown;
+
+    try {
+      service.openSwapReview(swapReviewIntent());
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toEqual(
+      jasmine.objectContaining({
+        code: 'GATEWAY_UNAVAILABLE',
+        message: 'Swap review is not available in the loaded wallet remote',
+        retryable: true,
+      })
+    );
   });
 
   it('delegates connected-wallet sync to the mounted wallet MFE', async () => {
@@ -266,3 +299,37 @@ describe('WalletGatewayBridgeService', () => {
     subscription.unsubscribe();
   });
 });
+
+function swapReviewIntent(): SwapReviewIntent {
+  return {
+    contractVersion: '1.0.0',
+    traceId: 'trace-review',
+    source: {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      decimals: 24,
+      amountAtomic: '1000000000000000000000000',
+      amountDisplay: '1',
+    },
+    destination: {
+      assetId: 'nep141:usdc.near',
+      executionAssetId: 'nep141:usdc.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    },
+    preview: {
+      amountOutAtomic: '1000000',
+      amountOutDisplay: '1',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    },
+    signer: { account: 'alice.near', chainType: 'near' },
+    network: { id: 'near:mainnet', label: 'NEAR' },
+    recipient: 'alice.near',
+    recipientType: 'INTENTS',
+    authMethod: 'near',
+    slippageToleranceBps: 35,
+  };
+}

@@ -4,6 +4,7 @@ import {
   WalletAccountChangedPayload,
   WalletIntentSignedPayload,
 } from './payloads';
+import type { SwapReviewIntent, SwapReviewServices } from './swap-review.types';
 
 export type WalletConnectionStatus =
   | 'idle'
@@ -69,7 +70,7 @@ export type WalletsMfeEvent =
   | { type: 'balances.updated'; payload: WalletBalancesSnapshot };
 
 export type WalletsMfeContext = {
-  contractVersion?: '2.0.0' | '2.1.0';
+  contractVersion?: '2.0.0' | '2.1.0' | '2.2.0';
   apiBaseUrl?: string;
   sessionId?: string;
   locale?: string;
@@ -96,6 +97,8 @@ export type WalletsMfeCallbacks = {
   }) => void;
   /** Emitted when the gateway completes intent signing (Path B). */
   onIntentSigned?: (payload: WalletIntentSignedPayload) => void;
+  onSwapSubmitted?: (payload: { traceId: string; intentHash: string }) => void;
+  onSwapPreviewRefreshRequested?: (payload: { traceId: string }) => void;
 };
 
 export type WalletsMfeMountApi = {
@@ -106,6 +109,8 @@ export type WalletsMfeMountApi = {
   createEmbeddedWallet?: () => Promise<WalletOnboardingResult>;
   syncConnectedWallet?: () => Promise<WalletConnectionSnapshot>;
   disconnectWallet?: () => void;
+  openSwapReview?: (intent: SwapReviewIntent) => void;
+  closeSwapReview?: () => void;
 };
 
 export type WalletsMfeModule = {
@@ -114,6 +119,7 @@ export type WalletsMfeModule = {
     props?: {
       context?: WalletsMfeContext;
       callbacks?: WalletsMfeCallbacks;
+      services?: SwapReviewServices;
     }
   ) => WalletsMfeMountApi | (() => void) | void;
 };
