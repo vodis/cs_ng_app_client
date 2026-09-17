@@ -106,6 +106,8 @@ Flow direction:
   distinguishes loading or provider failure from a successful zero-value
   portfolio. Wallet setup is not a blocking interstitial.
 - Legacy `/generate-wallet` links redirect to `/profile`.
+- Sidebar **Profile** opens `/profile`. The header account icon opens
+  `/portfolio` (holdings).
 
 Profile boundary rules:
 
