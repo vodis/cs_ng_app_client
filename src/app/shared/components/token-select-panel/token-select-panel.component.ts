@@ -17,6 +17,7 @@ import {
   resolveTokenSelectPanelViewModel,
   TokenSelectPanelViewModel,
 } from './token-select-panel.utils';
+import { WalletTokenOption } from './token-select-panel.models';
 import { networkLabel } from '@shared/utils/network.utils';
 
 @Component({
@@ -33,6 +34,10 @@ export class TokenSelectPanelComponent implements OnChanges {
   @Input() selectedAssetId = '';
   @Input() excludedAssetId = '';
   @Input() showNetworkStep = false;
+  @Input() showWalletTokens = false;
+  @Input() walletTokens: WalletTokenOption[] = [];
+  @Input() walletTokensLoading = false;
+  @Input() walletTokensError = '';
   @Input() isOpen = false;
 
   @Output() tokenSelected = new EventEmitter<ExchangeToken>();
@@ -64,6 +69,17 @@ export class TokenSelectPanelComponent implements OnChanges {
     );
   }
 
+  public get filteredWalletTokens(): WalletTokenOption[] {
+    const availableAssetIds = new Set(
+      filterTokensByQuery(this.availableTokens, this.filterQuery).map(
+        token => token.assetId
+      )
+    );
+    return this.walletTokens.filter(option =>
+      availableAssetIds.has(option.token.assetId)
+    );
+  }
+
   public get viewModel(): TokenSelectPanelViewModel {
     return resolveTokenSelectPanelViewModel({
       loading: this.loading,
@@ -92,12 +108,20 @@ export class TokenSelectPanelComponent implements OnChanges {
     this.emitSelection(token);
   }
 
+  public handleWalletTokenSelect(option: WalletTokenOption): void {
+    this.emitSelection(option.token);
+  }
+
   public handleBack(): void {
     this.pendingSymbol = '';
   }
 
   public networkName(token: ExchangeToken): string {
     return networkLabel(token.blockchain);
+  }
+
+  public tokenNetworkLabel(token: ExchangeToken): string {
+    return `${token.displaySymbol || token.symbol}_${this.networkName(token)}`;
   }
 
   public assetNetworkSummary(token: ExchangeToken): string {

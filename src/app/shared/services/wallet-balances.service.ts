@@ -1,7 +1,15 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { AuthProviderService } from '@core/auth/auth-provider.service';
-import { Observable, from, map, switchMap, throwError } from 'rxjs';
+import {
+  Observable,
+  concatMap,
+  from,
+  map,
+  switchMap,
+  throwError,
+  toArray,
+} from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type WalletBalance = {
@@ -37,6 +45,8 @@ type WalletBalancesResponse = {
   meta?: unknown;
 };
 
+const BALANCE_ASSET_BATCH_SIZE = 20;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -47,8 +57,20 @@ export class WalletBalancesService {
   ) {}
 
   loadBalances(params?: WalletBalancesRequest): Observable<WalletBalance[]> {
-    return this.loadBalancesWithMeta(params).pipe(
-      map(result => result.balances)
+    const requests = this.balanceRequests(params);
+    return from(requests).pipe(
+      concatMap(request =>
+        this.loadBalancesWithMeta(request).pipe(
+          map(result => {
+            if (result.partial) {
+              throw new Error('Wallet balance response is incomplete');
+            }
+            return result.balances;
+          })
+        )
+      ),
+      toArray(),
+      map(results => results.flat())
     );
   }
 
@@ -85,6 +107,29 @@ export class WalletBalancesService {
       throw new Error('Balance response metadata is invalid');
     }
     return value['partial'];
+  }
+
+  private balanceRequests(
+    params?: WalletBalancesRequest
+  ): Array<WalletBalancesRequest | undefined> {
+    const assetIds = params?.assetIds;
+    if (!assetIds || assetIds.length <= BALANCE_ASSET_BATCH_SIZE) {
+      return [params];
+    }
+
+    const uniqueAssetIds = [...new Set(assetIds)];
+    const requests: WalletBalancesRequest[] = [];
+    for (
+      let index = 0;
+      index < uniqueAssetIds.length;
+      index += BALANCE_ASSET_BATCH_SIZE
+    ) {
+      requests.push({
+        ...params,
+        assetIds: uniqueAssetIds.slice(index, index + BALANCE_ASSET_BATCH_SIZE),
+      });
+    }
+    return requests;
   }
 
   private parseBalances(value: unknown): WalletBalance[] {

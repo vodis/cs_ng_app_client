@@ -129,6 +129,66 @@ describe('WalletBalancesService', () => {
     expect(result).toEqual({ balances: [], partial: true });
   }));
 
+  it('loads the full asset catalog in batches of at most 20', fakeAsync(() => {
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+    const assetIds = Array.from(
+      { length: 21 },
+      (_, index) => `nep141:token-${index}.near`
+    );
+    let result: unknown;
+
+    service
+      .loadBalances({
+        walletAddress: 'alice.near',
+        network: 'near:mainnet',
+        assetIds,
+      })
+      .subscribe(balances => (result = balances));
+    tick();
+
+    const firstRequest = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/balances`
+    );
+    expect(firstRequest.request.body['assetIds']).toEqual(
+      assetIds.slice(0, 20)
+    );
+    firstRequest.flush({ data: [], meta: { partial: false } });
+    tick();
+
+    const secondRequest = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/balances`
+    );
+    expect(secondRequest.request.body['assetIds']).toEqual(assetIds.slice(20));
+    secondRequest.flush({ data: [], meta: { partial: false } });
+    tick();
+    expect(result).toEqual([]);
+  }));
+
+  it('rejects a partial result from any asset batch', fakeAsync(() => {
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+    const assetIds = Array.from(
+      { length: 21 },
+      (_, index) => `nep141:token-${index}.near`
+    );
+    let error: unknown;
+
+    service
+      .loadBalances({
+        walletAddress: 'alice.near',
+        network: 'near:mainnet',
+        assetIds,
+      })
+      .subscribe({ error: value => (error = value) });
+    tick();
+
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/balances`)
+      .flush({ data: [], meta: { partial: true } });
+    tick();
+
+    expect(error).toEqual(jasmine.any(Error));
+  }));
+
   it('waits for provider initialization before requesting a token', fakeAsync(() => {
     let settleProvider: (() => void) | undefined;
     authProvider.whenSettled.and.returnValue(

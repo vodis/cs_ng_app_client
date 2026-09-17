@@ -434,6 +434,10 @@
       [selectedAssetId]="tokenSelectorSelectedAssetId()"
       [excludedAssetId]="tokenSelectorExcludedAssetId()"
       [showNetworkStep]="tokenSelectorSide === 'to'"
+      [showWalletTokens]="tokenSelectorSide === 'from' && !!walletAddress"
+      [walletTokens]="tokenSelectorWalletTokens()"
+      [walletTokensLoading]="balancesLoading"
+      [walletTokensError]="balancesError"
       [isOpen]="isTokenSelectorOpen"
       (tokenSelected)="handleTokenSelected($event)"
       (closeRequested)="closeTokenSelector()" />
