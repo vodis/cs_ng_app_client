@@ -192,7 +192,7 @@
         <button
           class="connectMain"
           type="submit"
-          [disabled]="!!walletAddress && !canReviewSwap()">
+          [disabled]="isPrimaryActionDisabled()">
           {{ primaryActionLabel().toUpperCase() }}
         </button>
 
