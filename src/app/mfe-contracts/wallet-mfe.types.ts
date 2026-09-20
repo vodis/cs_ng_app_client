@@ -70,7 +70,7 @@ export type WalletsMfeEvent =
   | { type: 'balances.updated'; payload: WalletBalancesSnapshot };
 
 export type WalletsMfeContext = {
-  contractVersion?: '2.0.0' | '2.1.0' | '2.2.0';
+  contractVersion?: '2.0.0' | '2.1.0' | '2.2.0' | '2.3.0';
   apiBaseUrl?: string;
   sessionId?: string;
   locale?: string;
@@ -97,6 +97,7 @@ export type WalletsMfeCallbacks = {
   }) => void;
   /** Emitted when the gateway completes intent signing (Path B). */
   onIntentSigned?: (payload: WalletIntentSignedPayload) => void;
+  onTransactionSubmitted?: (payload: { hash: string }) => void;
   onSwapSubmitted?: (payload: { traceId: string; intentHash: string }) => void;
   onSwapPreviewRefreshRequested?: (payload: { traceId: string }) => void;
 };

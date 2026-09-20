@@ -22,7 +22,10 @@ import {
   type WalletBalancesSnapshot,
 } from '@mfe-contracts/wallet-balances.types';
 import { AppLoggerService } from '@core/logging/app-logger.service';
-import type { SwapReviewIntent } from '@mfe-contracts/swap-review.types';
+import type {
+  SwapReviewDepositRequest,
+  SwapReviewIntent,
+} from '@mfe-contracts/swap-review.types';
 
 const SIGNATURE_WAIT_MS = 120_000;
 
@@ -53,6 +56,10 @@ export class WalletGatewayBridgeService {
     resolve: (signature: DefuseWalletSignatureResult) => void;
     reject: (error: WalletExecutionFailure) => void;
   };
+  private pendingTransaction?: {
+    resolve: (hash: string) => void;
+    reject: (error: WalletExecutionFailure) => void;
+  };
 
   readonly snapshot$: Observable<WalletConnectionSnapshot | undefined> =
     this.snapshotSubject.asObservable();
@@ -71,6 +78,11 @@ export class WalletGatewayBridgeService {
     this.mountApi = undefined;
     this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
     this.rejectPendingSignature({
+      code: 'GATEWAY_UNAVAILABLE',
+      message: 'Wallet gateway unmounted',
+      retryable: true,
+    });
+    this.rejectPendingTransaction({
       code: 'GATEWAY_UNAVAILABLE',
       message: 'Wallet gateway unmounted',
       retryable: true,
@@ -106,20 +118,24 @@ export class WalletGatewayBridgeService {
     errorCode?: string;
   }): void {
     if (payload.state.endsWith('signRejected')) {
-      this.rejectPendingSignature({
-        code: 'SIGN_REJECTED',
-        message: payload.reason ?? 'Wallet action was cancelled',
-        retryable: true,
-      });
+      const error = this.executionFailure(
+        'SIGN_REJECTED',
+        payload.reason ?? 'Wallet action was cancelled',
+        true
+      );
+      this.rejectPendingSignature(error);
+      this.rejectPendingTransaction(error);
       return;
     }
 
     if (payload.state.endsWith('signFailed')) {
-      this.rejectPendingSignature({
-        code: 'SIGN_FAILED',
-        message: payload.reason ?? 'Intent signature failed',
-        retryable: true,
-      });
+      const error = this.executionFailure(
+        'SIGN_FAILED',
+        payload.reason ?? 'Wallet submission failed',
+        true
+      );
+      this.rejectPendingSignature(error);
+      this.rejectPendingTransaction(error);
     }
   }
 
@@ -130,6 +146,14 @@ export class WalletGatewayBridgeService {
 
     this.pendingSignature.resolve(payload.signature);
     this.pendingSignature = undefined;
+  }
+
+  handleTransactionSubmitted(payload: { hash: string }): void {
+    if (!this.pendingTransaction) {
+      return;
+    }
+    this.pendingTransaction.resolve(payload.hash);
+    this.pendingTransaction = undefined;
   }
 
   async runIntentSignFlow(input: {
@@ -188,6 +212,41 @@ export class WalletGatewayBridgeService {
     this.sendGatewayEvent({ type: 'SIGN_REQUESTED' });
 
     return this.waitForIntentSignature(input.traceId);
+  }
+
+  async runNearDepositFlow(
+    input: SwapReviewDepositRequest
+  ): Promise<{ transactionHash: string }> {
+    const snapshot = this.requireSnapshot();
+    if (!snapshot.account || snapshot.account !== input.senderAccount) {
+      throw this.executionFailure(
+        'NOT_CONNECTED',
+        'Connected NEAR wallet does not match the swap sender',
+        false
+      );
+    }
+    if (!snapshot.isVerified) {
+      this.sendGatewayEvent({ type: 'VERIFY_REQUESTED' });
+      throw this.executionFailure(
+        'NOT_VERIFIED',
+        'Complete wallet verification before depositing',
+        true
+      );
+    }
+
+    this.sendGatewayEvent({
+      type: 'PREPARE_REQUESTED',
+      payload: {
+        from: input.senderAccount,
+        to: input.depositAddress,
+        value: input.amount,
+      },
+    });
+    await this.waitForExecutionState('operating.awaitingSign', input.traceId);
+
+    const transaction = this.waitForTransactionSubmission(input.traceId);
+    this.sendGatewayEvent({ type: 'SIGN_REQUESTED' });
+    return { transactionHash: await transaction };
   }
 
   abortExecution(): void {
@@ -365,6 +424,45 @@ export class WalletGatewayBridgeService {
     });
   }
 
+  private waitForTransactionSubmission(traceId: string): Promise<string> {
+    if (this.pendingTransaction) {
+      throw this.executionFailure(
+        'SUBMIT_FAILED',
+        'Another wallet transaction is already in progress',
+        false
+      );
+    }
+
+    return new Promise<string>((resolve, reject) => {
+      const timer = window.setTimeout(() => {
+        this.pendingTransaction = undefined;
+        reject(
+          this.executionFailure(
+            'SUBMIT_FAILED',
+            'Timed out waiting for wallet transaction',
+            true
+          )
+        );
+      }, SIGNATURE_WAIT_MS);
+
+      this.pendingTransaction = {
+        resolve: hash => {
+          window.clearTimeout(timer);
+          this.logger.log('info', 'Wallet gateway: deposit submitted', {
+            flowName: 'swap',
+            step: 'deposit_submitted',
+            traceId,
+          });
+          resolve(hash);
+        },
+        reject: error => {
+          window.clearTimeout(timer);
+          reject(error);
+        },
+      };
+    });
+  }
+
   private rejectPendingSignature(error: WalletExecutionFailure): void {
     if (!this.pendingSignature) {
       return;
@@ -372,6 +470,14 @@ export class WalletGatewayBridgeService {
 
     this.pendingSignature.reject(error);
     this.pendingSignature = undefined;
+  }
+
+  private rejectPendingTransaction(error: WalletExecutionFailure): void {
+    if (!this.pendingTransaction) {
+      return;
+    }
+    this.pendingTransaction.reject(error);
+    this.pendingTransaction = undefined;
   }
 
   private executionFailure(

@@ -231,6 +231,8 @@ describe('SwapFlowFacade quote preview refresh', () => {
       signerId: '0x0000000000000000000000000000000000000001',
       recipient: '0x0000000000000000000000000000000000000001',
       recipientType: 'DESTINATION_CHAIN',
+      depositType: 'ORIGIN_CHAIN',
+      refundType: 'ORIGIN_CHAIN',
       slippageTolerance: 50,
       deadline: '2026-06-17T00:15:00.000Z',
       authMethod: 'evm',

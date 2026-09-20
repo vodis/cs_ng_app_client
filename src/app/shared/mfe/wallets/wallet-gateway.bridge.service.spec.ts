@@ -328,7 +328,9 @@ function swapReviewIntent(): SwapReviewIntent {
     signer: { account: 'alice.near', chainType: 'near' },
     network: { id: 'near:mainnet', label: 'NEAR' },
     recipient: 'alice.near',
-    recipientType: 'INTENTS',
+    recipientType: 'DESTINATION_CHAIN',
+    depositType: 'ORIGIN_CHAIN',
+    refundType: 'ORIGIN_CHAIN',
     authMethod: 'near',
     slippageToleranceBps: 35,
   };

@@ -95,7 +95,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       const mountResult = this.ngZone.runOutsideAngular(() =>
         mfeModule.mount(container, {
           context: {
-            contractVersion: '2.2.0',
+            contractVersion: '2.3.0',
             apiBaseUrl: environment.apiUrl,
             environment: this.mfeEnvironment(),
           },
@@ -134,6 +134,11 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
                 this.walletGatewayBridge.handleIntentSigned(payload);
               });
             },
+            onTransactionSubmitted: payload => {
+              this.ngZone.run(() => {
+                this.walletGatewayBridge.handleTransactionSubmitted(payload);
+              });
+            },
             onSwapSubmitted: payload => {
               this.ngZone.run(() => {
                 this.walletsService.publishSwapSubmitted(payload);
@@ -151,6 +156,8 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
               this.prepareSwap(request, options.signal),
             signSwap: input =>
               this.walletGatewayBridge.runIntentSignFlow(input),
+            depositSwap: request =>
+              this.walletGatewayBridge.runNearDepositFlow(request),
             submitSwap: async request => ({
               intentHash: await this.intentRelay.submitIntent({
                 traceId: request.traceId,
@@ -242,7 +249,10 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         .requestApprovedPreparePackage(request)
         .subscribe({
           next: result => {
-            if (result.executionPackage.mode !== 'intent_sign') {
+            if (
+              result.executionPackage.mode !== 'intent_sign' &&
+              result.executionPackage.mode !== 'deposit_address'
+            ) {
               reject(
                 new Error(
                   `Execution mode ${result.executionPackage.mode} is not supported in wallet review yet.`
