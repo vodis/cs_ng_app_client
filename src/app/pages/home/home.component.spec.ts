@@ -56,8 +56,12 @@ class SwapFlowFacadeStub {
 
   public watchQuotePreview = jasmine.createSpy('watchQuotePreview');
 
-  public refreshQuotePreview(): void {
-    return undefined;
+  public refreshQuotePreview = jasmine.createSpy('refreshQuotePreview');
+
+  public emitError(error: SwapFlowError): void {
+    this.quotePreviewSubject.next(undefined);
+    this.errorSubject.next(error);
+    this.stateSubject.next('idle');
   }
 
   public emitQuote(preview: SwapQuotePreview): void {
@@ -341,6 +345,83 @@ describe('HomeComponent market overview', () => {
 
     expect(component.primaryActionLabel()).toBe('Review');
     expect(component.canReviewSwap()).toBeFalse();
+  });
+
+  it('uses 0.5% as the default quote slippage', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    balancesService.balances = [nearBalance()];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next(nearWallet());
+    component.amount = '1';
+    component['refreshSwapQuotePreview']();
+
+    expect(component.slippageLabel()).toBe('0.5%');
+    expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
+      jasmine.objectContaining({ slippageTolerance: 50 })
+    );
+  });
+
+  it('enables a manual quote retry after a quote request fails', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    balancesService.balances = [nearBalance()];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next(nearWallet());
+    component.amount = '1';
+    component['refreshSwapQuotePreview']();
+    swapFlowFacade.emitError({
+      code: 'QUOTE_FAILED',
+      message: 'Quote failed. Try again.',
+      retryable: true,
+      step: 'requestingQuote',
+    });
+
+    expect(component.canReviewSwap()).toBeFalse();
+    expect(component.canRetryQuote()).toBeTrue();
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    expect(component.primaryActionLabel()).toBe('Retry quote');
+
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const action = compiled.querySelector<HTMLButtonElement>('.connectMain');
+    expect(compiled.querySelector('.exchange-error')?.textContent?.trim()).toBe(
+      'Quote failed. Try again.'
+    );
+    expect(action?.disabled).toBeFalse();
+    expect(action?.textContent?.trim()).toBe('RETRY QUOTE');
+
+    component.submitQuote();
+
+    expect(swapFlowFacade.refreshQuotePreview).toHaveBeenCalledWith(
+      jasmine.objectContaining({ slippageTolerance: 50 })
+    );
   });
 
   it('shows live NEAR balance for the connected NEAR wallet', () => {
@@ -1106,6 +1187,37 @@ describe('HomeComponent market overview', () => {
 
     expect(request.request.method).toBe('GET');
     return request;
+  }
+
+  function nearWallet(): WalletAccount {
+    return {
+      account: 'alice.near',
+      chainId: null,
+      identity: {
+        connectorId: 'near',
+        address: 'alice.near',
+        chainType: 'near',
+        walletType: 'external',
+      },
+    };
+  }
+
+  function nearBalance(): WalletBalance {
+    return {
+      walletId: 'wallet-1',
+      walletAddress: 'alice.near',
+      chainType: 'near',
+      network: 'near:mainnet',
+      assetId: 'near:native',
+      symbol: 'NEAR',
+      decimals: 24,
+      balanceRaw: '2000000000000000000000000',
+      balanceDecimal: '2',
+      source: 'near_rpc',
+      fetchedAt: '2026-09-20T12:00:00.000Z',
+      expiresAt: '2099-09-20T12:00:15.000Z',
+      stale: false,
+    };
   }
 
   function comparisonResponse(

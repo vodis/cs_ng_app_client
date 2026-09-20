@@ -76,6 +76,49 @@ describe('swap flow error utilities', () => {
     ).toBeUndefined();
   });
 
+  it('unwraps the current backend HTTP quote error body for the UI', () => {
+    expect(
+      toSwapFlowError(
+        'requestingQuote',
+        {
+          status: 400,
+          error: {
+            code: 'NO_QUOTE_AVAILABLE',
+            message: 'No quote is available for this pair.',
+          },
+        },
+        'Quote request failed'
+      )
+    ).toEqual({
+      code: 'NO_QUOTE_AVAILABLE',
+      message: 'No quote is available for this pair.',
+      retryable: false,
+      step: 'requestingQuote',
+    });
+  });
+
+  it('preserves retryability from a typed nested backend error', () => {
+    expect(
+      toSwapFlowError(
+        'requestingQuote',
+        {
+          status: 503,
+          error: {
+            code: 'QUOTE_PROVIDER_UNAVAILABLE',
+            message: 'Quote provider is temporarily unavailable.',
+            retryable: true,
+          },
+        },
+        'Quote request failed'
+      )
+    ).toEqual({
+      code: 'QUOTE_PROVIDER_UNAVAILABLE',
+      message: 'Quote provider is temporarily unavailable.',
+      retryable: true,
+      step: 'requestingQuote',
+    });
+  });
+
   it('normalizes unknown errors with the fallback message', () => {
     expect(toSwapFlowError('validating', null, 'Swap failed')).toEqual({
       code: 'SWAP_FAILED',

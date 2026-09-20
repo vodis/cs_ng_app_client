@@ -115,7 +115,7 @@ interface RecentActivityItem {
 })
 export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
-  private readonly slippageToleranceBps = 35;
+  private readonly slippageToleranceBps = 50;
   private readonly maxAmountFractionDigits = 18;
 
   public readonly recentActivity: RecentActivityItem[] = [
@@ -389,6 +389,23 @@ export class HomeComponent {
       Boolean(this.quotePreview?.expiresAt) &&
       Date.parse(this.quotePreview?.expiresAt ?? '') > Date.now() &&
       Boolean(this.buildQuotePreviewInput())
+    );
+  }
+
+  public canRetryQuote(): boolean {
+    return (
+      this.swapFlowState === 'idle' &&
+      Boolean(this.quoteError) &&
+      !this.canReviewSwap() &&
+      Boolean(this.buildQuotePreviewInput())
+    );
+  }
+
+  public isPrimaryActionDisabled(): boolean {
+    return (
+      Boolean(this.walletAddress) &&
+      !this.canReviewSwap() &&
+      !this.canRetryQuote()
     );
   }
 
@@ -772,7 +789,7 @@ export class HomeComponent {
       return 'Connect wallet';
     }
 
-    return 'Review';
+    return this.canRetryQuote() ? 'Retry quote' : 'Review';
   }
 
   public tokenDisplay(symbol: string): string {
@@ -828,7 +845,7 @@ export class HomeComponent {
   }
 
   public slippageLabel(): string {
-    return '0.35%';
+    return `${this.slippageToleranceBps / 100}%`;
   }
 
   public networkFeeLabel(): string {

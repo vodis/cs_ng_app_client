@@ -92,6 +92,14 @@ export function toSwapFlowError(
     };
   }
 
+  const httpError = parseHttpErrorResponse(error);
+  if (httpError) {
+    return {
+      ...httpError,
+      step,
+    };
+  }
+
   return {
     code: 'SWAP_FAILED',
     message: error instanceof Error ? error.message : fallbackMessage,
@@ -151,6 +159,68 @@ export function parseApiErrorEnvelope(
   }
 
   return envelope;
+}
+
+function parseHttpErrorResponse(error: unknown): ApiErrorEnvelope | undefined {
+  if (!isRecord(error) || !('error' in error)) {
+    return undefined;
+  }
+
+  const body = error['error'];
+  const typedBody = parseApiErrorEnvelope(body);
+  if (typedBody) {
+    return typedBody;
+  }
+
+  const status =
+    typeof error['status'] === 'number' ? error['status'] : undefined;
+  const bodyRecord = isRecord(body) ? body : undefined;
+  const message = bodyRecord
+    ? (readErrorMessage(bodyRecord['message']) ??
+      readErrorMessage(bodyRecord['error']))
+    : readErrorMessage(body);
+
+  if (!message) {
+    return undefined;
+  }
+
+  const code =
+    bodyRecord && typeof bodyRecord['code'] === 'string'
+      ? bodyRecord['code']
+      : status
+        ? `HTTP_${status}`
+        : 'HTTP_ERROR';
+  const retryable =
+    bodyRecord && typeof bodyRecord['retryable'] === 'boolean'
+      ? bodyRecord['retryable']
+      : status === undefined || status === 0 || status === 408 || status === 429
+        ? true
+        : status >= 500;
+
+  return {
+    code,
+    message,
+    retryable,
+    ...(bodyRecord?.['details'] !== undefined
+      ? { details: bodyRecord['details'] }
+      : {}),
+  };
+}
+
+function readErrorMessage(value: unknown): string | undefined {
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+
+  if (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(item => typeof item === 'string')
+  ) {
+    return value.join(' ');
+  }
+
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

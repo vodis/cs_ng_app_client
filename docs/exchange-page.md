@@ -121,7 +121,9 @@ quotes. Every quote-affecting value is part of the request key. Changing or
 invalidating input clears the preview and cancels the active observable; a
 monotonic request version additionally prevents late responses from updating
 state. The connected-wallet action is `Review` and is enabled only for a current,
-unexpired preview with no newer request pending.
+unexpired preview with no newer request pending. If a quote request fails, the
+action changes to `Retry quote` and remains available while the form and wallet
+balance are still valid, so the user can request a fresh quote manually.
 
 `Review` opens the wallet MFE in the existing right-side drawer and passes a
 versioned immutable swap intent. The MFE owns the non-dry prepare request, final
