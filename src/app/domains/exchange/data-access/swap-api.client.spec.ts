@@ -18,6 +18,8 @@ describe('SwapApiClient recipient mapping', () => {
     signerId: '0x0000000000000000000000000000000000000001',
     recipient: 'BYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z',
     recipientType: 'DESTINATION_CHAIN' as const,
+    depositType: 'ORIGIN_CHAIN' as const,
+    refundType: 'ORIGIN_CHAIN' as const,
     slippageTolerance: 50,
     deadline: '2026-08-18T10:15:00.000Z',
     authMethod: 'evm' as const,
@@ -41,6 +43,8 @@ describe('SwapApiClient recipient mapping', () => {
         userAddress: request.signerId,
         recipient: request.recipient,
         recipientType: request.recipientType,
+        depositType: request.depositType,
+        refundType: request.refundType,
       })
     );
     pending.flush({ data: { amountOut: '900000' }, error: null });
@@ -56,6 +60,8 @@ describe('SwapApiClient recipient mapping', () => {
         signerId: request.signerId,
         recipient: request.recipient,
         recipientType: request.recipientType,
+        depositType: request.depositType,
+        refundType: request.refundType,
       })
     );
     expect(pending.request.body.userAddress).toBeUndefined();

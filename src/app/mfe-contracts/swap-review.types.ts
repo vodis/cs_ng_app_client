@@ -37,6 +37,8 @@ export type SwapReviewIntent = {
   network: { id: string; label: string };
   recipient: string;
   recipientType: 'DESTINATION_CHAIN' | 'INTENTS';
+  depositType: 'ORIGIN_CHAIN' | 'INTENTS';
+  refundType: 'ORIGIN_CHAIN' | 'INTENTS';
   authMethod: 'evm' | 'near';
   slippageToleranceBps: number;
 };
@@ -50,6 +52,8 @@ export type SwapReviewPrepareRequest = {
   signerId: string;
   recipient: string;
   recipientType: 'DESTINATION_CHAIN' | 'INTENTS';
+  depositType: 'ORIGIN_CHAIN' | 'INTENTS';
+  refundType: 'ORIGIN_CHAIN' | 'INTENTS';
   authMethod: 'evm' | 'near';
   slippageTolerance: number;
   deadline: string;
@@ -78,6 +82,14 @@ export type SwapReviewSubmitRequest = {
   userChainType: 'evm' | 'near';
 };
 
+export type SwapReviewDepositRequest = {
+  traceId: string;
+  sourceAssetId: string;
+  senderAccount: string;
+  depositAddress: string;
+  amount: string;
+};
+
 export type SwapReviewServices = {
   prepareSwap: (
     request: SwapReviewPrepareRequest,
@@ -87,6 +99,9 @@ export type SwapReviewServices = {
     traceId: string;
     prepareRequest: ApprovedIntentPrepareRequest;
   }) => Promise<Record<string, unknown>>;
+  depositSwap: (
+    request: SwapReviewDepositRequest
+  ) => Promise<{ transactionHash: string }>;
   submitSwap: (
     request: SwapReviewSubmitRequest
   ) => Promise<{ intentHash: string }>;

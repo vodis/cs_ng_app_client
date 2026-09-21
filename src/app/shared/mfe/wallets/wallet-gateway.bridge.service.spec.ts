@@ -1,4 +1,5 @@
 import { AppLoggerService } from '@core/logging/app-logger.service';
+import { fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { IDLE_WALLET_BALANCES_SNAPSHOT } from '@mfe-contracts/wallet-balances.types';
 import type { SwapReviewIntent } from '@mfe-contracts/swap-review.types';
 import {
@@ -298,7 +299,73 @@ describe('WalletGatewayBridgeService', () => {
     expect(latest).toEqual(IDLE_WALLET_BALANCES_SNAPSHOT);
     subscription.unsubscribe();
   });
+
+  it('submits a prepared native NEAR deposit through the wallet gateway', fakeAsync(() => {
+    const snapshot = nearSnapshot();
+    mountApi.getSnapshot = jasmine
+      .createSpy('getSnapshot')
+      .and.returnValue(snapshot);
+    service.registerMountApi(mountApi);
+
+    let result: { transactionHash: string } | undefined;
+    void service.runNearDepositFlow(nearDepositRequest()).then(submission => {
+      result = submission;
+    });
+    expect(mountApi.sendGatewayEvent).toHaveBeenCalledWith({
+      type: 'PREPARE_REQUESTED',
+      payload: {
+        from: 'alice.near',
+        to: 'deposit.near',
+        value: '1000000000000000000000000',
+      },
+    });
+
+    service.updateSnapshot({
+      ...snapshot,
+      executionState: 'operating.awaitingSign',
+    });
+    flushMicrotasks();
+
+    expect(service.isExecutionInProgress()).toBeTrue();
+    expect(mountApi.sendGatewayEvent).toHaveBeenCalledWith({
+      type: 'SIGN_REQUESTED',
+    });
+
+    service.handleTransactionSubmitted({ hash: 'near-transaction-hash' });
+    flushMicrotasks();
+    expect(result).toEqual({
+      transactionHash: 'near-transaction-hash',
+    });
+  }));
 });
+
+function nearSnapshot(): WalletConnectionSnapshot {
+  return {
+    status: 'connected',
+    account: 'alice.near',
+    chainId: null,
+    identity: {
+      connectorId: 'near',
+      address: 'alice.near',
+      chainType: 'near',
+      walletType: 'external',
+    },
+    isVerified: true,
+    safetyStatus: 'safe',
+    isBypassed: false,
+    executionState: 'operating.idle',
+  };
+}
+
+function nearDepositRequest() {
+  return {
+    traceId: 'trace-deposit',
+    sourceAssetId: 'near:native',
+    senderAccount: 'alice.near',
+    depositAddress: 'deposit.near',
+    amount: '1000000000000000000000000',
+  };
+}
 
 function swapReviewIntent(): SwapReviewIntent {
   return {
@@ -328,7 +395,9 @@ function swapReviewIntent(): SwapReviewIntent {
     signer: { account: 'alice.near', chainType: 'near' },
     network: { id: 'near:mainnet', label: 'NEAR' },
     recipient: 'alice.near',
-    recipientType: 'INTENTS',
+    recipientType: 'DESTINATION_CHAIN',
+    depositType: 'ORIGIN_CHAIN',
+    refundType: 'ORIGIN_CHAIN',
     authMethod: 'near',
     slippageToleranceBps: 35,
   };

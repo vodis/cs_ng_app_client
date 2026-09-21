@@ -25,6 +25,8 @@ export type SwapFormInput = {
   signerId: string;
   recipient: string;
   recipientType: 'DESTINATION_CHAIN' | 'INTENTS';
+  depositType: 'ORIGIN_CHAIN' | 'INTENTS';
+  refundType: 'ORIGIN_CHAIN' | 'INTENTS';
   slippageTolerance: number;
   deadline: string;
   authMethod: 'evm' | 'near';
@@ -206,6 +208,8 @@ export class SwapFlowFacade {
       input.signerId.toLowerCase(),
       input.recipient,
       input.recipientType,
+      input.depositType,
+      input.refundType,
       input.slippageTolerance,
       input.deadline,
       input.authMethod,
