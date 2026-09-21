@@ -85,9 +85,10 @@ describe('HeaderComponent', () => {
 
     const link = fixture.nativeElement.querySelector(
       '.header__account-link'
-    ) as HTMLElement;
+    ) as HTMLAnchorElement;
 
     expect(link.getAttribute('aria-label')).toBe('Portfolio');
+    expect(link.getAttribute('href')).toBe('/en/portfolio');
     expect(link.classList.contains('header__account-link--icon')).toBeTrue();
     expect(link.querySelector('mat-icon')?.textContent?.trim()).toBe('person');
   });
