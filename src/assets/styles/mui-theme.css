@@ -9,7 +9,7 @@
 }
 
 .btn-lg.mdc-button {
-  --mdc-outlined-button-container-height: 36px;
+  --mat-button-outlined-container-height: 36px;
   font-size: 0.75rem;
   font-weight: 400;
   line-height: 1;
@@ -18,7 +18,7 @@
 
 @media (max-width: 976px) {
   .btn-lg.mdc-button {
-    --mdc-outlined-button-container-height: 32px;
+    --mat-button-outlined-container-height: 32px;
     font-size: 0.65rem;
   }
 }
