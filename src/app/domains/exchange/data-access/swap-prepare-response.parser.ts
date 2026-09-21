@@ -116,47 +116,10 @@ function parseExecutionPackage(
         requiredAction: 'sign',
         payload,
       };
-    case 'deposit_address':
-      readLiteral(
-        executionPackage['requiredAction'],
-        'deposit',
-        'data.executionPackage.requiredAction'
-      );
-      return {
-        providerId,
-        mode: 'deposit_address',
-        protocol,
-        requiredAction: 'deposit',
-        payload,
-      };
-    case 'evm_transaction':
-      readLiteral(
-        executionPackage['requiredAction'],
-        'submit_transaction',
-        'data.executionPackage.requiredAction'
-      );
-      return {
-        providerId,
-        mode: 'evm_transaction',
-        protocol,
-        requiredAction: 'submit_transaction',
-        payload,
-      };
-    case 'external_redirect':
-      readLiteral(
-        executionPackage['requiredAction'],
-        'redirect',
-        'data.executionPackage.requiredAction'
-      );
-      return {
-        providerId,
-        mode: 'external_redirect',
-        protocol,
-        requiredAction: 'redirect',
-        payload,
-      };
     default:
-      return invalidPreparePackage('data.executionPackage.mode is unsupported');
+      return invalidPreparePackage(
+        'data.executionPackage.mode must be intent_sign'
+      );
   }
 }
 
