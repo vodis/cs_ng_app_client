@@ -199,6 +199,21 @@ describe('SwapFlowFacade quote preview refresh', () => {
     expect(workflow.quoteCalls.length).toBe(2);
   }));
 
+  it('refreshes when deposit or refund routing changes', fakeAsync(() => {
+    facade.watchQuotePreview(input());
+    tick(350);
+
+    facade.watchQuotePreview(input({ depositType: 'INTENTS' }));
+    tick(350);
+
+    facade.watchQuotePreview(
+      input({ depositType: 'INTENTS', refundType: 'INTENTS' })
+    );
+    tick(350);
+
+    expect(workflow.quoteCalls.length).toBe(3);
+  }));
+
   it('requests a new quote when either asset or network context changes', fakeAsync(() => {
     facade.watchQuotePreview(input());
     tick(350);

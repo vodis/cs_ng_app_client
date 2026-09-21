@@ -156,6 +156,19 @@ export class WalletGatewayBridgeService {
     this.pendingTransaction = undefined;
   }
 
+  isExecutionInProgress(): boolean {
+    const state = this.snapshotSubject.value?.executionState;
+    return (
+      Boolean(this.pendingSignature || this.pendingTransaction) ||
+      state === 'operating.preparingIntentMessage' ||
+      state === 'operating.awaitingIntentSign' ||
+      state === 'operating.signingIntent' ||
+      state === 'operating.preparingExecution' ||
+      state === 'operating.awaitingSign' ||
+      state === 'operating.signing'
+    );
+  }
+
   async runIntentSignFlow(input: {
     traceId: string;
     prepareRequest: ApprovedIntentPrepareRequest;

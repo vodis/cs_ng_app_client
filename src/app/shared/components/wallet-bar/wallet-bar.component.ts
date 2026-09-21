@@ -86,6 +86,9 @@ export class WalletBarComponent {
 
   public handleCloseWalletMenu(): void {
     if (this.drawerMode === 'swap-review') {
+      if (this.walletGatewayBridge.isExecutionInProgress()) {
+        return;
+      }
       this.walletGatewayBridge.closeSwapReview();
       this.walletsService.drawerMode.next('wallet');
     } else {

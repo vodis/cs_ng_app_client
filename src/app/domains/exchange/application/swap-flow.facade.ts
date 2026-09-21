@@ -208,6 +208,8 @@ export class SwapFlowFacade {
       input.signerId.toLowerCase(),
       input.recipient,
       input.recipientType,
+      input.depositType,
+      input.refundType,
       input.slippageTolerance,
       input.deadline,
       input.authMethod,
