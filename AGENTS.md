@@ -99,6 +99,11 @@ Production host rules:
 
 Any contract change in wallets (routes, exposed modules, events, required inputs) must be mirrored in this host.
 
+Wallet MFE contract 2.3 adds native NEAR `deposit_address` execution through
+the host-provided `depositSwap` service and the `onTransactionSubmitted`
+callback. Keep all non-native-NEAR sources on intent execution until their
+origin-chain transaction adapters are implemented and documented.
+
 The canonical auth-provider runtime contract is open in
 `cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. The MFE loads backend
 public auth configuration and coordinates provider session registration.

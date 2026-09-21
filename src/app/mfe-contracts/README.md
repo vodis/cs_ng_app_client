@@ -184,9 +184,10 @@ fields and retain the signer-as-recipient behavior.
 The host exposes foreign-recipient routes only when
 `environment.crossNetworkRecipientIntentSignEnabled` is enabled. Keep it
 disabled until the deployed BFF accepts `recipient` / `recipientType` on both
-quote and prepare requests and guarantees `intent_sign` execution packages for
-those routes. A BFF that strips the fields or returns `deposit_address` is not
-compatible with the current wallet gateway and must remain fail-closed.
+quote and prepare requests. Contract 2.3 supports `deposit_address` execution
+only when the source is native NEAR. Other source assets remain on
+`depositType: INTENTS`; an unexpected deposit package for those assets must fail
+closed in the wallet review.
 
 Host files:
 
@@ -195,10 +196,12 @@ Host files:
 - `src/app/domains/exchange/application/swap-execution.workflow.ts`
 - `src/app/shared/mfe/wallets/wallet-gateway.bridge.service.ts`
 
-Wallet MFE must expose `sendGatewayEvent` on `WalletsMfeMountApi` and
-`onIntentSigned` callback for the full flow to complete.
+Wallet MFE must expose `sendGatewayEvent` on `WalletsMfeMountApi`. Intent-sign
+execution completes through `onIntentSigned`. Native NEAR deposit execution
+uses the host-provided `depositSwap` service and completes the gateway leg
+through `onTransactionSubmitted`.
 
-### Final swap review contract (2.2)
+### Final swap review contract (2.3)
 
 `WalletsMfeMountApi.openSwapReview(intent)` switches the existing right-side
 drawer to the executable review surface. The host supplies canonical display
@@ -210,9 +213,12 @@ The MFE calls the prepare port for the final `dry: false` package, rejects
 results whose amount/account/auth context does not match the immutable intent,
 and ignores any response that is not from its latest request. It owns quote
 expiry, refreshed-output disclosure, slippage-bound reconfirmation, and
-single-flight `Confirm & sign` submission. It reports completion through
-`onSwapSubmitted` and requests a new host preview through
-`onSwapPreviewRefreshRequested` when the executable change is outside policy.
+single-flight submission. `intent_sign` packages use `signSwap` followed by
+`submitSwap`. Native NEAR `deposit_address` packages use `depositSwap`, which
+submits the exact prepared amount to the validated deposit address through the
+wallet gateway. It reports completion through `onSwapSubmitted` and requests a
+new host preview through `onSwapPreviewRefreshRequested` when the executable
+change is outside policy.
 
 The host remains responsible for the Trade form, shared balance source, dry
 quote cancellation/versioning, and opening/closing the drawer. The MFE must not

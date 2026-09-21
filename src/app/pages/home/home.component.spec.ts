@@ -375,6 +375,40 @@ describe('HomeComponent market overview', () => {
     );
   });
 
+  it('keeps NEP-141 sources on intent execution', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.walletAddress = 'alice.near';
+    component.fromToken = {
+      assetId: 'nep141:usdc.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+      blockchain: 'near',
+    };
+    component.toToken = {
+      assetId: 'nep141:wrap.near',
+      symbol: 'wNEAR',
+      name: 'Wrapped NEAR',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+
+    expect(component['buildSwapInput']('1000000', 'near')).toEqual(
+      jasmine.objectContaining({
+        recipientType: 'INTENTS',
+        depositType: 'INTENTS',
+        refundType: 'INTENTS',
+      })
+    );
+  });
+
   it('enables a manual quote retry after a quote request fails', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
@@ -668,6 +702,8 @@ describe('HomeComponent market overview', () => {
         signerId: '0x0000000000000000000000000000000000000001',
         recipient: 'BYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z',
         recipientType: 'DESTINATION_CHAIN',
+        depositType: 'INTENTS',
+        refundType: 'INTENTS',
       })
     );
     expect(balancesService.calls).toContain(
@@ -901,6 +937,9 @@ describe('HomeComponent market overview', () => {
           assetId: 'near:native',
           executionAssetId: 'nep141:wrap.near',
         }),
+        recipientType: 'DESTINATION_CHAIN',
+        depositType: 'ORIGIN_CHAIN',
+        refundType: 'ORIGIN_CHAIN',
       })
     );
     expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('swap-review');
