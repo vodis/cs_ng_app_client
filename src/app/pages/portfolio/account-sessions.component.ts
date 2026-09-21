@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { AuthSessionService } from '@core/auth/auth-session.service';
+import { AccountSessionsFacade } from './account-sessions.facade';
 
 type AccountLoginSession = {
   status: 'Active' | 'Revoked';
@@ -41,6 +41,7 @@ const MOCK_LOGIN_SESSIONS: AccountLoginSession[] = [
   selector: 'app-account-sessions',
   standalone: false,
   templateUrl: './account-sessions.component.html',
+  providers: [AccountSessionsFacade],
 })
 export class AccountSessionsComponent {
   public deletionMessage = '';
@@ -48,9 +49,9 @@ export class AccountSessionsComponent {
   public showAllSessions = false;
   public readonly loginSessions = MOCK_LOGIN_SESSIONS;
   public visibleLoginSessions = MOCK_LOGIN_SESSIONS.slice(0, 2);
-  public readonly loading$ = this.authSession.loading$;
+  public readonly loading$ = this.account.loading$;
 
-  constructor(private readonly authSession: AuthSessionService) {}
+  constructor(private readonly account: AccountSessionsFacade) {}
 
   public toggleSessions(): void {
     this.showAllSessions = !this.showAllSessions;
@@ -70,7 +71,7 @@ export class AccountSessionsComponent {
     this.error = '';
     this.deletionMessage = '';
     try {
-      const deletionAvailableAt = await this.authSession.requestDeletion();
+      const deletionAvailableAt = await this.account.requestDeletion();
       this.deletionMessage = `Deletion available ${new Date(deletionAvailableAt).toLocaleDateString()}`;
     } catch (error) {
       this.error =
@@ -82,7 +83,7 @@ export class AccountSessionsComponent {
     this.error = '';
     this.deletionMessage = '';
     try {
-      await this.authSession.logout();
+      await this.account.logout();
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Logout failed';
     }
