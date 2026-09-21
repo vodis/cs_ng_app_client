@@ -60,6 +60,40 @@
   gap: 8px;
 }
 
+.connected-wallet-board__compatible {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+}
+
+.connected-wallet-board__compatible-title {
+  color: var(--secondary-text-color, #9aa0a6);
+  font-size: 0.75rem;
+}
+
+.connected-wallet-board__badges {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.connected-wallet-board__badge {
+  padding: 6px 12px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--secondary-text-color, #9aa0a6);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.connected-wallet-board__badge--active {
+  border-color: var(--primary-text-color, #fe6c00);
+  background: rgb(254 108 0 / 12%);
+  color: var(--primary-text-color, #fe6c00);
+}
+
 .connected-wallet-board__chip {
   padding: 6px 12px;
   border: 1px solid rgb(255 255 255 / 14%);
@@ -74,12 +108,6 @@
 .connected-wallet-board__chip:hover {
   border-color: var(--primary-text-color, #fe6c00);
   color: var(--main-text-color, #e8eaed);
-}
-
-.connected-wallet-board__chip--active {
-  border-color: var(--primary-text-color, #fe6c00);
-  background: rgb(254 108 0 / 12%);
-  color: var(--primary-text-color, #fe6c00);
 }
 
 .connected-wallet-board__token-list {
@@ -198,16 +226,4 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-}
-
-.connected-wallet-board__disconnect {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--main-bg-color, #171c1f) 88%, white);
-  color: inherit;
-  cursor: pointer;
-  font-size: 0.9375rem;
-  font-weight: 500;
 }

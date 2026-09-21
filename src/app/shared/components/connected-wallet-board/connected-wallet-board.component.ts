@@ -41,7 +41,6 @@ export class ConnectedWalletBoardComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly walletGatewayBridge = inject(WalletGatewayBridgeService);
   private readonly balancesFacade = inject(ConnectedWalletBalancesFacade);
-  private hasPickedChain = false;
 
   public snapshot: WalletConnectionSnapshot | undefined;
   public balances: ConnectedWalletBalancesState | undefined;
@@ -55,9 +54,7 @@ export class ConnectedWalletBoardComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(snapshot => {
         this.snapshot = snapshot;
-        if (!this.hasPickedChain) {
-          this.selectedEvmChainId = resolveDefaultEvmChainId(snapshot?.chainId);
-        }
+        this.selectedEvmChainId = resolveDefaultEvmChainId(snapshot?.chainId);
         this.loadBalancesIfConnected(snapshot);
       });
   }
@@ -134,6 +131,16 @@ export class ConnectedWalletBoardComponent {
     return '';
   }
 
+  public activeNetworkName(): string {
+    if (this.chainFamily === 'near') {
+      return 'NEAR';
+    }
+    if (this.chainFamily === 'ton') {
+      return 'TON';
+    }
+    return this.activeNetwork.name;
+  }
+
   public activeNetworkLabel(): string {
     if (this.chainFamily === 'near') {
       const account = this.snapshot?.account ?? '';
@@ -159,18 +166,8 @@ export class ConnectedWalletBoardComponent {
     return chain.chainId === this.selectedEvmChainId;
   }
 
-  public selectNetwork(chain: EvmChainMock): void {
-    this.hasPickedChain = true;
-    this.selectedEvmChainId = chain.chainId;
-    this.loadBalancesIfConnected(this.snapshot, true);
-  }
-
   public retryBalances(): void {
     this.loadBalancesIfConnected(this.snapshot, true);
-  }
-
-  public disconnect(): void {
-    this.walletGatewayBridge.disconnectWallet();
   }
 
   public changeLabel(market: TokenBalanceMock): string {
