@@ -61,7 +61,7 @@ Production wallet remote policy:
 - Keep wallet, passkey, and swap onboarding on `/profile` so first-time
   users can enter the app shell immediately.
 - Sidebar **Profile** links to `/profile`; the header account icon links to
-  `/portfolio` (holdings).
+  `/portfolio` (holdings, sessions, and sign-out).
 - Keep profile integrations behind `ProfileFacade`; do not inject auth, wallet
   gateway, or router services directly into `ProfileComponent`.
 - Supply activity through `ProfileActivitySource` so the activity panel and
@@ -234,8 +234,8 @@ Host auth routes live under `src/app/pages/auth/`.
 | `/proposals`       | Public      | Product page; login is optional                                    |
 | `/login`           | Public      | Passkey, Google, Apple, Telegram always shown; email code fallback |
 | `/register`        | Public      | Account creation only; wallet setup is separate                    |
-| `/profile`         | `AuthGuard` | Balance hero, onboarding, activity, sessions, account footer       |
-| `/portfolio`       | `AuthGuard` | Holdings and agent authorization                                   |
+| `/profile`         | `AuthGuard` | Balance hero, onboarding, activity, wallets                        |
+| `/portfolio`       | `AuthGuard` | Holdings, agent authorization, sessions, sign-out                  |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                                      |
 
 ### Login expectations
