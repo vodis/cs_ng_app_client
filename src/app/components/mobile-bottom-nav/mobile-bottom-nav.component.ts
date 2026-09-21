@@ -18,6 +18,7 @@ export type MobileNavIcon =
   | 'home'
   | 'exchange'
   | 'portfolio'
+  | 'profile'
   | 'more'
   | 'back'
   | 'grow'
@@ -84,7 +85,7 @@ export class MobileBottomNavComponent implements OnDestroy {
       name: 'Texts.sidebar-profile',
       fallback: 'Profile',
       url: '/profile',
-      icon: 'settings',
+      icon: 'profile',
       exact: true,
     },
     {

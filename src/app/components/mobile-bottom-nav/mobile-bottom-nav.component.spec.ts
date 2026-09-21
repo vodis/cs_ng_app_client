@@ -67,6 +67,9 @@ describe('MobileBottomNavComponent', () => {
     ]);
     expect(component.links.map(link => link.url)).not.toContain('/history');
     expect(component.links.map(link => link.url)).not.toContain('/portfolio');
+    expect(
+      component.links.find(link => link.fallback === 'Profile')?.icon
+    ).toBe('profile');
   });
 
   it('renders a persistent floating button instead of a bottom bar', () => {
