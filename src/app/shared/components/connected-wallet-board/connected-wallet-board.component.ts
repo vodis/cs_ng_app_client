@@ -35,7 +35,10 @@ export type ConnectedWalletBoardRow = {
   selector: 'app-connected-wallet-board',
   standalone: false,
   templateUrl: './connected-wallet-board.component.html',
-  styleUrls: ['./connected-wallet-board.component.scss'],
+  styleUrls: [
+    './connected-wallet-board.component.scss',
+    './connected-wallet-board-tokens.component.scss',
+  ],
 })
 export class ConnectedWalletBoardComponent {
   private readonly destroyRef = inject(DestroyRef);
