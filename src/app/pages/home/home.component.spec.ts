@@ -402,7 +402,7 @@ describe('HomeComponent market overview', () => {
 
     expect(component['buildSwapInput']('1000000', 'near')).toEqual(
       jasmine.objectContaining({
-        recipientType: 'INTENTS',
+        recipientType: 'DESTINATION_CHAIN',
         depositType: 'INTENTS',
         refundType: 'INTENTS',
       })
@@ -937,7 +937,7 @@ describe('HomeComponent market overview', () => {
           assetId: 'near:native',
           executionAssetId: 'nep141:wrap.near',
         }),
-        recipientType: 'INTENTS',
+        recipientType: 'DESTINATION_CHAIN',
         depositType: 'INTENTS',
         refundType: 'INTENTS',
       })

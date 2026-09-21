@@ -419,10 +419,7 @@ export class HomeComponent {
       amount,
       signerId: this.walletAddress.toLowerCase(),
       recipient: this.effectiveRecipient(),
-      recipientType:
-        this.isForeignDestination() || authMethod === 'evm'
-          ? 'DESTINATION_CHAIN'
-          : 'INTENTS',
+      recipientType: 'DESTINATION_CHAIN',
       depositType: 'INTENTS',
       refundType: 'INTENTS',
       slippageTolerance: this.slippageToleranceBps,
