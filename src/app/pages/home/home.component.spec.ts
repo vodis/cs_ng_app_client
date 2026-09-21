@@ -856,7 +856,7 @@ describe('HomeComponent market overview', () => {
     expect(component.quoteError).toBe('');
   });
 
-  it('opens MFE review with separate native and execution asset ids', () => {
+  it('keeps native NEAR swaps on intent signing and publishing', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
     ) as unknown as WalletBalancesServiceStub;
@@ -937,9 +937,9 @@ describe('HomeComponent market overview', () => {
           assetId: 'near:native',
           executionAssetId: 'nep141:wrap.near',
         }),
-        recipientType: 'DESTINATION_CHAIN',
-        depositType: 'ORIGIN_CHAIN',
-        refundType: 'ORIGIN_CHAIN',
+        recipientType: 'INTENTS',
+        depositType: 'INTENTS',
+        refundType: 'INTENTS',
       })
     );
     expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('swap-review');

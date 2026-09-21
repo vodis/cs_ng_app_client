@@ -56,7 +56,7 @@ describe('parseApprovedSwapPrepareResponse', () => {
     );
   });
 
-  it('decodes a deposit response without quote hashes', () => {
+  it('rejects a deposit response instead of authorizing a wallet transfer', () => {
     const data = validPrepareData();
     data['quoteHashes'] = [];
     data['executionPackage'] = {
@@ -68,16 +68,10 @@ describe('parseApprovedSwapPrepareResponse', () => {
     };
     data['providerId'] = 'one-click';
 
-    const parsed = parseApprovedSwapPrepareResponse({ data, error: null });
-
-    expect(parsed.executionPackage).toEqual({
-      providerId: 'one-click',
-      mode: 'deposit_address',
-      protocol: '1click',
-      requiredAction: 'deposit',
-      payload: { depositAddress: 'deposit.near' },
-    });
-    expect(parsed.quoteHashes).toEqual([]);
+    expectInvalidPreparePackage(
+      { data, error: null },
+      'data.executionPackage.mode must be intent_sign'
+    );
   });
 
   it('rejects malformed token deltas instead of asserting their type', () => {

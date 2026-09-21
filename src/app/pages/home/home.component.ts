@@ -413,9 +413,6 @@ export class HomeComponent {
     amount: string,
     authMethod: SupportedSwapAuthMethod
   ): SwapFormInput {
-    const usesNativeNearDeposit =
-      authMethod === 'near' && this.fromToken.assetId === 'near:native';
-
     return {
       originAsset: this.executionAssetId(this.fromToken),
       destinationAsset: this.executionAssetId(this.toToken),
@@ -423,13 +420,11 @@ export class HomeComponent {
       signerId: this.walletAddress.toLowerCase(),
       recipient: this.effectiveRecipient(),
       recipientType:
-        usesNativeNearDeposit ||
-        this.isForeignDestination() ||
-        authMethod === 'evm'
+        this.isForeignDestination() || authMethod === 'evm'
           ? 'DESTINATION_CHAIN'
           : 'INTENTS',
-      depositType: usesNativeNearDeposit ? 'ORIGIN_CHAIN' : 'INTENTS',
-      refundType: usesNativeNearDeposit ? 'ORIGIN_CHAIN' : 'INTENTS',
+      depositType: 'INTENTS',
+      refundType: 'INTENTS',
       slippageTolerance: this.slippageToleranceBps,
       deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       authMethod,

@@ -249,13 +249,10 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         .requestApprovedPreparePackage(request)
         .subscribe({
           next: result => {
-            if (
-              result.executionPackage.mode !== 'intent_sign' &&
-              result.executionPackage.mode !== 'deposit_address'
-            ) {
+            if (result.executionPackage.mode !== 'intent_sign') {
               reject(
                 new Error(
-                  `Execution mode ${result.executionPackage.mode} is not supported in wallet review yet.`
+                  `Execution mode ${result.executionPackage.mode} is not supported; swaps must sign and publish an intent.`
                 )
               );
               return;
