@@ -14,16 +14,16 @@
       <a
         class="header__account-link"
         [class.header__account-link--icon]="!!session || isMobileView"
-        [routerLink]="localizedRouting.path(session ? '/profile' : '/login')"
+        [routerLink]="localizedRouting.path(session ? '/portfolio' : '/login')"
         routerLinkActive="_active"
         [attr.aria-label]="
           session
-            ? ('Texts.header-profile' | csTranslate: 'Profile')
+            ? ('Texts.header-portfolio' | csTranslate: 'Portfolio')
             : ('Texts.header-sign-in' | csTranslate: 'Sign in')
         "
         [attr.title]="
           session
-            ? ('Texts.header-profile' | csTranslate: 'Profile')
+            ? ('Texts.header-portfolio' | csTranslate: 'Portfolio')
             : ('Texts.header-sign-in' | csTranslate: 'Sign in')
         ">
         @if (session || isMobileView) {

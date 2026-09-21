@@ -58,15 +58,18 @@ describe('MobileBottomNavComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('keeps the first level to Home, Exchange, Portfolio, and More', () => {
+  it('keeps the first level to Home, Exchange, Profile, and More', () => {
     expect(component.links.map(link => link.fallback)).toEqual([
       'Home',
       'Exchange',
-      'Portfolio',
+      'Profile',
       'More',
     ]);
     expect(component.links.map(link => link.url)).not.toContain('/history');
-    expect(component.links.map(link => link.url)).not.toContain('/profile');
+    expect(component.links.map(link => link.url)).not.toContain('/portfolio');
+    expect(
+      component.links.find(link => link.fallback === 'Profile')?.icon
+    ).toBe('profile');
   });
 
   it('renders a persistent floating button instead of a bottom bar', () => {
@@ -83,7 +86,7 @@ describe('MobileBottomNavComponent', () => {
       ) as NodeListOf<HTMLElement>
     ).map(el => el.textContent?.trim());
 
-    expect(labels).toEqual(['Home', 'Exchange', 'Portfolio', 'More']);
+    expect(labels).toEqual(['Home', 'Exchange', 'Profile', 'More']);
   });
 
   it('keeps visible internal destinations unique', () => {
@@ -92,11 +95,11 @@ describe('MobileBottomNavComponent', () => {
     expect(destinations).toEqual([
       '/home',
       '/',
-      '/portfolio',
+      '/profile',
       '/farm',
       '/proposals',
       '/history',
-      '/profile',
+      '/portfolio',
     ]);
     expect(new Set(destinations).size).toBe(destinations.length);
   });
@@ -113,7 +116,7 @@ describe('MobileBottomNavComponent', () => {
       'Grow',
       'Bots',
       'History',
-      'Settings',
+      'Portfolio',
       'Craftscript.com',
       'Docs',
     ]);
@@ -129,7 +132,7 @@ describe('MobileBottomNavComponent', () => {
       'Grow',
       'Bots',
       'History',
-      'Settings',
+      'Portfolio',
       'Craftscript.com',
       'Docs',
     ]);

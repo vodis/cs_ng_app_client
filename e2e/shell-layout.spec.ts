@@ -81,7 +81,7 @@ test.describe('Shell layout (desktop)', () => {
     await expect(page.locator('app-sidebar .sidebar__nav')).toBeVisible({
       timeout: 3000,
     });
-    await expect(page.getByRole('link', { name: 'Portfolio' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Profile' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Trade' })).toBeVisible();
     await expect(
       page.getByRole('link', { name: 'Transactions' })
