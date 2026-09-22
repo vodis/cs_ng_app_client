@@ -247,13 +247,23 @@ function withSparkline(token: TokenBalanceMockSeed): TokenBalanceMock {
   };
 }
 
-export function resolveDefaultEvmChainId(
+/** Preserves the wallet's actual EVM chain ID; never remaps unknown chains to mainnet. */
+export function resolveConnectedEvmChainId(
   chainId: number | null | undefined
-): number {
-  if (chainId != null && EVM_CHAINS.some(chain => chain.chainId === chainId)) {
-    return chainId;
+): number | null {
+  if (chainId == null || !Number.isFinite(chainId)) {
+    return null;
   }
-  return 1;
+  return chainId;
+}
+
+export function findKnownEvmChain(
+  chainId: number | null | undefined
+): EvmChainMock | undefined {
+  if (chainId == null) {
+    return undefined;
+  }
+  return EVM_CHAINS.find(chain => chain.chainId === chainId);
 }
 
 export function getMockBalances(
@@ -266,9 +276,7 @@ export function getMockBalances(
   if (family === 'ton') {
     return TON_BALANCES.map(withSparkline);
   }
-  return (ETHEREUM_BALANCES[evmChainId] ?? ETHEREUM_BALANCES[1]).map(
-    withSparkline
-  );
+  return (ETHEREUM_BALANCES[evmChainId] ?? []).map(withSparkline);
 }
 
 export function getMockTotalUsd(tokens: TokenBalanceMock[]): string {

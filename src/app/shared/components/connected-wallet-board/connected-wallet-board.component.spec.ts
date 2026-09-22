@@ -152,6 +152,30 @@ describe('ConnectedWalletBoardComponent', () => {
     ).toBeNull();
   });
 
+  it('preserves unsupported EVM chain IDs instead of remapping to mainnet', () => {
+    const sepoliaChainId = 11155111;
+    snapshot$.next({
+      ...evmSnapshot,
+      chainId: sepoliaChainId,
+    });
+    fixture.detectChanges();
+
+    expect(loadBalances).toHaveBeenCalledWith({
+      account,
+      network: `eip155:${sepoliaChainId}`,
+    });
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('EVM');
+    expect(text).toContain(`Unsupported · chain ${sepoliaChainId}`);
+    expect(text).not.toContain('Ethereum · chain 1');
+    expect(
+      fixture.nativeElement.querySelector(
+        '.connected-wallet-board__badge--active'
+      )
+    ).toBeNull();
+  });
+
   it('loads balances for a connected NEAR account', () => {
     snapshot$.next(nearSnapshot);
     fixture.detectChanges();
