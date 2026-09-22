@@ -129,10 +129,99 @@ describe('ConnectedWalletBoardComponent', () => {
     expect(text).toContain('ETH');
     expect(text).toContain('1.25');
     expect(text).not.toContain('$5,848.49');
-    expect(text).toContain('Mock markets');
+    expect(text).not.toContain('Mock markets');
     expect(fixture.nativeElement.querySelectorAll('app-sparkline').length).toBe(
       1
     );
+  });
+
+  it('hides zero-balance tokens and shows empty copy when none remain', () => {
+    balances$.next({
+      status: 'ready',
+      account,
+      network: 'eip155:1',
+      rows: [
+        {
+          walletId: null,
+          walletAddress: account,
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          assetId: 'usdc',
+          symbol: 'USDC',
+          decimals: 6,
+          balanceRaw: '0',
+          balanceDecimal: '0',
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+        {
+          walletId: null,
+          walletAddress: account,
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          assetId: 'eth',
+          symbol: 'ETH',
+          decimals: 18,
+          balanceRaw: '1000000000000000000',
+          balanceDecimal: '1.25',
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('ETH');
+    expect(text).toContain('1.25');
+    expect(text).not.toContain('USDC');
+
+    balances$.next({
+      status: 'ready',
+      account,
+      network: 'eip155:1',
+      rows: [
+        {
+          walletId: null,
+          walletAddress: account,
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          assetId: 'usdc',
+          symbol: 'USDC',
+          decimals: 6,
+          balanceRaw: '0',
+          balanceDecimal: '0',
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const emptyText = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(emptyText).toContain('No balance on this wallet detected');
+    expect(emptyText).not.toContain('USDC');
+  });
+
+  it('shows no-balance copy when balances fail to load', () => {
+    balances$.next({
+      status: 'error',
+      account,
+      network: 'eip155:1',
+      rows: [],
+      errorMessage: 'Failed to load balances.',
+    });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('No balance on this wallet detected');
+    expect(text).not.toContain('Failed to load balances.');
   });
 
   it('reloads balances for the selected EVM network', () => {
@@ -254,7 +343,7 @@ describe('ConnectedWalletBoardComponent', () => {
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Some balances could not be loaded.');
-    expect(text).not.toContain('No balances yet.');
+    expect(text).not.toContain('No balance on this wallet detected');
   });
 
   it('disconnects through the wallet gateway', () => {

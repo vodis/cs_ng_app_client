@@ -104,17 +104,19 @@ export class ConnectedWalletBoardComponent {
   }
 
   public get rows(): ConnectedWalletBoardRow[] {
-    return (this.balances?.rows ?? []).map(row => ({
-      id: `${row.network}:${row.assetId}`,
-      symbol: row.symbol,
-      amount: this.amountLabel(row),
-      stale: row.stale,
-      market: findMockMarket(
-        row.symbol,
-        this.chainFamily,
-        this.selectedEvmChainId
-      ),
-    }));
+    return (this.balances?.rows ?? [])
+      .filter(row => this.hasPositiveBalance(row))
+      .map(row => ({
+        id: `${row.network}:${row.assetId}`,
+        symbol: row.symbol,
+        amount: this.amountLabel(row),
+        stale: row.stale,
+        market: findMockMarket(
+          row.symbol,
+          this.chainFamily,
+          this.selectedEvmChainId
+        ),
+      }));
   }
 
   public get balancesCopy(): string {
@@ -122,14 +124,17 @@ export class ConnectedWalletBoardComponent {
     if (!status) {
       return '';
     }
-    if (status === 'error' || status === 'partial') {
+    if (status === 'error') {
+      return 'No balance on this wallet detected';
+    }
+    if (status === 'partial') {
       return this.balances?.errorMessage ?? 'Failed to load balances.';
     }
     if (status === 'loading') {
       return 'Loading balances...';
     }
     if (status === 'ready' && this.rows.length === 0) {
-      return 'No balances yet.';
+      return 'No balance on this wallet detected';
     }
     return '';
   }
@@ -243,5 +248,26 @@ export class ConnectedWalletBoardComponent {
     const amount = row.balanceDecimal ?? row.balanceRaw;
     const suffix = row.stale ? ' (stale)' : '';
     return `${amount}${suffix}`;
+  }
+
+  private hasPositiveBalance(row: WalletBalance): boolean {
+    const decimal = row.balanceDecimal?.trim();
+    if (decimal) {
+      const value = Number(decimal.replace(/,/g, ''));
+      if (Number.isFinite(value)) {
+        return value > 0;
+      }
+    }
+
+    const raw = row.balanceRaw?.trim();
+    if (!raw) {
+      return false;
+    }
+    try {
+      return BigInt(raw) > 0n;
+    } catch {
+      const value = Number(raw);
+      return Number.isFinite(value) && value > 0;
+    }
   }
 }
