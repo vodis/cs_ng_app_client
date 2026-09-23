@@ -172,8 +172,11 @@ Host-owned sequence for near-intents swaps:
 3. MFE builds `WalletMessage` via SDK only
 4. Host sends `SIGN_REQUESTED`
 5. MFE signs through gateway gates and emits `onIntentSigned`
-6. Host calls `POST /api/v1/swaps/execute` with `signature`, `quoteHashes`, and user context  
-   (`prepareBroadcastRequest.prepareSwapSignedData` runs in the BFF execute handler)
+6. Host calls authenticated `POST /api/v1/swaps/execute` with `signature`,
+   `quoteHashes`, and user context. The returned `preparationId` is preserved in
+   the execution payload and used as the stable `Idempotency-Key` header.
+   (`prepareBroadcastRequest.prepareSwapSignedData` runs in the BFF execute
+   handler.)
 
 Quote and prepare requests keep the signing/refund account separate from the
 destination recipient. `signerId` always identifies the connected wallet;

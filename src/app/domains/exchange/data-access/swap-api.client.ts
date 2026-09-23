@@ -1,7 +1,8 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, from, map, switchMap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { AuthProviderService } from '@core/auth/auth-provider.service';
 import type { ApiResponseEnvelope } from '@mfe-contracts/api-envelope';
 import type {
   ApprovedSwapPreparePackage,
@@ -34,7 +35,10 @@ type SubmitIntentResponse = ApiResponseEnvelope<{ intentHash: string }>;
   providedIn: 'root',
 })
 export class SwapApiClient {
-  constructor(private readonly httpClient: HttpClient) {}
+  constructor(
+    private readonly httpClient: HttpClient,
+    private readonly authProvider: AuthProviderService
+  ) {}
 
   requestQuotePreview(request: SwapQuoteRequest): Observable<SwapQuotePreview> {
     return this.httpClient
@@ -78,27 +82,46 @@ export class SwapApiClient {
       traceId: input.traceId,
     };
 
-    return this.httpClient
-      .post<SubmitIntentResponse>(
-        `${environment.apiUrl}/api/v1/swaps/execute`,
-        body,
-        { headers: this.traceHeaders(input.traceId) }
-      )
-      .pipe(
-        map(response => {
-          if (response.error || !response.data?.intentHash) {
-            throw (
-              response.error ?? {
-                code: 'SUBMIT_FAILED',
-                message: 'Swap execute response missing intentHash',
-                retryable: false,
-              }
-            );
-          }
+    return from(this.authProvider.whenSettled()).pipe(
+      switchMap(() => this.authProvider.getAccessToken()),
+      switchMap(token => {
+        if (!token) {
+          throw new Error('No active session');
+        }
 
-          return response.data.intentHash;
-        })
-      );
+        const idempotencyKey = this.executionIdempotencyKey(
+          input.executionPayload
+        );
+        if (!idempotencyKey) {
+          throw new Error(
+            'Swap execution package is missing a valid preparationId'
+          );
+        }
+
+        return this.httpClient.post<SubmitIntentResponse>(
+          `${environment.apiUrl}/api/v1/swaps/execute`,
+          body,
+          {
+            headers: this.traceHeaders(input.traceId)
+              .set('Authorization', `Bearer ${token}`)
+              .set('Idempotency-Key', idempotencyKey),
+          }
+        );
+      }),
+      map(response => {
+        if (response.error || !response.data?.intentHash) {
+          throw (
+            response.error ?? {
+              code: 'SUBMIT_FAILED',
+              message: 'Swap execute response missing intentHash',
+              retryable: false,
+            }
+          );
+        }
+
+        return response.data.intentHash;
+      })
+    );
   }
 
   private toQuoteBody(request: SwapQuoteRequest): Record<string, unknown> {
@@ -143,5 +166,15 @@ export class SwapApiClient {
       'x-trace-id': traceId,
       'x-request-id': traceId,
     });
+  }
+
+  private executionIdempotencyKey(
+    executionPayload?: Record<string, unknown>
+  ): string | undefined {
+    const preparationId = executionPayload?.['preparationId'];
+    return typeof preparationId === 'string' &&
+      /^[A-Za-z0-9._:-]{8,128}$/.test(preparationId)
+      ? preparationId
+      : undefined;
   }
 }
