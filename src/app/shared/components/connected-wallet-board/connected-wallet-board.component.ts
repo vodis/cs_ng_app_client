@@ -14,13 +14,9 @@ import {
 import type { Subscription } from 'rxjs';
 import {
   EVM_CHAINS,
-  findMockMarket,
-  formatChangePercent,
   resolveDefaultEvmChainId,
-  sparklineIsUp,
   type EvmChainMock,
   type SupportedChainFamily,
-  type TokenBalanceMock,
 } from './connected-wallet-board.mock';
 
 export type ConnectedWalletBoardRow = {
@@ -28,7 +24,6 @@ export type ConnectedWalletBoardRow = {
   symbol: string;
   amount: string;
   stale: boolean;
-  market?: TokenBalanceMock;
 };
 
 @Component({
@@ -111,11 +106,6 @@ export class ConnectedWalletBoardComponent {
         symbol: row.symbol,
         amount: this.amountLabel(row),
         stale: row.stale,
-        market: findMockMarket(
-          row.symbol,
-          this.chainFamily,
-          this.selectedEvmChainId
-        ),
       }));
   }
 
@@ -124,10 +114,7 @@ export class ConnectedWalletBoardComponent {
     if (!status) {
       return '';
     }
-    if (status === 'error') {
-      return 'No balance on this wallet detected';
-    }
-    if (status === 'partial') {
+    if (status === 'error' || status === 'partial') {
       return this.balances?.errorMessage ?? 'Failed to load balances.';
     }
     if (status === 'loading') {
@@ -176,18 +163,6 @@ export class ConnectedWalletBoardComponent {
 
   public disconnect(): void {
     this.walletGatewayBridge.disconnectWallet();
-  }
-
-  public changeLabel(market: TokenBalanceMock): string {
-    return formatChangePercent(market.change24h);
-  }
-
-  public isTokenUp(market: TokenBalanceMock): boolean {
-    return sparklineIsUp(market.sparkline7d);
-  }
-
-  public sparklineLabel(row: ConnectedWalletBoardRow): string {
-    return `${row.symbol} 7-day price trend`;
   }
 
   private loadBalancesIfConnected(

@@ -78,10 +78,6 @@
         <div class="connected-wallet-board__token-header" aria-hidden="true">
           <span>Name</span>
           <span>Amount</span>
-          <span>Price</span>
-          <span>Market Cap</span>
-          <span>Volume(24h)</span>
-          <span>7d</span>
         </div>
         @for (token of rows; track token.id) {
           <div class="connected-wallet-board__token-row">
@@ -91,38 +87,6 @@
             <span class="connected-wallet-board__token-metric">{{
               token.amount
             }}</span>
-            @if (token.market; as market) {
-              <span
-                class="connected-wallet-board__token-metric connected-wallet-board__token-metric--price">
-                {{ market.priceUsd }}
-                <span
-                  class="connected-wallet-board__token-change"
-                  [class.connected-wallet-board__token-change--up]="
-                    isTokenUp(market)
-                  "
-                  [class.connected-wallet-board__token-change--down]="
-                    !isTokenUp(market)
-                  ">
-                  {{ changeLabel(market) }}
-                </span>
-              </span>
-              <span class="connected-wallet-board__token-metric">{{
-                market.marketCap
-              }}</span>
-              <span class="connected-wallet-board__token-metric">{{
-                market.volume24h
-              }}</span>
-              <app-sparkline
-                class="connected-wallet-board__token-sparkline"
-                [values]="market.sparkline7d"
-                [positive]="isTokenUp(market)"
-                [label]="sparklineLabel(token)" />
-            } @else {
-              <span class="connected-wallet-board__token-metric">—</span>
-              <span class="connected-wallet-board__token-metric">—</span>
-              <span class="connected-wallet-board__token-metric">—</span>
-              <span></span>
-            }
           </div>
         }
       </div>

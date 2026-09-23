@@ -7,7 +7,6 @@ import {
   type ConnectedWalletBalancesState,
 } from '@domains/wallet/application/connected-wallet-balances.facade';
 import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
-import { SparklineComponent } from '@shared/components/sparkline/sparkline.component';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { ConnectedWalletBoardComponent } from './connected-wallet-board.component';
 
@@ -95,7 +94,7 @@ describe('ConnectedWalletBoardComponent', () => {
     disconnectWallet = jasmine.createSpy('disconnectWallet');
 
     await TestBed.configureTestingModule({
-      declarations: [ConnectedWalletBoardComponent, SparklineComponent],
+      declarations: [ConnectedWalletBoardComponent],
       providers: [
         {
           provide: WalletGatewayBridgeService,
@@ -130,8 +129,11 @@ describe('ConnectedWalletBoardComponent', () => {
     expect(text).toContain('1.25');
     expect(text).not.toContain('$5,848.49');
     expect(text).not.toContain('Mock markets');
+    expect(text).not.toContain('$3,285.40');
+    expect(text).not.toContain('Price');
+    expect(text).not.toContain('Market Cap');
     expect(fixture.nativeElement.querySelectorAll('app-sparkline').length).toBe(
-      1
+      0
     );
   });
 
@@ -209,7 +211,7 @@ describe('ConnectedWalletBoardComponent', () => {
     expect(emptyText).not.toContain('USDC');
   });
 
-  it('shows no-balance copy when balances fail to load', () => {
+  it('keeps balance-load failures as errors instead of no-balance copy', () => {
     balances$.next({
       status: 'error',
       account,
@@ -220,8 +222,8 @@ describe('ConnectedWalletBoardComponent', () => {
     fixture.detectChanges();
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('No balance on this wallet detected');
-    expect(text).not.toContain('Failed to load balances.');
+    expect(text).toContain('Failed to load balances.');
+    expect(text).not.toContain('No balance on this wallet detected');
   });
 
   it('reloads balances for the selected EVM network', () => {
