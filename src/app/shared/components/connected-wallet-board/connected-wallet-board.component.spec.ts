@@ -77,7 +77,6 @@ describe('ConnectedWalletBoardComponent', () => {
   let snapshot$: BehaviorSubject<WalletConnectionSnapshot | undefined>;
   let balances$: BehaviorSubject<ConnectedWalletBalancesState>;
   let loadBalances: jasmine.Spy;
-  let disconnectWallet: jasmine.Spy;
 
   beforeEach(async () => {
     snapshot$ = new BehaviorSubject<WalletConnectionSnapshot | undefined>(
@@ -92,7 +91,6 @@ describe('ConnectedWalletBoardComponent', () => {
     loadBalances = jasmine
       .createSpy('load')
       .and.returnValue(balances$.asObservable());
-    disconnectWallet = jasmine.createSpy('disconnectWallet');
 
     await TestBed.configureTestingModule({
       declarations: [ConnectedWalletBoardComponent, SparklineComponent],
@@ -101,7 +99,7 @@ describe('ConnectedWalletBoardComponent', () => {
           provide: WalletGatewayBridgeService,
           useValue: {
             snapshot$,
-            disconnectWallet,
+            disconnectWallet: jasmine.createSpy('disconnectWallet'),
           },
         },
         {
@@ -135,18 +133,47 @@ describe('ConnectedWalletBoardComponent', () => {
     );
   });
 
-  it('reloads balances for the selected EVM network', () => {
-    const chips = fixture.nativeElement.querySelectorAll(
-      '.connected-wallet-board__chip'
-    ) as NodeListOf<HTMLButtonElement>;
+  it('shows connected EVM network and read-only compatible badges', () => {
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Ethereum');
+    expect(text).toContain('Ethereum · chain 1');
+    expect(text).toContain('Compatible networks');
+    expect(
+      fixture.nativeElement.querySelectorAll('.connected-wallet-board__badge')
+        .length
+    ).toBe(9);
+    expect(
+      fixture.nativeElement
+        .querySelector('.connected-wallet-board__badge--active')
+        ?.textContent?.trim()
+    ).toBe('ETH');
+    expect(
+      fixture.nativeElement.querySelector('.connected-wallet-board__disconnect')
+    ).toBeNull();
+  });
 
-    chips[1].click();
+  it('preserves unsupported EVM chain IDs instead of remapping to mainnet', () => {
+    const sepoliaChainId = 11155111;
+    snapshot$.next({
+      ...evmSnapshot,
+      chainId: sepoliaChainId,
+    });
     fixture.detectChanges();
 
     expect(loadBalances).toHaveBeenCalledWith({
       account,
-      network: 'eip155:42161',
+      network: `eip155:${sepoliaChainId}`,
     });
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('EVM');
+    expect(text).toContain(`Unsupported · chain ${sepoliaChainId}`);
+    expect(text).not.toContain('Ethereum · chain 1');
+    expect(
+      fixture.nativeElement.querySelector(
+        '.connected-wallet-board__badge--active'
+      )
+    ).toBeNull();
   });
 
   it('loads balances for a connected NEAR account', () => {
@@ -161,12 +188,48 @@ describe('ConnectedWalletBoardComponent', () => {
     expect(text).toContain('alice.near');
     expect(text).toContain('NEAR');
     expect(text).toContain('NEAR · mainnet');
+    expect(text).not.toContain('Compatible networks');
     expect(text).not.toContain('Ethereum · chain 1');
     expect(text).toContain('Loading balances...');
     expect(
-      fixture.nativeElement.querySelectorAll('.connected-wallet-board__chip')
+      fixture.nativeElement.querySelectorAll('.connected-wallet-board__badge')
         .length
-    ).toBe(1);
+    ).toBe(0);
+  });
+
+  it('keeps mock market columns for NEAR balances with a null chainId', () => {
+    snapshot$.next(nearSnapshot);
+    balances$.next({
+      status: 'ready',
+      account: 'alice.near',
+      network: 'near:mainnet',
+      rows: [
+        {
+          walletId: null,
+          walletAddress: 'alice.near',
+          chainType: 'near',
+          network: 'near:mainnet',
+          assetId: 'near',
+          symbol: 'NEAR',
+          decimals: 24,
+          balanceRaw: '1000000000000000000000000',
+          balanceDecimal: '1.00',
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('$5.10');
+    expect(text).toContain('$6.1B');
+    expect(text).toContain('$312M');
+    expect(fixture.nativeElement.querySelectorAll('app-sparkline').length).toBe(
+      1
+    );
   });
 
   it('treats a HOT .tg account as NEAR mainnet even without identity', () => {
@@ -255,15 +318,5 @@ describe('ConnectedWalletBoardComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Some balances could not be loaded.');
     expect(text).not.toContain('No balances yet.');
-  });
-
-  it('disconnects through the wallet gateway', () => {
-    const button = fixture.nativeElement.querySelector(
-      '.connected-wallet-board__disconnect'
-    ) as HTMLButtonElement;
-
-    button.click();
-
-    expect(disconnectWallet).toHaveBeenCalledTimes(1);
   });
 });
