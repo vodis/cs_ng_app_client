@@ -52,7 +52,11 @@ export class AuthSessionService {
     private readonly walletsService: WalletsService,
     private readonly productEvents: ProductEventsService,
     private readonly localizedRouting: LocalizedRoutingService
-  ) {}
+  ) {
+    // Public routes never hit AuthGuard, so restore host session once the
+    // provider is ready whenever a valid access token already exists.
+    this.restoreSessionWhenProviderReady();
+  }
 
   get session(): AuthSession | null {
     return this.sessionSubject.value;
@@ -74,10 +78,15 @@ export class AuthSessionService {
     return this.authProvider.snapshot.passkeyLinkEnabled;
   }
 
-  async refresh(): Promise<AuthSession | null> {
+  async refresh(options?: {
+    clearOnFailure?: boolean;
+  }): Promise<AuthSession | null> {
+    const clearOnFailure = options?.clearOnFailure !== false;
     const token = await this.currentAccessToken();
     if (!token) {
-      this.sessionSubject.next(null);
+      if (clearOnFailure) {
+        this.sessionSubject.next(null);
+      }
       return null;
     }
 
@@ -100,7 +109,9 @@ export class AuthSessionService {
       this.sessionSubject.next(session);
       return session;
     } catch {
-      this.sessionSubject.next(null);
+      if (clearOnFailure) {
+        this.sessionSubject.next(null);
+      }
       return null;
     }
   }
@@ -290,6 +301,18 @@ export class AuthSessionService {
   clear(): void {
     this.accessToken = null;
     this.sessionSubject.next(null);
+  }
+
+  private restoreSessionWhenProviderReady(): void {
+    void this.authProvider
+      .whenSettled()
+      .then(async snapshot => {
+        if (snapshot.status !== 'ready' || this.sessionSubject.value) {
+          return;
+        }
+        await this.refresh({ clearOnFailure: false });
+      })
+      .catch(() => undefined);
   }
 
   private async clearAuthenticatedState(): Promise<void> {
