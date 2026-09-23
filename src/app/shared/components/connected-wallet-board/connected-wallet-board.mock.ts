@@ -268,13 +268,16 @@ export function findKnownEvmChain(
 
 export function getMockBalances(
   family: SupportedChainFamily,
-  evmChainId: number
+  evmChainId: number | null = null
 ): TokenBalanceMock[] {
   if (family === 'near') {
     return NEAR_BALANCES.map(withSparkline);
   }
   if (family === 'ton') {
     return TON_BALANCES.map(withSparkline);
+  }
+  if (evmChainId == null) {
+    return [];
   }
   return (ETHEREUM_BALANCES[evmChainId] ?? []).map(withSparkline);
 }
@@ -294,8 +297,13 @@ export function getMockTotalUsd(tokens: TokenBalanceMock[]): string {
 export function findMockMarket(
   symbol: string,
   family: SupportedChainFamily,
-  evmChainId: number
+  evmChainId: number | null
 ): TokenBalanceMock | undefined {
+  // EVM market fixtures are keyed by chain ID. Non-EVM families ignore it
+  // (NEAR/TON snapshots routinely have a null chainId).
+  if (family === 'ethereum' && evmChainId == null) {
+    return undefined;
+  }
   const needle = symbol.trim().toUpperCase();
   return getMockBalances(family, evmChainId).find(
     token => token.symbol.toUpperCase() === needle

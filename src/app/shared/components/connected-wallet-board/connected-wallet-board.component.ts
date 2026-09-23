@@ -107,16 +107,16 @@ export class ConnectedWalletBoardComponent {
   }
 
   public get rows(): ConnectedWalletBoardRow[] {
-    const evmChainId = this.selectedEvmChainId;
     return (this.balances?.rows ?? []).map(row => ({
       id: `${row.network}:${row.assetId}`,
       symbol: row.symbol,
       amount: this.amountLabel(row),
       stale: row.stale,
-      market:
-        evmChainId == null
-          ? undefined
-          : findMockMarket(row.symbol, this.chainFamily, evmChainId),
+      market: findMockMarket(
+        row.symbol,
+        this.chainFamily,
+        this.selectedEvmChainId
+      ),
     }));
   }
 
@@ -245,10 +245,7 @@ export class ConnectedWalletBoardComponent {
     if (this.chainFamily === 'ton') {
       return this.snapshot?.chainId === -3 ? 'ton:testnet' : 'ton:mainnet';
     }
-    if (
-      /^0x[a-f0-9]{40}$/i.test(account) &&
-      this.selectedEvmChainId != null
-    ) {
+    if (/^0x[a-f0-9]{40}$/i.test(account) && this.selectedEvmChainId != null) {
       return `eip155:${this.selectedEvmChainId}`;
     }
     return undefined;

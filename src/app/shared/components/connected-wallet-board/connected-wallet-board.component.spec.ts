@@ -197,6 +197,41 @@ describe('ConnectedWalletBoardComponent', () => {
     ).toBe(0);
   });
 
+  it('keeps mock market columns for NEAR balances with a null chainId', () => {
+    snapshot$.next(nearSnapshot);
+    balances$.next({
+      status: 'ready',
+      account: 'alice.near',
+      network: 'near:mainnet',
+      rows: [
+        {
+          walletId: null,
+          walletAddress: 'alice.near',
+          chainType: 'near',
+          network: 'near:mainnet',
+          assetId: 'near',
+          symbol: 'NEAR',
+          decimals: 24,
+          balanceRaw: '1000000000000000000000000',
+          balanceDecimal: '1.00',
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('$5.10');
+    expect(text).toContain('$6.1B');
+    expect(text).toContain('$312M');
+    expect(fixture.nativeElement.querySelectorAll('app-sparkline').length).toBe(
+      1
+    );
+  });
+
   it('treats a HOT .tg account as NEAR mainnet even without identity', () => {
     snapshot$.next({
       ...nearSnapshot,
