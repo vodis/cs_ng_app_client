@@ -375,6 +375,11 @@ Passkey UX rule:
 `AuthGuard` applies only to protected account routes. Public shell routes must
 not wait on the provider or redirect to `/login`.
 
+On public routes the host still restores `AuthSessionService` once the auth
+provider reaches `ready` and a provider access token is available. That keeps
+the header profile control in sync with a valid provider session (for example
+after refresh on Token Exchange) without blocking navigation.
+
 `AuthGuard` behavior:
 
 1. Allow navigation when `AuthSessionService.session` is already populated.

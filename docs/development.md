@@ -255,6 +255,9 @@ Host auth routes live under `src/app/pages/auth/`.
 - Missing or non-renewable sessions redirect to `/login?returnUrl=<safe-path>`
   only on protected account routes (`/profile`, `/portfolio`).
 - `AuthGuard` waits for auth-provider readiness before attempting refresh.
+- On public routes, `AuthSessionService` still hydrates the host session after
+  the provider is `ready` so the header shows the profile icon when a valid
+  provider token exists (without blocking or redirecting guests).
 - Logout navigates to Token Exchange (`/`).
 
 ### Wallet onboarding split
