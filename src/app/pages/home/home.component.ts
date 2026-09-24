@@ -42,6 +42,11 @@ import {
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
 import type { WalletTokenOption } from '@shared/components/token-select-panel/token-select-panel.models';
 import {
+  DEFAULT_SLIPPAGE_TOLERANCE_BPS,
+  formatSlippagePercentLabel,
+  minimumReceivedAtomic,
+} from '@shared/components/slippage-settings-panel/slippage-settings.utils';
+import {
   isNearWalletAddress,
   nearNetworkForAddress,
   networkLabel,
@@ -115,7 +120,6 @@ interface RecentActivityItem {
 })
 export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
-  private readonly slippageToleranceBps = 50;
   private readonly maxAmountFractionDigits = 18;
 
   public readonly recentActivity: RecentActivityItem[] = [
@@ -210,6 +214,9 @@ export class HomeComponent {
   public isTokenSelectorOpen = false;
   public tokenSelectorSide: TokenSelectorSide | null = null;
   public isRecipientPanelOpen = false;
+  public isSlippageSettingsOpen = false;
+  public slippageToleranceBps = DEFAULT_SLIPPAGE_TOLERANCE_BPS;
+  public slippageDraftBps = DEFAULT_SLIPPAGE_TOLERANCE_BPS;
   public recipientAddress = '';
   public crossNetworkRecipientIntentSignEnabled =
     environment.crossNetworkRecipientIntentSignEnabled;
@@ -441,11 +448,11 @@ export class HomeComponent {
 
     const input = this.buildSwapInput(amount, authMethod);
     const traceId = preview.traceId ?? createTraceId();
-    const minimumAtomic = (
-      (BigInt(preview.amountOutAtomic) *
-        BigInt(10_000 - this.slippageToleranceBps)) /
-      10_000n
-    ).toString();
+    const minimumAtomic =
+      minimumReceivedAtomic(
+        preview.amountOutAtomic,
+        this.slippageToleranceBps
+      ) ?? '0';
     const intent: SwapReviewIntent = {
       contractVersion: '1.0.0',
       traceId,
@@ -846,7 +853,52 @@ export class HomeComponent {
   }
 
   public slippageLabel(): string {
-    return `${this.slippageToleranceBps / 100}%`;
+    return formatSlippagePercentLabel(this.slippageToleranceBps);
+  }
+
+  public slippageReceiveAtLeastLabel(): string {
+    const preview = this.quotePreview;
+    if (!preview?.amountOutAtomic) {
+      return '';
+    }
+
+    const minimumAtomic = minimumReceivedAtomic(
+      preview.amountOutAtomic,
+      this.slippageDraftBps
+    );
+    if (!minimumAtomic) {
+      return '';
+    }
+
+    const formatted = this.formatSwapAmount(
+      this.fromBaseUnits(
+        minimumAtomic,
+        this.tokenDecimals(this.toToken.decimals)
+      ),
+      this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken))
+    );
+    return `${formatted} ${this.tokenSymbolLabel(this.toToken)}`;
+  }
+
+  public openSlippageSettings(): void {
+    this.slippageDraftBps = this.slippageToleranceBps;
+    this.isSlippageSettingsOpen = true;
+  }
+
+  public closeSlippageSettings(): void {
+    this.isSlippageSettingsOpen = false;
+    this.slippageDraftBps = this.slippageToleranceBps;
+  }
+
+  public onSlippageDraftChanged(bps: number): void {
+    this.slippageDraftBps = bps;
+  }
+
+  public saveSlippageSettings(bps: number): void {
+    this.slippageToleranceBps = bps;
+    this.slippageDraftBps = bps;
+    this.isSlippageSettingsOpen = false;
+    this.refreshSwapQuotePreview();
   }
 
   public networkFeeLabel(): string {

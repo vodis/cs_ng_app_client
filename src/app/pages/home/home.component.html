@@ -179,10 +179,14 @@
             <span>Price Impact</span>
             <b class="green">{{ swapPriceImpactLabel() }}</b>
           </div>
-          <div class="stat">
+          <button
+            type="button"
+            class="stat stat--action"
+            aria-label="Edit slippage"
+            (click)="openSlippageSettings()">
             <span>Slippage</span>
             <b class="orange">{{ slippageLabel() }} &#9998;</b>
-          </div>
+          </button>
           <div class="stat">
             <span>Network Fee</span>
             <b>{{ networkFeeLabel() }}</b>
@@ -455,4 +459,12 @@
       (addressSaved)="saveRecipientAddress($event)"
       (closeRequested)="closeRecipientPanel()" />
   </app-side-modal>
+
+  <app-slippage-settings-panel
+    [isOpen]="isSlippageSettingsOpen"
+    [slippageToleranceBps]="slippageToleranceBps"
+    [receiveAtLeastLabel]="slippageReceiveAtLeastLabel()"
+    (draftBpsChanged)="onSlippageDraftChanged($event)"
+    (saveRequested)="saveSlippageSettings($event)"
+    (closeRequested)="closeSlippageSettings()" />
 </div>

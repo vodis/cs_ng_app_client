@@ -20,6 +20,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
 import { RecipientAddressPanelComponent } from '@shared/components/recipient-address-panel/recipient-address-panel.component';
+import { SlippageSettingsPanelComponent } from '@shared/components/slippage-settings-panel/slippage-settings-panel.component';
 
 const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
 
@@ -44,6 +45,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     SideModalComponent,
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
+    SlippageSettingsPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
   ],
@@ -60,6 +62,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     SideModalComponent,
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
+    SlippageSettingsPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
     AvatarComponent,

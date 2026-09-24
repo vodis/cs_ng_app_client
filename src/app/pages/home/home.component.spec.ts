@@ -375,6 +375,31 @@ describe('HomeComponent market overview', () => {
     );
   });
 
+  it('applies a saved slippage preset to later quote requests', () => {
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next(nearWallet());
+    component.amount = '1';
+    component.saveSlippageSettings(100);
+
+    expect(component.slippageLabel()).toBe('1%');
+    expect(component.isSlippageSettingsOpen).toBeFalse();
+    expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
+      jasmine.objectContaining({ slippageTolerance: 100 })
+    );
+  });
+
   it('keeps NEP-141 sources on intent execution', () => {
     expectComparisonRequest({
       base: 'USDC',
