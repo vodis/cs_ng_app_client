@@ -63,8 +63,10 @@
             spellcheck="false"
             placeholder="Custom"
             aria-label="Custom slippage percent"
+            [attr.aria-invalid]="validationError ? true : null"
             [value]="customPercent"
             (focus)="focusCustom()"
+            (keydown)="onCustomKeydown($event)"
             (input)="onCustomInput($event)" />
           <span class="slippage-settings__custom-suffix" aria-hidden="true"
             >%</span
@@ -72,9 +74,12 @@
         </label>
       </div>
 
-      @if (validationError) {
-        <p class="slippage-settings__error">{{ validationError }}</p>
-      }
+      <p
+        class="slippage-settings__error"
+        [class.slippage-settings__error--visible]="!!validationError"
+        aria-live="polite">
+        {{ validationError }}
+      </p>
 
       <div class="slippage-settings__actions">
         <button

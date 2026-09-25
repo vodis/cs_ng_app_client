@@ -1,3 +1,5 @@
+import { normalizeAmountInputChars } from '@shared/utils/amount-format.utils';
+
 /** Basis points: 100 bps = 1%. */
 export const DEFAULT_SLIPPAGE_TOLERANCE_BPS = 50;
 
@@ -22,15 +24,35 @@ export function formatSlippagePercentLabel(bps: number): string {
   return `${fixed}%`;
 }
 
+export function sanitizeSlippagePercentInput(raw: string): string {
+  const cleaned = normalizeAmountInputChars(raw);
+  let separator: '.' | ',' | null = null;
+  let result = '';
+
+  for (const char of cleaned) {
+    if (char === '.' || char === ',') {
+      if (separator !== null) {
+        continue;
+      }
+      separator = char;
+      result += char;
+      continue;
+    }
+    result += char;
+  }
+
+  return result;
+}
+
 export function parseSlippagePercentInput(raw: string): number | null {
-  const trimmed = raw.trim().replace('%', '');
+  const trimmed = sanitizeSlippagePercentInput(raw.trim().replace('%', ''));
   if (!trimmed) {
     return null;
   }
-  if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+  if (!/^\d+([.,]\d+)?$/.test(trimmed)) {
     return null;
   }
-  const percent = Number(trimmed);
+  const percent = Number(trimmed.replace(',', '.'));
   if (
     !Number.isFinite(percent) ||
     percent < MIN_SLIPPAGE_PERCENT ||

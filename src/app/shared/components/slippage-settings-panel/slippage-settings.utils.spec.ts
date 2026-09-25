@@ -6,6 +6,7 @@ import {
   minimumReceivedAtomic,
   parseSlippagePercentInput,
   percentInputFromBps,
+  sanitizeSlippagePercentInput,
 } from './slippage-settings.utils';
 
 describe('slippage-settings utils', () => {
@@ -34,6 +35,29 @@ describe('slippage-settings utils', () => {
     expect(parseSlippagePercentInput('50.004')).toBeNull();
     expect(parseSlippagePercentInput('50.01')).toBeNull();
     expect(parseSlippagePercentInput('49.995')).toBe(5_000);
+  });
+
+  it('allows either comma or dot as the decimal separator', () => {
+    expect(sanitizeSlippagePercentInput('0.8')).toBe('0.8');
+    expect(sanitizeSlippagePercentInput('0,8')).toBe('0,8');
+    expect(parseSlippagePercentInput('0.8')).toBe(80);
+    expect(parseSlippagePercentInput('0,8')).toBe(80);
+    expect(parseSlippagePercentInput('12,5%')).toBe(1_250);
+  });
+
+  it('keeps only the first decimal separator when both appear', () => {
+    expect(sanitizeSlippagePercentInput('0,5.2')).toBe('0,52');
+    expect(sanitizeSlippagePercentInput('0.5,2')).toBe('0.52');
+    expect(sanitizeSlippagePercentInput('1..2')).toBe('1.2');
+    expect(sanitizeSlippagePercentInput('1,,2')).toBe('1,2');
+    expect(parseSlippagePercentInput('0,5.2')).toBe(52);
+    expect(parseSlippagePercentInput('0.5,2')).toBe(52);
+  });
+
+  it('strips letters from custom input', () => {
+    expect(sanitizeSlippagePercentInput('0,епм')).toBe('0,');
+    expect(sanitizeSlippagePercentInput('12abc.3.4')).toBe('12.34');
+    expect(sanitizeSlippagePercentInput('1a,2b')).toBe('1,2');
   });
 
   it('round-trips custom inputs for non-preset values', () => {

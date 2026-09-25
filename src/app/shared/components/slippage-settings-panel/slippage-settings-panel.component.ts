@@ -14,9 +14,11 @@ import {
   isSlippagePresetBps,
   parseSlippagePercentInput,
   percentInputFromBps,
+  sanitizeSlippagePercentInput,
   SLIPPAGE_PRESET_BPS,
   type SlippagePresetBps,
 } from './slippage-settings.utils';
+import { resolveAmountKeydownAction } from '@shared/utils/amount-format.utils';
 
 @Component({
   selector: 'app-slippage-settings-panel',
@@ -66,18 +68,41 @@ export class SlippageSettingsPanelComponent implements OnChanges {
 
   public onCustomInput(event: Event): void {
     const target = event.target;
-    const raw = target instanceof HTMLInputElement ? target.value : '';
-    this.customPercent = raw;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    const sanitized = sanitizeSlippagePercentInput(target.value);
+    if (target.value !== sanitized) {
+      const selectionStart = target.selectionStart ?? sanitized.length;
+      target.value = sanitized;
+      const nextCaret = Math.min(selectionStart, sanitized.length);
+      target.setSelectionRange(nextCaret, nextCaret);
+    }
+    this.customPercent = sanitized;
     this.selectedPresetBps = null;
-    const parsed = parseSlippagePercentInput(raw);
+    const parsed = parseSlippagePercentInput(sanitized);
     if (parsed == null) {
-      this.validationError = raw.trim()
+      this.validationError = sanitized.trim()
         ? 'Enter a slippage between 0.01% and 50%.'
         : '';
       return;
     }
     this.validationError = '';
     this.draftBpsChanged.emit(parsed);
+  }
+
+  public onCustomKeydown(event: KeyboardEvent): void {
+    const action = resolveAmountKeydownAction(event);
+    if (action === 'allow') {
+      return;
+    }
+    if (action === 'decimal-separator') {
+      if (/[.,]/.test(this.customPercent)) {
+        event.preventDefault();
+      }
+      return;
+    }
+    event.preventDefault();
   }
 
   public focusCustom(): void {
