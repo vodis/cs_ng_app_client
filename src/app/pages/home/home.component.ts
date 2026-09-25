@@ -394,11 +394,6 @@ export class HomeComponent {
       return false;
     }
 
-    const expiresAt = Date.parse(this.quotePreview?.expiresAt ?? '');
-    if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
-      return false;
-    }
-
     return Boolean(this.buildQuotePreviewInput());
   }
 

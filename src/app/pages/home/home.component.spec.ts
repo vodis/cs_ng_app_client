@@ -790,6 +790,47 @@ describe('HomeComponent market overview', () => {
     expect(component.primaryActionLabel()).toBe('Review');
   });
 
+  it('keeps Review enabled after the preview expiry passes', () => {
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next(nearWallet());
+    component.fromToken = {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    component.amount = '0.09';
+    swapFlowFacade.emitQuote({
+      amountOut: '0.0001',
+      amountOutAtomic: '100',
+      expiresAt: '2020-01-01T00:00:00.000Z',
+      raw: {
+        quote: {
+          amountOutFormatted: '0.0001',
+        },
+      },
+    });
+
+    expect(component.canReviewSwap()).toBeTrue();
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    expect(component.primaryActionLabel()).toBe('Review');
+  });
+
   it('uses the testnet balance network for a .testnet wallet', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService

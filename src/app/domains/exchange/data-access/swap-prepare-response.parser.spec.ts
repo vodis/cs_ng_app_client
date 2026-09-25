@@ -30,6 +30,38 @@ describe('parseApprovedSwapPrepareResponse', () => {
     });
   });
 
+  it('accepts an intent-sign package whose quote hashes are empty', () => {
+    const data = validPrepareData();
+    data['providerId'] = 'one-click';
+    data['quoteHashes'] = [];
+    data['executionPackage'] = {
+      providerId: 'one-click',
+      mode: 'intent_sign',
+      protocol: 'near-intents',
+      requiredAction: 'sign',
+      payload: {
+        intent: {
+          standard: 'nep413',
+          payload: {
+            message: '{}',
+            nonce: 'nonce',
+            recipient: 'intents.near',
+          },
+        },
+        depositAddress: 'deposit.near',
+        preparationId: 'preparation',
+      },
+    };
+
+    const parsed = parseApprovedSwapPrepareResponse({ data, error: null });
+
+    expect(parsed.quoteHashes).toEqual([]);
+    expect(parsed.executionPackage.mode).toBe('intent_sign');
+    expect(parsed.executionPackage.payload['depositAddress']).toBe(
+      'deposit.near'
+    );
+  });
+
   it('rejects a response without an execution package', () => {
     const data = validPrepareData();
     delete data['executionPackage'];
