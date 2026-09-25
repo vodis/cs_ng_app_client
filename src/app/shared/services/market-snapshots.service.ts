@@ -1,0 +1,95 @@
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import {
+  emptyMarketSnapshot,
+  type WalletMarketSnapshot,
+} from '@shared/utils/market-display.util';
+import { Observable, catchError, map, of } from 'rxjs';
+import { environment } from '../../../environments/environment';
+
+type MarketSnapshotsResponse = {
+  data?: unknown;
+};
+
+@Injectable({
+  providedIn: 'root',
+})
+export class MarketSnapshotsService {
+  constructor(private readonly httpClient: HttpClient) {}
+
+  load(symbols: string[]): Observable<WalletMarketSnapshot[]> {
+    const requested = [
+      ...new Set(
+        symbols
+          .map(symbol => symbol.trim().toUpperCase())
+          .filter(symbol => symbol.length > 0)
+      ),
+    ];
+    if (requested.length === 0) {
+      return of([]);
+    }
+
+    return this.httpClient
+      .get<MarketSnapshotsResponse>(
+        `${environment.apiUrl}/api/v1/markets/snapshots`,
+        { params: { symbols: requested.join(',') } }
+      )
+      .pipe(
+        map(response => this.parse(response, requested)),
+        catchError(() =>
+          of(requested.map(symbol => emptyMarketSnapshot(symbol)))
+        )
+      );
+  }
+
+  private parse(
+    response: MarketSnapshotsResponse,
+    symbols: string[]
+  ): WalletMarketSnapshot[] {
+    if (!Array.isArray(response?.data)) {
+      throw new Error('Market snapshot response is invalid');
+    }
+
+    const bySymbol = new Map<string, WalletMarketSnapshot>();
+    for (const item of response.data) {
+      const snapshot = this.parseSnapshot(item);
+      if (snapshot) {
+        bySymbol.set(snapshot.symbol, snapshot);
+      }
+    }
+
+    return symbols.map(
+      symbol => bySymbol.get(symbol) ?? emptyMarketSnapshot(symbol)
+    );
+  }
+
+  private parseSnapshot(value: unknown): WalletMarketSnapshot | undefined {
+    if (!this.isRecord(value) || typeof value['symbol'] !== 'string') {
+      return undefined;
+    }
+
+    const sparkline = Array.isArray(value['sparkline7d'])
+      ? value['sparkline7d'].filter(
+          (point): point is number =>
+            typeof point === 'number' && Number.isFinite(point)
+        )
+      : [];
+
+    return {
+      symbol: value['symbol'].trim().toUpperCase(),
+      priceUsd: this.numberOrZero(value['priceUsd']),
+      change24hPercent: this.numberOrZero(value['change24hPercent']),
+      marketCapUsd: this.numberOrZero(value['marketCapUsd']),
+      volume24hUsd: this.numberOrZero(value['volume24hUsd']),
+      sparkline7d: sparkline.length >= 2 ? sparkline : [0, 0],
+    };
+  }
+
+  private numberOrZero(value: unknown): number {
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+}

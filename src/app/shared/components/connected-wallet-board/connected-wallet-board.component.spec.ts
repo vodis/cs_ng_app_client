@@ -1,13 +1,16 @@
 /// <reference types="jasmine" />
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import {
   ConnectedWalletBalancesFacade,
   type ConnectedWalletBalancesState,
 } from '@domains/wallet/application/connected-wallet-balances.facade';
 import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import { MarketSnapshotsService } from '@shared/services/market-snapshots.service';
+import type { WalletMarketSnapshot } from '@shared/utils/market-display.util';
+import { SparklineComponent } from '@shared/components/sparkline/sparkline.component';
 import { ConnectedWalletBoardComponent } from './connected-wallet-board.component';
 
 describe('ConnectedWalletBoardComponent', () => {
@@ -72,10 +75,21 @@ describe('ConnectedWalletBoardComponent', () => {
     ],
   };
 
+  const nearMarket: WalletMarketSnapshot = {
+    symbol: 'ETH',
+    priceUsd: 3285.4,
+    change24hPercent: 1.24,
+    marketCapUsd: 395_200_000_000,
+    volume24hUsd: 18_400_000_000,
+    sparkline7d: [3200, 3285],
+  };
+
   let fixture: ComponentFixture<ConnectedWalletBoardComponent>;
   let snapshot$: BehaviorSubject<WalletConnectionSnapshot | undefined>;
   let balances$: BehaviorSubject<ConnectedWalletBalancesState>;
+  let snapshots$: Subject<WalletMarketSnapshot[]>;
   let loadBalances: jasmine.Spy;
+  let loadSnapshots: jasmine.Spy;
 
   beforeEach(async () => {
     snapshot$ = new BehaviorSubject<WalletConnectionSnapshot | undefined>(
@@ -90,9 +104,13 @@ describe('ConnectedWalletBoardComponent', () => {
     loadBalances = jasmine
       .createSpy('load')
       .and.returnValue(balances$.asObservable());
+    snapshots$ = new Subject<WalletMarketSnapshot[]>();
+    loadSnapshots = jasmine
+      .createSpy('loadSnapshots')
+      .and.returnValue(snapshots$.asObservable());
 
     await TestBed.configureTestingModule({
-      declarations: [ConnectedWalletBoardComponent],
+      declarations: [ConnectedWalletBoardComponent, SparklineComponent],
       providers: [
         {
           provide: WalletGatewayBridgeService,
@@ -104,6 +122,10 @@ describe('ConnectedWalletBoardComponent', () => {
         {
           provide: ConnectedWalletBalancesFacade,
           useValue: { load: loadBalances },
+        },
+        {
+          provide: MarketSnapshotsService,
+          useValue: { load: loadSnapshots },
         },
       ],
     }).compileComponents();
@@ -125,14 +147,26 @@ describe('ConnectedWalletBoardComponent', () => {
     expect(text).toContain('0x1111...1111');
     expect(text).toContain('ETH');
     expect(text).toContain('1.25');
-    expect(text).not.toContain('$5,848.49');
+    expect(text).toContain('Price');
+    expect(text).toContain('Market Cap');
+    expect(text).toContain('Volume(24h)');
+    expect(text).toContain('7d');
+    expect(text).toContain('$0.00');
+    expect(text).toContain('0.00%');
     expect(text).not.toContain('Mock markets');
-    expect(text).not.toContain('$3,285.40');
-    expect(text).not.toContain('Price');
-    expect(text).not.toContain('Market Cap');
     expect(fixture.nativeElement.querySelectorAll('app-sparkline').length).toBe(
-      0
+      1
     );
+    expect(loadSnapshots).toHaveBeenCalledWith(['ETH']);
+
+    snapshots$.next([nearMarket]);
+    fixture.detectChanges();
+
+    const priced = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(priced).toContain('$3,285.40');
+    expect(priced).toContain('+1.24%');
+    expect(priced).toContain('$395.2B');
+    expect(priced).toContain('$18.4B');
   });
 
   it('hides zero-balance tokens and shows empty copy when none remain', () => {
