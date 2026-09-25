@@ -58,6 +58,8 @@ class SwapFlowFacadeStub {
 
   public refreshQuotePreview = jasmine.createSpy('refreshQuotePreview');
 
+  public requestExecutableQuote = jasmine.createSpy('requestExecutableQuote');
+
   public emitError(error: SwapFlowError): void {
     this.quotePreviewSubject.next(undefined);
     this.errorSubject.next(error);
@@ -627,6 +629,165 @@ describe('HomeComponent market overview', () => {
     component.submitQuote();
 
     expect(component.quoteError).toBe('Insufficient NEAR balance.');
+  });
+
+  it('requests a one-click preview when an amount is pasted into From', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    balancesService.balances = [nearBalance()];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next(nearWallet());
+    component.fromToken = {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    component.toToken = {
+      assetId: 'nep141:usdc.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+      blockchain: 'near',
+    };
+    swapFlowFacade.watchQuotePreview.calls.reset();
+
+    const input = document.createElement('input');
+    const preventDefault = jasmine.createSpy('preventDefault');
+    component.onAmountPaste({
+      preventDefault,
+      clipboardData: {
+        getData: (type: string) =>
+          type === 'text/plain' || type === 'text' ? '0,09' : '',
+      },
+      target: input,
+    } as unknown as ClipboardEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(component.amount).toBe('0.09');
+    expect(input.value).toBe('0,09');
+    expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        originAsset: 'nep141:wrap.near',
+        destinationAsset: 'nep141:usdc.near',
+        amount: '90000000000000000000000',
+      })
+    );
+  });
+
+  it('still requests a one-click preview when the pasted amount exceeds balance', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    balancesService.balances = [nearBalance()];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next(nearWallet());
+    component.fromToken = {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    swapFlowFacade.watchQuotePreview.calls.reset();
+
+    const input = document.createElement('input');
+    component.onAmountPaste({
+      preventDefault: jasmine.createSpy('preventDefault'),
+      clipboardData: {
+        getData: () => '5',
+      },
+      target: input,
+    } as unknown as ClipboardEvent);
+
+    expect(component.amount).toBe('5');
+    expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        amount: '5000000000000000000000000',
+      })
+    );
+  });
+
+  it('enables Review when a quote is visible even if the balance is stale', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    balancesService.balances = [
+      {
+        ...nearBalance(),
+        expiresAt: '2020-01-01T00:00:00.000Z',
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next(nearWallet());
+    component.fromToken = {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    component.amount = '0.09';
+    swapFlowFacade.emitQuote({
+      amountOut: '',
+      amountOutAtomic: '',
+      expiresAt: '',
+      raw: {
+        quote: {
+          amountOutFormatted: '0.0001',
+        },
+      },
+    });
+
+    expect(component.balanceLabel(component.fromToken)).toContain('(stale)');
+    expect(component.canReviewSwap()).toBeTrue();
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    expect(component.primaryActionLabel()).toBe('Review');
   });
 
   it('uses the testnet balance network for a .testnet wallet', () => {

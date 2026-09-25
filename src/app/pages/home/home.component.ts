@@ -370,7 +370,7 @@ export class HomeComponent {
       return;
     }
 
-    if (this.quoteResult && this.canReviewSwap()) {
+    if (this.canReviewSwap()) {
       this.openSwapReview(amount, authMethod);
       return;
     }
@@ -390,13 +390,16 @@ export class HomeComponent {
   }
 
   public canReviewSwap(): boolean {
-    return (
-      this.swapFlowState === 'idle' &&
-      Boolean(this.quotePreview?.amountOutAtomic) &&
-      Boolean(this.quotePreview?.expiresAt) &&
-      Date.parse(this.quotePreview?.expiresAt ?? '') > Date.now() &&
-      Boolean(this.buildQuotePreviewInput())
-    );
+    if (!this.hasPositiveQuoteAmount(this.quotedOutputAmount())) {
+      return false;
+    }
+
+    const expiresAt = Date.parse(this.quotePreview?.expiresAt ?? '');
+    if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+      return false;
+    }
+
+    return Boolean(this.buildQuotePreviewInput());
   }
 
   public canRetryQuote(): boolean {
@@ -448,6 +451,7 @@ export class HomeComponent {
 
     const input = this.buildSwapInput(amount, authMethod);
     const traceId = preview.traceId ?? createTraceId();
+    this.swapFlowFacade.requestExecutableQuote(input, traceId);
     const minimumAtomic =
       minimumReceivedAtomic(
         preview.amountOutAtomic,
@@ -941,10 +945,13 @@ export class HomeComponent {
   }
 
   public onAmountPaste(event: ClipboardEvent): void {
-    event.preventDefault();
-
     const input = event.target as HTMLInputElement;
-    const pasted = event.clipboardData?.getData('text') ?? '';
+    const pasted = this.readPastedText(event);
+    if (!pasted) {
+      return;
+    }
+
+    event.preventDefault();
     const start = input.selectionStart ?? input.value.length;
     const end = input.selectionEnd ?? input.value.length;
     const nextValue =
@@ -1080,11 +1087,16 @@ export class HomeComponent {
       return undefined;
     }
 
-    if (this.validateSourceBalance(amount)) {
-      return undefined;
+    return this.buildSwapInput(amount, authMethod);
+  }
+
+  private readPastedText(event: ClipboardEvent): string {
+    const data = event.clipboardData;
+    if (!data) {
+      return '';
     }
 
-    return this.buildSwapInput(amount, authMethod);
+    return data.getData('text/plain') || data.getData('text') || '';
   }
 
   private scrollAmountToEnd(input: HTMLInputElement): void {
@@ -1178,6 +1190,23 @@ export class HomeComponent {
     }
 
     input.setSelectionRange(newCaret, newCaret);
+  }
+
+  private quotedOutputAmount(): string {
+    return (
+      this.quotePreview?.amountOutAtomic ||
+      this.quotePreview?.amountOut ||
+      this.rawQuoteAmount()
+    );
+  }
+
+  private hasPositiveQuoteAmount(value: string): boolean {
+    if (/^\d+$/.test(value)) {
+      return !/^0+$/.test(value);
+    }
+
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) && parsed > 0;
   }
 
   private isZeroAmountValue(value: string): boolean {

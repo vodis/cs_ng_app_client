@@ -41,13 +41,14 @@ export class SwapExecutionWorkflow {
 
   requestQuotePreviewStream(
     request: Omit<SwapQuoteRequest, 'traceId' | 'dry'>,
-    traceId = createTraceId()
+    traceId = createTraceId(),
+    dry = true
   ): Observable<{ traceId: string; preview: SwapQuotePreview }> {
     return this.swapApiClient
       .requestQuotePreview({
         ...request,
         traceId,
-        dry: true,
+        dry,
       })
       .pipe(
         map(preview => ({

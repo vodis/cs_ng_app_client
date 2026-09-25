@@ -189,14 +189,14 @@ describe('SwapFlowFacade quote preview refresh', () => {
     );
   }));
 
-  it('refreshes when a quote deadline changes', fakeAsync(() => {
+  it('keeps the in-flight quote when only the deadline timestamp changes', fakeAsync(() => {
     facade.watchQuotePreview(input());
     tick(350);
 
     facade.watchQuotePreview(input({ deadline: '2026-06-17T00:20:00.000Z' }));
     tick(350);
 
-    expect(workflow.quoteCalls.length).toBe(2);
+    expect(workflow.quoteCalls.length).toBe(1);
   }));
 
   it('refreshes when deposit or refund routing changes', fakeAsync(() => {
