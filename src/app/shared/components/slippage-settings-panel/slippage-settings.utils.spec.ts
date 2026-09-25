@@ -27,6 +27,15 @@ describe('slippage-settings utils', () => {
     expect(parseSlippagePercentInput('abc')).toBeNull();
   });
 
+  it('rejects values outside 0.01%-50% before rounding to basis points', () => {
+    expect(parseSlippagePercentInput('0.01')).toBe(1);
+    expect(parseSlippagePercentInput('0.005')).toBeNull();
+    expect(parseSlippagePercentInput('0.009')).toBeNull();
+    expect(parseSlippagePercentInput('50.004')).toBeNull();
+    expect(parseSlippagePercentInput('50.01')).toBeNull();
+    expect(parseSlippagePercentInput('49.995')).toBe(5_000);
+  });
+
   it('round-trips custom inputs for non-preset values', () => {
     expect(percentInputFromBps(75)).toBe('0.75');
     expect(isSlippagePresetBps(75)).toBeFalse();

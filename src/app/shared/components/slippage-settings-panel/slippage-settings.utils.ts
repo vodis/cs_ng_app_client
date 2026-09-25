@@ -5,7 +5,9 @@ export const SLIPPAGE_PRESET_BPS = [10, 25, 50, 100, 300] as const;
 
 export type SlippagePresetBps = (typeof SLIPPAGE_PRESET_BPS)[number];
 
-export const MAX_SLIPPAGE_TOLERANCE_BPS = 5_000;
+export const MIN_SLIPPAGE_PERCENT = 0.01;
+export const MAX_SLIPPAGE_PERCENT = 50;
+export const MAX_SLIPPAGE_TOLERANCE_BPS = MAX_SLIPPAGE_PERCENT * 100;
 
 export function isSlippagePresetBps(value: number): value is SlippagePresetBps {
   return (SLIPPAGE_PRESET_BPS as readonly number[]).includes(value);
@@ -29,14 +31,14 @@ export function parseSlippagePercentInput(raw: string): number | null {
     return null;
   }
   const percent = Number(trimmed);
-  if (!Number.isFinite(percent) || percent <= 0) {
+  if (
+    !Number.isFinite(percent) ||
+    percent < MIN_SLIPPAGE_PERCENT ||
+    percent > MAX_SLIPPAGE_PERCENT
+  ) {
     return null;
   }
-  const bps = Math.round(percent * 100);
-  if (bps < 1 || bps > MAX_SLIPPAGE_TOLERANCE_BPS) {
-    return null;
-  }
-  return bps;
+  return Math.round(percent * 100);
 }
 
 export function percentInputFromBps(bps: number): string {

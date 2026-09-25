@@ -83,13 +83,12 @@ export class SlippageSettingsPanelComponent implements OnChanges {
   public focusCustom(): void {
     this.selectedPresetBps = null;
     if (!this.customPercent.trim()) {
-      this.customPercent = percentInputFromBps(this.slippageToleranceBps);
+      this.validationError = '';
+      return;
     }
     const parsed = parseSlippagePercentInput(this.customPercent);
     if (parsed == null) {
-      this.validationError = this.customPercent.trim()
-        ? 'Enter a slippage between 0.01% and 50%.'
-        : '';
+      this.validationError = 'Enter a slippage between 0.01% and 50%.';
       return;
     }
     this.validationError = '';
