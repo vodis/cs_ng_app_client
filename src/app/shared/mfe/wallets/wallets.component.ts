@@ -246,7 +246,10 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
 
     return new Promise((resolve, reject) => {
       const subscription = this.swapApi
-        .requestApprovedPreparePackage(request)
+        .requestApprovedPreparePackage({
+          ...request,
+          deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        })
         .subscribe({
           next: result => {
             if (result.executionPackage.mode !== 'intent_sign') {

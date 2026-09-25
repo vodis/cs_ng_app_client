@@ -1,6 +1,7 @@
 // Kept in the global bundle to stay within Angular's per-component style budget.
-// The app-profile root makes the feature boundary explicit and prevents leakage.
-app-profile .profile-shell {
+// The feature boundary is explicit and prevents leakage into unrelated pages.
+app-profile .profile-shell,
+app-account-sessions .profile-shell {
   display: grid;
   padding: clamp(1rem, 3vw, 2rem);
   gap: 1rem;
@@ -1060,7 +1061,8 @@ app-profile .profile-shell {
 }
 
 @media (width <= 720px) {
-  app-profile .profile-shell {
+  app-profile .profile-shell,
+  app-account-sessions .profile-shell {
     &__grid {
       grid-template-columns: 1fr;
     }

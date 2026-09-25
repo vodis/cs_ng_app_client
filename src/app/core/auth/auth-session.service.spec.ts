@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
 import { AuthSessionService } from './auth-session.service';
 import { environment } from '../../../environments/environment';
 import { AuthProviderService } from './auth-provider.service';
+import type { AuthProviderSnapshot } from '../../mfe-contracts/auth-provider.types';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ProductEventsService } from '@core/product-events/product-events.service';
@@ -34,6 +35,7 @@ describe('AuthSessionService', () => {
         'logout',
         'getAccessToken',
         'ensureEmbeddedWallet',
+        'whenSettled',
       ],
       {
         snapshot: {
@@ -46,6 +48,8 @@ describe('AuthSessionService', () => {
         },
       }
     );
+    // Keep constructor restore idle unless a test resolves whenSettled.
+    authProvider.whenSettled.and.returnValue(new Promise(() => undefined));
     authProvider.login.and.resolveTo({
       user: {
         id: 'account-1',
@@ -475,5 +479,158 @@ describe('AuthSessionService', () => {
         expiresAt: '2026-06-23T12:01:00.000Z',
       },
     ]);
+  }));
+});
+
+describe('AuthSessionService provider restore', () => {
+  let service: AuthSessionService;
+  let httpMock: HttpTestingController;
+  let authProvider: jasmine.SpyObj<AuthProviderService>;
+
+  const readySnapshot: AuthProviderSnapshot = {
+    status: 'ready',
+    loginMethods: ['email', 'passkey'],
+    passkeyLoginEnabled: true,
+    passkeySignupEnabled: false,
+    passkeyLinkEnabled: true,
+    embeddedWalletEnabled: true,
+  };
+
+  function configure(whenSettled: Promise<AuthProviderSnapshot>): void {
+    const router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
+    authProvider = jasmine.createSpyObj<AuthProviderService>(
+      'AuthProviderService',
+      [
+        'login',
+        'sendEmailCode',
+        'verifyEmailCode',
+        'linkPasskey',
+        'logout',
+        'getAccessToken',
+        'ensureEmbeddedWallet',
+        'whenSettled',
+      ],
+      { snapshot: readySnapshot }
+    );
+    authProvider.whenSettled.and.returnValue(whenSettled);
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+    authProvider.login.and.resolveTo({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+        email: 'user@example.com',
+        authMethod: 'email',
+      },
+      wallets: [],
+    });
+    authProvider.logout.and.resolveTo();
+
+    const walletGatewayBridge =
+      jasmine.createSpyObj<WalletGatewayBridgeService>(
+        'WalletGatewayBridgeService',
+        ['disconnectWallet', 'syncConnectedWallet']
+      );
+    const walletsService = jasmine.createSpyObj<WalletsService>(
+      'WalletsService',
+      ['setAccount']
+    );
+    const productEvents = jasmine.createSpyObj<ProductEventsService>(
+      'ProductEventsService',
+      ['record', 'recordFailure', 'reason', 'message']
+    );
+    productEvents.reason.and.returnValue('test_error');
+    productEvents.message.and.callFake((error: unknown) =>
+      error instanceof Error ? error.message : undefined
+    );
+    const localizedRouting = jasmine.createSpyObj<LocalizedRoutingService>(
+      'LocalizedRoutingService',
+      ['path']
+    );
+    localizedRouting.path.and.callFake(path =>
+      path === '/' ? '/en' : `/en${path}`
+    );
+
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        { provide: Router, useValue: router },
+        { provide: AuthProviderService, useValue: authProvider },
+        { provide: WalletGatewayBridgeService, useValue: walletGatewayBridge },
+        { provide: WalletsService, useValue: walletsService },
+        { provide: ProductEventsService, useValue: productEvents },
+        { provide: LocalizedRoutingService, useValue: localizedRouting },
+      ],
+    });
+
+    service = TestBed.inject(AuthSessionService);
+    httpMock = TestBed.inject(HttpTestingController);
+  }
+
+  afterEach(() => {
+    httpMock.verify();
+    TestBed.resetTestingModule();
+  });
+
+  it('restores host session when the provider is ready with a token', fakeAsync(() => {
+    configure(Promise.resolve(readySnapshot));
+    flushMicrotasks();
+
+    const me = httpMock.expectOne(`${environment.apiUrl}/api/v1/me`);
+    const wallets = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`);
+    me.flush({
+      user: {
+        id: 'account-1',
+        providerUserId: 'provider-user-1',
+        sessionId: 'session-1',
+      },
+    });
+    wallets.flush({ wallets: [] });
+    flushMicrotasks();
+
+    expect(service.session?.user.id).toBe('account-1');
+  }));
+
+  it('does not clear an existing session when provider restore refresh fails', fakeAsync(() => {
+    configure(Promise.resolve(readySnapshot));
+    flushMicrotasks();
+
+    void service.login('email');
+    flushMicrotasks();
+    expect(service.session?.user.id).toBe('account-1');
+
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/me`)
+      .flush(
+        { message: 'unavailable' },
+        { status: 503, statusText: 'Service Unavailable' }
+      );
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/wallets`)
+      .flush(
+        { message: 'unavailable' },
+        { status: 503, statusText: 'Service Unavailable' }
+      );
+    flushMicrotasks();
+
+    expect(service.session?.user.id).toBe('account-1');
+  }));
+
+  it('skips restore when the provider settles without a ready status', fakeAsync(() => {
+    configure(
+      Promise.resolve({
+        status: 'disabled',
+        loginMethods: [],
+        passkeyLoginEnabled: false,
+        passkeySignupEnabled: false,
+        passkeyLinkEnabled: false,
+        embeddedWalletEnabled: false,
+      })
+    );
+    flushMicrotasks();
+
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/me`);
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/wallets`);
+    expect(service.session).toBeNull();
   }));
 });

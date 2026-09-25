@@ -61,7 +61,7 @@ Production wallet remote policy:
 - Keep wallet, passkey, and swap onboarding on `/profile` so first-time
   users can enter the app shell immediately.
 - Sidebar **Profile** links to `/profile`; the header account icon links to
-  `/portfolio` (holdings).
+  `/portfolio` (holdings, sessions, and sign-out).
 - Keep profile integrations behind `ProfileFacade`; do not inject auth, wallet
   gateway, or router services directly into `ProfileComponent`.
 - Supply activity through `ProfileActivitySource` so the activity panel and
@@ -234,8 +234,8 @@ Host auth routes live under `src/app/pages/auth/`.
 | `/proposals`       | Public      | Product page; login is optional                                    |
 | `/login`           | Public      | Passkey, Google, Apple, Telegram always shown; email code fallback |
 | `/register`        | Public      | Account creation only; wallet setup is separate                    |
-| `/profile`         | `AuthGuard` | Balance hero, onboarding, activity, sessions, account footer       |
-| `/portfolio`       | `AuthGuard` | Holdings and agent authorization                                   |
+| `/profile`         | `AuthGuard` | Balance hero, onboarding, activity, wallets                        |
+| `/portfolio`       | `AuthGuard` | Holdings, agent authorization, sessions, sign-out                  |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                                      |
 
 ### Login expectations
@@ -255,6 +255,9 @@ Host auth routes live under `src/app/pages/auth/`.
 - Missing or non-renewable sessions redirect to `/login?returnUrl=<safe-path>`
   only on protected account routes (`/profile`, `/portfolio`).
 - `AuthGuard` waits for auth-provider readiness before attempting refresh.
+- On public routes, `AuthSessionService` still hydrates the host session after
+  the provider is `ready` so the header shows the profile icon when a valid
+  provider token exists (without blocking or redirecting guests).
 - Logout navigates to Token Exchange (`/`).
 
 ### Wallet onboarding split

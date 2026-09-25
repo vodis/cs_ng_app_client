@@ -76,7 +76,6 @@ describe('ConnectedWalletBoardComponent', () => {
   let snapshot$: BehaviorSubject<WalletConnectionSnapshot | undefined>;
   let balances$: BehaviorSubject<ConnectedWalletBalancesState>;
   let loadBalances: jasmine.Spy;
-  let disconnectWallet: jasmine.Spy;
 
   beforeEach(async () => {
     snapshot$ = new BehaviorSubject<WalletConnectionSnapshot | undefined>(
@@ -91,7 +90,6 @@ describe('ConnectedWalletBoardComponent', () => {
     loadBalances = jasmine
       .createSpy('load')
       .and.returnValue(balances$.asObservable());
-    disconnectWallet = jasmine.createSpy('disconnectWallet');
 
     await TestBed.configureTestingModule({
       declarations: [ConnectedWalletBoardComponent],
@@ -100,7 +98,7 @@ describe('ConnectedWalletBoardComponent', () => {
           provide: WalletGatewayBridgeService,
           useValue: {
             snapshot$,
-            disconnectWallet,
+            disconnectWallet: jasmine.createSpy('disconnectWallet'),
           },
         },
         {
@@ -226,18 +224,47 @@ describe('ConnectedWalletBoardComponent', () => {
     expect(text).not.toContain('No balance on this wallet detected');
   });
 
-  it('reloads balances for the selected EVM network', () => {
-    const chips = fixture.nativeElement.querySelectorAll(
-      '.connected-wallet-board__chip'
-    ) as NodeListOf<HTMLButtonElement>;
+  it('shows connected EVM network and read-only compatible badges', () => {
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Ethereum');
+    expect(text).toContain('Ethereum · chain 1');
+    expect(text).toContain('Compatible networks');
+    expect(
+      fixture.nativeElement.querySelectorAll('.connected-wallet-board__badge')
+        .length
+    ).toBe(9);
+    expect(
+      fixture.nativeElement
+        .querySelector('.connected-wallet-board__badge--active')
+        ?.textContent?.trim()
+    ).toBe('ETH');
+    expect(
+      fixture.nativeElement.querySelector('.connected-wallet-board__disconnect')
+    ).toBeNull();
+  });
 
-    chips[1].click();
+  it('preserves unsupported EVM chain IDs instead of remapping to mainnet', () => {
+    const sepoliaChainId = 11155111;
+    snapshot$.next({
+      ...evmSnapshot,
+      chainId: sepoliaChainId,
+    });
     fixture.detectChanges();
 
     expect(loadBalances).toHaveBeenCalledWith({
       account,
-      network: 'eip155:42161',
+      network: `eip155:${sepoliaChainId}`,
     });
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('EVM');
+    expect(text).toContain(`Unsupported · chain ${sepoliaChainId}`);
+    expect(text).not.toContain('Ethereum · chain 1');
+    expect(
+      fixture.nativeElement.querySelector(
+        '.connected-wallet-board__badge--active'
+      )
+    ).toBeNull();
   });
 
   it('loads balances for a connected NEAR account', () => {
@@ -252,12 +279,13 @@ describe('ConnectedWalletBoardComponent', () => {
     expect(text).toContain('alice.near');
     expect(text).toContain('NEAR');
     expect(text).toContain('NEAR · mainnet');
+    expect(text).not.toContain('Compatible networks');
     expect(text).not.toContain('Ethereum · chain 1');
     expect(text).toContain('Loading balances...');
     expect(
-      fixture.nativeElement.querySelectorAll('.connected-wallet-board__chip')
+      fixture.nativeElement.querySelectorAll('.connected-wallet-board__badge')
         .length
-    ).toBe(1);
+    ).toBe(0);
   });
 
   it('treats a HOT .tg account as NEAR mainnet even without identity', () => {
@@ -346,15 +374,5 @@ describe('ConnectedWalletBoardComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Some balances could not be loaded.');
     expect(text).not.toContain('No balance on this wallet detected');
-  });
-
-  it('disconnects through the wallet gateway', () => {
-    const button = fixture.nativeElement.querySelector(
-      '.connected-wallet-board__disconnect'
-    ) as HTMLButtonElement;
-
-    button.click();
-
-    expect(disconnectWallet).toHaveBeenCalledTimes(1);
   });
 });

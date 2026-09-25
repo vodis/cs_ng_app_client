@@ -7,53 +7,36 @@
     <div class="connected-wallet-board__meta">{{ networkMeta }}</div>
   </div>
 
-  @if (isEvm) {
-    <div class="connected-wallet-board__card">
-      <div class="connected-wallet-board__title">Network</div>
-      <div
-        class="connected-wallet-board__chips"
-        role="tablist"
-        aria-label="EVM networks">
-        @for (chain of networks; track chain.chainId) {
-          <button
-            type="button"
-            role="tab"
-            class="connected-wallet-board__chip"
-            [class.connected-wallet-board__chip--active]="
-              isActiveNetwork(chain)
-            "
-            [attr.aria-selected]="isActiveNetwork(chain)"
-            (click)="selectNetwork(chain)">
-            {{ chain.shortName }}
-          </button>
-        }
-      </div>
-      <div class="connected-wallet-board__meta">
-        {{ activeNetworkLabel() }}
-      </div>
+  <div class="connected-wallet-board__card">
+    <div class="connected-wallet-board__title">Network</div>
+    <div class="connected-wallet-board__value">
+      {{ activeNetworkName() }}
     </div>
-  } @else {
-    <div class="connected-wallet-board__card">
-      <div class="connected-wallet-board__title">Network</div>
-      <div
-        class="connected-wallet-board__chips"
-        role="tablist"
-        [attr.aria-label]="
-          chainFamily === 'near' ? 'NEAR network' : 'TON network'
-        ">
-        <button
-          type="button"
-          role="tab"
-          class="connected-wallet-board__chip connected-wallet-board__chip--active"
-          aria-selected="true">
-          {{ chainFamily === 'near' ? 'NEAR' : 'TON' }}
-        </button>
-      </div>
-      <div class="connected-wallet-board__meta">
-        {{ activeNetworkLabel() }}
-      </div>
+    <div class="connected-wallet-board__meta">
+      {{ activeNetworkLabel() }}
     </div>
-  }
+
+    @if (isEvm) {
+      <div class="connected-wallet-board__compatible">
+        <div class="connected-wallet-board__compatible-title">
+          Compatible networks
+        </div>
+        <div
+          class="connected-wallet-board__badges"
+          aria-label="EVM networks associated with this wallet">
+          @for (chain of networks; track chain.chainId) {
+            <span
+              class="connected-wallet-board__badge"
+              [class.connected-wallet-board__badge--active]="
+                isActiveNetwork(chain)
+              ">
+              {{ chain.shortName }}
+            </span>
+          }
+        </div>
+      </div>
+    }
+  </div>
 
   <div class="connected-wallet-board__card">
     <div class="connected-wallet-board__header">
@@ -112,11 +95,4 @@
       Move assets in and out of this wallet
     </div>
   </div>
-
-  <button
-    type="button"
-    class="connected-wallet-board__disconnect"
-    (click)="disconnect()">
-    Disconnect
-  </button>
 </section>

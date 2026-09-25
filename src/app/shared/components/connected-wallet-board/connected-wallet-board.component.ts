@@ -14,7 +14,8 @@ import {
 import type { Subscription } from 'rxjs';
 import {
   EVM_CHAINS,
-  resolveDefaultEvmChainId,
+  findKnownEvmChain,
+  resolveConnectedEvmChainId,
   type EvmChainMock,
   type SupportedChainFamily,
 } from './connected-wallet-board.mock';
@@ -30,17 +31,19 @@ export type ConnectedWalletBoardRow = {
   selector: 'app-connected-wallet-board',
   standalone: false,
   templateUrl: './connected-wallet-board.component.html',
-  styleUrls: ['./connected-wallet-board.component.scss'],
+  styleUrls: [
+    './connected-wallet-board.component.scss',
+    './connected-wallet-board-tokens.component.scss',
+  ],
 })
 export class ConnectedWalletBoardComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly walletGatewayBridge = inject(WalletGatewayBridgeService);
   private readonly balancesFacade = inject(ConnectedWalletBalancesFacade);
-  private hasPickedChain = false;
 
   public snapshot: WalletConnectionSnapshot | undefined;
   public balances: ConnectedWalletBalancesState | undefined;
-  public selectedEvmChainId = 1;
+  public selectedEvmChainId: number | null = null;
   public readonly networks = EVM_CHAINS;
   private balanceRequestKey: string | undefined;
   private balanceSubscription: Subscription | undefined;
@@ -50,9 +53,7 @@ export class ConnectedWalletBoardComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(snapshot => {
         this.snapshot = snapshot;
-        if (!this.hasPickedChain) {
-          this.selectedEvmChainId = resolveDefaultEvmChainId(snapshot?.chainId);
-        }
+        this.selectedEvmChainId = resolveConnectedEvmChainId(snapshot?.chainId);
         this.loadBalancesIfConnected(snapshot);
       });
   }
@@ -81,19 +82,21 @@ export class ConnectedWalletBoardComponent {
     return this.chainFamily === 'ethereum';
   }
 
-  public get activeNetwork(): EvmChainMock {
-    for (const chain of EVM_CHAINS) {
-      if (chain.chainId === this.selectedEvmChainId) {
-        return chain;
-      }
-    }
-    return EVM_CHAINS[0];
+  public get knownActiveNetwork(): EvmChainMock | undefined {
+    return findKnownEvmChain(this.selectedEvmChainId);
   }
 
   public get networkMeta(): string {
     const walletType = this.snapshot?.identity?.walletType ?? 'external';
     if (this.isEvm) {
-      return `${this.activeNetwork.name.toLowerCase()} / ${walletType}`;
+      const known = this.knownActiveNetwork;
+      if (known) {
+        return `${known.name.toLowerCase()} / ${walletType}`;
+      }
+      if (this.selectedEvmChainId != null) {
+        return `chain ${this.selectedEvmChainId} / ${walletType}`;
+      }
+      return `evm / ${walletType}`;
     }
     return `${this.chainFamily} / ${walletType}`;
   }
@@ -126,6 +129,16 @@ export class ConnectedWalletBoardComponent {
     return '';
   }
 
+  public activeNetworkName(): string {
+    if (this.chainFamily === 'near') {
+      return 'NEAR';
+    }
+    if (this.chainFamily === 'ton') {
+      return 'TON';
+    }
+    return this.knownActiveNetwork?.name ?? 'EVM';
+  }
+
   public activeNetworkLabel(): string {
     if (this.chainFamily === 'near') {
       const account = this.snapshot?.account ?? '';
@@ -136,8 +149,14 @@ export class ConnectedWalletBoardComponent {
     if (this.chainFamily === 'ton') {
       return this.snapshot?.chainId === -3 ? 'TON · testnet' : 'TON · mainnet';
     }
-    const chain = this.activeNetwork;
-    return `${chain.name} · chain ${chain.chainId}`;
+    const known = this.knownActiveNetwork;
+    if (known) {
+      return `${known.name} · chain ${known.chainId}`;
+    }
+    if (this.selectedEvmChainId != null) {
+      return `Unsupported · chain ${this.selectedEvmChainId}`;
+    }
+    return 'Unsupported · unknown chain';
   }
 
   public shortAddress(address: string): string {
@@ -148,21 +167,14 @@ export class ConnectedWalletBoardComponent {
   }
 
   public isActiveNetwork(chain: EvmChainMock): boolean {
-    return chain.chainId === this.selectedEvmChainId;
-  }
-
-  public selectNetwork(chain: EvmChainMock): void {
-    this.hasPickedChain = true;
-    this.selectedEvmChainId = chain.chainId;
-    this.loadBalancesIfConnected(this.snapshot, true);
+    return (
+      this.selectedEvmChainId != null &&
+      chain.chainId === this.selectedEvmChainId
+    );
   }
 
   public retryBalances(): void {
     this.loadBalancesIfConnected(this.snapshot, true);
-  }
-
-  public disconnect(): void {
-    this.walletGatewayBridge.disconnectWallet();
   }
 
   private loadBalancesIfConnected(
@@ -213,7 +225,7 @@ export class ConnectedWalletBoardComponent {
     if (this.chainFamily === 'ton') {
       return this.snapshot?.chainId === -3 ? 'ton:testnet' : 'ton:mainnet';
     }
-    if (/^0x[a-f0-9]{40}$/i.test(account)) {
+    if (/^0x[a-f0-9]{40}$/i.test(account) && this.selectedEvmChainId != null) {
       return `eip155:${this.selectedEvmChainId}`;
     }
     return undefined;

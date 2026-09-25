@@ -107,7 +107,7 @@ Flow direction:
   portfolio. Wallet setup is not a blocking interstitial.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
-  `/portfolio` (holdings).
+  `/portfolio` (holdings, sessions, and sign-out).
 
 Profile boundary rules:
 
@@ -348,8 +348,8 @@ prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 
 | Route                       | Guard       | Purpose                                                |
 | --------------------------- | ----------- | ------------------------------------------------------ |
-| `/profile`                  | `AuthGuard` | Balance hero, onboarding portfolio, activity, sessions |
-| `/portfolio`                | `AuthGuard` | Holdings and agent authorization                       |
+| `/profile`                  | `AuthGuard` | Balance hero, onboarding portfolio, activity, wallets  |
+| `/portfolio`                | `AuthGuard` | Holdings, agent authorization, sessions, sign-out      |
 | `/generate-wallet`          | `AuthGuard` | Legacy redirect to `/profile`                          |
 
 ### Login methods on `/login`
@@ -374,6 +374,11 @@ Passkey UX rule:
 
 `AuthGuard` applies only to protected account routes. Public shell routes must
 not wait on the provider or redirect to `/login`.
+
+On public routes the host still restores `AuthSessionService` once the auth
+provider reaches `ready` and a provider access token is available. That keeps
+the header profile control in sync with a valid provider session (for example
+after refresh on Token Exchange) without blocking navigation.
 
 `AuthGuard` behavior:
 
