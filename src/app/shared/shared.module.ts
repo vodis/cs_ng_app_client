@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatButtonModule } from '@angular/material/button';
+import { A11yModule } from '@angular/cdk/a11y';
 import { AnimateLineComponent } from './components/animate-line/animate-line.component';
 import { AnimateTitleComponent } from './components/animate-title/animate-title.component';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,12 +21,14 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
 import { RecipientAddressPanelComponent } from '@shared/components/recipient-address-panel/recipient-address-panel.component';
+import { SlippageSettingsPanelComponent } from '@shared/components/slippage-settings-panel/slippage-settings-panel.component';
 
 const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
 
 @NgModule({
   imports: [
     ...AngularMaterial,
+    A11yModule,
     CommonModule,
     FormsModule,
     HttpClientModule,
@@ -44,6 +47,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     SideModalComponent,
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
+    SlippageSettingsPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
   ],
@@ -60,6 +64,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
     SideModalComponent,
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
+    SlippageSettingsPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
     AvatarComponent,

@@ -40,11 +40,15 @@ panels. At `1100px` and below, it changes to a single-column layout.
 | From row       | `.swapRow.first`  | Token selector, balance, amount input, and USD estimate  |
 | Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison  |
 | To row         | `.swapRow`        | Token selector, balance, quoted amount, and USD estimate |
-| Details        | `.stats`, `.stat` | Rate, price impact, slippage, and network fee            |
+| Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee   |
 | Primary action | `.connectMain`    | Opens final MFE review after a current dry quote         |
 
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
+Slippage opens `app-slippage-settings-panel` with presets
+(`0.1%`, `0.25%`, `0.5%`, `1%`, `3%`) plus custom input. The host stores the
+choice as basis points (default `50` = `0.5%`) and includes it in dry quote and
+review intent payloads.
 
 ### Market panel
 

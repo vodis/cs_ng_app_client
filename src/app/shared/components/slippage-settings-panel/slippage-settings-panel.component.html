@@ -1,0 +1,101 @@
+@if (isOpen) {
+  <div
+    class="slippage-settings-backdrop"
+    role="presentation"
+    (click)="onBackdropClick($event)">
+    <section
+      #dialog
+      class="slippage-settings"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="slippage-settings-title"
+      tabindex="-1"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
+      (click)="$event.stopPropagation()">
+      <header class="slippage-settings__header">
+        <h2 id="slippage-settings-title">Slippage</h2>
+        <button
+          #closeButton
+          type="button"
+          class="slippage-settings__close"
+          aria-label="Close slippage settings"
+          (click)="close()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <p class="slippage-settings__copy">
+        The slippage setting is a safety mechanism to protect you from getting a
+        final price that is very different than the quoted price. If the
+        specified slippage would be exceeded, your trade will be cancelled.
+        Below is the minimum amount you are guaranteed to receive.
+      </p>
+
+      <div class="slippage-settings__receive" aria-live="polite">
+        <span>Receive at least</span>
+        <strong>{{ receiveAtLeastLabel || '—' }}</strong>
+      </div>
+
+      <div
+        class="slippage-settings__presets"
+        role="group"
+        aria-label="Slippage presets">
+        @for (preset of presets; track preset) {
+          <button
+            type="button"
+            class="slippage-settings__preset"
+            [class.slippage-settings__preset--active]="isPresetSelected(preset)"
+            (click)="selectPreset(preset)">
+            {{ presetLabel(preset) }}
+          </button>
+        }
+        <label
+          class="slippage-settings__custom"
+          [class.slippage-settings__custom--active]="
+            selectedPresetBps === null
+          ">
+          <input
+            type="text"
+            inputmode="decimal"
+            name="customSlippage"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Custom"
+            aria-label="Custom slippage percent"
+            [attr.aria-invalid]="validationError ? true : null"
+            [value]="customPercent"
+            (focus)="focusCustom()"
+            (keydown)="onCustomKeydown($event)"
+            (input)="onCustomInput($event)" />
+          <span class="slippage-settings__custom-suffix" aria-hidden="true"
+            >%</span
+          >
+        </label>
+      </div>
+
+      <p
+        class="slippage-settings__error"
+        [class.slippage-settings__error--visible]="!!validationError"
+        aria-live="polite">
+        {{ validationError }}
+      </p>
+
+      <div class="slippage-settings__actions">
+        <button
+          type="button"
+          class="slippage-settings__button slippage-settings__button--cancel"
+          (click)="close()">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="slippage-settings__button slippage-settings__button--save"
+          [disabled]="!canSave()"
+          (click)="save()">
+          Save
+        </button>
+      </div>
+    </section>
+  </div>
+}
