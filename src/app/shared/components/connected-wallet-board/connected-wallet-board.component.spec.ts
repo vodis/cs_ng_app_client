@@ -7,7 +7,6 @@ import {
   type ConnectedWalletBalancesState,
 } from '@domains/wallet/application/connected-wallet-balances.facade';
 import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
-import { SparklineComponent } from '@shared/components/sparkline/sparkline.component';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { ConnectedWalletBoardComponent } from './connected-wallet-board.component';
 
@@ -93,7 +92,7 @@ describe('ConnectedWalletBoardComponent', () => {
       .and.returnValue(balances$.asObservable());
 
     await TestBed.configureTestingModule({
-      declarations: [ConnectedWalletBoardComponent, SparklineComponent],
+      declarations: [ConnectedWalletBoardComponent],
       providers: [
         {
           provide: WalletGatewayBridgeService,
@@ -127,10 +126,102 @@ describe('ConnectedWalletBoardComponent', () => {
     expect(text).toContain('ETH');
     expect(text).toContain('1.25');
     expect(text).not.toContain('$5,848.49');
-    expect(text).toContain('Mock markets');
+    expect(text).not.toContain('Mock markets');
+    expect(text).not.toContain('$3,285.40');
+    expect(text).not.toContain('Price');
+    expect(text).not.toContain('Market Cap');
     expect(fixture.nativeElement.querySelectorAll('app-sparkline').length).toBe(
-      1
+      0
     );
+  });
+
+  it('hides zero-balance tokens and shows empty copy when none remain', () => {
+    balances$.next({
+      status: 'ready',
+      account,
+      network: 'eip155:1',
+      rows: [
+        {
+          walletId: null,
+          walletAddress: account,
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          assetId: 'usdc',
+          symbol: 'USDC',
+          decimals: 6,
+          balanceRaw: '0',
+          balanceDecimal: '0',
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+        {
+          walletId: null,
+          walletAddress: account,
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          assetId: 'eth',
+          symbol: 'ETH',
+          decimals: 18,
+          balanceRaw: '1000000000000000000',
+          balanceDecimal: '1.25',
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('ETH');
+    expect(text).toContain('1.25');
+    expect(text).not.toContain('USDC');
+
+    balances$.next({
+      status: 'ready',
+      account,
+      network: 'eip155:1',
+      rows: [
+        {
+          walletId: null,
+          walletAddress: account,
+          chainType: 'ethereum',
+          network: 'eip155:1',
+          assetId: 'usdc',
+          symbol: 'USDC',
+          decimals: 6,
+          balanceRaw: '0',
+          balanceDecimal: '0',
+          source: 'rpc_batch',
+          fetchedAt: '2026-01-01T00:00:00Z',
+          expiresAt: '2026-01-01T00:01:00Z',
+          stale: false,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const emptyText = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(emptyText).toContain('No balance on this wallet detected');
+    expect(emptyText).not.toContain('USDC');
+  });
+
+  it('keeps balance-load failures as errors instead of no-balance copy', () => {
+    balances$.next({
+      status: 'error',
+      account,
+      network: 'eip155:1',
+      rows: [],
+      errorMessage: 'Failed to load balances.',
+    });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Failed to load balances.');
+    expect(text).not.toContain('No balance on this wallet detected');
   });
 
   it('shows connected EVM network and read-only compatible badges', () => {
@@ -195,41 +286,6 @@ describe('ConnectedWalletBoardComponent', () => {
       fixture.nativeElement.querySelectorAll('.connected-wallet-board__badge')
         .length
     ).toBe(0);
-  });
-
-  it('keeps mock market columns for NEAR balances with a null chainId', () => {
-    snapshot$.next(nearSnapshot);
-    balances$.next({
-      status: 'ready',
-      account: 'alice.near',
-      network: 'near:mainnet',
-      rows: [
-        {
-          walletId: null,
-          walletAddress: 'alice.near',
-          chainType: 'near',
-          network: 'near:mainnet',
-          assetId: 'near',
-          symbol: 'NEAR',
-          decimals: 24,
-          balanceRaw: '1000000000000000000000000',
-          balanceDecimal: '1.00',
-          source: 'rpc_batch',
-          fetchedAt: '2026-01-01T00:00:00Z',
-          expiresAt: '2026-01-01T00:01:00Z',
-          stale: false,
-        },
-      ],
-    });
-    fixture.detectChanges();
-
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('$5.10');
-    expect(text).toContain('$6.1B');
-    expect(text).toContain('$312M');
-    expect(fixture.nativeElement.querySelectorAll('app-sparkline').length).toBe(
-      1
-    );
   });
 
   it('treats a HOT .tg account as NEAR mainnet even without identity', () => {
@@ -317,6 +373,6 @@ describe('ConnectedWalletBoardComponent', () => {
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Some balances could not be loaded.');
-    expect(text).not.toContain('No balances yet.');
+    expect(text).not.toContain('No balance on this wallet detected');
   });
 });

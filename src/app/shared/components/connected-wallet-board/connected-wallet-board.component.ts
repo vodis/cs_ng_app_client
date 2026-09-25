@@ -15,13 +15,9 @@ import type { Subscription } from 'rxjs';
 import {
   EVM_CHAINS,
   findKnownEvmChain,
-  findMockMarket,
-  formatChangePercent,
   resolveConnectedEvmChainId,
-  sparklineIsUp,
   type EvmChainMock,
   type SupportedChainFamily,
-  type TokenBalanceMock,
 } from './connected-wallet-board.mock';
 
 export type ConnectedWalletBoardRow = {
@@ -29,7 +25,6 @@ export type ConnectedWalletBoardRow = {
   symbol: string;
   amount: string;
   stale: boolean;
-  market?: TokenBalanceMock;
 };
 
 @Component({
@@ -107,17 +102,14 @@ export class ConnectedWalletBoardComponent {
   }
 
   public get rows(): ConnectedWalletBoardRow[] {
-    return (this.balances?.rows ?? []).map(row => ({
-      id: `${row.network}:${row.assetId}`,
-      symbol: row.symbol,
-      amount: this.amountLabel(row),
-      stale: row.stale,
-      market: findMockMarket(
-        row.symbol,
-        this.chainFamily,
-        this.selectedEvmChainId
-      ),
-    }));
+    return (this.balances?.rows ?? [])
+      .filter(row => this.hasPositiveBalance(row))
+      .map(row => ({
+        id: `${row.network}:${row.assetId}`,
+        symbol: row.symbol,
+        amount: this.amountLabel(row),
+        stale: row.stale,
+      }));
   }
 
   public get balancesCopy(): string {
@@ -132,7 +124,7 @@ export class ConnectedWalletBoardComponent {
       return 'Loading balances...';
     }
     if (status === 'ready' && this.rows.length === 0) {
-      return 'No balances yet.';
+      return 'No balance on this wallet detected';
     }
     return '';
   }
@@ -183,18 +175,6 @@ export class ConnectedWalletBoardComponent {
 
   public retryBalances(): void {
     this.loadBalancesIfConnected(this.snapshot, true);
-  }
-
-  public changeLabel(market: TokenBalanceMock): string {
-    return formatChangePercent(market.change24h);
-  }
-
-  public isTokenUp(market: TokenBalanceMock): boolean {
-    return sparklineIsUp(market.sparkline7d);
-  }
-
-  public sparklineLabel(row: ConnectedWalletBoardRow): string {
-    return `${row.symbol} 7-day price trend`;
   }
 
   private loadBalancesIfConnected(
@@ -255,5 +235,26 @@ export class ConnectedWalletBoardComponent {
     const amount = row.balanceDecimal ?? row.balanceRaw;
     const suffix = row.stale ? ' (stale)' : '';
     return `${amount}${suffix}`;
+  }
+
+  private hasPositiveBalance(row: WalletBalance): boolean {
+    const decimal = row.balanceDecimal?.trim();
+    if (decimal) {
+      const value = Number(decimal.replace(/,/g, ''));
+      if (Number.isFinite(value)) {
+        return value > 0;
+      }
+    }
+
+    const raw = row.balanceRaw?.trim();
+    if (!raw) {
+      return false;
+    }
+    try {
+      return BigInt(raw) > 0n;
+    } catch {
+      const value = Number(raw);
+      return Number.isFinite(value) && value > 0;
+    }
   }
 }

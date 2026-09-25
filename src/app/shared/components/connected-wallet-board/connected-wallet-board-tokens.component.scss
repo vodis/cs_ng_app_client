@@ -11,12 +11,10 @@
 .connected-wallet-board__token-row {
   display: grid;
   width: 100%;
-  min-width: 520px;
+  min-width: 0;
   align-items: center;
   gap: 8px;
-  grid-template-columns:
-    52px minmax(72px, 0.9fr) minmax(88px, 1.1fr) minmax(64px, 0.85fr)
-    minmax(72px, 0.95fr) 96px;
+  grid-template-columns: minmax(72px, 1fr) minmax(96px, 1fr);
   white-space: nowrap;
 }
 
@@ -31,10 +29,6 @@
 
 .connected-wallet-board__token-header > span:nth-child(n + 2) {
   text-align: right;
-}
-
-.connected-wallet-board__token-header > span:last-child {
-  text-align: center;
 }
 
 .connected-wallet-board__token-row {
@@ -74,33 +68,4 @@
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.connected-wallet-board__token-metric--price {
-  gap: 6px;
-}
-
-.connected-wallet-board__token-sparkline {
-  display: block;
-  overflow: visible;
-  width: 96px;
-  height: 32px;
-  flex-shrink: 0;
-  justify-self: end;
-  pointer-events: none;
-}
-
-.connected-wallet-board__token-change {
-  flex-shrink: 0;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.connected-wallet-board__token-change--up {
-  color: #16c784;
-}
-
-.connected-wallet-board__token-change--down {
-  color: #ea3943;
 }
