@@ -1,10 +1,13 @@
 import {
   Component,
+  ElementRef,
   EventEmitter,
+  HostListener,
   Input,
   OnChanges,
   Output,
   SimpleChanges,
+  ViewChild,
 } from '@angular/core';
 import {
   formatSlippagePercentLabel,
@@ -30,6 +33,10 @@ export class SlippageSettingsPanelComponent implements OnChanges {
   @Output() closeRequested = new EventEmitter<void>();
   @Output() draftBpsChanged = new EventEmitter<number>();
 
+  @ViewChild('dialog') private readonly dialog?: ElementRef<HTMLElement>;
+  @ViewChild('closeButton')
+  private readonly closeButton?: ElementRef<HTMLButtonElement>;
+
   public readonly presets = SLIPPAGE_PRESET_BPS;
   public selectedPresetBps: SlippagePresetBps | null = 50;
   public customPercent = '';
@@ -38,6 +45,7 @@ export class SlippageSettingsPanelComponent implements OnChanges {
   public ngOnChanges(changes: SimpleChanges): void {
     if (changes['isOpen']?.currentValue === true) {
       this.syncFromSaved(this.slippageToleranceBps);
+      queueMicrotask(() => this.focusInitialControl());
     }
   }
 
@@ -109,6 +117,23 @@ export class SlippageSettingsPanelComponent implements OnChanges {
     if (event.target === event.currentTarget) {
       this.close();
     }
+  }
+
+  @HostListener('document:keydown.escape')
+  public handleEscape(): void {
+    if (!this.isOpen) {
+      return;
+    }
+    this.close();
+  }
+
+  private focusInitialControl(): void {
+    const closeButton = this.closeButton?.nativeElement;
+    if (closeButton) {
+      closeButton.focus();
+      return;
+    }
+    this.dialog?.nativeElement.focus();
   }
 
   private draftBps(): number | null {

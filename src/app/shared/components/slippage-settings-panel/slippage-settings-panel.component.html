@@ -4,14 +4,19 @@
     role="presentation"
     (click)="onBackdropClick($event)">
     <section
+      #dialog
       class="slippage-settings"
       role="dialog"
       aria-modal="true"
       aria-labelledby="slippage-settings-title"
+      tabindex="-1"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
       (click)="$event.stopPropagation()">
       <header class="slippage-settings__header">
         <h2 id="slippage-settings-title">Slippage</h2>
         <button
+          #closeButton
           type="button"
           class="slippage-settings__close"
           aria-label="Close slippage settings"

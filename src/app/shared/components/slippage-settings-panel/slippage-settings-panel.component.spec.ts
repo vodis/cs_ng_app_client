@@ -1,6 +1,12 @@
 /// <reference types="jasmine" />
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { A11yModule } from '@angular/cdk/a11y';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+} from '@angular/core/testing';
 import { MatIconModule } from '@angular/material/icon';
 import { SlippageSettingsPanelComponent } from './slippage-settings-panel.component';
 
@@ -10,7 +16,7 @@ describe('SlippageSettingsPanelComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MatIconModule],
+      imports: [MatIconModule, A11yModule],
       declarations: [SlippageSettingsPanelComponent],
     }).compileComponents();
 
@@ -69,5 +75,36 @@ describe('SlippageSettingsPanelComponent', () => {
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
     expect(save.disabled).toBeTrue();
+  });
+
+  it('moves focus into the dialog when opened', fakeAsync(() => {
+    component.isOpen = false;
+    fixture.detectChanges();
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.textContent = 'Edit slippage';
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    component.isOpen = true;
+    fixture.detectChanges();
+    tick();
+
+    const close = fixture.nativeElement.querySelector(
+      '.slippage-settings__close'
+    ) as HTMLButtonElement;
+    expect(document.activeElement).toBe(close);
+
+    trigger.remove();
+  }));
+
+  it('emits close on Escape', () => {
+    const closeSpy = jasmine.createSpy('close');
+    component.closeRequested.subscribe(closeSpy);
+
+    component.handleEscape();
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
   });
 });
