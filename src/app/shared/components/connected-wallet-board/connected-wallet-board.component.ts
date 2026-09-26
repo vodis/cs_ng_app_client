@@ -21,7 +21,7 @@ import {
   isNearWalletAddress,
   nearNetworkForAddress,
 } from '@shared/utils/network.utils';
-import type { Subscription } from 'rxjs';
+import { concat, interval, of, switchMap, type Subscription } from 'rxjs';
 import {
   EVM_CHAINS,
   findKnownEvmChain,
@@ -37,6 +37,8 @@ export type ConnectedWalletBoardRow = {
   stale: boolean;
   market: WalletMarketSnapshot;
 };
+
+const marketRefreshMs = 60_000;
 
 @Component({
   selector: 'app-connected-wallet-board',
@@ -298,9 +300,11 @@ export class ConnectedWalletBoardComponent {
       return;
     }
 
-    this.marketSubscription = this.marketSnapshots
-      .load(symbols)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    this.marketSubscription = concat(of(0), interval(marketRefreshMs))
+      .pipe(
+        switchMap(() => this.marketSnapshots.load(symbols)),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(snapshots => {
         if (this.marketRequestKey !== key) {
           return;

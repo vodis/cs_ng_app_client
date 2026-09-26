@@ -58,8 +58,6 @@ class SwapFlowFacadeStub {
 
   public refreshQuotePreview = jasmine.createSpy('refreshQuotePreview');
 
-  public requestExecutableQuote = jasmine.createSpy('requestExecutableQuote');
-
   public emitError(error: SwapFlowError): void {
     this.quotePreviewSubject.next(undefined);
     this.errorSubject.next(error);
@@ -739,7 +737,7 @@ describe('HomeComponent market overview', () => {
     );
   });
 
-  it('enables Review when a quote is visible even if the balance is stale', () => {
+  it('keeps Review disabled when the balance is stale', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
     ) as unknown as WalletBalancesServiceStub;
@@ -774,23 +772,59 @@ describe('HomeComponent market overview', () => {
     };
     component.amount = '0.09';
     swapFlowFacade.emitQuote({
-      amountOut: '',
-      amountOutAtomic: '',
-      expiresAt: '',
-      raw: {
-        quote: {
-          amountOutFormatted: '0.0001',
-        },
-      },
+      amountOut: '0.0001',
+      amountOutAtomic: '100',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      raw: { amountOut: '100' },
     });
 
     expect(component.balanceLabel(component.fromToken)).toContain('(stale)');
-    expect(component.canReviewSwap()).toBeTrue();
-    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    expect(component.canReviewSwap()).toBeFalse();
+    expect(component.isPrimaryActionDisabled()).toBeTrue();
     expect(component.primaryActionLabel()).toBe('Review');
   });
 
-  it('keeps Review enabled after the preview expiry passes', () => {
+  it('keeps Review disabled when a formatted quote lacks atomic output', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    balancesService.balances = [nearBalance()];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next(nearWallet());
+    component.fromToken = {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    component.amount = '0.09';
+    swapFlowFacade.emitQuote({
+      amountOut: '0.0001',
+      amountOutAtomic: '',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      raw: { amountOutFormatted: '0.0001' },
+    });
+
+    expect(component.canReviewSwap()).toBeFalse();
+    expect(component.isPrimaryActionDisabled()).toBeTrue();
+  });
+
+  it('keeps Review disabled after the preview expiry passes', () => {
     const walletsService = TestBed.inject(
       WalletsService
     ) as unknown as WalletsServiceStub;
@@ -826,8 +860,8 @@ describe('HomeComponent market overview', () => {
       },
     });
 
-    expect(component.canReviewSwap()).toBeTrue();
-    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    expect(component.canReviewSwap()).toBeFalse();
+    expect(component.isPrimaryActionDisabled()).toBeTrue();
     expect(component.primaryActionLabel()).toBe('Review');
   });
 

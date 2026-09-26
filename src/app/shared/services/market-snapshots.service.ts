@@ -4,8 +4,10 @@ import {
   emptyMarketSnapshot,
   type WalletMarketSnapshot,
 } from '@shared/utils/market-display.util';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
+
+const maxSymbolsPerRequest = 30;
 
 type MarketSnapshotsResponse = {
   data?: unknown;
@@ -29,16 +31,29 @@ export class MarketSnapshotsService {
       return of([]);
     }
 
+    const batches: string[][] = [];
+    for (
+      let index = 0;
+      index < requested.length;
+      index += maxSymbolsPerRequest
+    ) {
+      batches.push(requested.slice(index, index + maxSymbolsPerRequest));
+    }
+
+    return forkJoin(batches.map(batch => this.loadBatch(batch))).pipe(
+      map(results => results.flat())
+    );
+  }
+
+  private loadBatch(symbols: string[]): Observable<WalletMarketSnapshot[]> {
     return this.httpClient
       .get<MarketSnapshotsResponse>(
         `${environment.apiUrl}/api/v1/markets/snapshots`,
-        { params: { symbols: requested.join(',') } }
+        { params: { symbols: symbols.join(',') } }
       )
       .pipe(
-        map(response => this.parse(response, requested)),
-        catchError(() =>
-          of(requested.map(symbol => emptyMarketSnapshot(symbol)))
-        )
+        map(response => this.parse(response, symbols)),
+        catchError(() => of(symbols.map(symbol => emptyMarketSnapshot(symbol))))
       );
   }
 

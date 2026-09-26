@@ -1,6 +1,11 @@
 /// <reference types="jasmine" />
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+} from '@angular/core/testing';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
   ConnectedWalletBalancesFacade,
@@ -168,6 +173,25 @@ describe('ConnectedWalletBoardComponent', () => {
     expect(priced).toContain('$395.2B');
     expect(priced).toContain('$18.4B');
   });
+
+  it('retries market snapshots while the wallet remains connected', fakeAsync(() => {
+    balances$.next(readyBalances);
+    expect(loadSnapshots).toHaveBeenCalledTimes(1);
+    snapshots$.next([]);
+
+    tick(60_000);
+    expect(loadSnapshots).toHaveBeenCalledTimes(2);
+    snapshots$.next([nearMarket]);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      '$3,285.40'
+    );
+
+    snapshot$.next({ ...evmSnapshot, status: 'disconnected', account: null });
+    tick(60_000);
+    expect(loadSnapshots).toHaveBeenCalledTimes(2);
+    fixture.destroy();
+  }));
 
   it('hides zero-balance tokens and shows empty copy when none remain', () => {
     balances$.next({

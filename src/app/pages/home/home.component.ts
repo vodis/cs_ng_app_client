@@ -390,19 +390,25 @@ export class HomeComponent {
   }
 
   public canReviewSwap(): boolean {
-    if (!this.hasPositiveQuoteAmount(this.quotedOutputAmount())) {
-      return false;
-    }
-
-    return Boolean(this.buildQuotePreviewInput());
+    const preview = this.quotePreview;
+    const input = this.buildQuotePreviewInput();
+    return Boolean(
+      preview &&
+      input &&
+      /^\d+$/.test(preview.amountOutAtomic) &&
+      !/^0+$/.test(preview.amountOutAtomic) &&
+      Date.parse(preview.expiresAt) > Date.now() &&
+      !this.validateSourceBalance(input.amount)
+    );
   }
 
   public canRetryQuote(): boolean {
+    const input = this.buildQuotePreviewInput();
     return (
       this.swapFlowState === 'idle' &&
       Boolean(this.quoteError) &&
       !this.canReviewSwap() &&
-      Boolean(this.buildQuotePreviewInput())
+      Boolean(input && !this.validateSourceBalance(input.amount))
     );
   }
 
@@ -446,7 +452,6 @@ export class HomeComponent {
 
     const input = this.buildSwapInput(amount, authMethod);
     const traceId = preview.traceId ?? createTraceId();
-    this.swapFlowFacade.requestExecutableQuote(input, traceId);
     const minimumAtomic =
       minimumReceivedAtomic(
         preview.amountOutAtomic,
@@ -1185,23 +1190,6 @@ export class HomeComponent {
     }
 
     input.setSelectionRange(newCaret, newCaret);
-  }
-
-  private quotedOutputAmount(): string {
-    return (
-      this.quotePreview?.amountOutAtomic ||
-      this.quotePreview?.amountOut ||
-      this.rawQuoteAmount()
-    );
-  }
-
-  private hasPositiveQuoteAmount(value: string): boolean {
-    if (/^\d+$/.test(value)) {
-      return !/^0+$/.test(value);
-    }
-
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) && parsed > 0;
   }
 
   private isZeroAmountValue(value: string): boolean {

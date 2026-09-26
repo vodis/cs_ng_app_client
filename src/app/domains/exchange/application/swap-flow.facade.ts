@@ -125,15 +125,6 @@ export class SwapFlowFacade {
     this.quoteInputSubject.next(input);
   }
 
-  requestExecutableQuote(
-    input: SwapFormInput,
-    traceId = createTraceId()
-  ): void {
-    this.workflow.requestQuotePreviewStream(input, traceId, false).subscribe({
-      error: () => undefined,
-    });
-  }
-
   async executeSwap(input: SwapFormInput): Promise<void> {
     this.activeTraceId = createTraceId();
     const currentQuotePreview = this.quotePreview;

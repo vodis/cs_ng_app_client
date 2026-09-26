@@ -3,6 +3,7 @@ import {
   HttpTestingController,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import type { WalletMarketSnapshot } from '@shared/utils/market-display.util';
 import { environment } from '../../../environments/environment';
 import { MarketSnapshotsService } from './market-snapshots.service';
 
@@ -86,5 +87,35 @@ describe('MarketSnapshotsService', () => {
         sparkline7d: [0, 0],
       },
     ]);
+  });
+
+  it('batches over 30 symbols and keeps successful batches when another fails', () => {
+    const symbols = Array.from({ length: 31 }, (_, index) => `S${index}`);
+    let result: WalletMarketSnapshot[] | undefined;
+    service.load(symbols).subscribe(snapshots => {
+      result = snapshots;
+    });
+
+    const requests = httpMock.match(
+      request =>
+        request.url === `${environment.apiUrl}/api/v1/markets/snapshots`
+    );
+    expect(requests.length).toBe(2);
+    expect(requests[0].request.params.get('symbols')).toBe(
+      symbols.slice(0, 30).join(',')
+    );
+    expect(requests[1].request.params.get('symbols')).toBe('S30');
+
+    requests[0].flush({
+      data: [{ symbol: 'S0', priceUsd: 5, sparkline7d: [4, 5] }],
+    });
+    requests[1].flush('unavailable', {
+      status: 503,
+      statusText: 'Service Unavailable',
+    });
+
+    expect(result!.length).toBe(31);
+    expect(result![0].priceUsd).toBe(5);
+    expect(result![30].priceUsd).toBe(0);
   });
 });
