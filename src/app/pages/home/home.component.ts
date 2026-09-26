@@ -370,7 +370,7 @@ export class HomeComponent {
       return;
     }
 
-    if (this.quoteResult && this.canReviewSwap()) {
+    if (this.canReviewSwap()) {
       this.openSwapReview(amount, authMethod);
       return;
     }
@@ -390,21 +390,25 @@ export class HomeComponent {
   }
 
   public canReviewSwap(): boolean {
-    return (
-      this.swapFlowState === 'idle' &&
-      Boolean(this.quotePreview?.amountOutAtomic) &&
-      Boolean(this.quotePreview?.expiresAt) &&
-      Date.parse(this.quotePreview?.expiresAt ?? '') > Date.now() &&
-      Boolean(this.buildQuotePreviewInput())
+    const preview = this.quotePreview;
+    const input = this.buildQuotePreviewInput();
+    return Boolean(
+      preview &&
+      input &&
+      /^\d+$/.test(preview.amountOutAtomic) &&
+      !/^0+$/.test(preview.amountOutAtomic) &&
+      Date.parse(preview.expiresAt) > Date.now() &&
+      !this.validateSourceBalance(input.amount)
     );
   }
 
   public canRetryQuote(): boolean {
+    const input = this.buildQuotePreviewInput();
     return (
       this.swapFlowState === 'idle' &&
       Boolean(this.quoteError) &&
       !this.canReviewSwap() &&
-      Boolean(this.buildQuotePreviewInput())
+      Boolean(input && !this.validateSourceBalance(input.amount))
     );
   }
 
@@ -941,10 +945,13 @@ export class HomeComponent {
   }
 
   public onAmountPaste(event: ClipboardEvent): void {
-    event.preventDefault();
-
     const input = event.target as HTMLInputElement;
-    const pasted = event.clipboardData?.getData('text') ?? '';
+    const pasted = this.readPastedText(event);
+    if (!pasted) {
+      return;
+    }
+
+    event.preventDefault();
     const start = input.selectionStart ?? input.value.length;
     const end = input.selectionEnd ?? input.value.length;
     const nextValue =
@@ -1080,11 +1087,16 @@ export class HomeComponent {
       return undefined;
     }
 
-    if (this.validateSourceBalance(amount)) {
-      return undefined;
+    return this.buildSwapInput(amount, authMethod);
+  }
+
+  private readPastedText(event: ClipboardEvent): string {
+    const data = event.clipboardData;
+    if (!data) {
+      return '';
     }
 
-    return this.buildSwapInput(amount, authMethod);
+    return data.getData('text/plain') || data.getData('text') || '';
   }
 
   private scrollAmountToEnd(input: HTMLInputElement): void {

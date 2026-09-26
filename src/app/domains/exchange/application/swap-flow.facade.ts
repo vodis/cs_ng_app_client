@@ -211,7 +211,6 @@ export class SwapFlowFacade {
       input.depositType,
       input.refundType,
       input.slippageTolerance,
-      input.deadline,
       input.authMethod,
       input.network,
     ].join('|');

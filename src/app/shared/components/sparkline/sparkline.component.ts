@@ -22,12 +22,23 @@ export class SparklineComponent {
     return this.values.length >= 2;
   }
 
+  public get flat(): boolean {
+    if (this.values.length < 2) {
+      return true;
+    }
+    const first = this.values[0];
+    return this.values.every(value => value === first);
+  }
+
   public get stroke(): string {
+    if (this.flat) {
+      return '#9aa0a6';
+    }
     return this.positive ? '#16c784' : '#ea3943';
   }
 
   public get gradientId(): string {
-    const direction = this.positive ? 'up' : 'down';
+    const direction = this.flat ? 'flat' : this.positive ? 'up' : 'down';
     return `spark-fill-${direction}-${hashSparklineValues(this.values)}`;
   }
 

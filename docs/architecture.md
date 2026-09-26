@@ -332,13 +332,13 @@ provider login, passkey linking, and wallet modal workflows.
 
 Login is optional. Guests can browse the shell without a session.
 
-| Route                    | Purpose                                      |
-| ------------------------ | -------------------------------------------- |
-| `/`                      | Token Exchange                               |
-| `/farm`, `/proposals`    | Product pages                                |
-| `/home`, `/history`      | Placeholder shell pages                      |
-| `/login`                 | Returning-user sign in                       |
-| `/register`              | New account creation                         |
+| Route                 | Purpose                 |
+| --------------------- | ----------------------- |
+| `/`                   | Token Exchange          |
+| `/farm`, `/proposals` | Product pages           |
+| `/home`, `/history`   | Placeholder shell pages |
+| `/login`              | Returning-user sign in  |
+| `/register`           | New account creation    |
 
 `/login` and `/register` render outside the main shell (no header/sidebar). Route
 prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
@@ -346,11 +346,11 @@ prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 
 ### Protected routes
 
-| Route                       | Guard       | Purpose                                                |
-| --------------------------- | ----------- | ------------------------------------------------------ |
-| `/profile`                  | `AuthGuard` | Balance hero, onboarding portfolio, activity, wallets  |
-| `/portfolio`                | `AuthGuard` | Holdings, agent authorization, sessions, sign-out      |
-| `/generate-wallet`          | `AuthGuard` | Legacy redirect to `/profile`                          |
+| Route              | Guard       | Purpose                                               |
+| ------------------ | ----------- | ----------------------------------------------------- |
+| `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, wallets |
+| `/portfolio`       | `AuthGuard` | Holdings, agent authorization, sessions, sign-out     |
+| `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                         |
 
 ### Login methods on `/login`
 

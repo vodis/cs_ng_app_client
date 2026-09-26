@@ -6,12 +6,22 @@ import {
   type ConnectedWalletBalancesState,
 } from '@domains/wallet/application/connected-wallet-balances.facade';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+import { MarketSnapshotsService } from '@shared/services/market-snapshots.service';
 import type { WalletBalance } from '@shared/services/wallet-balances.service';
+import {
+  emptyMarketSnapshot,
+  formatChangePercent,
+  formatCompactUsd,
+  formatUsdPrice,
+  marketIsDown,
+  marketIsUp,
+  type WalletMarketSnapshot,
+} from '@shared/utils/market-display.util';
 import {
   isNearWalletAddress,
   nearNetworkForAddress,
 } from '@shared/utils/network.utils';
-import type { Subscription } from 'rxjs';
+import { concat, interval, of, switchMap, type Subscription } from 'rxjs';
 import {
   EVM_CHAINS,
   findKnownEvmChain,
@@ -25,7 +35,10 @@ export type ConnectedWalletBoardRow = {
   symbol: string;
   amount: string;
   stale: boolean;
+  market: WalletMarketSnapshot;
 };
+
+const marketRefreshMs = 60_000;
 
 @Component({
   selector: 'app-connected-wallet-board',
@@ -40,6 +53,7 @@ export class ConnectedWalletBoardComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly walletGatewayBridge = inject(WalletGatewayBridgeService);
   private readonly balancesFacade = inject(ConnectedWalletBalancesFacade);
+  private readonly marketSnapshots = inject(MarketSnapshotsService);
 
   public snapshot: WalletConnectionSnapshot | undefined;
   public balances: ConnectedWalletBalancesState | undefined;
@@ -47,6 +61,9 @@ export class ConnectedWalletBoardComponent {
   public readonly networks = EVM_CHAINS;
   private balanceRequestKey: string | undefined;
   private balanceSubscription: Subscription | undefined;
+  private marketRequestKey: string | undefined;
+  private marketSubscription: Subscription | undefined;
+  private markets = new Map<string, WalletMarketSnapshot>();
 
   constructor() {
     this.walletGatewayBridge.snapshot$
@@ -104,12 +121,16 @@ export class ConnectedWalletBoardComponent {
   public get rows(): ConnectedWalletBoardRow[] {
     return (this.balances?.rows ?? [])
       .filter(row => this.hasPositiveBalance(row))
-      .map(row => ({
-        id: `${row.network}:${row.assetId}`,
-        symbol: row.symbol,
-        amount: this.amountLabel(row),
-        stale: row.stale,
-      }));
+      .map(row => {
+        const symbol = row.symbol.trim().toUpperCase();
+        return {
+          id: `${row.network}:${row.assetId}`,
+          symbol: row.symbol,
+          amount: this.amountLabel(row),
+          stale: row.stale,
+          market: this.markets.get(symbol) ?? emptyMarketSnapshot(symbol),
+        };
+      });
   }
 
   public get balancesCopy(): string {
@@ -177,6 +198,30 @@ export class ConnectedWalletBoardComponent {
     this.loadBalancesIfConnected(this.snapshot, true);
   }
 
+  public priceLabel(market: WalletMarketSnapshot): string {
+    return formatUsdPrice(market.priceUsd);
+  }
+
+  public changeLabel(market: WalletMarketSnapshot): string {
+    return formatChangePercent(market.change24hPercent);
+  }
+
+  public compactLabel(value: number): string {
+    return formatCompactUsd(value);
+  }
+
+  public isTokenUp(market: WalletMarketSnapshot): boolean {
+    return marketIsUp(market);
+  }
+
+  public isTokenDown(market: WalletMarketSnapshot): boolean {
+    return marketIsDown(market);
+  }
+
+  public sparklineLabel(row: ConnectedWalletBoardRow): string {
+    return `${row.symbol} 7-day price trend`;
+  }
+
   private loadBalancesIfConnected(
     snapshot: WalletConnectionSnapshot | undefined,
     force = false
@@ -192,6 +237,7 @@ export class ConnectedWalletBoardComponent {
       this.balanceSubscription = undefined;
       this.balanceRequestKey = undefined;
       this.balances = undefined;
+      this.clearMarkets();
       return;
     }
 
@@ -211,6 +257,7 @@ export class ConnectedWalletBoardComponent {
       .subscribe(state => {
         if (this.balanceRequestKey === requestKey) {
           this.balances = state;
+          this.refreshMarkets(state.rows);
           if (state.status === 'error' || state.status === 'partial') {
             this.balanceRequestKey = undefined;
           }
@@ -229,6 +276,50 @@ export class ConnectedWalletBoardComponent {
       return `eip155:${this.selectedEvmChainId}`;
     }
     return undefined;
+  }
+
+  private refreshMarkets(rows: WalletBalance[]): void {
+    const symbols = [
+      ...new Set(
+        rows
+          .filter(row => this.hasPositiveBalance(row))
+          .map(row => row.symbol.trim().toUpperCase())
+          .filter(symbol => symbol.length > 0)
+      ),
+    ].sort();
+    const key = symbols.join(',');
+    if (key === this.marketRequestKey) {
+      return;
+    }
+
+    this.marketRequestKey = key;
+    this.marketSubscription?.unsubscribe();
+    this.marketSubscription = undefined;
+    if (!key) {
+      this.markets = new Map();
+      return;
+    }
+
+    this.marketSubscription = concat(of(0), interval(marketRefreshMs))
+      .pipe(
+        switchMap(() => this.marketSnapshots.load(symbols)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(snapshots => {
+        if (this.marketRequestKey !== key) {
+          return;
+        }
+        this.markets = new Map(
+          snapshots.map(snapshot => [snapshot.symbol, snapshot])
+        );
+      });
+  }
+
+  private clearMarkets(): void {
+    this.marketSubscription?.unsubscribe();
+    this.marketSubscription = undefined;
+    this.marketRequestKey = undefined;
+    this.markets = new Map();
   }
 
   private amountLabel(row: WalletBalance): string {

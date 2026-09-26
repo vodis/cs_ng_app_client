@@ -36,7 +36,7 @@ export function parseApprovedSwapPrepareResponse(
   const quoteHashes = readStringArray(
     payload['quoteHashes'],
     'data.quoteHashes',
-    executionPackage.mode === 'intent_sign'
+    false
   );
   const nonce = readOptionalString(payload['nonce'], 'data.nonce');
   const referral = readOptionalString(payload['referral'], 'data.referral');
