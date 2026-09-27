@@ -84,14 +84,37 @@ describe('SwapApiClient', () => {
     pending.flush({ data: { amountOut: '900000' }, error: null });
   });
 
+  it('passes confidential balance custody through preview and prepare', () => {
+    const confidential = {
+      ...request,
+      depositType: 'CONFIDENTIAL_INTENTS' as const,
+      refundType: 'CONFIDENTIAL_INTENTS' as const,
+    };
+    client.requestQuotePreview({ ...confidential, dry: true }).subscribe();
+    const preview = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/quotes/one-click`
+    );
+    expect(preview.request.body).toEqual(
+      jasmine.objectContaining({
+        depositType: 'CONFIDENTIAL_INTENTS',
+        refundType: 'CONFIDENTIAL_INTENTS',
+        isConfidential: true,
+      })
+    );
+    preview.flush({ data: { amountOut: '900000' }, error: null });
+  });
+
   it('uses the swaps prepare DTO instead of the legacy quote DTO', () => {
-    client.requestApprovedPreparePackage(request).subscribe();
+    client
+      .requestApprovedPreparePackage({ ...request, providerId: 'one-click' })
+      .subscribe();
     const pending = httpMock.expectOne(
       `${environment.apiUrl}/api/v1/swaps/prepare`
     );
     expect(pending.request.body).toEqual(
       jasmine.objectContaining({
         signerId: request.signerId,
+        providerId: 'one-click',
         recipient: request.recipient,
         recipientType: request.recipientType,
         depositType: request.depositType,
@@ -147,6 +170,21 @@ describe('SwapApiClient', () => {
     pending.flush({ data: { intentHash: 'intent-hash' }, error: null });
 
     expect(intentHash).toBe('intent-hash');
+  }));
+
+  it('retrieves authenticated 1Click settlement status by preparation id', fakeAsync(() => {
+    let status: string | undefined;
+    const preparationId = '22222222-2222-4222-8222-222222222222';
+    client.getSwapStatus(preparationId).subscribe(value => (status = value));
+    flushMicrotasks();
+    const pending = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/swaps/status/${preparationId}`
+    );
+    expect(pending.request.headers.get('Authorization')).toBe(
+      'Bearer privy-access-token'
+    );
+    pending.flush({ data: { status: 'SUCCESS' }, error: null });
+    expect(status).toBe('SUCCESS');
   }));
 
   it('fails execution before transport when no access token is available', fakeAsync(() => {

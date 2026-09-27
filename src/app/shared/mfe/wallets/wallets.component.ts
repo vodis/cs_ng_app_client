@@ -7,6 +7,7 @@ import {
   NgZone,
 } from '@angular/core';
 import { loadRemoteModule } from '@angular-architects/module-federation';
+import { firstValueFrom } from 'rxjs';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import {
   WalletConnectionSnapshot,
@@ -175,6 +176,8 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
                 },
               }),
             }),
+            checkSwapStatus: preparationId =>
+              firstValueFrom(this.swapApi.getSwapStatus(preparationId)),
           },
         })
       );

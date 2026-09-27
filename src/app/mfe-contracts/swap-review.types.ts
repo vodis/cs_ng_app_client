@@ -36,14 +36,15 @@ export type SwapReviewIntent = {
   };
   network: { id: string; label: string };
   recipient: string;
-  recipientType: 'DESTINATION_CHAIN' | 'INTENTS';
-  depositType: 'ORIGIN_CHAIN' | 'INTENTS';
-  refundType: 'ORIGIN_CHAIN' | 'INTENTS';
+  recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
+  depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
+  refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   authMethod: 'evm' | 'near';
   slippageToleranceBps: number;
 };
 
 export type SwapReviewPrepareRequest = {
+  providerId: 'one-click';
   dry: false;
   traceId: string;
   originAsset: string;
@@ -51,9 +52,9 @@ export type SwapReviewPrepareRequest = {
   amount: string;
   signerId: string;
   recipient: string;
-  recipientType: 'DESTINATION_CHAIN' | 'INTENTS';
-  depositType: 'ORIGIN_CHAIN' | 'INTENTS';
-  refundType: 'ORIGIN_CHAIN' | 'INTENTS';
+  recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
+  depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
+  refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   authMethod: 'evm' | 'near';
   slippageTolerance: number;
   deadline: string;
@@ -90,6 +91,15 @@ export type SwapReviewDepositRequest = {
   amount: string;
 };
 
+export type SwapStatus =
+  | 'KNOWN_DEPOSIT_TX'
+  | 'PENDING_DEPOSIT'
+  | 'INCOMPLETE_DEPOSIT'
+  | 'PROCESSING'
+  | 'SUCCESS'
+  | 'REFUNDED'
+  | 'FAILED';
+
 export type SwapReviewServices = {
   prepareSwap: (
     request: SwapReviewPrepareRequest,
@@ -105,4 +115,5 @@ export type SwapReviewServices = {
   submitSwap: (
     request: SwapReviewSubmitRequest
   ) => Promise<{ intentHash: string }>;
+  checkSwapStatus?: (preparationId: string) => Promise<SwapStatus>;
 };

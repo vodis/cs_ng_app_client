@@ -565,6 +565,15 @@
     margin: 16px 0 8px;
   }
 
+  .swap-confidential-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
   .exchange-error {
     margin: 12px 0 0;
     color: var(--exchange-orange);

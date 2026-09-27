@@ -75,6 +75,7 @@ until backend history is integrated.
 | Wallet balances   | `POST /api/v1/balances`          | NestJS BFF                        |
 | Final preparation | `POST /api/v1/swaps/prepare`     | Wallet MFE through host transport |
 | Swap submission   | `POST /api/v1/swaps/execute`     | Wallet MFE through host transport |
+| Settlement status | `GET /api/v1/swaps/status/:preparationId` | Wallet MFE through host transport |
 
 Client token metadata in `HomeComponent.exchangeTokens` is display and
 bootstrap data only. The backend is authoritative for tradability, chain
@@ -135,6 +136,15 @@ amount disclosure, expiry/retry state, reconfirmation within slippage policy,
 wallet signing, single-flight submission, and success callback. Authenticated
 BFF calls remain host transport services so the MFE does not duplicate session
 or API-client logic.
+
+Public Intents custody is the default. The Confidential swap checkbox requests
+`CONFIDENTIAL_INTENTS` for the deposit and refund balances. The final quote and
+unsigned message come from 1Click through the BFF. The MFE signs that exact
+message and submits it once; it then polls 1Click status through the host.
+The MFE selects `one-click` in its final preparation request so the BFF does
+not substitute a solver-relay quote for this flow.
+An intent hash confirms submission. Only `SUCCESS` confirms settlement;
+`REFUNDED` and `FAILED` are shown separately.
 
 ## Styling contract
 

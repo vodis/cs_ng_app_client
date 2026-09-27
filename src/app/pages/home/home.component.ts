@@ -216,6 +216,7 @@ export class HomeComponent {
   public isRecipientPanelOpen = false;
   public isSlippageSettingsOpen = false;
   public slippageToleranceBps = DEFAULT_SLIPPAGE_TOLERANCE_BPS;
+  public confidentialSwap = false;
   public slippageDraftBps = DEFAULT_SLIPPAGE_TOLERANCE_BPS;
   public recipientAddress = '';
   public crossNetworkRecipientIntentSignEnabled =
@@ -280,9 +281,9 @@ export class HomeComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(result => {
         if (!result || result.traceId !== this.activeReviewTraceId) return;
-        this.intentHash = result.intentHash;
         this.activeReviewTraceId = '';
         this.swapFlowFacade.reset();
+        this.intentHash = result.intentHash;
         this.loadWalletBalances();
       });
 
@@ -431,8 +432,8 @@ export class HomeComponent {
       signerId: this.walletAddress.toLowerCase(),
       recipient: this.effectiveRecipient(),
       recipientType: 'DESTINATION_CHAIN',
-      depositType: 'INTENTS',
-      refundType: 'INTENTS',
+      depositType: this.confidentialSwap ? 'CONFIDENTIAL_INTENTS' : 'INTENTS',
+      refundType: this.confidentialSwap ? 'CONFIDENTIAL_INTENTS' : 'INTENTS',
       slippageTolerance: this.slippageToleranceBps,
       deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       authMethod,
@@ -887,6 +888,12 @@ export class HomeComponent {
   public openSlippageSettings(): void {
     this.slippageDraftBps = this.slippageToleranceBps;
     this.isSlippageSettingsOpen = true;
+  }
+
+  public setConfidentialSwap(enabled: boolean): void {
+    if (this.confidentialSwap === enabled) return;
+    this.confidentialSwap = enabled;
+    this.refreshSwapQuotePreview();
   }
 
   public closeSlippageSettings(): void {
