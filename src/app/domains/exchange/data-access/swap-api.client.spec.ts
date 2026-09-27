@@ -104,12 +104,16 @@ describe('SwapApiClient', () => {
     preview.flush({ data: { amountOut: '900000' }, error: null });
   });
 
-  it('uses the swaps prepare DTO instead of the legacy quote DTO', () => {
+  it('uses an authenticated swaps prepare DTO before the wallet signs', fakeAsync(() => {
     client
       .requestApprovedPreparePackage({ ...request, providerId: 'one-click' })
       .subscribe();
+    flushMicrotasks();
     const pending = httpMock.expectOne(
       `${environment.apiUrl}/api/v1/swaps/prepare`
+    );
+    expect(pending.request.headers.get('Authorization')).toBe(
+      'Bearer privy-access-token'
     );
     expect(pending.request.body).toEqual(
       jasmine.objectContaining({
@@ -146,7 +150,22 @@ describe('SwapApiClient', () => {
       },
       error: null,
     });
-  });
+  }));
+
+  it('does not prepare a swap without an authenticated session', fakeAsync(() => {
+    authProvider.getAccessToken.and.resolveTo(null);
+    let failure: unknown;
+    client
+      .requestApprovedPreparePackage({ ...request, providerId: 'one-click' })
+      .subscribe({ error: error => (failure = error) });
+    flushMicrotasks();
+    expect(failure).toEqual(
+      jasmine.objectContaining({
+        message: 'Sign in and link this wallet before preparing a swap',
+      })
+    );
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/swaps/prepare`);
+  }));
 
   it('authenticates execution and binds idempotency to the preparation', fakeAsync(() => {
     let intentHash: string | undefined;

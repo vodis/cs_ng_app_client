@@ -52,11 +52,27 @@ export class SwapApiClient {
   requestApprovedPreparePackage(
     request: SwapPrepareRequest
   ): Observable<ApprovedSwapPreparePackage> {
-    return this.httpClient
-      .post<
-        ApiResponseEnvelope<unknown>
-      >(`${environment.apiUrl}/api/v1/swaps/prepare`, this.toPrepareBody(request), { headers: this.traceHeaders(request.traceId) })
-      .pipe(map(parseApprovedSwapPrepareResponse));
+    return from(this.authProvider.whenSettled()).pipe(
+      switchMap(() => this.authProvider.getAccessToken()),
+      switchMap(token => {
+        if (!token) {
+          throw new Error(
+            'Sign in and link this wallet before preparing a swap'
+          );
+        }
+        return this.httpClient.post<ApiResponseEnvelope<unknown>>(
+          `${environment.apiUrl}/api/v1/swaps/prepare`,
+          this.toPrepareBody(request),
+          {
+            headers: this.traceHeaders(request.traceId).set(
+              'Authorization',
+              `Bearer ${token}`
+            ),
+          }
+        );
+      }),
+      map(parseApprovedSwapPrepareResponse)
+    );
   }
 
   submitSignedIntent(input: {

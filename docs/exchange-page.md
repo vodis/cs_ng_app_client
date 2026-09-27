@@ -136,6 +136,9 @@ amount disclosure, expiry/retry state, reconfirmation within slippage policy,
 wallet signing, single-flight submission, and success callback. Authenticated
 BFF calls remain host transport services so the MFE does not duplicate session
 or API-client logic.
+Final preparation sends the user's bearer token; the BFF checks that the signer
+is an active wallet link before the MFE asks the wallet to sign. Deploy this host
+change before enforcing the authenticated preparation endpoint in the BFF.
 
 Public Intents custody is the default. The Confidential swap checkbox requests
 `CONFIDENTIAL_INTENTS` for the deposit and refund balances. The final quote and
