@@ -24,9 +24,9 @@ export type SwapFormInput = {
   amount: string;
   signerId: string;
   recipient: string;
-  recipientType: 'DESTINATION_CHAIN' | 'INTENTS';
-  depositType: 'ORIGIN_CHAIN' | 'INTENTS';
-  refundType: 'ORIGIN_CHAIN' | 'INTENTS';
+  recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
+  depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
+  refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   slippageTolerance: number;
   deadline: string;
   authMethod: 'evm' | 'near';

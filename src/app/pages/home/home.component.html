@@ -193,6 +193,15 @@
           </div>
         </div>
 
+        <label class="swap-confidential-option">
+          <input
+            #confidentialToggle
+            type="checkbox"
+            [checked]="confidentialSwap"
+            (change)="setConfidentialSwap(confidentialToggle.checked)" />
+          <span>Confidential swap</span>
+        </label>
+
         <button
           class="connectMain"
           type="submit"

@@ -432,6 +432,14 @@ describe('HomeComponent market overview', () => {
         refundType: 'INTENTS',
       })
     );
+
+    component.setConfidentialSwap(true);
+    expect(component['buildSwapInput']('1000000', 'near')).toEqual(
+      jasmine.objectContaining({
+        depositType: 'CONFIDENTIAL_INTENTS',
+        refundType: 'CONFIDENTIAL_INTENTS',
+      })
+    );
   });
 
   it('enables a manual quote retry after a quote request fails', () => {

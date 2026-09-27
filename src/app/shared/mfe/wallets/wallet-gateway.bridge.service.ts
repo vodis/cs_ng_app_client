@@ -160,6 +160,7 @@ export class WalletGatewayBridgeService {
     const state = this.snapshotSubject.value?.executionState;
     return (
       Boolean(this.pendingSignature || this.pendingTransaction) ||
+      this.mountApi?.isSwapReviewBusy?.() === true ||
       state === 'operating.preparingIntentMessage' ||
       state === 'operating.awaitingIntentSign' ||
       state === 'operating.signingIntent' ||

@@ -7,6 +7,7 @@ import {
   NgZone,
 } from '@angular/core';
 import { loadRemoteModule } from '@angular-architects/module-federation';
+import { firstValueFrom } from 'rxjs';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import {
   WalletConnectionSnapshot,
@@ -43,6 +44,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   private unsubscribeEvents: (() => void) | undefined;
   private isDestroyed = false;
   private readonly remoteName = WALLET_REMOTE_NAME;
+  private activeSwapPreparation?: { id: string; traceId: string };
 
   constructor(
     private walletsService: WalletsService,
@@ -175,6 +177,17 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
                 },
               }),
             }),
+            checkSwapStatus: preparationId => {
+              const preparation = this.activeSwapPreparation;
+              if (preparation?.id !== preparationId) {
+                return Promise.reject(
+                  new Error('Swap preparation is no longer active')
+                );
+              }
+              return firstValueFrom(
+                this.swapApi.getSwapStatus(preparationId, preparation.traceId)
+              );
+            },
           },
         })
       );
@@ -260,6 +273,12 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
               );
               return;
             }
+            const preparationId =
+              result.executionPackage.payload['preparationId'];
+            this.activeSwapPreparation =
+              typeof preparationId === 'string'
+                ? { id: preparationId, traceId: request.traceId }
+                : undefined;
             resolve({
               prepareRequest: result,
               providerId: result.providerId,

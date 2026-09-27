@@ -112,6 +112,7 @@ export type WalletsMfeMountApi = {
   disconnectWallet?: () => void;
   openSwapReview?: (intent: SwapReviewIntent) => void;
   closeSwapReview?: () => void;
+  isSwapReviewBusy?: () => boolean;
 };
 
 export type WalletsMfeModule = {

@@ -15,6 +15,7 @@ import type {
   IntentRelayUserInfo,
 } from '@mfe-contracts/wallet-execution.types';
 import type { SwapExecutionMode } from '@mfe-contracts/intent-prepare.contract';
+import type { SwapStatus } from '@mfe-contracts/swap-review.types';
 import { mapQuotePreviewResponse } from './swap-api.mappers';
 import { parseApprovedSwapPrepareResponse } from './swap-prepare-response.parser';
 
@@ -124,6 +125,39 @@ export class SwapApiClient {
     );
   }
 
+  getSwapStatus(
+    preparationId: string,
+    traceId: string
+  ): Observable<SwapStatus> {
+    if (!/^[0-9a-f-]{36}$/i.test(preparationId)) {
+      throw new Error('Swap status requires a valid preparationId');
+    }
+    return from(this.authProvider.whenSettled()).pipe(
+      switchMap(() => this.authProvider.getAccessToken()),
+      switchMap(token => {
+        if (!token) throw new Error('No active session');
+        return this.httpClient.get<ApiResponseEnvelope<{ status: SwapStatus }>>(
+          `${environment.apiUrl}/api/v1/swaps/status/${preparationId}`,
+          {
+            headers: this.traceHeaders(traceId).set(
+              'Authorization',
+              `Bearer ${token}`
+            ),
+          }
+        );
+      }),
+      map(response => {
+        if (response.error || !response.data?.status) {
+          throw (
+            response.error ??
+            new Error('Swap status response is missing status')
+          );
+        }
+        return response.data.status;
+      })
+    );
+  }
+
   private toQuoteBody(request: SwapQuoteRequest): Record<string, unknown> {
     return {
       dry: request.dry,
@@ -139,13 +173,14 @@ export class SwapApiClient {
       refundType: request.refundType,
       authMethod: request.authMethod,
       swapType: 'EXACT_INPUT',
-      isConfidential: false,
+      isConfidential: request.depositType === 'CONFIDENTIAL_INTENTS',
       isAuthenticated: true,
     };
   }
 
   private toPrepareBody(request: SwapPrepareRequest): Record<string, unknown> {
     return {
+      providerId: request.providerId,
       originAsset: request.originAsset,
       destinationAsset: request.destinationAsset,
       amount: request.amount,
