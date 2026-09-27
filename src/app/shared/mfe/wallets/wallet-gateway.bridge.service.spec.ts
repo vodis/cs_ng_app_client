@@ -146,6 +146,20 @@ describe('WalletGatewayBridgeService', () => {
     expect(mountApi.closeSwapReview).toHaveBeenCalledTimes(1);
   });
 
+  it('reports the wallet MFE busy state as execution in progress', () => {
+    mountApi.isSwapReviewBusy = jasmine
+      .createSpy('isSwapReviewBusy')
+      .and.returnValue(true);
+    service.registerMountApi(mountApi);
+
+    expect(service.isExecutionInProgress()).toBeTrue();
+
+    mountApi.isSwapReviewBusy = jasmine
+      .createSpy('isSwapReviewBusy')
+      .and.returnValue(false);
+    expect(service.isExecutionInProgress()).toBeFalse();
+  });
+
   it('fails closed when the mounted wallet MFE cannot open swap review', () => {
     service.registerMountApi(mountApi);
     let thrown: unknown;

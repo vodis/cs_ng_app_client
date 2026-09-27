@@ -224,6 +224,13 @@ The host remains responsible for the Trade form, shared balance source, dry
 quote cancellation/versioning, and opening/closing the drawer. The MFE must not
 fetch token catalogs or dry quotes.
 
+The optional `isSwapReviewBusy()` mount method reports signing, submission,
+deposit, or settlement tracking. The host checks it before dismissing the swap
+review drawer. The MFE keeps the review mounted after `onSwapSubmitted` until
+settlement tracking finishes; the callback itself reports submission only.
+Deploy the wallet MFE before the host so this guard is available when the host
+starts using it. Older remotes can mount but retain the previous close behavior.
+
 When the host dismisses the connection drawer, it sends `RESET`. The MFE must
 abort any active provider pairing request before returning the gateway to idle,
 so a dismissed QR code or wallet prompt cannot connect later.

@@ -50,7 +50,7 @@ describe('WalletBarComponent', () => {
     component.isOpenWalletConnectMenu = true;
   });
 
-  it('keeps the swap review open while wallet execution is in progress', () => {
+  it('keeps the swap review open while wallet execution or settlement is in progress', () => {
     gateway.isExecutionInProgress.and.returnValue(true);
 
     component.handleCloseWalletMenu();
