@@ -175,7 +175,9 @@ describe('SwapApiClient', () => {
   it('retrieves authenticated 1Click settlement status by preparation id', fakeAsync(() => {
     let status: string | undefined;
     const preparationId = '22222222-2222-4222-8222-222222222222';
-    client.getSwapStatus(preparationId).subscribe(value => (status = value));
+    client
+      .getSwapStatus(preparationId, request.traceId)
+      .subscribe(value => (status = value));
     flushMicrotasks();
     const pending = httpMock.expectOne(
       `${environment.apiUrl}/api/v1/swaps/status/${preparationId}`
@@ -183,6 +185,8 @@ describe('SwapApiClient', () => {
     expect(pending.request.headers.get('Authorization')).toBe(
       'Bearer privy-access-token'
     );
+    expect(pending.request.headers.get('x-trace-id')).toBe(request.traceId);
+    expect(pending.request.headers.get('x-request-id')).toBe(request.traceId);
     pending.flush({ data: { status: 'SUCCESS' }, error: null });
     expect(status).toBe('SUCCESS');
   }));

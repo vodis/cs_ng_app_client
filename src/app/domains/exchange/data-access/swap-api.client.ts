@@ -125,7 +125,10 @@ export class SwapApiClient {
     );
   }
 
-  getSwapStatus(preparationId: string): Observable<SwapStatus> {
+  getSwapStatus(
+    preparationId: string,
+    traceId: string
+  ): Observable<SwapStatus> {
     if (!/^[0-9a-f-]{36}$/i.test(preparationId)) {
       throw new Error('Swap status requires a valid preparationId');
     }
@@ -135,7 +138,12 @@ export class SwapApiClient {
         if (!token) throw new Error('No active session');
         return this.httpClient.get<ApiResponseEnvelope<{ status: SwapStatus }>>(
           `${environment.apiUrl}/api/v1/swaps/status/${preparationId}`,
-          { headers: new HttpHeaders().set('Authorization', `Bearer ${token}`) }
+          {
+            headers: this.traceHeaders(traceId).set(
+              'Authorization',
+              `Bearer ${token}`
+            ),
+          }
         );
       }),
       map(response => {
