@@ -2,6 +2,7 @@ import {
   HttpClientTestingModule,
   HttpTestingController,
 } from '@angular/common/http/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { fakeAsync, flushMicrotasks, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
 import { AuthProviderService } from '@core/auth/auth-provider.service';
@@ -189,6 +190,25 @@ describe('SwapApiClient', () => {
     pending.flush({ data: { intentHash: 'intent-hash' }, error: null });
 
     expect(intentHash).toBe('intent-hash');
+  }));
+
+  it('preserves a typed pre-provider 403 for the wallet review', fakeAsync(() => {
+    let failure: HttpErrorResponse | undefined;
+    client.submitSignedIntent(executionRequest).subscribe({
+      error: (error: HttpErrorResponse) => (failure = error),
+    });
+    flushMicrotasks();
+
+    const pending = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/swaps/execute`
+    );
+    pending.flush(
+      { code: 'SWAP_WALLET_NOT_AUTHORIZED' },
+      { status: 403, statusText: 'Forbidden' }
+    );
+
+    expect(failure?.status).toBe(403);
+    expect(failure?.error.code).toBe('SWAP_WALLET_NOT_AUTHORIZED');
   }));
 
   it('retrieves authenticated 1Click settlement status by preparation id', fakeAsync(() => {
