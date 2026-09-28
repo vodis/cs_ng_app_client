@@ -2,6 +2,7 @@ import {
   HttpClientTestingModule,
   HttpTestingController,
 } from '@angular/common/http/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { fakeAsync, flushMicrotasks, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
 import { AuthProviderService } from '@core/auth/auth-provider.service';
@@ -104,12 +105,16 @@ describe('SwapApiClient', () => {
     preview.flush({ data: { amountOut: '900000' }, error: null });
   });
 
-  it('uses the swaps prepare DTO instead of the legacy quote DTO', () => {
+  it('uses an authenticated swaps prepare DTO before the wallet signs', fakeAsync(() => {
     client
       .requestApprovedPreparePackage({ ...request, providerId: 'one-click' })
       .subscribe();
+    flushMicrotasks();
     const pending = httpMock.expectOne(
       `${environment.apiUrl}/api/v1/swaps/prepare`
+    );
+    expect(pending.request.headers.get('Authorization')).toBe(
+      'Bearer privy-access-token'
     );
     expect(pending.request.body).toEqual(
       jasmine.objectContaining({
@@ -146,7 +151,22 @@ describe('SwapApiClient', () => {
       },
       error: null,
     });
-  });
+  }));
+
+  it('does not prepare a swap without an authenticated session', fakeAsync(() => {
+    authProvider.getAccessToken.and.resolveTo(null);
+    let failure: unknown;
+    client
+      .requestApprovedPreparePackage({ ...request, providerId: 'one-click' })
+      .subscribe({ error: error => (failure = error) });
+    flushMicrotasks();
+    expect(failure).toEqual(
+      jasmine.objectContaining({
+        message: 'Sign in and link this wallet before preparing a swap',
+      })
+    );
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/swaps/prepare`);
+  }));
 
   it('authenticates execution and binds idempotency to the preparation', fakeAsync(() => {
     let intentHash: string | undefined;
@@ -170,6 +190,25 @@ describe('SwapApiClient', () => {
     pending.flush({ data: { intentHash: 'intent-hash' }, error: null });
 
     expect(intentHash).toBe('intent-hash');
+  }));
+
+  it('preserves a typed pre-provider 403 for the wallet review', fakeAsync(() => {
+    let failure: HttpErrorResponse | undefined;
+    client.submitSignedIntent(executionRequest).subscribe({
+      error: (error: HttpErrorResponse) => (failure = error),
+    });
+    flushMicrotasks();
+
+    const pending = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/swaps/execute`
+    );
+    pending.flush(
+      { code: 'SWAP_WALLET_NOT_AUTHORIZED' },
+      { status: 403, statusText: 'Forbidden' }
+    );
+
+    expect(failure?.status).toBe(403);
+    expect(failure?.error.code).toBe('SWAP_WALLET_NOT_AUTHORIZED');
   }));
 
   it('retrieves authenticated 1Click settlement status by preparation id', fakeAsync(() => {

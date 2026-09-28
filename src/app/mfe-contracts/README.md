@@ -168,6 +168,9 @@ Before merging contract changes:
 Host-owned sequence for near-intents swaps:
 
 1. `POST /api/v1/swaps/prepare` (BFF) returns `ApprovedIntentPrepareRequest`
+   after the host sends the Privy bearer token. The BFF checks that `signerId`
+   and `authMethod` identify an active wallet link for that session before the
+   wallet is asked to sign.
 2. Host sends `PREPARE_INTENT_MESSAGE_REQUESTED` to wallet MFE
 3. MFE builds `WalletMessage` via SDK only
 4. Host sends `SIGN_REQUESTED`
