@@ -40,6 +40,7 @@ export type WalletConnectionSnapshot = {
   executionState: string;
   errorCode?: string;
   errorMessage?: string;
+  linkStatus?: 'checking' | 'unlinked' | 'linking' | 'linked' | 'error';
 };
 
 export type WalletOnboardingResult = {

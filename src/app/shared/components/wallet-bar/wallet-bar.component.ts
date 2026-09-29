@@ -28,14 +28,32 @@ export class WalletBarComponent {
   public isOpenWalletConnectMenu = false;
   public account: WalletAccount | undefined;
   public isGatewayConnected = false;
+  public needsNearWalletLink = false;
   public drawerMode: WalletDrawerMode = 'wallet';
 
   constructor() {
     this.walletGatewayBridge.snapshot$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(snapshot => {
+        const wasGatewayConnected = this.isGatewayConnected;
         this.isGatewayConnected = snapshot?.status === 'connected';
-        this.changeDetector.markForCheck();
+        this.needsNearWalletLink =
+          snapshot?.identity?.chainType === 'near' &&
+          snapshot.linkStatus !== undefined &&
+          snapshot.linkStatus !== 'linked';
+        if (
+          this.hostModal &&
+          this.isOpenWalletConnectMenu &&
+          this.drawerMode === 'wallet' &&
+          !wasGatewayConnected &&
+          this.isGatewayConnected &&
+          Boolean(snapshot?.account) &&
+          !this.needsNearWalletLink
+        ) {
+          this.setWalletMenuOpen(false);
+        } else {
+          this.changeDetector.markForCheck();
+        }
       });
 
     this.walletsService.account
@@ -43,8 +61,25 @@ export class WalletBarComponent {
       .subscribe(account => {
         const hadAccount = Boolean(this.account?.account);
         this.account = account;
-        if (this.hostModal && account && !hadAccount) {
-          this.setWalletMenuOpen(false);
+        if (
+          this.hostModal &&
+          this.isOpenWalletConnectMenu &&
+          this.drawerMode === 'wallet' &&
+          account &&
+          !hadAccount
+        ) {
+          // The remote may call back before mount() returns its snapshot API.
+          queueMicrotask(() => {
+            if (
+              this.hostModal &&
+              this.isOpenWalletConnectMenu &&
+              this.drawerMode === 'wallet' &&
+              this.account?.account === account.account &&
+              !this.walletGatewayBridge.supportsConnectionSnapshots()
+            ) {
+              this.setWalletMenuOpen(false);
+            }
+          });
         }
       });
 
