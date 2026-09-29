@@ -331,24 +331,6 @@
       </div>
 
       <div
-        class="profile-shell__wallet-connect"
-        *ngIf="
-          !isLiveConnected() &&
-          !showLastConnectedSection() &&
-          hasLinkedWallets()
-        ">
-        <button
-          type="button"
-          mat-button
-          color="primary"
-          class="profile-shell__view-wallet"
-          (click)="openWalletModal()">
-          Manage wallets
-          <span aria-hidden="true">›</span>
-        </button>
-      </div>
-
-      <div
         class="profile-shell__empty"
         *ngIf="
           activeSession.wallets.length === 0 &&
