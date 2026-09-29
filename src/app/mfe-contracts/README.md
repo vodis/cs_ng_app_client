@@ -272,7 +272,9 @@ For NEAR connections, the optional `linkStatus` snapshot field reports
 `checking`, `unlinked`, `linking`, `linked`, or `error`. While it is present and
 not `linked`, the host keeps the wallet MFE visible in the drawer so users can
 choose its separate Link wallet action. Older remotes without this field retain
-the existing connected-wallet view.
+the existing connected-wallet view. For snapshot-capable remotes, the host waits
+for the connected snapshot before deciding whether to close the drawer; legacy
+callback-only remotes still close it when the account callback arrives.
 
 ## 9) Suggested file placement
 

@@ -1,5 +1,10 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  fakeAsync,
+  flushMicrotasks,
+  TestBed,
+} from '@angular/core/testing';
 import { BehaviorSubject } from 'rxjs';
 import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
@@ -9,6 +14,21 @@ import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import { WalletBarComponent } from './wallet-bar.component';
 
 describe('WalletBarComponent', () => {
+  const connectedNearSnapshot: WalletConnectionSnapshot = {
+    status: 'connected',
+    account: 'alice.near',
+    chainId: null,
+    identity: {
+      connectorId: 'near',
+      address: 'alice.near',
+      chainType: 'near',
+      walletType: 'external',
+    },
+    isVerified: true,
+    safetyStatus: 'safe',
+    isBypassed: false,
+    executionState: 'operating.idle',
+  };
   let component: WalletBarComponent;
   let fixture: ComponentFixture<WalletBarComponent>;
   let snapshots: BehaviorSubject<WalletConnectionSnapshot | undefined>;
@@ -30,9 +50,15 @@ describe('WalletBarComponent', () => {
     );
     gateway = jasmine.createSpyObj<WalletGatewayBridgeService>(
       'WalletGatewayBridgeService',
-      ['closeSwapReview', 'isExecutionInProgress', 'resetConnection'],
+      [
+        'closeSwapReview',
+        'isExecutionInProgress',
+        'resetConnection',
+        'supportsConnectionSnapshots',
+      ],
       { snapshot$: snapshots }
     );
+    gateway.supportsConnectionSnapshots.and.returnValue(true);
     wallets = {
       account: new BehaviorSubject<WalletAccount | undefined>(undefined),
       closeRequested: new BehaviorSubject(false),
@@ -77,35 +103,74 @@ describe('WalletBarComponent', () => {
     expect(component.isOpenWalletConnectMenu).toBeFalse();
   });
 
-  it('keeps the wallet drawer open for a connected NEAR wallet awaiting explicit linking', () => {
+  [true, false].forEach(accountFirst => {
+    it(`keeps the unlinked NEAR drawer open with ${accountFirst ? 'account-first' : 'snapshot-first'} delivery`, fakeAsync(() => {
+      component.hostModal = true;
+      wallets.drawerMode.next('wallet');
+      if (accountFirst) {
+        wallets.account.next({ account: 'alice.near', chainId: null });
+        expect(component.isOpenWalletConnectMenu).toBeTrue();
+      }
+      snapshots.next({ ...connectedNearSnapshot, linkStatus: 'unlinked' });
+      if (!accountFirst) {
+        wallets.account.next({ account: 'alice.near', chainId: null });
+      }
+      flushMicrotasks();
+
+      expect(component.needsNearWalletLink).toBeTrue();
+      expect(component.isOpenWalletConnectMenu).toBeTrue();
+      fixture.detectChanges();
+      expect(
+        fixture.nativeElement.querySelector('app-connected-wallet-board')
+      ).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('.wallet-bar__mfe-host--hidden')
+      ).toBeNull();
+    }));
+  });
+
+  it('closes on a connected snapshot from an older NEAR remote without link status', () => {
     component.hostModal = true;
     wallets.drawerMode.next('wallet');
-    snapshots.next({
-      status: 'connected',
-      account: 'alice.near',
-      chainId: null,
-      identity: {
-        connectorId: 'near',
-        address: 'alice.near',
-        chainType: 'near',
-        walletType: 'external',
-      },
-      linkStatus: 'unlinked',
-      isVerified: true,
-      safetyStatus: 'safe',
-      isBypassed: false,
-      executionState: 'operating.idle',
-    });
     wallets.account.next({ account: 'alice.near', chainId: null });
 
-    expect(component.needsNearWalletLink).toBeTrue();
     expect(component.isOpenWalletConnectMenu).toBeTrue();
+    snapshots.next(connectedNearSnapshot);
+
+    expect(component.needsNearWalletLink).toBeFalse();
+    expect(component.isOpenWalletConnectMenu).toBeFalse();
+    component.handleOpenWalletMenu();
     fixture.detectChanges();
     expect(
       fixture.nativeElement.querySelector('app-connected-wallet-board')
-    ).toBeNull();
-    expect(
-      fixture.nativeElement.querySelector('.wallet-bar__mfe-host--hidden')
-    ).toBeNull();
+    ).not.toBeNull();
   });
+
+  it('keeps account-based auto-close for a legacy remote without snapshots', fakeAsync(() => {
+    component.hostModal = true;
+    wallets.drawerMode.next('wallet');
+    gateway.supportsConnectionSnapshots.and.returnValue(false);
+
+    wallets.account.next({ account: 'alice.near', chainId: null });
+    expect(component.isOpenWalletConnectMenu).toBeTrue();
+    flushMicrotasks();
+
+    expect(component.isOpenWalletConnectMenu).toBeFalse();
+  }));
+
+  it('waits for a snapshot API returned after a synchronous account callback', fakeAsync(() => {
+    component.hostModal = true;
+    wallets.drawerMode.next('wallet');
+    gateway.supportsConnectionSnapshots.and.returnValue(false);
+
+    wallets.account.next({ account: 'alice.near', chainId: null });
+    gateway.supportsConnectionSnapshots.and.returnValue(true);
+    flushMicrotasks();
+
+    expect(component.isOpenWalletConnectMenu).toBeTrue();
+    snapshots.next({ ...connectedNearSnapshot, linkStatus: 'unlinked' });
+
+    expect(component.needsNearWalletLink).toBeTrue();
+    expect(component.isOpenWalletConnectMenu).toBeTrue();
+  }));
 });

@@ -35,12 +35,25 @@ export class WalletBarComponent {
     this.walletGatewayBridge.snapshot$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(snapshot => {
+        const wasGatewayConnected = this.isGatewayConnected;
         this.isGatewayConnected = snapshot?.status === 'connected';
         this.needsNearWalletLink =
           snapshot?.identity?.chainType === 'near' &&
           snapshot.linkStatus !== undefined &&
           snapshot.linkStatus !== 'linked';
-        this.changeDetector.markForCheck();
+        if (
+          this.hostModal &&
+          this.isOpenWalletConnectMenu &&
+          this.drawerMode === 'wallet' &&
+          !wasGatewayConnected &&
+          this.isGatewayConnected &&
+          Boolean(snapshot?.account) &&
+          !this.needsNearWalletLink
+        ) {
+          this.setWalletMenuOpen(false);
+        } else {
+          this.changeDetector.markForCheck();
+        }
       });
 
     this.walletsService.account
@@ -50,11 +63,23 @@ export class WalletBarComponent {
         this.account = account;
         if (
           this.hostModal &&
+          this.isOpenWalletConnectMenu &&
+          this.drawerMode === 'wallet' &&
           account &&
-          !hadAccount &&
-          !this.needsNearWalletLink
+          !hadAccount
         ) {
-          this.setWalletMenuOpen(false);
+          // The remote may call back before mount() returns its snapshot API.
+          queueMicrotask(() => {
+            if (
+              this.hostModal &&
+              this.isOpenWalletConnectMenu &&
+              this.drawerMode === 'wallet' &&
+              this.account?.account === account.account &&
+              !this.walletGatewayBridge.supportsConnectionSnapshots()
+            ) {
+              this.setWalletMenuOpen(false);
+            }
+          });
         }
       });
 

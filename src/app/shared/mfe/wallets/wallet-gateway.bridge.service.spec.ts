@@ -49,6 +49,14 @@ describe('WalletGatewayBridgeService', () => {
     window.localStorage.removeItem('mfe-wallets.session.v1');
   });
 
+  it('reports whether the mounted wallet remote supplies connection snapshots', () => {
+    expect(service.supportsConnectionSnapshots()).toBeFalse();
+    service.registerMountApi(mountApi);
+    expect(service.supportsConnectionSnapshots()).toBeTrue();
+    service.clearMountApi();
+    expect(service.supportsConnectionSnapshots()).toBeFalse();
+  });
+
   it('delegates embedded wallet creation to the mounted wallet MFE', async () => {
     const createEmbeddedWallet = jasmine
       .createSpy('createEmbeddedWallet')

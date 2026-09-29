@@ -74,6 +74,10 @@ export class WalletGatewayBridgeService {
     this.snapshotSubject.next(api.getSnapshot());
   }
 
+  supportsConnectionSnapshots(): boolean {
+    return this.mountApi !== undefined;
+  }
+
   clearMountApi(): void {
     this.mountApi = undefined;
     this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
