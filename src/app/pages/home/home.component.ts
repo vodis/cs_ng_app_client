@@ -1,4 +1,10 @@
-import { Component, DestroyRef, inject } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  ViewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
@@ -206,6 +212,8 @@ export class HomeComponent {
   ];
 
   public amount = '';
+  /** When set by clicking To balance, shown in the To field instead of the quote. */
+  public toAmountManual = '';
   public walletAddress = '';
   public walletChainId: number | null = null;
   public walletChainType: 'ethereum' | 'near' | 'ton' | undefined;
@@ -242,6 +250,9 @@ export class HomeComponent {
   public exchangeAssetsError = '';
   public balancesLoading = false;
   public balancesError = '';
+
+  @ViewChild('fromAmountInput')
+  private fromAmountInput?: ElementRef<HTMLInputElement>;
 
   private walletBalances: WalletBalance[] = [];
   private balanceRequestId = 0;
@@ -587,6 +598,7 @@ export class HomeComponent {
     const previousFrom = this.fromToken;
     this.fromToken = this.toToken;
     this.toToken = previousFrom;
+    this.toAmountManual = '';
     this.refreshSwapQuotePreview();
     this.loadMarketComparison();
   }
@@ -789,6 +801,10 @@ export class HomeComponent {
   }
 
   public toAmountDisplay(): string {
+    if (this.toAmountManual.trim()) {
+      return this.toAmountManual;
+    }
+
     const amount = this.rawQuoteAmount();
     if (!amount) {
       return '';
@@ -822,6 +838,27 @@ export class HomeComponent {
     }
 
     return `Balance: — ${this.tokenSymbolLabel(token)}`;
+  }
+
+  public canApplyMaxBalance(token: ExchangeToken): boolean {
+    return this.canUseBalanceAsMax(this.balanceForToken(token));
+  }
+
+  public applyMaxBalance(side: 'from' | 'to'): void {
+    if (side === 'from') {
+      this.toAmountManual = '';
+      this.fillAmountFromTokenBalance(this.fromToken);
+      return;
+    }
+
+    const toBalance = this.balanceForToken(this.toToken);
+    if (!this.canUseBalanceAsMax(toBalance)) {
+      return;
+    }
+
+    this.toAmountManual = this.sanitizeAmountInput(
+      this.balanceDecimalAmount(toBalance)
+    );
   }
 
   public swapRateLabel(): string {
@@ -1025,33 +1062,32 @@ export class HomeComponent {
     const previousAmount = this.amount;
     this.amount = sanitized;
 
-    if (!input) {
-      return;
-    }
+    if (input) {
+      const display = this.formatSwapAmount(
+        sanitized,
+        this.maxAmountFractionDigits,
+        true
+      );
 
-    const display = this.formatSwapAmount(
-      sanitized,
-      this.maxAmountFractionDigits,
-      true
-    );
+      input.value = display;
 
-    input.value = display;
-
-    if (sanitized.endsWith('.')) {
-      const commaIndex = display.lastIndexOf(AMOUNT_DECIMAL_SEPARATOR);
-      if (commaIndex !== -1) {
-        input.setSelectionRange(commaIndex + 1, commaIndex + 1);
+      if (sanitized.endsWith('.')) {
+        const commaIndex = display.lastIndexOf(AMOUNT_DECIMAL_SEPARATOR);
+        if (commaIndex !== -1) {
+          input.setSelectionRange(commaIndex + 1, commaIndex + 1);
+        }
+      } else if (previousValue !== display) {
+        this.restoreCaretAfterDigits(input, previousValue, caret, display);
       }
-    } else if (previousValue !== display) {
-      this.restoreCaretAfterDigits(input, previousValue, caret, display);
+
+      if (display.length > previousValue.length) {
+        this.scrollAmountToEnd(input);
+      }
     }
 
     if (sanitized !== previousAmount) {
+      this.toAmountManual = '';
       this.refreshSwapQuotePreview();
-    }
-
-    if (display.length > previousValue.length) {
-      this.scrollAmountToEnd(input);
     }
   }
 
@@ -1562,6 +1598,43 @@ export class HomeComponent {
       balance =>
         balance.network === network && balance.assetId === token.assetId
     );
+  }
+
+  private canUseBalanceAsMax(
+    balance: WalletBalance | undefined
+  ): balance is WalletBalance {
+    if (!balance || !this.isBalanceUsable(balance)) {
+      return false;
+    }
+
+    try {
+      return BigInt(balance.balanceRaw) > 0n;
+    } catch {
+      return false;
+    }
+  }
+
+  private balanceDecimalAmount(balance: WalletBalance): string {
+    return (
+      balance.balanceDecimal ??
+      this.fromBaseUnits(
+        balance.balanceRaw,
+        this.tokenDecimals(balance.decimals)
+      )
+    );
+  }
+
+  private fillAmountFromTokenBalance(token: ExchangeToken): void {
+    const balance = this.balanceForToken(token);
+    if (!this.canUseBalanceAsMax(balance)) {
+      return;
+    }
+
+    this.fillAmountValue(this.balanceDecimalAmount(balance));
+  }
+
+  private fillAmountValue(value: string): void {
+    this.applySanitizedAmount(value, this.fromAmountInput?.nativeElement);
   }
 
   private formatBalance(balance: WalletBalance): string {

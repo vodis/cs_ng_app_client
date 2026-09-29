@@ -401,12 +401,26 @@
   .balance {
     overflow: hidden;
     margin-bottom: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: #c4c6c7;
+    cursor: pointer;
+    font: inherit;
     font-size: 12px;
     text-align: right;
     text-overflow: ellipsis;
     text-transform: uppercase;
     white-space: nowrap;
+
+    &:hover:not(:disabled) {
+      color: var(--primary-text-color);
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
   }
 
   .usd {
