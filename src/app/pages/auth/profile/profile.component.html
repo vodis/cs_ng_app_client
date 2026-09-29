@@ -1,13 +1,27 @@
 <section class="profile-shell" *ngIf="session as activeSession">
   <div class="profile-shell__top">
-    <ng-container *ngIf="profile.providerSnapshot$ | async as provider">
-      <p class="profile-shell__empty" *ngIf="provider.status === 'disabled'">
-        Wallet setup is not enabled for this environment.
+    <section class="profile-shell__hero" aria-label="Portfolio balance">
+      <p class="profile-shell__balance" aria-live="polite">
+        {{ usdBalanceLabel() }}
       </p>
-      <p class="profile-shell__empty" *ngIf="provider.status === 'failed'">
-        {{ provider.error || 'Wallet setup is temporarily unavailable.' }}
-      </p>
-    </ng-container>
+
+      <div class="profile-shell__change" *ngIf="portfolioStatus === 'ready'">
+        <span>{{ usdChangeLabel() }}</span>
+        <span class="profile-shell__change-percent">
+          <span aria-hidden="true">▾</span>
+          {{ usdChangePercentLabel() }}
+        </span>
+      </div>
+
+      <ng-container *ngIf="profile.providerSnapshot$ | async as provider">
+        <p class="profile-shell__empty" *ngIf="provider.status === 'disabled'">
+          Wallet setup is not enabled for this environment.
+        </p>
+        <p class="profile-shell__empty" *ngIf="provider.status === 'failed'">
+          {{ provider.error || 'Wallet setup is temporarily unavailable.' }}
+        </p>
+      </ng-container>
+    </section>
 
     <section
       class="profile-shell__onboarding"

@@ -10,6 +10,12 @@ import { LocalizedRoutingService } from '@core/routing/localized-routing.service
 import type { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import {
+  isNearWalletAddress,
+  nearNetworkForAddress,
+} from '@shared/utils/network.utils';
+import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
+import type { PortfolioSnapshot } from '../../portfolio/portfolio.models';
 
 export type ProfileOnboardingAction =
   | 'complete'
@@ -58,7 +64,8 @@ export class ProfileFacade {
     private readonly walletsService: WalletsService,
     private readonly walletGatewayBridge: WalletGatewayBridgeService,
     private readonly router: Router,
-    private readonly localizedRouting: LocalizedRoutingService
+    private readonly localizedRouting: LocalizedRoutingService,
+    private readonly portfolioApi: PortfolioApiService
   ) {}
 
   public get passkeyLinkEnabled(): boolean {
@@ -241,6 +248,14 @@ export class ProfileFacade {
     return this.authSession.loadBalances();
   }
 
+  public loadPortfolio(
+    account?: string | null,
+    chainId?: number | null
+  ): Promise<PortfolioSnapshot> {
+    const connected = this.connectedPortfolioQuery(account, chainId);
+    return this.portfolioApi.loadPortfolio(connected);
+  }
+
   public setPrimaryWallet(walletId: string): Promise<BackendWallet> {
     return this.authSession.setPrimaryWallet(walletId);
   }
@@ -259,5 +274,27 @@ export class ProfileFacade {
 
   public navigateTo(path: '/' | '/portfolio'): Promise<boolean> {
     return this.router.navigateByUrl(this.localizedRouting.path(path));
+  }
+
+  private connectedPortfolioQuery(
+    account?: string | null,
+    chainId?: number | null
+  ): { walletAddress?: string; network?: string } | undefined {
+    if (!account) {
+      return undefined;
+    }
+    if (isNearWalletAddress(account)) {
+      return {
+        walletAddress: account,
+        network: nearNetworkForAddress(account),
+      };
+    }
+    if (/^0x[a-f0-9]{40}$/i.test(account) && chainId != null) {
+      return {
+        walletAddress: account,
+        network: `eip155:${chainId}`,
+      };
+    }
+    return { walletAddress: account };
   }
 }

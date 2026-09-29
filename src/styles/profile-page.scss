@@ -29,6 +29,40 @@ app-account-sessions .profile-shell {
     gap: 1.25rem;
   }
 
+  &__hero {
+    display: grid;
+    align-content: start;
+    padding: 1.15rem 0 0.5rem;
+    gap: 0.55rem;
+    justify-items: start;
+    text-align: left;
+  }
+
+  &__balance {
+    margin: 0;
+    color: var(--main-text-color);
+    font-family: 'Aeonik Fono', monospace;
+    font-size: clamp(3.25rem, 14vw, 5rem);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  &__change {
+    display: inline-flex;
+    align-items: center;
+    color: var(--secondary-text-color);
+    font-size: 0.9rem;
+    gap: 0.5rem;
+    line-height: 1.2;
+  }
+
+  &__change-percent {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+
   &__hero-action {
     min-height: 3.25rem;
     padding: 0 1rem;
@@ -199,7 +233,22 @@ app-account-sessions .profile-shell {
 
   @media (width >= 768px) {
     &__top {
+      align-items: start;
       gap: 1.5rem;
+      grid-template-columns: minmax(0, 0.9fr) minmax(18rem, 1.1fr);
+    }
+
+    &__hero {
+      // Match onboarding card top padding so balance sits on the same line.
+      padding: 1.15rem 0 0.5rem;
+    }
+
+    &__balance {
+      font-size: 5.5rem;
+    }
+
+    &__change {
+      font-size: 1rem;
     }
 
     &__onboarding-focus {
