@@ -10,7 +10,7 @@
       </button>
 
       <p class="profile-shell__balance" aria-live="polite">
-        {{ usdBalanceLabel() }}
+        <span #usdBalanceValue>$0.00</span>
         <small *ngIf="tokenBalanceLabel() as tokenBalance">
           · {{ tokenBalance }}
         </small>

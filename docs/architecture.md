@@ -102,9 +102,12 @@ Flow direction:
 - `/profile` shows a BFF-valued USD balance hero beside an Onboarding
   portfolio card (wallet, passkey, five swaps). The hero reads
   `GET /api/v1/portfolio`, passing the connected wallet address and CAIP-2
-  network when available. It renders both USD value and token quantities, and
-  distinguishes loading or provider failure from a successful zero-value
-  portfolio. Wallet setup is not a blocking interstitial.
+  network when available. It renders both USD value and token quantities.
+  While valuation is in flight the hero shows `$0.00` (not `Loading…`), then
+  animates to the fetched total. Portfolio is fetched once per
+  session/account and refreshed after swaps, wallet generation, or an
+  explicit balances refresh — not on every session tick. Wallet setup is not
+  a blocking interstitial.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
   `/portfolio` (holdings, sessions, and sign-out).

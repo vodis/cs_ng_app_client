@@ -29,6 +29,9 @@ describe('ProfileComponent', () => {
     { account: string; chainId: number | null } | undefined
   >;
   let lastConnectedSubject: BehaviorSubject<LastConnectedWallet | undefined>;
+  let swapSubmittedSubject: BehaviorSubject<
+    { traceId: string; intentHash: string } | undefined
+  >;
 
   const enabledSession: AuthSession = {
     user: {
@@ -88,6 +91,9 @@ describe('ProfileComponent', () => {
     lastConnectedSubject = new BehaviorSubject<LastConnectedWallet | undefined>(
       undefined
     );
+    swapSubmittedSubject = new BehaviorSubject<
+      { traceId: string; intentHash: string } | undefined
+    >(undefined);
     authSession = jasmine.createSpyObj<AuthSessionService>(
       'AuthSessionService',
       [
@@ -115,6 +121,7 @@ describe('ProfileComponent', () => {
       {
         account: accountSubject,
         lastConnected: lastConnectedSubject,
+        swapSubmitted: swapSubmittedSubject,
       }
     );
     walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
@@ -248,8 +255,8 @@ describe('ProfileComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalled();
   });
 
-  it('shows portfolio loading without presenting it as a zero balance', () => {
-    expect(component.usdBalanceLabel()).toBe('Loading…');
+  it('shows $0.00 while portfolio is loading instead of Loading…', () => {
+    expect(component.usdBalanceLabel()).toBe('$0.00');
     expect(component.usdChangeLabel()).toBe('+$0.00');
     expect(component.usdChangePercentLabel()).toBe('0.00%');
     expect(component.walletPillLabel()).toBe('No wallet');
@@ -344,6 +351,30 @@ describe('ProfileComponent', () => {
       walletAddress: 'alice.tg',
       network: 'near:mainnet',
     });
+  });
+
+  it('does not refetch portfolio for the same session and account', async () => {
+    await component.ensurePortfolioLoaded();
+    const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
+
+    sessionSubject.next(disabledSession);
+    accountSubject.next(undefined);
+    await Promise.resolve();
+
+    expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit);
+  });
+
+  it('refetches portfolio after a completed swap', async () => {
+    await Promise.resolve();
+    const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
+
+    swapSubmittedSubject.next({
+      traceId: 'trace-1',
+      intentHash: 'intent-1',
+    });
+    await Promise.resolve();
+
+    expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit + 1);
   });
 
   it('labels an embedded linked wallet in the balance hero', () => {
