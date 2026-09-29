@@ -28,6 +28,7 @@ export class WalletBarComponent {
   public isOpenWalletConnectMenu = false;
   public account: WalletAccount | undefined;
   public isGatewayConnected = false;
+  public needsNearWalletLink = false;
   public drawerMode: WalletDrawerMode = 'wallet';
 
   constructor() {
@@ -35,6 +36,10 @@ export class WalletBarComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(snapshot => {
         this.isGatewayConnected = snapshot?.status === 'connected';
+        this.needsNearWalletLink =
+          snapshot?.identity?.chainType === 'near' &&
+          snapshot.linkStatus !== undefined &&
+          snapshot.linkStatus !== 'linked';
         this.changeDetector.markForCheck();
       });
 
@@ -43,7 +48,12 @@ export class WalletBarComponent {
       .subscribe(account => {
         const hadAccount = Boolean(this.account?.account);
         this.account = account;
-        if (this.hostModal && account && !hadAccount) {
+        if (
+          this.hostModal &&
+          account &&
+          !hadAccount &&
+          !this.needsNearWalletLink
+        ) {
           this.setWalletMenuOpen(false);
         }
       });

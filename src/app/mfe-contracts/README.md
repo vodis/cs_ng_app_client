@@ -268,6 +268,12 @@ export type WalletConnectionSnapshot = {
 remote does not expose it, or if restore fails, the host should still open the
 wallet modal so the user can connect manually.
 
+For NEAR connections, the optional `linkStatus` snapshot field reports
+`checking`, `unlinked`, `linking`, `linked`, or `error`. While it is present and
+not `linked`, the host keeps the wallet MFE visible in the drawer so users can
+choose its separate Link wallet action. Older remotes without this field retain
+the existing connected-wallet view.
+
 ## 9) Suggested file placement
 
 If/when extracting typed contracts into code, place them under:

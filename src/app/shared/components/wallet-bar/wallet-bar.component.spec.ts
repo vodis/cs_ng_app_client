@@ -1,14 +1,17 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject } from 'rxjs';
 import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import type { WalletDrawerMode } from '@shared/mfe/wallets/wallets.service';
+import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import { WalletBarComponent } from './wallet-bar.component';
 
 describe('WalletBarComponent', () => {
   let component: WalletBarComponent;
+  let fixture: ComponentFixture<WalletBarComponent>;
+  let snapshots: BehaviorSubject<WalletConnectionSnapshot | undefined>;
   let gateway: jasmine.SpyObj<WalletGatewayBridgeService>;
   let wallets: Pick<
     WalletsService,
@@ -22,10 +25,13 @@ describe('WalletBarComponent', () => {
   >;
 
   beforeEach(() => {
+    snapshots = new BehaviorSubject<WalletConnectionSnapshot | undefined>(
+      undefined
+    );
     gateway = jasmine.createSpyObj<WalletGatewayBridgeService>(
       'WalletGatewayBridgeService',
       ['closeSwapReview', 'isExecutionInProgress', 'resetConnection'],
-      { snapshot$: new BehaviorSubject(undefined) }
+      { snapshot$: snapshots }
     );
     wallets = {
       account: new BehaviorSubject<WalletAccount | undefined>(undefined),
@@ -45,7 +51,8 @@ describe('WalletBarComponent', () => {
       ],
       schemas: [NO_ERRORS_SCHEMA],
     });
-    component = TestBed.createComponent(WalletBarComponent).componentInstance;
+    fixture = TestBed.createComponent(WalletBarComponent);
+    component = fixture.componentInstance;
     wallets.drawerMode.next('swap-review');
     component.isOpenWalletConnectMenu = true;
   });
@@ -68,5 +75,37 @@ describe('WalletBarComponent', () => {
     expect(gateway.closeSwapReview).toHaveBeenCalledTimes(1);
     expect(wallets.drawerMode.value).toBe('wallet');
     expect(component.isOpenWalletConnectMenu).toBeFalse();
+  });
+
+  it('keeps the wallet drawer open for a connected NEAR wallet awaiting explicit linking', () => {
+    component.hostModal = true;
+    wallets.drawerMode.next('wallet');
+    snapshots.next({
+      status: 'connected',
+      account: 'alice.near',
+      chainId: null,
+      identity: {
+        connectorId: 'near',
+        address: 'alice.near',
+        chainType: 'near',
+        walletType: 'external',
+      },
+      linkStatus: 'unlinked',
+      isVerified: true,
+      safetyStatus: 'safe',
+      isBypassed: false,
+      executionState: 'operating.idle',
+    });
+    wallets.account.next({ account: 'alice.near', chainId: null });
+
+    expect(component.needsNearWalletLink).toBeTrue();
+    expect(component.isOpenWalletConnectMenu).toBeTrue();
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('app-connected-wallet-board')
+    ).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('.wallet-bar__mfe-host--hidden')
+    ).toBeNull();
   });
 });
