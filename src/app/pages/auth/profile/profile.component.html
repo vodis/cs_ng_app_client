@@ -1,19 +1,8 @@
 <section class="profile-shell" *ngIf="session as activeSession">
   <div class="profile-shell__top">
     <section class="profile-shell__hero" aria-label="Portfolio balance">
-      <button
-        type="button"
-        class="profile-shell__wallet-pill"
-        (click)="openWalletModal()">
-        <span class="profile-shell__wallet-pill-mark" aria-hidden="true"></span>
-        {{ walletPillLabel() }}
-      </button>
-
       <p class="profile-shell__balance" aria-live="polite">
         {{ usdBalanceLabel() }}
-        <small *ngIf="tokenBalanceLabel() as tokenBalance">
-          · {{ tokenBalance }}
-        </small>
       </p>
 
       <div class="profile-shell__change" *ngIf="portfolioStatus === 'ready'">

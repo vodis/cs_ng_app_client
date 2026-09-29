@@ -307,23 +307,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
       : '$0.00';
   }
 
-  public tokenBalanceLabel(): string {
-    if (this.portfolioStatus !== 'ready' || !this.portfolio?.positions.length) {
-      return '';
-    }
-    const visible = this.portfolio.positions.slice(0, 2).map(position => {
-      const quantity = Number(position.quantity);
-      const amount = Number.isFinite(quantity)
-        ? quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })
-        : position.quantity;
-      return `${amount} ${position.symbol}`;
-    });
-    const remaining = this.portfolio.positions.length - visible.length;
-    return remaining > 0
-      ? `${visible.join(' · ')} · +${remaining} more`
-      : visible.join(' · ');
-  }
-
   public usdChangeLabel(): string {
     return '+$0.00';
   }

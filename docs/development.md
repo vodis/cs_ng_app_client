@@ -268,8 +268,9 @@ Host auth routes live under `src/app/pages/auth/`.
   portfolio card for wallet, passkey, and five swaps. The hero loads
   `GET /api/v1/portfolio`; for a live connected wallet it supplies the wallet
   address and CAIP-2 network so the backend can value that wallet directly.
-  The hero shows both the USD estimate and returned token quantities. Loading
-  and provider failures are shown explicitly instead of as `$0.00`.
+  The hero shows the USD estimate. Loading and provider failures are shown
+  explicitly instead of as `$0.00`. The wallet address pill above the balance
+  is not shown — open Manage wallets for wallet identity and token balances.
 - Generate wallet uses the host auth-session bridge; connecting an existing
   wallet still opens the wallets MFE modal. The swap step routes to
   Exchange.
