@@ -29,6 +29,9 @@ describe('ProfileComponent', () => {
     { account: string; chainId: number | null } | undefined
   >;
   let lastConnectedSubject: BehaviorSubject<LastConnectedWallet | undefined>;
+  let swapSubmittedSubject: BehaviorSubject<
+    { traceId: string; intentHash: string } | undefined
+  >;
 
   const enabledSession: AuthSession = {
     user: {
@@ -88,6 +91,9 @@ describe('ProfileComponent', () => {
     lastConnectedSubject = new BehaviorSubject<LastConnectedWallet | undefined>(
       undefined
     );
+    swapSubmittedSubject = new BehaviorSubject<
+      { traceId: string; intentHash: string } | undefined
+    >(undefined);
     authSession = jasmine.createSpyObj<AuthSessionService>(
       'AuthSessionService',
       [
@@ -115,6 +121,7 @@ describe('ProfileComponent', () => {
       {
         account: accountSubject,
         lastConnected: lastConnectedSubject,
+        swapSubmitted: swapSubmittedSubject,
       }
     );
     walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
@@ -248,8 +255,8 @@ describe('ProfileComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalled();
   });
 
-  it('shows portfolio loading without presenting it as a zero balance', () => {
-    expect(component.usdBalanceLabel()).toBe('Loading…');
+  it('shows $0.00 while portfolio is loading instead of Loading…', () => {
+    expect(component.usdBalanceLabel()).toBe('$0.00');
     expect(component.usdChangeLabel()).toBe('+$0.00');
     expect(component.usdChangePercentLabel()).toBe('0.00%');
     expect(component.walletPillLabel()).toBe('No wallet');
@@ -282,6 +289,7 @@ describe('ProfileComponent', () => {
 
     expect(portfolioApi.loadPortfolio).toHaveBeenCalled();
     expect(component.usdBalanceLabel()).toBe('$125.50');
+    expect(component.tokenBalanceLabel()).toBe('50.125 NEAR');
   });
 
   it('shows an unavailable state when portfolio valuation fails', async () => {
@@ -291,6 +299,84 @@ describe('ProfileComponent', () => {
 
     expect(component.portfolio).toBeNull();
     expect(component.usdBalanceLabel()).toBe('Unavailable');
+  });
+
+  it('cancels the previous CountUp before starting a new balance animation', () => {
+    const el = document.createElement('span');
+    (
+      component as unknown as {
+        usdBalanceValue?: { nativeElement: HTMLElement };
+      }
+    ).usdBalanceValue = { nativeElement: el };
+
+    (
+      component as unknown as { animateBalanceTo: (value: number) => void }
+    ).animateBalanceTo(10);
+    const first = (
+      component as unknown as {
+        balanceCountUp: { onDestroy: () => void } | null;
+      }
+    ).balanceCountUp;
+    expect(first).not.toBeNull();
+    const destroy = spyOn(first!, 'onDestroy').and.callThrough();
+
+    (
+      component as unknown as { animateBalanceTo: (value: number) => void }
+    ).animateBalanceTo(20);
+
+    expect(destroy).toHaveBeenCalled();
+    expect(
+      (component as unknown as { balanceCountUp: object | null }).balanceCountUp
+    ).not.toBe(first);
+  });
+
+  it('keeps Unavailable when portfolio fails during a balance animation', async () => {
+    const el = document.createElement('span');
+    (
+      component as unknown as {
+        usdBalanceValue?: { nativeElement: HTMLElement };
+      }
+    ).usdBalanceValue = { nativeElement: el };
+    (
+      component as unknown as { animateBalanceTo: (value: number) => void }
+    ).animateBalanceTo(125.5);
+    expect(
+      (component as unknown as { balanceCountUp: object | null }).balanceCountUp
+    ).not.toBeNull();
+
+    portfolioApi.loadPortfolio.and.rejectWith(new Error('RPC unavailable'));
+    await component.refreshPortfolio();
+
+    expect(el.textContent).toBe('Unavailable');
+    expect(
+      (component as unknown as { balanceCountUp: object | null }).balanceCountUp
+    ).toBeNull();
+  });
+
+  it('cancels an active balance animation on destroy', () => {
+    const el = document.createElement('span');
+    (
+      component as unknown as {
+        usdBalanceValue?: { nativeElement: HTMLElement };
+      }
+    ).usdBalanceValue = { nativeElement: el };
+    (
+      component as unknown as { animateBalanceTo: (value: number) => void }
+    ).animateBalanceTo(42);
+    const active = (
+      component as unknown as {
+        balanceCountUp: { onDestroy: () => void } | null;
+      }
+    ).balanceCountUp;
+    expect(active).not.toBeNull();
+    const destroy = spyOn(active!, 'onDestroy').and.callThrough();
+
+    component.ngOnDestroy();
+
+    expect(destroy).toHaveBeenCalled();
+    expect(
+      (component as unknown as { balanceCountUp: object | null }).balanceCountUp
+    ).toBeNull();
   });
 
   it('ignores a stale portfolio response after a newer request completes', async () => {
@@ -343,6 +429,54 @@ describe('ProfileComponent', () => {
       walletAddress: 'alice.tg',
       network: 'near:mainnet',
     });
+  });
+
+  it('does not refetch portfolio for the same session and account', async () => {
+    await component.ensurePortfolioLoaded();
+    const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
+
+    sessionSubject.next(disabledSession);
+    accountSubject.next(undefined);
+    await Promise.resolve();
+
+    expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit);
+  });
+
+  it('reuses portfolio cache when a new session object arrives for the same user/account', async () => {
+    await Promise.resolve();
+    const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
+    expect(callsAfterInit).toBe(1);
+
+    sessionSubject.next({
+      user: { ...disabledSession.user },
+      wallets: [...disabledSession.wallets],
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit);
+  });
+
+  it('forces a portfolio reload only from an explicit balances refresh', async () => {
+    await Promise.resolve();
+    const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
+
+    await component.refreshBalances();
+
+    expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit + 1);
+  });
+
+  it('refetches portfolio after a completed swap', async () => {
+    await Promise.resolve();
+    const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
+
+    swapSubmittedSubject.next({
+      traceId: 'trace-1',
+      intentHash: 'intent-1',
+    });
+    await Promise.resolve();
+
+    expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit + 1);
   });
 
   it('labels an embedded linked wallet for onboarding', () => {

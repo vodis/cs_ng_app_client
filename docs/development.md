@@ -268,9 +268,11 @@ Host auth routes live under `src/app/pages/auth/`.
   portfolio card for wallet, passkey, and five swaps. The hero loads
   `GET /api/v1/portfolio`; for a live connected wallet it supplies the wallet
   address and CAIP-2 network so the backend can value that wallet directly.
-  The hero shows the USD estimate. Loading and provider failures are shown
-  explicitly instead of as `$0.00`. The wallet address pill above the balance
-  is not shown — open Manage wallets for wallet identity and token balances.
+  The hero shows `$0.00` while loading, then animates to the returned USD
+  total (and token quantities). Portfolio is cached per session/account and
+  only refetched after a swap, wallet generation, account change, or manual
+  balances refresh. The wallet address pill above the balance is not shown —
+  open Manage wallets for wallet identity and token balances.
 - Generate wallet uses the host auth-session bridge; connecting an existing
   wallet still opens the wallets MFE modal. The swap step routes to
   Exchange.
@@ -283,6 +285,6 @@ Host auth routes live under `src/app/pages/auth/`.
 3. Verify `/` stays on Token Exchange without a session, and `/profile`
    redirects to `/login`.
 4. Verify register/login without wallets routes to `/profile` with a `$0.00`
-   balance hero until holdings are priced.
+   balance that animates up once portfolio returns (no `Loading…` flicker).
 5. Verify the Onboarding portfolio Set up wallet CTA opens the wallets MFE
    modal, and Generate wallet creates an embedded wallet.
