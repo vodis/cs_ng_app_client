@@ -46,7 +46,9 @@ panels. At `1100px` and below, it changes to a single-column layout.
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
 Clicking a usable From balance prefills only the From amount. Clicking a usable
-To balance prefills only the To amount display. Slippage opens
+To balance stores a destination target for display only; Review stays disabled
+until the quoted output matches that target, and review payloads always use the
+quoted `amountOut` (never the balance override). Slippage opens
 `app-slippage-settings-panel` with presets
 (`0.1%`, `0.25%`, `0.5%`, `1%`, `3%`) plus custom input. The host stores the
 choice as basis points (default `50` = `0.5%`) and includes it in dry quote and

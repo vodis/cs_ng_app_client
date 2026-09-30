@@ -410,7 +410,8 @@ export class HomeComponent {
       /^\d+$/.test(preview.amountOutAtomic) &&
       !/^0+$/.test(preview.amountOutAtomic) &&
       Date.parse(preview.expiresAt) > Date.now() &&
-      !this.validateSourceBalance(input.amount)
+      !this.validateSourceBalance(input.amount) &&
+      this.destinationTargetMatchesQuote()
     );
   }
 
@@ -481,8 +482,11 @@ export class HomeComponent {
       destination: this.reviewToken(this.toToken),
       preview: {
         amountOutAtomic: preview.amountOutAtomic,
-        amountOutDisplay: this.toAmountDisplay(),
-        fiatValue: this.toFiatEstimate(),
+        amountOutDisplay: this.quotedToAmountDisplay(),
+        fiatValue: this.fiatEstimate(
+          this.toToken.symbol,
+          this.quotedToAmountDisplay()
+        ),
         expiresAt: preview.expiresAt,
         rate: this.swapRateLabel(),
         minimumReceived: `${this.formatSwapAmount(
@@ -805,6 +809,11 @@ export class HomeComponent {
       return this.toAmountManual;
     }
 
+    return this.quotedToAmountDisplay();
+  }
+
+  /** Quote output only — never the To-balance override. */
+  public quotedToAmountDisplay(): string {
     const amount = this.rawQuoteAmount();
     if (!amount) {
       return '';
@@ -1262,6 +1271,7 @@ export class HomeComponent {
       this.fromToken = selected;
     } else if (this.tokenSelectorSide === 'to') {
       this.toToken = selected;
+      this.toAmountManual = '';
       this.recipientAddress = '';
     }
 
@@ -1473,17 +1483,25 @@ export class HomeComponent {
             this.pickDefaultFromToken()
           ) ?? tokens[0]
         );
-        this.toToken = this.enrichToken(
+        const nextToToken = this.enrichToken(
           this.resolveSelectedToken(previousTo, this.pickDefaultToToken()) ??
             tokens[Math.min(1, tokens.length - 1)]
         );
+        if (nextToToken.assetId !== this.toToken.assetId) {
+          this.toAmountManual = '';
+        }
+        this.toToken = nextToToken;
 
         this.alignSelectionsToWallet();
 
         if (this.fromToken.assetId === this.toToken.assetId) {
-          this.toToken =
+          const fallbackTo =
             tokens.find(token => token.assetId !== this.fromToken.assetId) ??
             this.toToken;
+          if (fallbackTo.assetId !== this.toToken.assetId) {
+            this.toAmountManual = '';
+          }
+          this.toToken = fallbackTo;
         }
 
         this.loadMarketComparison();
@@ -1614,6 +1632,31 @@ export class HomeComponent {
     }
   }
 
+  private destinationTargetMatchesQuote(): boolean {
+    const target = this.toAmountManual.trim();
+    if (!target) {
+      return true;
+    }
+
+    const quoted = this.quotedToAmountDisplay();
+    if (!quoted.trim()) {
+      return false;
+    }
+
+    const targetAtomic = this.toBaseUnits(target, this.toToken.decimals);
+    const quotedAtomic = this.toBaseUnits(
+      this.normalizeAmountStorage(quoted),
+      this.toToken.decimals
+    );
+
+    return Boolean(
+      targetAtomic &&
+      quotedAtomic &&
+      !/^0+$/.test(targetAtomic) &&
+      targetAtomic === quotedAtomic
+    );
+  }
+
   private balanceDecimalAmount(balance: WalletBalance): string {
     return (
       balance.balanceDecimal ??
@@ -1739,7 +1782,7 @@ export class HomeComponent {
       this.toToken.blockchain !== blockchain ||
       this.toToken.assetId === this.fromToken.assetId
     ) {
-      this.toToken =
+      const nextToToken =
         this.exchangeTokens.find(
           token =>
             token.blockchain === blockchain &&
@@ -1753,6 +1796,10 @@ export class HomeComponent {
             token.assetId !== this.fromToken.assetId
         ) ??
         this.toToken;
+      if (nextToToken.assetId !== this.toToken.assetId) {
+        this.toAmountManual = '';
+      }
+      this.toToken = nextToToken;
     }
   }
 
