@@ -201,6 +201,9 @@
             (change)="setConfidentialSwap(confidentialToggle.checked)" />
           <span>Confidential swap</span>
         </label>
+        @if (fundingSourceError(); as fundingError) {
+          <p class="exchange-error" role="alert">{{ fundingError }}</p>
+        }
 
         <button
           class="connectMain"

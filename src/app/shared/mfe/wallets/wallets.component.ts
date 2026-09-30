@@ -265,10 +265,14 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         })
         .subscribe({
           next: result => {
-            if (result.executionPackage.mode !== 'intent_sign') {
+            const expectedMode =
+              request.depositType === 'ORIGIN_CHAIN'
+                ? 'deposit_address'
+                : 'intent_sign';
+            if (result.executionPackage.mode !== expectedMode) {
               reject(
                 new Error(
-                  `Execution mode ${result.executionPackage.mode} is not supported; swaps must sign and publish an intent.`
+                  `Execution mode ${result.executionPackage.mode} does not match the requested funding source.`
                 )
               );
               return;

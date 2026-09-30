@@ -106,9 +106,13 @@ Balance/display identity and execution identity are intentionally separate:
 - Wrapped NEAR uses NEP-141 asset id `nep141:wrap.near` and symbol `wNEAR`.
 - `PUBLIC_NEAR` remains its own NEP-141 token and is never a native-balance
   fallback.
-- The current intents backend executes native NEAR routes through
-  `nep141:wrap.near`, represented by `ExchangeToken.executionAssetId`; this
-  does not change the balance/display identity.
+- Native NEAR quotes use `nep141:wrap.near` as the provider asset identifier,
+  with `ORIGIN_CHAIN` deposit and refund routing. The wallet sends native NEAR
+  to the prepared 1Click deposit address; it does not sign a transfer from an
+  unfunded Intents account. USDC delivery remains on the destination chain.
+- Deposit submission remains pending until provider settlement succeeds. Deploy
+  the backend preparation storage change, then wallet settlement tracking,
+  then the host routing change. No contract version or schema change is needed.
 
 The missing native balance was caused by mapping the backend wrapped-NEAR asset
 to a display token named NEAR and then matching balances against that NEP-141

@@ -88,7 +88,7 @@ describe('parseApprovedSwapPrepareResponse', () => {
     );
   });
 
-  it('rejects a deposit response instead of authorizing a wallet transfer', () => {
+  it('parses a 1Click origin-chain deposit response', () => {
     const data = validPrepareData();
     data['quoteHashes'] = [];
     data['executionPackage'] = {
@@ -100,10 +100,10 @@ describe('parseApprovedSwapPrepareResponse', () => {
     };
     data['providerId'] = 'one-click';
 
-    expectInvalidPreparePackage(
-      { data, error: null },
-      'data.executionPackage.mode must be intent_sign'
-    );
+    expect(
+      parseApprovedSwapPrepareResponse({ data, error: null }).executionPackage
+        .mode
+    ).toBe('deposit_address');
   });
 
   it('rejects malformed token deltas instead of asserting their type', () => {
