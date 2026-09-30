@@ -165,7 +165,7 @@ Important page targets:
 - market panel padding: `24px 28px`
 - swap row height: `112px`
 - stats row height: `70px`
-- market panel desktop height: `486px`
+- swap / market desktop height: `560px` (fits Review CTA without clipping)
 - market summary/chart grid: `104px / 1fr`
 - numeric amount font: `Aeonik Fono` through `.amount`
 
