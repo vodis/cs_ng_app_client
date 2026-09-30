@@ -61,8 +61,8 @@ Production wallet remote policy:
 - Keep wallet, passkey, and swap onboarding on `/profile` so first-time
   users can enter the app shell immediately.
 - Sidebar **Profile** links to `/profile`; the header account icon links to
-  `/portfolio`. A notifications icon sits beside the account control in the
-  header (no feed wired yet).
+  `/portfolio`. Header chrome also includes a notifications icon (no feed yet)
+  and a wallets icon that opens the wallet MFE drawer.
 - Keep profile integrations behind `ProfileFacade`; do not inject auth, wallet
   gateway, or router services directly into `ProfileComponent`.
 - Supply activity through `ProfileActivitySource` so the activity panel and
