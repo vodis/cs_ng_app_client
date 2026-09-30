@@ -1,14 +1,6 @@
 <section class="profile-shell" *ngIf="session as activeSession">
   <div class="profile-shell__top">
     <section class="profile-shell__hero" aria-label="Portfolio balance">
-      <button
-        type="button"
-        class="profile-shell__wallet-pill"
-        (click)="openWalletModal()">
-        <span class="profile-shell__wallet-pill-mark" aria-hidden="true"></span>
-        {{ walletPillLabel() }}
-      </button>
-
       <p class="profile-shell__balance" aria-live="polite">
         <span #usdBalanceValue>$0.00</span>
         <small *ngIf="tokenBalanceLabel() as tokenBalance">
@@ -339,24 +331,6 @@
           Connect a wallet to link or create one through the wallet modal.
         </p>
         <app-wallet-bar />
-      </div>
-
-      <div
-        class="profile-shell__wallet-connect"
-        *ngIf="
-          !isLiveConnected() &&
-          !showLastConnectedSection() &&
-          hasLinkedWallets()
-        ">
-        <button
-          type="button"
-          mat-button
-          color="primary"
-          class="profile-shell__view-wallet"
-          (click)="openWalletModal()">
-          Manage wallets
-          <span aria-hidden="true">›</span>
-        </button>
       </div>
 
       <div

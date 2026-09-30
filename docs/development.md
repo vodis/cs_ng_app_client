@@ -271,7 +271,8 @@ Host auth routes live under `src/app/pages/auth/`.
   The hero shows `$0.00` while loading, then animates to the returned USD
   total (and token quantities). Portfolio is cached per session/account and
   only refetched after a swap, wallet generation, account change, or manual
-  balances refresh.
+  balances refresh. The wallet address pill above the balance is not shown —
+  open Manage wallets for wallet identity and token balances.
 - Generate wallet uses the host auth-session bridge; connecting an existing
   wallet still opens the wallets MFE modal. The swap step routes to
   Exchange.

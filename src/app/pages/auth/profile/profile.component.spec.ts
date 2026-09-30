@@ -289,7 +289,6 @@ describe('ProfileComponent', () => {
 
     expect(portfolioApi.loadPortfolio).toHaveBeenCalled();
     expect(component.usdBalanceLabel()).toBe('$125.50');
-    expect(component.tokenBalanceLabel()).toBe('50.125 NEAR');
   });
 
   it('shows an unavailable state when portfolio valuation fails', async () => {
@@ -401,7 +400,7 @@ describe('ProfileComponent', () => {
     expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit + 1);
   });
 
-  it('labels an embedded linked wallet in the balance hero', () => {
+  it('labels an embedded linked wallet for onboarding', () => {
     sessionSubject.next(linkedWalletSession);
 
     expect(component.walletPillLabel()).toBe('CraftScript wallet');

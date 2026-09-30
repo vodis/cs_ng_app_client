@@ -106,8 +106,9 @@ Flow direction:
   While valuation is in flight the hero shows `$0.00` (not `Loading…`), then
   animates to the fetched total. Portfolio is fetched once per
   session/account and refreshed after swaps, wallet generation, or an
-  explicit balances refresh — not on every session tick. Wallet setup is not
-  a blocking interstitial.
+  explicit balances refresh — not on every session tick. The wallet address
+  pill above the balance is omitted — wallet identity and token balances live
+  in Manage wallets. Wallet setup is not a blocking interstitial.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
   `/portfolio` (holdings, sessions, and sign-out).

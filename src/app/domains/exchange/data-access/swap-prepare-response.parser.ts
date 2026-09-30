@@ -116,9 +116,28 @@ function parseExecutionPackage(
         requiredAction: 'sign',
         payload,
       };
+    case 'deposit_address':
+      readLiteral(
+        executionPackage['requiredAction'],
+        'deposit',
+        'data.executionPackage.requiredAction'
+      );
+      readLiteral(providerId, 'one-click', 'data.executionPackage.providerId');
+      readLiteral(protocol, '1click', 'data.executionPackage.protocol');
+      readNonEmptyString(
+        payload['depositAddress'],
+        'data.executionPackage.payload.depositAddress'
+      );
+      return {
+        providerId,
+        mode: 'deposit_address',
+        protocol,
+        requiredAction: 'deposit',
+        payload,
+      };
     default:
       return invalidPreparePackage(
-        'data.executionPackage.mode must be intent_sign'
+        'data.executionPackage.mode must be intent_sign or deposit_address'
       );
   }
 }

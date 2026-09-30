@@ -425,6 +425,13 @@ export class HomeComponent {
     amount: string,
     authMethod: SupportedSwapAuthMethod
   ): SwapFormInput {
+    const nativeNear =
+      authMethod === 'near' && this.fromToken.assetId === 'near:native';
+    const fundingType = nativeNear
+      ? 'ORIGIN_CHAIN'
+      : this.confidentialSwap
+        ? 'CONFIDENTIAL_INTENTS'
+        : 'INTENTS';
     return {
       originAsset: this.executionAssetId(this.fromToken),
       destinationAsset: this.executionAssetId(this.toToken),
@@ -432,8 +439,8 @@ export class HomeComponent {
       signerId: this.walletAddress.toLowerCase(),
       recipient: this.effectiveRecipient(),
       recipientType: 'DESTINATION_CHAIN',
-      depositType: this.confidentialSwap ? 'CONFIDENTIAL_INTENTS' : 'INTENTS',
-      refundType: this.confidentialSwap ? 'CONFIDENTIAL_INTENTS' : 'INTENTS',
+      depositType: fundingType,
+      refundType: fundingType,
       slippageTolerance: this.slippageToleranceBps,
       deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       authMethod,
@@ -794,7 +801,11 @@ export class HomeComponent {
       return '';
     }
 
-    return this.normalizeQuoteAmount(amount, this.toToken.decimals);
+    return amount.formatted
+      ? /^\d+(\.\d+)?$/.test(amount.value)
+        ? amount.value
+        : ''
+      : this.normalizeQuoteAmount(amount.value, this.toToken.decimals);
   }
 
   public primaryActionLabel(): string {
@@ -1528,7 +1539,15 @@ export class HomeComponent {
       });
   }
 
+  public fundingSourceError(): string {
+    return this.fromToken.assetId === 'near:native' && this.confidentialSwap
+      ? 'Native NEAR requires a public wallet deposit. Turn off confidential mode to continue.'
+      : '';
+  }
+
   private validateSourceBalance(amountRaw: string): string {
+    const fundingError = this.fundingSourceError();
+    if (fundingError) return fundingError;
     if (!this.canFetchBalance(this.fromToken)) {
       return '';
     }
@@ -2106,30 +2125,26 @@ export class HomeComponent {
     return `${this.tokenSymbolLabel(this.fromToken)} and ${this.tokenSymbolLabel(this.toToken)} are normalized to 0% at the start of the selected timeframe`;
   }
 
-  private rawQuoteAmount(): string {
+  private isQuoteRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private rawQuoteAmount(): { value: string; formatted: boolean } | undefined {
     const quote = this.quoteResult;
-    const quoteBody =
-      quote && typeof quote['quote'] === 'object' && quote['quote'] !== null
-        ? (quote['quote'] as Record<string, unknown>)
-        : quote;
-    const amount =
+    const nested = quote?.['quote'];
+    const quoteBody = this.isQuoteRecord(nested) ? nested : quote;
+    const formatted =
       quoteBody?.['amountOutFormatted'] ??
       quoteBody?.['destinationAmountFormatted'] ??
-      quoteBody?.['toAmountFormatted'] ??
+      quoteBody?.['toAmountFormatted'];
+    const amount =
+      formatted ??
       quoteBody?.['amountOut'] ??
       quoteBody?.['destinationAmount'] ??
       quoteBody?.['toAmount'] ??
-      this.quotePreview?.amountOut;
-
-    if (typeof amount === 'number') {
-      return Number.isFinite(amount) ? String(amount) : '';
-    }
-
-    if (typeof amount === 'string') {
-      return amount.trim();
-    }
-
-    return '';
+      this.quotePreview?.amountOutAtomic;
+    const value = typeof amount === 'string' ? amount.trim() : undefined;
+    return value ? { value, formatted: formatted !== undefined } : undefined;
   }
 
   private normalizeQuoteAmount(rawAmount: string, decimals?: number): string {
