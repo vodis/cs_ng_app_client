@@ -301,6 +301,84 @@ describe('ProfileComponent', () => {
     expect(component.usdBalanceLabel()).toBe('Unavailable');
   });
 
+  it('cancels the previous CountUp before starting a new balance animation', () => {
+    const el = document.createElement('span');
+    (
+      component as unknown as {
+        usdBalanceValue?: { nativeElement: HTMLElement };
+      }
+    ).usdBalanceValue = { nativeElement: el };
+
+    (
+      component as unknown as { animateBalanceTo: (value: number) => void }
+    ).animateBalanceTo(10);
+    const first = (
+      component as unknown as {
+        balanceCountUp: { onDestroy: () => void } | null;
+      }
+    ).balanceCountUp;
+    expect(first).not.toBeNull();
+    const destroy = spyOn(first!, 'onDestroy').and.callThrough();
+
+    (
+      component as unknown as { animateBalanceTo: (value: number) => void }
+    ).animateBalanceTo(20);
+
+    expect(destroy).toHaveBeenCalled();
+    expect(
+      (component as unknown as { balanceCountUp: object | null }).balanceCountUp
+    ).not.toBe(first);
+  });
+
+  it('keeps Unavailable when portfolio fails during a balance animation', async () => {
+    const el = document.createElement('span');
+    (
+      component as unknown as {
+        usdBalanceValue?: { nativeElement: HTMLElement };
+      }
+    ).usdBalanceValue = { nativeElement: el };
+    (
+      component as unknown as { animateBalanceTo: (value: number) => void }
+    ).animateBalanceTo(125.5);
+    expect(
+      (component as unknown as { balanceCountUp: object | null }).balanceCountUp
+    ).not.toBeNull();
+
+    portfolioApi.loadPortfolio.and.rejectWith(new Error('RPC unavailable'));
+    await component.refreshPortfolio();
+
+    expect(el.textContent).toBe('Unavailable');
+    expect(
+      (component as unknown as { balanceCountUp: object | null }).balanceCountUp
+    ).toBeNull();
+  });
+
+  it('cancels an active balance animation on destroy', () => {
+    const el = document.createElement('span');
+    (
+      component as unknown as {
+        usdBalanceValue?: { nativeElement: HTMLElement };
+      }
+    ).usdBalanceValue = { nativeElement: el };
+    (
+      component as unknown as { animateBalanceTo: (value: number) => void }
+    ).animateBalanceTo(42);
+    const active = (
+      component as unknown as {
+        balanceCountUp: { onDestroy: () => void } | null;
+      }
+    ).balanceCountUp;
+    expect(active).not.toBeNull();
+    const destroy = spyOn(active!, 'onDestroy').and.callThrough();
+
+    component.ngOnDestroy();
+
+    expect(destroy).toHaveBeenCalled();
+    expect(
+      (component as unknown as { balanceCountUp: object | null }).balanceCountUp
+    ).toBeNull();
+  });
+
   it('ignores a stale portfolio response after a newer request completes', async () => {
     await Promise.resolve();
     let resolveFirst!: (

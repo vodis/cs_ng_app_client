@@ -164,7 +164,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.portfolioRequestId += 1;
-    this.balanceCountUp = null;
+    this.cancelBalanceAnimation();
     this.subscription?.unsubscribe();
   }
 
@@ -640,6 +640,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
       this.portfolioCacheKeyLoaded = null;
       this.portfolioInFlightKey = null;
       this.displayedBalanceValue = 0;
+      this.cancelBalanceAnimation();
       const el = this.usdBalanceValue?.nativeElement;
       if (el) {
         el.textContent = 'Unavailable';
@@ -701,12 +702,13 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     this.portfolioCacheKeyLoaded = null;
     this.portfolioInFlightKey = null;
     this.portfolioRequestId += 1;
-    this.pendingBalanceAnimation = null;
+    this.cancelBalanceAnimation();
     this.setBalanceLabelImmediate(0);
   }
 
   private settleBalanceDisplay(value: number): void {
     if (!this.usdBalanceValue?.nativeElement) {
+      this.cancelBalanceAnimation();
       this.pendingBalanceAnimation = value;
       this.setBalanceLabelImmediate(value);
       return;
@@ -714,7 +716,22 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     this.animateBalanceTo(value);
   }
 
+  private stopActiveCountUp(): void {
+    const active = this.balanceCountUp;
+    if (!active) {
+      return;
+    }
+    active.onDestroy();
+    this.balanceCountUp = null;
+  }
+
+  private cancelBalanceAnimation(): void {
+    this.pendingBalanceAnimation = null;
+    this.stopActiveCountUp();
+  }
+
   private setBalanceLabelImmediate(value: number): void {
+    this.stopActiveCountUp();
     this.displayedBalanceValue = value;
     const el = this.usdBalanceValue?.nativeElement;
     if (el) {
@@ -725,11 +742,13 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   private animateBalanceTo(value: number): void {
     const el = this.usdBalanceValue?.nativeElement;
     if (!el) {
+      this.cancelBalanceAnimation();
       this.pendingBalanceAnimation = value;
       this.setBalanceLabelImmediate(value);
       return;
     }
 
+    this.cancelBalanceAnimation();
     const startVal = this.displayedBalanceValue;
     this.displayedBalanceValue = value;
     if (startVal === value) {
@@ -747,6 +766,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     if (this.balanceCountUp.error) {
       el.textContent = formatUsdCurrency(value);
+      this.balanceCountUp = null;
       return;
     }
     this.balanceCountUp.start();
