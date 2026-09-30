@@ -364,6 +364,30 @@ describe('ProfileComponent', () => {
     expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit);
   });
 
+  it('reuses portfolio cache when a new session object arrives for the same user/account', async () => {
+    await Promise.resolve();
+    const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
+    expect(callsAfterInit).toBe(1);
+
+    sessionSubject.next({
+      user: { ...disabledSession.user },
+      wallets: [...disabledSession.wallets],
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit);
+  });
+
+  it('forces a portfolio reload only from an explicit balances refresh', async () => {
+    await Promise.resolve();
+    const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
+
+    await component.refreshBalances();
+
+    expect(portfolioApi.loadPortfolio.calls.count()).toBe(callsAfterInit + 1);
+  });
+
   it('refetches portfolio after a completed swap', async () => {
     await Promise.resolve();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();

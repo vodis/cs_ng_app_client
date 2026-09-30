@@ -115,7 +115,6 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subscription.add(
       combineLatest([this.profile.session$, this.profile.account$]).subscribe(
         ([session, account]) => {
-          const previousSession = this.session;
           const previousAccount = this.connectedAccount;
           const previousChainId = this.connectedChainId;
           this.connectedAccount = account?.account ?? null;
@@ -123,12 +122,11 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
           this.session = session;
           if (session) {
             this.seedLastConnectedFromBackend(session.wallets);
-            if (session !== previousSession) {
-              void this.refreshBalances();
-            }
             const accountChanged =
               this.connectedAccount !== previousAccount ||
               this.connectedChainId !== previousChainId;
+            // Automatic session ticks reuse cache / in-flight; force only via
+            // refreshBalances(), swaps, or a real account change.
             void this.ensurePortfolioLoaded(accountChanged);
           } else {
             this.balances = [];
