@@ -58,7 +58,8 @@ provide a `1M` window.
 
 The relative-performance chart renders the quote-token move minus the base-token
 move. Keep the summary column compact so the chart retains most of the available
-width.
+width. The Advanced Chart entry control is hidden for now; advanced market view
+state and `app-live-chart` wiring remain in `HomeComponent` for a later return.
 
 ### Recent activity
 
