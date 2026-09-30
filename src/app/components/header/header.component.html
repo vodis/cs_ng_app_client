@@ -11,6 +11,15 @@
         src="../../../assets/img/logo/logo.svg" />
     </a>
     <div class="header__content_connect">
+      <button
+        type="button"
+        class="header__icon-button"
+        aria-label="Notifications"
+        title="Notifications">
+        <mat-icon aria-hidden="true" fontSet="material-icons-outlined"
+          >notifications</mat-icon
+        >
+      </button>
       <a
         class="header__account-link"
         [class.header__account-link--icon]="!!session || isMobileView"
