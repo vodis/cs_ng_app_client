@@ -237,6 +237,11 @@ export class HomeComponent {
     '1D',
     '1W',
   ];
+  /** Temporary display labels until market/product metadata comes from the BFF. */
+  public readonly marketMetaMock = {
+    market: 'Spot',
+    product: 'Token Exchange',
+  } as const;
   public showAdvancedMarketView = false;
   public exchangeAssetsLoading = false;
   public exchangeAssetsError = '';

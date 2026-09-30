@@ -363,12 +363,16 @@
 
             <div class="marketFooter">
               <div class="note">{{ comparisonNoteText() }}</div>
-              <button
-                type="button"
-                class="advanced"
-                (click)="toggleAdvancedMarketView()">
-                Advanced Chart &rarr;
-              </button>
+              <dl class="marketMeta" aria-label="Market and product">
+                <div class="marketMeta__row">
+                  <dt>Market</dt>
+                  <dd>{{ marketMetaMock.market }}</dd>
+                </div>
+                <div class="marketMeta__row">
+                  <dt>Product</dt>
+                  <dd>{{ marketMetaMock.product }}</dd>
+                </div>
+              </dl>
             </div>
           </div>
         </div>

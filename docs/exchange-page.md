@@ -27,7 +27,7 @@ The page contains:
 2. A swap panel with token selectors, amount fields, rate details, and the
    wallet-aware primary action.
 3. A market panel with pair summary, timeframe controls, relative-performance
-   chart, and supporting links.
+   chart, Market/Product mock labels, and supporting note text.
 4. A full-width recent-activity table below the two-column top section.
 
 On desktop, the top grid uses a `42% / 58%` split for the swap and market
@@ -59,6 +59,10 @@ provide a `1M` window.
 The relative-performance chart renders the quote-token move minus the base-token
 move. Keep the summary column compact so the chart retains most of the available
 width.
+
+Under the chart, the right-hand info area shows temporary **Market** and
+**Product** mock labels (`Spot` / `Token Exchange`) until the BFF exposes real
+metadata.
 
 ### Recent activity
 
