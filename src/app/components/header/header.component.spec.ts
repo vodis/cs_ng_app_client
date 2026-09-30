@@ -80,6 +80,20 @@ describe('HeaderComponent', () => {
     expect(link.classList.contains('header__account-link--icon')).toBeFalse();
   });
 
+  it('shows a notifications icon next to the account control', () => {
+    setup(session);
+
+    const button = fixture.nativeElement.querySelector(
+      '.header__icon-button'
+    ) as HTMLButtonElement;
+    const icon = button.querySelector('mat-icon');
+
+    expect(button.getAttribute('aria-label')).toBe('Notifications');
+    expect(button.getAttribute('type')).toBe('button');
+    expect(icon?.textContent?.trim()).toBe('notifications');
+    expect(icon?.getAttribute('fontSet')).toBe('material-icons-outlined');
+  });
+
   it('shows account icon when logged in', () => {
     setup(session);
 
