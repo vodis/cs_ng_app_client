@@ -299,6 +299,19 @@ describe('HomeComponent market overview', () => {
     expect(component.toAmountDisplay()).toBe('7.385926');
   });
 
+  it('does not scale an already formatted whole-token quote a second time', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    component.toToken = { ...component.toToken, decimals: 6 };
+    component.quoteResult = {
+      quote: { amountOut: '1000000', amountOutFormatted: '1' },
+    };
+    expect(component.toAmountDisplay()).toBe('1');
+  });
+
   it('normalizes NEAR quote raw amount using 24 destination decimals', () => {
     expectComparisonRequest({
       base: 'USDC',
@@ -397,6 +410,45 @@ describe('HomeComponent market overview', () => {
     expect(component.isSlippageSettingsOpen).toBeFalse();
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
       jasmine.objectContaining({ slippageTolerance: 100 })
+    );
+  });
+
+  it('routes native NEAR from the wallet and preserves 24/6 decimal amounts (Sep 30 swap)', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    component.walletAddress = 'vodis_craftscript.tg';
+    component.fromToken = {
+      ...component.toToken,
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    const amount = component['toBaseUnits']('0.01', 24);
+    expect(amount).toBe('10000000000000000000000');
+    expect(component['fromBaseUnits']('50446', 6)).toBe('0.050446');
+    expect(component['buildSwapInput'](amount, 'near')).toEqual(
+      jasmine.objectContaining({
+        originAsset: 'nep141:wrap.near',
+        amount,
+        depositType: 'ORIGIN_CHAIN',
+        refundType: 'ORIGIN_CHAIN',
+        recipientType: 'DESTINATION_CHAIN',
+        recipient: 'vodis_craftscript.tg',
+        slippageTolerance: 50,
+      })
+    );
+    component.confidentialSwap = true;
+    expect(component['validateSourceBalance'](amount)).toContain(
+      'public wallet deposit'
+    );
+    fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'Turn off confidential mode'
     );
   });
 
@@ -1207,8 +1259,8 @@ describe('HomeComponent market overview', () => {
           executionAssetId: 'nep141:wrap.near',
         }),
         recipientType: 'DESTINATION_CHAIN',
-        depositType: 'INTENTS',
-        refundType: 'INTENTS',
+        depositType: 'ORIGIN_CHAIN',
+        refundType: 'ORIGIN_CHAIN',
       })
     );
     expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('swap-review');

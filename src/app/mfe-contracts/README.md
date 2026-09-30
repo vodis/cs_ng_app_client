@@ -190,10 +190,10 @@ fields and retain the signer-as-recipient behavior.
 The host exposes foreign-recipient routes only when
 `environment.crossNetworkRecipientIntentSignEnabled` is enabled. Keep it
 disabled until the deployed BFF accepts `recipient` / `recipientType` on both
-quote and prepare requests. This host sends `depositType: INTENTS` and
-`refundType: INTENTS` for every swap source, including native NEAR. An
-unexpected `deposit_address` package must fail closed; the host swap flow must
-never turn intent confirmation into a wallet transfer.
+quote and prepare requests. Native NEAR sends `depositType: ORIGIN_CHAIN` and
+`refundType: ORIGIN_CHAIN`; other sources retain their Intents routing. The
+prepared execution mode must match the requested funding source. Native NEAR
+cannot use confidential mode without first funding a confidential balance.
 
 Host files:
 
@@ -218,9 +218,10 @@ The MFE calls the prepare port for the final `dry: false` package, rejects
 results whose amount/account/auth context does not match the immutable intent,
 and ignores any response that is not from its latest request. It owns quote
 expiry, refreshed-output disclosure, slippage-bound reconfirmation, and
-single-flight submission. Only `intent_sign` packages are accepted by this
-host; they use `signSwap` followed by `submitSwap`. It reports completion
-through `onSwapSubmitted` and requests a new host preview through
+single-flight submission. `intent_sign` packages use `signSwap` followed by
+`submitSwap`. Native NEAR `deposit_address` packages use `depositSwap` on
+explicit confirmation. Both routes use the backend's stored preparation ID for
+settlement tracking. It reports submission through `onSwapSubmitted` and requests a new host preview through
 `onSwapPreviewRefreshRequested` when the executable change is outside policy.
 
 The host remains responsible for the Trade form, shared balance source, dry

@@ -99,11 +99,11 @@ Production host rules:
 
 Any contract change in wallets (routes, exposed modules, events, required inputs) must be mirrored in this host.
 
-Wallet MFE contract 2.3 exposes generic `deposit_address` execution for
-compatible consumers, but this host's swap product uses `intent_sign` for every
-source, including native NEAR: prepare the message, sign it, then publish it
-through the BFF. Reject unexpected deposit packages instead of initiating a
-wallet transfer.
+Native NEAR swaps use `ORIGIN_CHAIN` deposits and refunds with a 1Click
+`deposit_address` package. The wallet MFE sends the native NEAR transfer only
+on explicit confirmation, then tracks settlement through the BFF. Native wallet
+NEAR is not an Intents balance. Other sources retain `intent_sign`; reject any
+execution package that does not match the requested funding source.
 
 The canonical auth-provider runtime contract is open in
 `cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. The MFE loads backend
