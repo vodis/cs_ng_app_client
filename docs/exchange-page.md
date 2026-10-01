@@ -58,7 +58,8 @@ provide a `1M` window.
 
 The relative-performance chart renders the quote-token move minus the base-token
 move. Keep the summary column compact so the chart retains most of the available
-width.
+width. The Advanced Chart entry control is hidden for now; advanced market view
+state and `app-live-chart` wiring remain in `HomeComponent` for a later return.
 
 ### Recent activity
 
@@ -165,7 +166,7 @@ Important page targets:
 - market panel padding: `24px 28px`
 - swap row height: `112px`
 - stats row height: `70px`
-- market panel desktop height: `486px`
+- swap / market desktop height: `560px` (fits Review CTA without clipping)
 - market summary/chart grid: `104px / 1fr`
 - numeric amount font: `Aeonik Fono` through `.amount`
 

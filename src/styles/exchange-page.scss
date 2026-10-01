@@ -92,7 +92,8 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    height: 486px;
+    // Tall enough for stats + confidential + Review without clipping the CTA.
+    height: 560px;
     box-sizing: border-box;
     flex-direction: column;
     padding: 24px;
@@ -100,7 +101,7 @@
 
     &--foreign {
       height: auto;
-      min-height: 486px;
+      min-height: 560px;
     }
 
     .panelTitle {
@@ -126,6 +127,12 @@
     .stats {
       flex-shrink: 0;
       margin-top: auto;
+    }
+
+    .swap-confidential-option,
+    .connectMain,
+    .exchange-error {
+      flex-shrink: 0;
     }
   }
 
@@ -541,9 +548,12 @@
   }
 
   .connectMain {
+    display: inline-flex;
     width: 100%;
     height: 50px;
     flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
     border: 0;
     border-radius: 4px;
     margin: 0;
@@ -553,6 +563,7 @@
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 0.02em;
+    line-height: 1;
     text-transform: uppercase;
 
     &:disabled {
@@ -586,7 +597,7 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    height: 486px;
+    height: 560px;
     box-sizing: border-box;
     flex-direction: column;
     padding: 24px 28px;
@@ -933,7 +944,7 @@
       app-live-chart {
         display: flex;
         overflow: hidden;
-        height: calc(486px - 48px - 44px);
+        height: calc(560px - 48px - 44px);
         min-height: 0;
         flex: 0 0 auto;
         flex-direction: column;

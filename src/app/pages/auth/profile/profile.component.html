@@ -2,7 +2,10 @@
   <div class="profile-shell__top">
     <section class="profile-shell__hero" aria-label="Portfolio balance">
       <p class="profile-shell__balance" aria-live="polite">
-        {{ usdBalanceLabel() }}
+        <span #usdBalanceValue>$0.00</span>
+        <small *ngIf="tokenBalanceLabel() as tokenBalance">
+          · {{ tokenBalance }}
+        </small>
       </p>
 
       <div class="profile-shell__change" *ngIf="portfolioStatus === 'ready'">
