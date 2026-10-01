@@ -31,8 +31,11 @@ import {
 } from './home-price.utils';
 import {
   AMOUNT_DECIMAL_SEPARATOR,
+  atomicToDecimal,
+  decimalToAtomic,
   displayHasDecimalSeparator,
   formatSwapAmountDisplay,
+  isCanonicalDecimalAmount,
   normalizeAmountInputChars,
   normalizeAmountStorage as normalizeSwapAmountStorage,
   resolveAmountKeydownAction,
@@ -692,15 +695,12 @@ export class HomeComponent {
 
   public toAmountFormatted(): string {
     const raw = this.toAmountUi();
-    if (
-      !raw.trim() ||
-      this.isZeroAmountValue(this.normalizeAmountStorage(raw))
-    ) {
+    if (!raw.trim() || this.isZeroAmountValue(raw)) {
       return '0,00';
     }
 
     return this.formatSwapAmount(
-      raw,
+      this.canonicalAmountStorage(raw),
       this.swapAmountFractionDigits(this.toToken.symbol)
     );
   }
@@ -865,9 +865,12 @@ export class HomeComponent {
       return;
     }
 
-    this.toAmountManual = this.sanitizeAmountInput(
-      this.balanceDecimalAmount(toBalance)
-    );
+    const canonical = this.balanceCanonicalDecimal(toBalance);
+    if (!canonical) {
+      return;
+    }
+
+    this.toAmountManual = canonical;
   }
 
   public swapRateLabel(): string {
@@ -1245,13 +1248,37 @@ export class HomeComponent {
   }
 
   private isZeroAmountValue(value: string): boolean {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '.') {
+      return true;
+    }
+
+    if (isCanonicalDecimalAmount(trimmed)) {
+      const [whole, fraction = ''] = trimmed.split('.');
+      return /^0*$/.test(whole) && /^0*$/.test(fraction);
+    }
+
     const normalized = this.normalizeAmountStorage(value);
     if (!normalized || normalized === '.') {
       return true;
     }
 
+    if (isCanonicalDecimalAmount(normalized)) {
+      const [whole, fraction = ''] = normalized.split('.');
+      return /^0*$/.test(whole) && /^0*$/.test(fraction);
+    }
+
     const parsed = Number.parseFloat(normalized);
     return !Number.isNaN(parsed) && parsed === 0;
+  }
+
+  private canonicalAmountStorage(value: string): string {
+    const trimmed = value.trim();
+    if (isCanonicalDecimalAmount(trimmed)) {
+      return trimmed;
+    }
+
+    return this.normalizeAmountStorage(trimmed);
   }
 
   public openTokenSelector(side: TokenSelectorSide): void {
@@ -1638,16 +1665,13 @@ export class HomeComponent {
       return true;
     }
 
-    const quoted = this.quotedToAmountDisplay();
-    if (!quoted.trim()) {
+    const quoted = this.quotedToAmountDisplay().trim();
+    if (!quoted) {
       return false;
     }
 
     const targetAtomic = this.toBaseUnits(target, this.toToken.decimals);
-    const quotedAtomic = this.toBaseUnits(
-      this.normalizeAmountStorage(quoted),
-      this.toToken.decimals
-    );
+    const quotedAtomic = this.toBaseUnits(quoted, this.toToken.decimals);
 
     return Boolean(
       targetAtomic &&
@@ -1657,14 +1681,33 @@ export class HomeComponent {
     );
   }
 
-  private balanceDecimalAmount(balance: WalletBalance): string {
-    return (
-      balance.balanceDecimal ??
-      this.fromBaseUnits(
-        balance.balanceRaw,
-        this.tokenDecimals(balance.decimals)
-      )
-    );
+  private balanceCanonicalDecimal(
+    balance: WalletBalance | undefined
+  ): string | undefined {
+    if (!balance) {
+      return undefined;
+    }
+
+    const decimals = this.tokenDecimals(balance.decimals);
+    const raw = balance.balanceRaw?.trim();
+    if (raw && /^\d+$/.test(raw)) {
+      try {
+        return atomicToDecimal(raw, decimals);
+      } catch {
+        return undefined;
+      }
+    }
+
+    const decimal = balance.balanceDecimal?.trim();
+    if (!decimal) {
+      return undefined;
+    }
+
+    try {
+      return atomicToDecimal(decimalToAtomic(decimal, decimals), decimals);
+    } catch {
+      return undefined;
+    }
   }
 
   private fillAmountFromTokenBalance(token: ExchangeToken): void {
@@ -1673,20 +1716,37 @@ export class HomeComponent {
       return;
     }
 
-    this.fillAmountValue(this.balanceDecimalAmount(balance));
+    const canonical = this.balanceCanonicalDecimal(balance);
+    if (!canonical) {
+      return;
+    }
+
+    this.fillAmountValue(canonical);
   }
 
   private fillAmountValue(value: string): void {
-    this.applySanitizedAmount(value, this.fromAmountInput?.nativeElement);
+    const previousAmount = this.amount;
+    this.amount = value;
+
+    const input = this.fromAmountInput?.nativeElement;
+    if (input) {
+      input.value = this.formatSwapAmount(
+        value,
+        this.maxAmountFractionDigits,
+        true
+      );
+      this.scrollAmountToEnd(input);
+    }
+
+    if (value !== previousAmount) {
+      this.toAmountManual = '';
+      this.refreshSwapQuotePreview();
+    }
   }
 
   private formatBalance(balance: WalletBalance): string {
     const decimal =
-      balance.balanceDecimal ??
-      this.fromBaseUnits(
-        balance.balanceRaw,
-        this.tokenDecimals(balance.decimals)
-      );
+      this.balanceCanonicalDecimal(balance) ?? balance.balanceDecimal ?? '0';
 
     return this.formatSwapAmount(
       decimal,
@@ -2253,7 +2313,25 @@ export class HomeComponent {
   }
 
   private normalizeQuoteAmount(rawAmount: string, decimals?: number): string {
-    const normalized = this.normalizeAmountStorage(rawAmount);
+    const trimmed = rawAmount.trim();
+    if (!trimmed) {
+      return '';
+    }
+
+    // Quote payloads often send atomic integers without a decimal point.
+    if (/^\d+$/.test(trimmed)) {
+      try {
+        return atomicToDecimal(trimmed, this.tokenDecimals(decimals));
+      } catch {
+        return '';
+      }
+    }
+
+    if (isCanonicalDecimalAmount(trimmed)) {
+      return trimmed;
+    }
+
+    const normalized = this.normalizeAmountStorage(trimmed);
     if (!normalized) {
       return '';
     }
@@ -2262,44 +2340,33 @@ export class HomeComponent {
       return normalized;
     }
 
-    return this.fromBaseUnits(normalized, this.tokenDecimals(decimals));
+    try {
+      return atomicToDecimal(normalized, this.tokenDecimals(decimals));
+    } catch {
+      return '';
+    }
   }
 
   private toBaseUnits(value: string, decimals?: number): string {
-    const normalized = this.normalizeAmountStorage(value);
     const precision = this.tokenDecimals(decimals);
-    const decimalPattern = new RegExp(`^\\d+(\\.\\d{0,${precision}})?$`);
-
-    if (!decimalPattern.test(normalized)) {
+    const canonical = this.canonicalAmountStorage(value);
+    if (!canonical || canonical === '.') {
       return '';
     }
 
-    const [whole, fraction = ''] = normalized.split('.');
-    const digits = `${whole}${fraction.padEnd(precision, '0')}`.replace(
-      /^0+(?=\d)/,
-      ''
-    );
-    return digits || '0';
+    try {
+      return decimalToAtomic(canonical, precision);
+    } catch {
+      return '';
+    }
   }
 
   private fromBaseUnits(value: string, decimals: number): string {
-    const digits = value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
-    if (!digits) {
+    try {
+      return atomicToDecimal(value, decimals);
+    } catch {
       return '0';
     }
-
-    if (decimals <= 0) {
-      return digits;
-    }
-
-    if (digits.length <= decimals) {
-      const padded = digits.padStart(decimals, '0');
-      return `0.${padded}`.replace(/\.?0+$/, '') || '0';
-    }
-
-    const whole = digits.slice(0, digits.length - decimals);
-    const fraction = digits.slice(digits.length - decimals).replace(/0+$/, '');
-    return fraction ? `${whole}.${fraction}` : whole;
   }
 
   private tokenDecimals(value?: number): number {

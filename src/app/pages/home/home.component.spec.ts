@@ -628,6 +628,204 @@ describe('HomeComponent market overview', () => {
     expect(component.toAmountFormatted()).toContain('2');
   });
 
+  it('preserves canonical decimals when From balance is clicked', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.fromToken = {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    component.toToken = {
+      assetId: 'nep141:usdc.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+      blockchain: 'near',
+    };
+
+    const cases: Array<{
+      balanceRaw: string;
+      balanceDecimal: string | null;
+      expectedAmount: string;
+    }> = [
+      {
+        balanceRaw: '1000000000000000000000000',
+        balanceDecimal: '1',
+        expectedAmount: '1',
+      },
+      {
+        balanceRaw: '1234000000000000000000000',
+        balanceDecimal: null,
+        expectedAmount: '1.234',
+      },
+      {
+        balanceRaw: '1000000000000000000000',
+        balanceDecimal: null,
+        expectedAmount: '0.001',
+      },
+      {
+        balanceRaw: '1123456789012345678901234',
+        balanceDecimal: null,
+        expectedAmount: '1.123456789012345678901234',
+      },
+    ];
+
+    for (const testCase of cases) {
+      const balance: WalletBalance = {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: testCase.balanceRaw,
+        balanceDecimal: testCase.balanceDecimal,
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
+      };
+      balancesService.balances = [balance];
+      (
+        component as unknown as { walletBalances: WalletBalance[] }
+      ).walletBalances = [balance];
+      swapFlowFacade.watchQuotePreview.calls.reset();
+
+      component.applyMaxBalance('from');
+
+      expect(component.amount)
+        .withContext(`raw=${testCase.balanceRaw}`)
+        .toBe(testCase.expectedAmount);
+      expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
+        jasmine.objectContaining({ amount: testCase.balanceRaw })
+      );
+    }
+  });
+
+  it('preserves canonical decimals when To balance is clicked', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.amount = '1';
+
+    const cases: Array<{
+      balanceRaw: string;
+      balanceDecimal: string | null;
+      expectedAmount: string;
+    }> = [
+      {
+        balanceRaw: '1000000000000000000000000',
+        balanceDecimal: '1',
+        expectedAmount: '1',
+      },
+      {
+        balanceRaw: '1234000000000000000000000',
+        balanceDecimal: null,
+        expectedAmount: '1.234',
+      },
+      {
+        balanceRaw: '1000000000000000000000',
+        balanceDecimal: null,
+        expectedAmount: '0.001',
+      },
+      {
+        balanceRaw: '1123456789012345678901234',
+        balanceDecimal: null,
+        expectedAmount: '1.123456789012345678901234',
+      },
+    ];
+
+    for (const testCase of cases) {
+      const balance: WalletBalance = {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: testCase.balanceRaw,
+        balanceDecimal: testCase.balanceDecimal,
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
+      };
+      balancesService.balances = [balance];
+      (
+        component as unknown as { walletBalances: WalletBalance[] }
+      ).walletBalances = [balance];
+      component.quotePreview = {
+        amountOutAtomic: testCase.balanceRaw,
+        amountOut: testCase.balanceRaw,
+        expiresAt: '2099-01-01T00:00:00.000Z',
+        traceId: 'trace-to-max',
+        raw: { amountOut: testCase.balanceRaw },
+      };
+      component.quoteResult = {
+        amountOut: testCase.balanceRaw,
+        amountOutAtomic: testCase.balanceRaw,
+      };
+
+      component.applyMaxBalance('to');
+
+      expect(component.toAmountManual)
+        .withContext(`raw=${testCase.balanceRaw}`)
+        .toBe(testCase.expectedAmount);
+      expect(
+        (
+          component as unknown as {
+            destinationTargetMatchesQuote: () => boolean;
+          }
+        ).destinationTargetMatchesQuote()
+      )
+        .withContext(`match raw=${testCase.balanceRaw}`)
+        .toBeTrue();
+      expect(
+        (
+          component as unknown as {
+            toBaseUnits: (value: string, decimals?: number) => string;
+          }
+        ).toBaseUnits(component.toAmountManual, component.toToken.decimals)
+      )
+        .withContext(`atomic raw=${testCase.balanceRaw}`)
+        .toBe(testCase.balanceRaw);
+    }
+  });
+
   it('keeps Review disabled when To balance override mismatches the quote', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
