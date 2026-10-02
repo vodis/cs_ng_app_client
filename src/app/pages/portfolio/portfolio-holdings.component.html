@@ -1,39 +1,3 @@
-<section class="portfolio-summary">
-  <article class="portfolio-summary__value">
-    <p class="portfolio-summary__label">Total portfolio value</p>
-    <strong>{{ currency(snapshot.totalValue) }}</strong>
-    <small class="portfolio-summary__updated"
-      >USD estimate · Updated {{ date(snapshot.asOf) }}</small
-    >
-  </article>
-
-  <article class="portfolio-summary__allocation">
-    <div class="allocation-ring" [style.background]="allocationGradient()">
-      <span class="allocation-ring__value">{{
-        snapshot.positions.length
-      }}</span>
-      <small class="allocation-ring__label">assets</small>
-    </div>
-    <div>
-      <h2>Allocation</h2>
-      <p
-        class="portfolio-summary__allocation-copy"
-        *ngIf="snapshot.unpricedPositionCount === 0">
-        All positions are priced.
-      </p>
-      <p
-        class="portfolio-summary__allocation-copy"
-        *ngIf="snapshot.unpricedPositionCount > 0">
-        {{ snapshot.unpricedPositionCount }}
-        {{
-          snapshot.unpricedPositionCount === 1 ? 'position is' : 'positions are'
-        }}
-        unpriced.
-      </p>
-    </div>
-  </article>
-</section>
-
 <section class="portfolio-panel portfolio-panel--positions">
   <div class="portfolio-panel__header">
     <div>

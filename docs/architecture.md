@@ -113,7 +113,8 @@ Flow direction:
   Action), not a stacked list.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
-  `/portfolio` (holdings, sessions, and sign-out). The header also shows a
+  `/portfolio` (agent preferences, sessions, and sign-out — balance/holdings
+  UI removed). The header also shows a
   notifications control and a wallets control beside the account icon. Wallets
   opens the existing wallet MFE drawer; notifications remains a UI placeholder
   until a feed is wired.
@@ -358,7 +359,7 @@ prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 | Route              | Guard       | Purpose                                               |
 | ------------------ | ----------- | ----------------------------------------------------- |
 | `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, wallets |
-| `/portfolio`       | `AuthGuard` | Holdings, agent authorization, sessions, sign-out     |
+| `/portfolio`       | `AuthGuard` | Agent preferences, sessions, sign-out (no balance/holdings UI) |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                         |
 
 ### Login methods on `/login`
