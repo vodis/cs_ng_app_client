@@ -384,7 +384,7 @@ describe('HomeComponent market overview', () => {
 
     expect(component.slippageLabel()).toBe('0.5%');
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
-      jasmine.objectContaining({ slippageTolerance: 50 })
+      jasmine.objectContaining({ slippageToleranceBps: 50 })
     );
   });
 
@@ -409,7 +409,7 @@ describe('HomeComponent market overview', () => {
     expect(component.slippageLabel()).toBe('1%');
     expect(component.isSlippageSettingsOpen).toBeFalse();
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
-      jasmine.objectContaining({ slippageTolerance: 100 })
+      jasmine.objectContaining({ slippageToleranceBps: 100 })
     );
   });
 
@@ -430,29 +430,23 @@ describe('HomeComponent market overview', () => {
     const amount = component['toBaseUnits']('0.01', 24);
     expect(amount).toBe('10000000000000000000000');
     expect(component['fromBaseUnits']('50446', 6)).toBe('0.050446');
-    expect(component['buildSwapInput'](amount, 'near')).toEqual(
+    expect(component['buildSwapInput'](amount)).toEqual(
       jasmine.objectContaining({
-        originAsset: 'nep141:wrap.near',
+        source: jasmine.objectContaining({
+          executionAssetId: 'nep141:wrap.near',
+        }),
         amount,
-        depositType: 'ORIGIN_CHAIN',
-        refundType: 'ORIGIN_CHAIN',
-        recipientType: 'DESTINATION_CHAIN',
         recipient: 'vodis_craftscript.tg',
-        slippageTolerance: 50,
+        slippageToleranceBps: 50,
       })
     );
-    component.confidentialSwap = true;
-    expect(component['validateSourceBalance'](amount)).toContain(
-      'public wallet deposit'
-    );
-    fixture.detectChanges();
-    const element: HTMLElement = fixture.nativeElement;
-    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
-      'Turn off confidential mode'
-    );
+    const input = component['buildSwapInput'](amount);
+    expect(Object.keys(input)).not.toContain('depositType');
+    expect(Object.keys(input)).not.toContain('authMethod');
+    expect(Object.keys(input)).not.toContain('deadline');
   });
 
-  it('quotes wallet-held NEP-141 tokens from the origin chain', () => {
+  it('passes privacy choices without selecting funding channels', () => {
     expectComparisonRequest({
       base: 'USDC',
       quote: 'NEAR',
@@ -477,23 +471,13 @@ describe('HomeComponent market overview', () => {
       blockchain: 'near',
     };
 
-    expect(component['buildSwapInput']('1000000', 'near')).toEqual(
-      jasmine.objectContaining({
-        recipientType: 'DESTINATION_CHAIN',
-        depositType: 'ORIGIN_CHAIN',
-        refundType: 'ORIGIN_CHAIN',
-      })
+    expect(component['buildSwapInput']('1000000')).toEqual(
+      jasmine.objectContaining({ confidential: false })
     );
 
     component.setConfidentialSwap(true);
-    expect(component.fundingSourceError()).toContain(
-      'Turn off confidential mode'
-    );
-    expect(component['buildSwapInput']('1000000', 'near')).toEqual(
-      jasmine.objectContaining({
-        depositType: 'ORIGIN_CHAIN',
-        refundType: 'ORIGIN_CHAIN',
-      })
+    expect(component['buildSwapInput']('1000000')).toEqual(
+      jasmine.objectContaining({ confidential: true })
     );
   });
 
@@ -542,7 +526,7 @@ describe('HomeComponent market overview', () => {
     component.submitQuote();
 
     expect(swapFlowFacade.refreshQuotePreview).toHaveBeenCalledWith(
-      jasmine.objectContaining({ slippageTolerance: 50 })
+      jasmine.objectContaining({ slippageToleranceBps: 50 })
     );
   });
 
@@ -980,6 +964,22 @@ describe('HomeComponent market overview', () => {
     });
 
     expect(component.canReviewSwap()).toBeTrue();
+    swapFlowFacade.emitQuote({
+      amountOut: '1',
+      amountOutAtomic: '1000000',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      raw: {},
+      action: {
+        supported: false,
+        label: 'Swap unavailable',
+        description: 'Choose a supported source asset.',
+      },
+    });
+    expect(component.canReviewSwap()).toBeFalse();
+    expect(component.primaryActionLabel()).toBe('Swap unavailable');
+    expect(component.fundingSourceError()).toBe(
+      'Choose a supported source asset.'
+    );
   });
 
   it('opens Review with quoted amountOutDisplay, never the To override', () => {
@@ -1234,8 +1234,12 @@ describe('HomeComponent market overview', () => {
     expect(input.value).toBe('0,09');
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
       jasmine.objectContaining({
-        originAsset: 'nep141:wrap.near',
-        destinationAsset: 'nep141:usdc.near',
+        source: jasmine.objectContaining({
+          executionAssetId: 'nep141:wrap.near',
+        }),
+        destination: jasmine.objectContaining({
+          executionAssetId: 'nep141:usdc.near',
+        }),
         amount: '90000000000000000000000',
       })
     );
@@ -1511,11 +1515,8 @@ describe('HomeComponent market overview', () => {
     expect(component.isForeignDestination()).toBeTrue();
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
       jasmine.objectContaining({
-        signerId: '0x0000000000000000000000000000000000000001',
+        account: '0x0000000000000000000000000000000000000001',
         recipient: 'BYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z',
-        recipientType: 'DESTINATION_CHAIN',
-        depositType: 'ORIGIN_CHAIN',
-        refundType: 'ORIGIN_CHAIN',
       })
     );
     expect(balancesService.calls).toContain(
@@ -1745,13 +1746,13 @@ describe('HomeComponent market overview', () => {
     expect(openReview).toHaveBeenCalledOnceWith(
       jasmine.objectContaining({
         traceId: 'trace-review',
-        source: jasmine.objectContaining({
-          assetId: 'near:native',
-          executionAssetId: 'nep141:wrap.near',
+        contractVersion: '2.0.0',
+        input: jasmine.objectContaining({
+          source: jasmine.objectContaining({
+            assetId: 'near:native',
+            executionAssetId: 'nep141:wrap.near',
+          }),
         }),
-        recipientType: 'DESTINATION_CHAIN',
-        depositType: 'ORIGIN_CHAIN',
-        refundType: 'ORIGIN_CHAIN',
       })
     );
     expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('swap-review');
@@ -1860,9 +1861,8 @@ describe('HomeComponent market overview', () => {
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
       jasmine.objectContaining({
         amount: '1000000000000000000000000',
-        signerId: 'alice.near',
+        account: 'alice.near',
         recipient: '0x0000000000000000000000000000000000000002',
-        recipientType: 'DESTINATION_CHAIN',
       })
     );
   });

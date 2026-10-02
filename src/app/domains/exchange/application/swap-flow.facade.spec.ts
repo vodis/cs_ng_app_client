@@ -1,15 +1,12 @@
 import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { Subject } from 'rxjs';
-import type {
-  ApprovedSwapPreparePackage,
-  SwapQuotePreview,
-} from '@domains/exchange/models/swap.models';
-import { SwapExecutionWorkflow } from './swap-execution.workflow';
+import type { SwapQuotePreview } from '@domains/exchange/models/swap.models';
+import { SwapQuoteGateway } from './swap-quote.gateway';
 import { SwapFlowFacade, SwapFormInput } from './swap-flow.facade';
 
-class SwapExecutionWorkflowStub implements Pick<
-  SwapExecutionWorkflow,
-  'requestQuotePreview' | 'requestQuotePreviewStream' | 'executeSwap'
+class SwapQuoteGatewayStub implements Pick<
+  SwapQuoteGateway,
+  'requestQuotePreview' | 'requestQuotePreviewStream'
 > {
   public readonly quoteCalls: Array<{
     input: SwapFormInput;
@@ -35,21 +32,6 @@ class SwapExecutionWorkflowStub implements Pick<
       preview: preview(input.amount),
     };
   }
-
-  public async executeSwap(
-    _input: SwapFormInput,
-    traceId: string
-  ): Promise<{
-    traceId: string;
-    preparePackage: ApprovedSwapPreparePackage;
-    intentHash: string;
-  }> {
-    return {
-      traceId,
-      preparePackage: approvedPreparePackage(),
-      intentHash: 'hash',
-    };
-  }
 }
 
 function preview(amountOut: string): SwapQuotePreview {
@@ -61,47 +43,12 @@ function preview(amountOut: string): SwapQuotePreview {
   };
 }
 
-function approvedPreparePackage(): ApprovedSwapPreparePackage {
-  return {
-    protocol: 'near-intents',
-    providerId: 'solver-relay',
-    executionPackage: {
-      providerId: 'solver-relay',
-      mode: 'intent_sign',
-      protocol: 'near-intents',
-      requiredAction: 'sign',
-      payload: {
-        quoteHashes: ['quote-hash'],
-      },
-    },
-    kind: 'swap',
-    quoteHashes: ['quote-hash'],
-    signerId: '0x0000000000000000000000000000000000000001',
-    authMethod: 'evm',
-    deadlineTimestamp: 1_765_497_600,
-    amountIn: '1000000',
-    amountOut: '1000000',
-    quoteExpiration: '2099-01-01T00:00:00.000Z',
-    slippageTolerance: 50,
-    tokenDeltas: [
-      {
-        assetId: 'nep141:usdc',
-        amount: '-1000000',
-      },
-      {
-        assetId: 'nep141:near',
-        amount: '1000000',
-      },
-    ],
-  };
-}
-
 describe('SwapFlowFacade quote preview refresh', () => {
-  let workflow: SwapExecutionWorkflowStub;
+  let workflow: SwapQuoteGatewayStub;
   let facade: SwapFlowFacade;
 
   beforeEach(() => {
-    workflow = new SwapExecutionWorkflowStub();
+    workflow = new SwapQuoteGatewayStub();
     facade = new SwapFlowFacade(workflow);
   });
 
@@ -189,25 +136,25 @@ describe('SwapFlowFacade quote preview refresh', () => {
     );
   }));
 
-  it('keeps the in-flight quote when only the deadline timestamp changes', fakeAsync(() => {
+  it('keeps the in-flight quote for unchanged user choices', fakeAsync(() => {
     facade.watchQuotePreview(input());
     tick(350);
 
-    facade.watchQuotePreview(input({ deadline: '2026-06-17T00:20:00.000Z' }));
+    facade.watchQuotePreview(input());
     tick(350);
 
     expect(workflow.quoteCalls.length).toBe(1);
   }));
 
-  it('refreshes when deposit or refund routing changes', fakeAsync(() => {
+  it('refreshes when privacy preference or wallet account changes', fakeAsync(() => {
     facade.watchQuotePreview(input());
     tick(350);
 
-    facade.watchQuotePreview(input({ depositType: 'INTENTS' }));
+    facade.watchQuotePreview(input({ confidential: true }));
     tick(350);
 
     facade.watchQuotePreview(
-      input({ depositType: 'INTENTS', refundType: 'INTENTS' })
+      input({ confidential: true, account: 'other.near' })
     );
     tick(350);
 
@@ -217,20 +164,22 @@ describe('SwapFlowFacade quote preview refresh', () => {
   it('requests a new quote when either asset or network context changes', fakeAsync(() => {
     facade.watchQuotePreview(input());
     tick(350);
-    facade.watchQuotePreview(input({ originAsset: 'nep141:usdt' }));
+    facade.watchQuotePreview(
+      input({ source: { ...input().source, executionAssetId: 'nep141:usdt' } })
+    );
     tick(350);
     facade.watchQuotePreview(
       input({
-        originAsset: 'nep141:usdt',
-        destinationAsset: 'nep141:btc',
+        source: { ...input().source, executionAssetId: 'nep141:usdt' },
+        destination: { ...input().destination, executionAssetId: 'nep141:btc' },
       })
     );
     tick(350);
     facade.watchQuotePreview(
       input({
-        originAsset: 'nep141:usdt',
-        destinationAsset: 'nep141:btc',
-        network: 'eip155:8453',
+        source: { ...input().source, executionAssetId: 'nep141:usdt' },
+        destination: { ...input().destination, executionAssetId: 'nep141:btc' },
+        network: { id: 'eip155:8453', label: 'Base' },
       })
     );
     tick(350);
@@ -240,18 +189,26 @@ describe('SwapFlowFacade quote preview refresh', () => {
 
   function input(overrides: Partial<SwapFormInput> = {}): SwapFormInput {
     return {
-      originAsset: 'nep141:usdc',
-      destinationAsset: 'nep141:near',
+      source: {
+        assetId: 'nep141:usdc',
+        executionAssetId: 'nep141:usdc',
+        symbol: 'USDC',
+        name: 'USDC',
+        decimals: 6,
+      },
+      destination: {
+        assetId: 'nep141:near',
+        executionAssetId: 'nep141:near',
+        symbol: 'NEAR',
+        name: 'NEAR',
+        decimals: 24,
+      },
       amount: '1000000',
-      signerId: '0x0000000000000000000000000000000000000001',
+      account: '0x0000000000000000000000000000000000000001',
       recipient: '0x0000000000000000000000000000000000000001',
-      recipientType: 'DESTINATION_CHAIN',
-      depositType: 'ORIGIN_CHAIN',
-      refundType: 'ORIGIN_CHAIN',
-      slippageTolerance: 50,
-      deadline: '2026-06-17T00:15:00.000Z',
-      authMethod: 'evm',
-      network: 'eip155:1',
+      slippageToleranceBps: 50,
+      confidential: false,
+      network: { id: 'eip155:1', label: 'Ethereum' },
       ...overrides,
     };
   }

@@ -1,3 +1,4 @@
+import { fromEvent, takeUntil } from 'rxjs';
 import {
   Component,
   ViewChild,
@@ -154,6 +155,14 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
             },
           },
           services: {
+            quoteSwap: (request, options) => {
+              options.signal.throwIfAborted();
+              return firstValueFrom(
+                this.swapApi
+                  .requestQuotePreview(request)
+                  .pipe(takeUntil(fromEvent(options.signal, 'abort')))
+              );
+            },
             prepareSwap: (request, options) =>
               this.prepareSwap(request, options.signal),
             signSwap: input =>
@@ -259,24 +268,9 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
 
     return new Promise((resolve, reject) => {
       const subscription = this.swapApi
-        .requestApprovedPreparePackage({
-          ...request,
-          deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        })
+        .requestApprovedPreparePackage(request)
         .subscribe({
           next: result => {
-            const expectedMode =
-              request.depositType === 'ORIGIN_CHAIN'
-                ? 'deposit_address'
-                : 'intent_sign';
-            if (result.executionPackage.mode !== expectedMode) {
-              reject(
-                new Error(
-                  `Execution mode ${result.executionPackage.mode} does not match the requested funding source.`
-                )
-              );
-              return;
-            }
             const preparationId =
               result.executionPackage.payload['preparationId'];
             this.activeSwapPreparation =

@@ -18,11 +18,9 @@ import {
 } from '@domains/exchange/application/swap-flow.facade';
 import type {
   SwapFlowState,
-  SwapPrepareRequest,
   SwapQuotePreview,
 } from '@domains/exchange/models/swap.models';
 import { environment } from '../../../environments/environment';
-import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 import {
   changeClass as changePriceClass,
   formatPercent as formatPricePercent,
@@ -64,14 +62,13 @@ import {
 } from '@shared/utils/network.utils';
 import { ConnectedWalletBalancesFacade } from '@domains/wallet/application/connected-wallet-balances.facade';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
-import type { SwapReviewIntent } from '@mfe-contracts/swap-review.types';
+import type { WalletSwapReview } from '@mfe-contracts/swap-review.types';
 import { createTraceId } from '@core/trace/create-trace-id';
 
 type TokenSelectorSide = 'from' | 'to';
 
 type ComparisonTimeframe = '1H' | '1D' | '1W';
 type MarketChartMode = 'price' | 'relative';
-type SupportedSwapAuthMethod = SwapPrepareRequest['authMethod'];
 
 interface MarketComparisonToken {
   symbol: string;
@@ -345,17 +342,6 @@ export class HomeComponent {
       return;
     }
 
-    const authMethod = this.resolveSwapAuthMethod({
-      account: this.walletAddress,
-      chainId: this.walletChainId,
-    });
-
-    if (!authMethod) {
-      this.quoteError =
-        'This wallet is not supported for swaps yet. Connect an EVM or NEAR wallet.';
-      return;
-    }
-
     const recipientError = this.recipientValidationError();
     if (recipientError) {
       this.quoteError = recipientError;
@@ -386,13 +372,11 @@ export class HomeComponent {
     }
 
     if (this.canReviewSwap()) {
-      this.openSwapReview(amount, authMethod);
+      this.openSwapReview(amount);
       return;
     }
 
-    this.swapFlowFacade.refreshQuotePreview(
-      this.buildSwapInput(amount, authMethod)
-    );
+    this.swapFlowFacade.refreshQuotePreview(this.buildSwapInput(amount));
   }
 
   public isQuoteLoading(): boolean {
@@ -436,53 +420,42 @@ export class HomeComponent {
     );
   }
 
-  private buildSwapInput(
-    amount: string,
-    authMethod: SupportedSwapAuthMethod
-  ): SwapFormInput {
+  private buildSwapInput(amount: string): SwapFormInput {
     return {
-      originAsset: this.executionAssetId(this.fromToken),
-      destinationAsset: this.executionAssetId(this.toToken),
+      source: this.reviewToken(this.fromToken),
+      destination: this.reviewToken(this.toToken),
       amount,
-      signerId: this.walletAddress.toLowerCase(),
+      account: this.walletAddress,
       recipient: this.effectiveRecipient(),
-      recipientType: 'DESTINATION_CHAIN',
-      depositType: 'ORIGIN_CHAIN',
-      refundType: 'ORIGIN_CHAIN',
-      slippageTolerance: this.slippageToleranceBps,
-      deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      authMethod,
-      network: this.balanceNetwork() ?? '',
+      network: {
+        id: this.balanceNetwork() ?? '',
+        label: this.tokenNetworkLabel(this.fromToken),
+      },
+      slippageToleranceBps: this.slippageToleranceBps,
+      confidential: this.confidentialSwap,
     };
   }
 
-  private openSwapReview(
-    amount: string,
-    authMethod: SupportedSwapAuthMethod
-  ): void {
+  private openSwapReview(amount: string): void {
     const preview = this.quotePreview;
     const network = this.balanceNetwork();
-    const chainType =
-      this.walletChainType ?? (authMethod === 'near' ? 'near' : 'ethereum');
     if (!preview || !network || !this.canReviewSwap()) return;
 
-    const input = this.buildSwapInput(amount, authMethod);
+    const input = this.buildSwapInput(amount);
     const traceId = preview.traceId ?? createTraceId();
     const minimumAtomic =
       minimumReceivedAtomic(
         preview.amountOutAtomic,
         this.slippageToleranceBps
       ) ?? '0';
-    const intent: SwapReviewIntent = {
-      contractVersion: '1.0.0',
+    const intent: WalletSwapReview = {
+      contractVersion: '2.0.0',
       traceId,
-      source: {
-        ...this.reviewToken(this.fromToken),
-        amountAtomic: amount,
+      input,
+      sourceDisplay: {
         amountDisplay: this.amount,
         fiatValue: this.fromFiatEstimate(),
       },
-      destination: this.reviewToken(this.toToken),
       preview: {
         amountOutAtomic: preview.amountOutAtomic,
         amountOutDisplay: this.quotedToAmountDisplay(),
@@ -503,20 +476,6 @@ export class HomeComponent {
           ? { quoteReference: preview.quoteReference }
           : {}),
       },
-      signer: {
-        account: this.walletAddress,
-        chainType,
-      },
-      network: {
-        id: network,
-        label: this.tokenNetworkLabel(this.fromToken),
-      },
-      recipient: input.recipient,
-      recipientType: input.recipientType,
-      depositType: input.depositType,
-      refundType: input.refundType,
-      authMethod,
-      slippageToleranceBps: this.slippageToleranceBps,
     };
 
     try {
@@ -547,26 +506,6 @@ export class HomeComponent {
 
   private executionAssetId(token: ExchangeToken): string {
     return token.executionAssetId ?? token.assetId;
-  }
-
-  private resolveSwapAuthMethod(
-    wallet: WalletAccount
-  ): SupportedSwapAuthMethod | undefined {
-    if (
-      wallet.identity?.chainType === 'ethereum' ||
-      /^0x[a-fA-F0-9]{40}$/.test(wallet.account)
-    ) {
-      return 'evm';
-    }
-
-    if (
-      wallet.identity?.chainType === 'near' ||
-      isNearWalletAddress(wallet.account)
-    ) {
-      return 'near';
-    }
-
-    return undefined;
   }
 
   public changeComparisonTimeframe(timeframe: ComparisonTimeframe): void {
@@ -831,7 +770,9 @@ export class HomeComponent {
       return 'Connect wallet';
     }
 
-    return this.canRetryQuote() ? 'Retry quote' : 'Review';
+    return this.canRetryQuote()
+      ? 'Retry quote'
+      : (this.quotePreview?.action?.label ?? 'Review');
   }
 
   public tokenDisplay(symbol: string): string {
@@ -1127,15 +1068,6 @@ export class HomeComponent {
       return undefined;
     }
 
-    const authMethod = this.resolveSwapAuthMethod({
-      account: this.walletAddress,
-      chainId: this.walletChainId,
-    });
-
-    if (!authMethod) {
-      return undefined;
-    }
-
     if (this.recipientValidationError()) {
       return undefined;
     }
@@ -1146,7 +1078,7 @@ export class HomeComponent {
       return undefined;
     }
 
-    return this.buildSwapInput(amount, authMethod);
+    return this.buildSwapInput(amount);
   }
 
   private readPastedText(event: ClipboardEvent): string {
@@ -1614,9 +1546,8 @@ export class HomeComponent {
   }
 
   public fundingSourceError(): string {
-    return this.confidentialSwap
-      ? 'Wallet-funded swaps require a public wallet deposit. Turn off confidential mode to continue.'
-      : '';
+    const action = this.quotePreview?.action;
+    return action && !action.supported ? action.description : '';
   }
 
   private validateSourceBalance(amountRaw: string): string {

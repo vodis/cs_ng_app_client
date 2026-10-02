@@ -101,6 +101,10 @@ export type SwapStatus =
   | 'FAILED';
 
 export type SwapReviewServices = {
+  quoteSwap?: (
+    request: SwapReviewQuoteRequest,
+    options: { signal: AbortSignal }
+  ) => Promise<WalletSwapQuote>;
   prepareSwap: (
     request: SwapReviewPrepareRequest,
     options: { signal: AbortSignal }
@@ -116,4 +120,39 @@ export type SwapReviewServices = {
     request: SwapReviewSubmitRequest
   ) => Promise<{ intentHash: string }>;
   checkSwapStatus?: (preparationId: string) => Promise<SwapStatus>;
+};
+
+/** Product choices only. Provider routing and signing parameters belong to the MFE. */
+export type WalletSwapInput = {
+  source: SwapReviewToken;
+  destination: SwapReviewToken;
+  amount: string;
+  account: string;
+  recipient: string;
+  network: { id: string; label: string };
+  slippageToleranceBps: number;
+  confidential: boolean;
+};
+
+export type WalletSwapQuote = {
+  amountOut: string;
+  amountOutAtomic: string;
+  expiresAt: string;
+  traceId?: string;
+  quoteReference?: string;
+  raw: Record<string, unknown>;
+  action?: { supported: boolean; label: string; description: string };
+};
+
+export type WalletSwapReview = {
+  contractVersion: '2.0.0';
+  traceId: string;
+  input: WalletSwapInput;
+  sourceDisplay: { amountDisplay: string; fiatValue?: string };
+  preview: SwapReviewIntent['preview'];
+};
+
+export type WalletSwapQuoteOptions = { traceId: string; signal: AbortSignal };
+export type SwapReviewQuoteRequest = Omit<SwapReviewPrepareRequest, 'dry'> & {
+  dry: true;
 };

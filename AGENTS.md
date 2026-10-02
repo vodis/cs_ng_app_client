@@ -99,6 +99,10 @@ Production host rules:
 
 Any contract change in wallets (routes, exposed modules, events, required inputs) must be mirrored in this host.
 
+The MFE owns wallet-funded quote/prepare configuration through the v2 wallet
+swap contract. Home supplies product choices and renders MFE action guidance;
+it must not select provider, authentication, funding/refund fields, or deadlines.
+The host retains authenticated BFF transport and quote refresh/cancellation.
 Wallet-funded swaps use `ORIGIN_CHAIN` deposits and refunds with a 1Click
 `deposit_address` package. The wallet MFE sends the native NEAR transfer only
 on explicit confirmation, then tracks settlement through the BFF. Native wallet

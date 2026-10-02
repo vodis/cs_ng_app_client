@@ -1,3 +1,9 @@
+import type {
+  WalletSwapInput,
+  WalletSwapQuote,
+  WalletSwapQuoteOptions,
+  WalletSwapReview,
+} from './swap-review.types';
 import type { WalletGatewayEvent } from './gateway-events';
 import type { WalletBalancesSnapshot } from './wallet-balances.types';
 import {
@@ -111,6 +117,12 @@ export type WalletsMfeMountApi = {
   createEmbeddedWallet?: () => Promise<WalletOnboardingResult>;
   syncConnectedWallet?: () => Promise<WalletConnectionSnapshot>;
   disconnectWallet?: () => void;
+  swapContractVersion?: '2.0.0';
+  requestSwapQuote?: (
+    input: WalletSwapInput,
+    options: WalletSwapQuoteOptions
+  ) => Promise<WalletSwapQuote>;
+  openWalletSwapReview?: (review: WalletSwapReview) => void;
   openSwapReview?: (intent: SwapReviewIntent) => void;
   closeSwapReview?: () => void;
   isSwapReviewBusy?: () => boolean;
