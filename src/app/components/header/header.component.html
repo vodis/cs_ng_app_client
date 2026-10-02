@@ -20,6 +20,16 @@
           >notifications</mat-icon
         >
       </button>
+      <button
+        type="button"
+        class="header__icon-button"
+        aria-label="Wallets"
+        title="Wallets"
+        (click)="openWallets()">
+        <mat-icon aria-hidden="true" fontSet="material-icons-outlined"
+          >account_balance_wallet</mat-icon
+        >
+      </button>
       <a
         class="header__account-link"
         [class.header__account-link--icon]="!!session || isMobileView"

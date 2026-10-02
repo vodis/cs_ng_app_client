@@ -10,6 +10,7 @@ import { HeaderComponent } from './header.component';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import {
   CsTranslationsModule,
   CsTranslationsService,
@@ -18,6 +19,7 @@ import {
 describe('HeaderComponent', () => {
   let component: HeaderComponent;
   let fixture: ComponentFixture<HeaderComponent>;
+  let walletsService: { requestOpen: jasmine.Spy };
 
   const session: AuthSession = {
     user: {
@@ -32,6 +34,9 @@ describe('HeaderComponent', () => {
   };
 
   function setup(sessionValue: AuthSession | null): void {
+    walletsService = {
+      requestOpen: jasmine.createSpy('requestOpen'),
+    };
     TestBed.configureTestingModule({
       imports: [RouterTestingModule, MatIconModule, CsTranslationsModule],
       declarations: [HeaderComponent],
@@ -47,6 +52,10 @@ describe('HeaderComponent', () => {
           useValue: {
             path: (path: string) => `/en${path === '/' ? '' : path}`,
           },
+        },
+        {
+          provide: WalletsService,
+          useValue: walletsService,
         },
         {
           provide: CsTranslationsService,
@@ -84,14 +93,29 @@ describe('HeaderComponent', () => {
     setup(session);
 
     const button = fixture.nativeElement.querySelector(
-      '.header__icon-button'
+      'button.header__icon-button[aria-label="Notifications"]'
     ) as HTMLButtonElement;
     const icon = button.querySelector('mat-icon');
 
-    expect(button.getAttribute('aria-label')).toBe('Notifications');
     expect(button.getAttribute('type')).toBe('button');
     expect(icon?.textContent?.trim()).toBe('notifications');
     expect(icon?.getAttribute('fontSet')).toBe('material-icons-outlined');
+  });
+
+  it('opens the wallets drawer from the header wallet icon', () => {
+    setup(session);
+
+    const button = fixture.nativeElement.querySelector(
+      'button.header__icon-button[aria-label="Wallets"]'
+    ) as HTMLButtonElement;
+    const icon = button.querySelector('mat-icon');
+
+    expect(icon?.textContent?.trim()).toBe('account_balance_wallet');
+    expect(icon?.getAttribute('fontSet')).toBe('material-icons-outlined');
+
+    button.click();
+
+    expect(walletsService.requestOpen).toHaveBeenCalledOnceWith();
   });
 
   it('shows account icon when logged in', () => {

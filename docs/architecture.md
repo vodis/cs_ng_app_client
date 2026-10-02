@@ -112,8 +112,9 @@ Flow direction:
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
   `/portfolio` (holdings, sessions, and sign-out). The header also shows a
-  notifications control next to the account icon (UI placeholder until a
-  notifications feed is wired).
+  notifications control and a wallets control beside the account icon. Wallets
+  opens the existing wallet MFE drawer; notifications remains a UI placeholder
+  until a feed is wired.
 
 Profile boundary rules:
 

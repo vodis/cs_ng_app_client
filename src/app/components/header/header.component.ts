@@ -8,6 +8,7 @@ import {
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -31,7 +32,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   constructor(
     public readonly authSession: AuthSessionService,
-    public readonly localizedRouting: LocalizedRoutingService
+    public readonly localizedRouting: LocalizedRoutingService,
+    private readonly walletsService: WalletsService
   ) {}
 
   public ngOnInit(): void {
@@ -44,6 +46,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.sessionSubscription?.unsubscribe();
+  }
+
+  public openWallets(): void {
+    this.walletsService.requestOpen();
   }
 
   @HostListener('window:resize', ['$event'])
