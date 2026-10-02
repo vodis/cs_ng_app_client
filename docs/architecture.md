@@ -109,6 +109,8 @@ Flow direction:
   explicit balances refresh — not on every session tick. The wallet address
   pill above the balance is omitted — wallet identity and token balances live
   in Manage wallets. Wallet setup is not a blocking interstitial.
+- Connected wallets on `/profile` render as a table (Wallet, Network, Status,
+  Action), not a stacked list.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
   `/portfolio` (holdings, sessions, and sign-out). The header also shows a
