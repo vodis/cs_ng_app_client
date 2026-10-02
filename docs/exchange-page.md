@@ -37,15 +37,19 @@ panels. At `1100px` and below, it changes to a single-column layout.
 
 | Block          | Markup            | Behavior                                                 |
 | -------------- | ----------------- | -------------------------------------------------------- |
-| From row       | `.swapRow.first`  | Token selector, balance, amount input, and USD estimate  |
+| From row       | `.swapRow.first`  | Token selector, clickable max balance, amount input, USD estimate |
 | Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison  |
-| To row         | `.swapRow`        | Token selector, balance, quoted amount, and USD estimate |
+| To row         | `.swapRow`        | Token selector, clickable max balance, quoted amount, USD estimate |
 | Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee   |
 | Primary action | `.connectMain`    | Opens final MFE review after a current dry quote         |
 
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
-Slippage opens `app-slippage-settings-panel` with presets
+Clicking a usable From balance prefills only the From amount. Clicking a usable
+To balance stores a destination target for display only; Review stays disabled
+until the quoted output matches that target, and review payloads always use the
+quoted `amountOut` (never the balance override). Slippage opens
+`app-slippage-settings-panel` with presets
 (`0.1%`, `0.25%`, `0.5%`, `1%`, `3%`) plus custom input. The host stores the
 choice as basis points (default `50` = `0.5%`) and includes it in dry quote and
 review intent payloads.
@@ -58,7 +62,8 @@ provide a `1M` window.
 
 The relative-performance chart renders the quote-token move minus the base-token
 move. Keep the summary column compact so the chart retains most of the available
-width.
+width. The Advanced Chart entry control is hidden for now; advanced market view
+state and `app-live-chart` wiring remain in `HomeComponent` for a later return.
 
 Under the chart, the right-hand info area shows temporary **Market** and
 **Product** mock labels (`Spot` / `Token Exchange`) until the BFF exposes real
@@ -169,7 +174,7 @@ Important page targets:
 - market panel padding: `24px 28px`
 - swap row height: `112px`
 - stats row height: `70px`
-- market panel desktop height: `486px`
+- swap / market desktop height: `560px` (fits Review CTA without clipping)
 - market summary/chart grid: `104px / 1fr`
 - numeric amount font: `Aeonik Fono` through `.amount`
 

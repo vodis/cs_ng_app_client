@@ -252,3 +252,75 @@ function stripThousands(part: string, thousandSeparator: string): string {
 function stripLeadingZeros(digits: string): string {
   return digits.replace(/^0+(?=\d)/, '');
 }
+
+const MAX_TOKEN_DECIMALS = 78;
+const CANONICAL_DECIMAL_PATTERN = /^(?:0|[1-9]\d*)(?:\.\d+)?$/;
+const ATOMIC_AMOUNT_PATTERN = /^\d+$/;
+
+function assertTokenDecimals(decimals: number): number {
+  if (
+    !Number.isInteger(decimals) ||
+    decimals < 0 ||
+    decimals > MAX_TOKEN_DECIMALS
+  ) {
+    throw new Error(`Invalid token decimals: ${String(decimals)}`);
+  }
+
+  return decimals;
+}
+
+/**
+ * Convert an atomic (base-unit) integer string to a canonical decimal string.
+ * Uses string/BigInt math only — never JavaScript Number.
+ */
+export function atomicToDecimal(raw: string, decimals: number): string {
+  const precision = assertTokenDecimals(decimals);
+  const trimmed = raw.trim();
+  if (!ATOMIC_AMOUNT_PATTERN.test(trimmed)) {
+    throw new Error(`Invalid atomic amount: ${raw}`);
+  }
+
+  // Normalize via BigInt so leading zeros collapse without Number coercion.
+  const digits = BigInt(trimmed).toString();
+
+  if (precision === 0) {
+    return digits;
+  }
+
+  const padded = digits.padStart(precision + 1, '0');
+  const whole = stripLeadingZeros(padded.slice(0, -precision)) || '0';
+  const fraction = padded.slice(-precision).replace(/0+$/, '');
+  return fraction ? `${whole}.${fraction}` : whole;
+}
+
+/**
+ * Convert a canonical decimal string (`.` separator, no grouping) to atomic units.
+ * Rejects excess fractional precision instead of truncating.
+ */
+export function decimalToAtomic(amount: string, decimals: number): string {
+  const precision = assertTokenDecimals(decimals);
+  const trimmed = amount.trim();
+  if (!CANONICAL_DECIMAL_PATTERN.test(trimmed)) {
+    throw new Error(`Invalid canonical decimal amount: ${amount}`);
+  }
+
+  const [wholePart, fractionPart = ''] = trimmed.split('.');
+  if (fractionPart.length > precision) {
+    throw new Error(
+      `Excess fractional precision: ${fractionPart.length} > ${precision}`
+    );
+  }
+
+  const combined =
+    `${wholePart}${fractionPart.padEnd(precision, '0')}`.replace(
+      /^0+(?=\d)/,
+      ''
+    ) || '0';
+
+  return BigInt(combined).toString();
+}
+
+/** True when value is already a canonical storage decimal (no localized grouping). */
+export function isCanonicalDecimalAmount(value: string): boolean {
+  return CANONICAL_DECIMAL_PATTERN.test(value.trim());
+}

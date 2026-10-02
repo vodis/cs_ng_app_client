@@ -1,5 +1,14 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
+import { CountUp } from 'countup.js';
 import { combineLatest, Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import type {
   AuthSession,
   BackendBalance,
@@ -13,6 +22,7 @@ import {
   type ActivityHeatmapWeek,
 } from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
+import { atomicToDecimal } from '@shared/utils/amount-format.utils';
 import { isNearWalletAddress } from '@shared/utils/network.utils';
 import {
   MockProfileActivitySource,
@@ -32,9 +42,22 @@ const CHAIN_ICON_URLS: Record<string, string> = {
 };
 
 const REQUIRED_SWAP_COUNT = 5;
+const ZERO_USD_LABEL = '$0.00';
 
 function formatUsdAmount(value: number): string {
   return value.toFixed(2);
+}
+
+function formatUsdCurrency(value: number): string {
+  if (!Number.isFinite(value)) {
+    return ZERO_USD_LABEL;
+  }
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  });
 }
 
 @Component({
@@ -47,7 +70,10 @@ function formatUsdAmount(value: number): string {
     { provide: ProfileActivitySource, useClass: MockProfileActivitySource },
   ],
 })
-export class ProfileComponent implements OnInit, OnDestroy {
+export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('usdBalanceValue')
+  private usdBalanceValue?: ElementRef<HTMLElement>;
+
   public session: AuthSession | null = null;
   public walletMessage = '';
   public balanceMessage = '';
@@ -71,6 +97,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   private subscription?: Subscription;
   private portfolioRequestId = 0;
+  private portfolioCacheKeyLoaded: string | null = null;
+  private portfolioInFlightKey: string | null = null;
+  private displayedBalanceValue = 0;
+  private pendingBalanceAnimation: number | null = null;
+  private balanceCountUp: CountUp | null = null;
 
   constructor(
     public readonly profile: ProfileFacade,
@@ -85,21 +116,22 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.subscription.add(
       combineLatest([this.profile.session$, this.profile.account$]).subscribe(
         ([session, account]) => {
-          const previousSession = this.session;
+          const previousAccount = this.connectedAccount;
+          const previousChainId = this.connectedChainId;
           this.connectedAccount = account?.account ?? null;
           this.connectedChainId = account?.chainId ?? null;
           this.session = session;
           if (session) {
             this.seedLastConnectedFromBackend(session.wallets);
-            if (session !== previousSession) {
-              void this.refreshBalances();
-            }
-            void this.refreshPortfolio();
+            const accountChanged =
+              this.connectedAccount !== previousAccount ||
+              this.connectedChainId !== previousChainId;
+            // Automatic session ticks reuse cache / in-flight; force only via
+            // refreshBalances(), swaps, or a real account change.
+            void this.ensurePortfolioLoaded(accountChanged);
           } else {
             this.balances = [];
-            this.portfolio = null;
-            this.portfolioStatus = 'idle';
-            this.portfolioRequestId += 1;
+            this.resetPortfolioDisplay();
           }
           this.refreshOnboarding();
         }
@@ -111,10 +143,29 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.refreshOnboarding();
       })
     );
+    this.subscription.add(
+      this.profile.swapSubmitted$
+        .pipe(
+          filter((result): result is { traceId: string; intentHash: string } =>
+            Boolean(result)
+          )
+        )
+        .subscribe(() => {
+          void this.ensurePortfolioLoaded(true);
+        })
+    );
+  }
+
+  public ngAfterViewInit(): void {
+    if (this.pendingBalanceAnimation != null) {
+      this.animateBalanceTo(this.pendingBalanceAnimation);
+      this.pendingBalanceAnimation = null;
+    }
   }
 
   public ngOnDestroy(): void {
     this.portfolioRequestId += 1;
+    this.cancelBalanceAnimation();
     this.subscription?.unsubscribe();
   }
 
@@ -291,20 +342,31 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   public usdBalanceLabel(): string {
-    if (this.portfolioStatus === 'loading') {
-      return 'Loading…';
-    }
     if (this.portfolioStatus === 'error') {
       return 'Unavailable';
     }
-    const total = Number(this.portfolio?.totalValue ?? 0);
-    return Number.isFinite(total)
-      ? total.toLocaleString('en-US', {
-          style: 'currency',
-          currency: 'USD',
-          maximumFractionDigits: 2,
-        })
-      : '$0.00';
+    if (this.portfolioStatus === 'ready') {
+      const total = Number(this.portfolio?.totalValue ?? 0);
+      return formatUsdCurrency(total);
+    }
+    return ZERO_USD_LABEL;
+  }
+
+  public tokenBalanceLabel(): string {
+    if (this.portfolioStatus !== 'ready' || !this.portfolio?.positions.length) {
+      return '';
+    }
+    const visible = this.portfolio.positions.slice(0, 2).map(position => {
+      const quantity = Number(position.quantity);
+      const amount = Number.isFinite(quantity)
+        ? quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })
+        : position.quantity;
+      return `${amount} ${position.symbol}`;
+    });
+    const remaining = this.portfolio.positions.length - visible.length;
+    return remaining > 0
+      ? `${visible.join(' · ')} · +${remaining} more`
+      : visible.join(' · ');
   }
 
   public usdChangeLabel(): string {
@@ -451,7 +513,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     try {
       this.balances = await this.profile.generateWallet();
       this.walletMessage = 'Wallet generated';
-      await this.refreshPortfolio();
+      await this.ensurePortfolioLoaded(true);
     } catch (error) {
       this.error =
         error instanceof Error ? error.message : 'Wallet setup failed';
@@ -522,6 +584,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.balances = await this.profile.loadBalances();
       this.balanceMessage =
         this.balances.length > 0 ? 'Balances refreshed' : '';
+      await this.ensurePortfolioLoaded(true);
     } catch (error) {
       this.error =
         error instanceof Error ? error.message : 'Balance refresh failed';
@@ -530,13 +593,30 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
   }
 
+  public async ensurePortfolioLoaded(force = false): Promise<void> {
+    if (!this.session) {
+      this.resetPortfolioDisplay();
+      return;
+    }
+    const cacheKey = this.portfolioCacheKey();
+    if (
+      !force &&
+      (this.portfolioCacheKeyLoaded === cacheKey ||
+        this.portfolioInFlightKey === cacheKey)
+    ) {
+      return;
+    }
+    await this.refreshPortfolio();
+  }
+
   public async refreshPortfolio(): Promise<void> {
     const requestId = ++this.portfolioRequestId;
     if (!this.session) {
-      this.portfolio = null;
-      this.portfolioStatus = 'idle';
+      this.resetPortfolioDisplay();
       return;
     }
+    const cacheKey = this.portfolioCacheKey();
+    this.portfolioInFlightKey = cacheKey;
     this.portfolioStatus = 'loading';
     try {
       const portfolio = await this.profile.loadPortfolio(
@@ -548,12 +628,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
       }
       this.portfolio = portfolio;
       this.portfolioStatus = 'ready';
+      this.portfolioCacheKeyLoaded = cacheKey;
+      this.portfolioInFlightKey = null;
+      const total = Number(portfolio.totalValue ?? 0);
+      this.settleBalanceDisplay(Number.isFinite(total) ? total : 0);
     } catch {
       if (requestId !== this.portfolioRequestId) {
         return;
       }
       this.portfolio = null;
       this.portfolioStatus = 'error';
+      this.portfolioCacheKeyLoaded = null;
+      this.portfolioInFlightKey = null;
+      this.displayedBalanceValue = 0;
+      this.cancelBalanceAnimation();
+      const el = this.usdBalanceValue?.nativeElement;
+      if (el) {
+        el.textContent = 'Unavailable';
+      }
     }
   }
 
@@ -595,6 +687,90 @@ export class ProfileComponent implements OnInit, OnDestroy {
     } finally {
       this.busyWalletId = '';
     }
+  }
+
+  private portfolioCacheKey(): string {
+    return [
+      this.session?.user.id ?? '',
+      this.connectedAccount ?? '',
+      this.connectedChainId ?? '',
+    ].join(':');
+  }
+
+  private resetPortfolioDisplay(): void {
+    this.portfolio = null;
+    this.portfolioStatus = 'idle';
+    this.portfolioCacheKeyLoaded = null;
+    this.portfolioInFlightKey = null;
+    this.portfolioRequestId += 1;
+    this.cancelBalanceAnimation();
+    this.setBalanceLabelImmediate(0);
+  }
+
+  private settleBalanceDisplay(value: number): void {
+    if (!this.usdBalanceValue?.nativeElement) {
+      this.cancelBalanceAnimation();
+      this.pendingBalanceAnimation = value;
+      this.setBalanceLabelImmediate(value);
+      return;
+    }
+    this.animateBalanceTo(value);
+  }
+
+  private stopActiveCountUp(): void {
+    const active = this.balanceCountUp;
+    if (!active) {
+      return;
+    }
+    active.onDestroy();
+    this.balanceCountUp = null;
+  }
+
+  private cancelBalanceAnimation(): void {
+    this.pendingBalanceAnimation = null;
+    this.stopActiveCountUp();
+  }
+
+  private setBalanceLabelImmediate(value: number): void {
+    this.stopActiveCountUp();
+    this.displayedBalanceValue = value;
+    const el = this.usdBalanceValue?.nativeElement;
+    if (el) {
+      el.textContent = formatUsdCurrency(value);
+    }
+  }
+
+  private animateBalanceTo(value: number): void {
+    const el = this.usdBalanceValue?.nativeElement;
+    if (!el) {
+      this.cancelBalanceAnimation();
+      this.pendingBalanceAnimation = value;
+      this.setBalanceLabelImmediate(value);
+      return;
+    }
+
+    this.cancelBalanceAnimation();
+    const startVal = this.displayedBalanceValue;
+    this.displayedBalanceValue = value;
+    if (startVal === value) {
+      el.textContent = formatUsdCurrency(value);
+      return;
+    }
+
+    this.balanceCountUp = new CountUp(el, value, {
+      startVal,
+      duration: 1.1,
+      decimalPlaces: 2,
+      useEasing: true,
+      useGrouping: true,
+      formattingFn: (n: number) => formatUsdCurrency(n),
+    });
+    if (this.balanceCountUp.error) {
+      el.textContent = formatUsdCurrency(value);
+      this.balanceCountUp = null;
+      return;
+    }
+    this.balanceCountUp.start();
   }
 
   private buildOnboardingViewModel(): ProfileOnboardingViewModel {
@@ -648,14 +824,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   private rawToDecimal(rawBalance: string, decimals: number): string {
-    if (!/^\d+$/.test(rawBalance) || decimals <= 0) {
+    try {
+      return atomicToDecimal(rawBalance, decimals);
+    } catch {
       return rawBalance;
     }
-
-    const padded = rawBalance.padStart(decimals + 1, '0');
-    const whole = padded.slice(0, -decimals);
-    const fraction = padded.slice(-decimals).replace(/0+$/, '');
-    return fraction ? `${whole}.${fraction}` : whole;
   }
 
   private capitalizeLabel(value: string | null | undefined): string {

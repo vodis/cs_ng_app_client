@@ -105,6 +105,9 @@ importers:
       '@vodis/cs-intents':
         specifier: 0.1.0
         version: 0.1.0
+      countup.js:
+        specifier: ^2.10.1
+        version: 2.10.1
       liveline:
         specifier: ^0.0.7
         version: 0.0.7(react@19.2.7)
@@ -3663,6 +3666,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  countup.js@2.10.1:
+    resolution: {integrity: sha512-UHW/BsPDgVZfN919D4iu2HPv+jJxZUuaR3EhT0ScFZaD446GiQtkMTgOnOyJXdA2AewdlyUk9UvERlTHTbVpcw==}
 
   create-require@1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
@@ -11014,6 +11020,8 @@ snapshots:
       parse-json: 5.2.0
     optionalDependencies:
       typescript: 5.9.3
+
+  countup.js@2.10.1: {}
 
   create-require@1.1.1: {}
 

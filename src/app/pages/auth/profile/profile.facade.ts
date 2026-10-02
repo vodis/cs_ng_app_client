@@ -58,6 +58,8 @@ export class ProfileFacade {
   public readonly account$ = this.walletsService.account.asObservable();
   public readonly lastConnected$ =
     this.walletsService.lastConnected.asObservable();
+  public readonly swapSubmitted$ =
+    this.walletsService.swapSubmitted.asObservable();
 
   constructor(
     private readonly authSession: AuthSessionService,

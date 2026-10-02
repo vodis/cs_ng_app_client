@@ -52,9 +52,22 @@
                 </button>
               </div>
               <div class="swapRow__right">
-                <div class="balance">{{ balanceLabel(fromToken) }}</div>
+                <button
+                  type="button"
+                  class="balance"
+                  [disabled]="!canApplyMaxBalance(fromToken)"
+                  [attr.title]="
+                    canApplyMaxBalance(fromToken) ? 'Use max balance' : null
+                  "
+                  [attr.aria-label]="
+                    'Use max ' + tokenSymbolLabel(fromToken) + ' balance'
+                  "
+                  (click)="applyMaxBalance('from')">
+                  {{ balanceLabel(fromToken) }}
+                </button>
                 <div class="swapRow__amount">
                   <input
+                    #fromAmountInput
                     class="amount"
                     [class.amount--muted]="isAmountMuted()"
                     type="text"
@@ -137,7 +150,19 @@
                 </button>
               </div>
               <div class="swapRow__right">
-                <div class="balance">{{ balanceLabel(toToken) }}</div>
+                <button
+                  type="button"
+                  class="balance"
+                  [disabled]="!canApplyMaxBalance(toToken)"
+                  [attr.title]="
+                    canApplyMaxBalance(toToken) ? 'Use max balance' : null
+                  "
+                  [attr.aria-label]="
+                    'Use max ' + tokenSymbolLabel(toToken) + ' balance'
+                  "
+                  (click)="applyMaxBalance('to')">
+                  {{ balanceLabel(toToken) }}
+                </button>
                 <div class="swapRow__amount">
                   <div class="amountTrack">
                     <output
