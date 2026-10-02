@@ -211,3 +211,8 @@ refresh, cancellation, HTTP/session transport, and display; the MFE returns
 quote action guidance and resolves the live wallet context. See the
 [v2 wallet swap contract](../src/app/mfe-contracts/README.md#wallet-swap-contract-200)
 for compatibility and deployment order.
+
+The MFE shows exchange progress and a receipt after confirmation. Its additive
+`onSwapSettled` callback refreshes wallet balances after confirmed completion or
+another terminal provider result; submission alone is too early to show the
+updated destination balance. Closing the receipt remains a user action.

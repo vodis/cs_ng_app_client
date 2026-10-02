@@ -1,5 +1,6 @@
+import type { SwapSettlementResult } from '@mfe-contracts/swap-review.types';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import {
   LastConnectedWallet,
   WalletAccount,
@@ -81,6 +82,7 @@ export class WalletsService {
   public closeRequested = new BehaviorSubject<boolean>(false);
   public openRequested = new BehaviorSubject<boolean>(false);
   public drawerMode = new BehaviorSubject<WalletDrawerMode>('wallet');
+  public swapSettled = new Subject<SwapSettlementResult>();
   public swapSubmitted = new BehaviorSubject<
     { traceId: string; intentHash: string } | undefined
   >(undefined);
@@ -142,6 +144,10 @@ export class WalletsService {
 
   clearOpenRequest(): void {
     this.openRequested.next(false);
+  }
+
+  publishSwapSettled(result: SwapSettlementResult): void {
+    this.swapSettled.next(result);
   }
 
   publishSwapSubmitted(result: { traceId: string; intentHash: string }): void {

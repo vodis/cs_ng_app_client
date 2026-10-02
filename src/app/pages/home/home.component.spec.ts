@@ -26,6 +26,10 @@ import { environment } from '../../../environments/environment';
 import { HomeComponent } from './home.component';
 
 class WalletsServiceStub {
+  public swapSettled = new Subject<{
+    traceId: string;
+    status: 'SUCCESS' | 'REFUNDED' | 'FAILED' | 'INCOMPLETE_DEPOSIT';
+  }>();
   public account = new BehaviorSubject<WalletAccount | undefined>(undefined);
   public swapSubmitted = new BehaviorSubject<
     { traceId: string; intentHash: string } | undefined
@@ -1418,6 +1422,26 @@ describe('HomeComponent market overview', () => {
     expect(component.canReviewSwap()).toBeFalse();
     expect(component.isPrimaryActionDisabled()).toBeTrue();
     expect(component.primaryActionLabel()).toBe('Review');
+  });
+
+  it('refreshes wallet balances after confirmed settlement, not just submission', () => {
+    const wallets = TestBed.inject(WalletsService);
+    const loadBalances = spyOn(
+      TestBed.inject(WalletBalancesService),
+      'loadBalancesWithMeta'
+    ).and.callThrough();
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    wallets.account.next(nearWallet());
+    loadBalances.calls.reset();
+    wallets.swapSettled.next({ traceId: 'settled-swap', status: 'SUCCESS' });
+    expect(loadBalances).toHaveBeenCalledTimes(1);
+    expect(loadBalances).toHaveBeenCalledWith(
+      jasmine.objectContaining({ walletAddress: 'alice.near' })
+    );
   });
 
   it('uses the testnet balance network for a .testnet wallet', () => {

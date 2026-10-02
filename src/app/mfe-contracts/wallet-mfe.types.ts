@@ -1,3 +1,4 @@
+import type { SwapSettlementResult } from './swap-review.types';
 import type {
   WalletSwapInput,
   WalletSwapQuote,
@@ -105,6 +106,7 @@ export type WalletsMfeCallbacks = {
   /** Emitted when the gateway completes intent signing (Path B). */
   onIntentSigned?: (payload: WalletIntentSignedPayload) => void;
   onTransactionSubmitted?: (payload: { hash: string }) => void;
+  onSwapSettled?: (result: SwapSettlementResult) => void;
   onSwapSubmitted?: (payload: { traceId: string; intentHash: string }) => void;
   onSwapPreviewRefreshRequested?: (payload: { traceId: string }) => void;
 };
