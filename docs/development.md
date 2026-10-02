@@ -63,6 +63,9 @@ Production wallet remote policy:
 - Sidebar **Profile** links to `/profile`; the header account icon links to
   `/portfolio`. Header chrome also includes a notifications icon (no feed yet)
   and a wallets icon that opens the wallet MFE drawer.
+- `/portfolio` includes Enable 2FA and Manage passkey cards. Passkey enable
+  uses the existing provider-neutral `linkPasskey()` contract; disable/recover
+  and 2FA enrollment remain host UI until the auth-provider contract grows.
 - Keep profile integrations behind `ProfileFacade`; do not inject auth, wallet
   gateway, or router services directly into `ProfileComponent`.
 - Supply activity through `ProfileActivitySource` so the activity panel and
@@ -236,7 +239,7 @@ Host auth routes live under `src/app/pages/auth/`.
 | `/login`           | Public      | Passkey, Google, Apple, Telegram always shown; email code fallback |
 | `/register`        | Public      | Account creation only; wallet setup is separate                    |
 | `/profile`         | `AuthGuard` | Balance hero, onboarding, activity, wallets                        |
-| `/portfolio`       | `AuthGuard` | Holdings, agent authorization, sessions, sign-out                  |
+| `/portfolio`       | `AuthGuard` | Holdings, 2FA/passkey security, sessions, sign-out                 |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                                      |
 
 ### Login expectations

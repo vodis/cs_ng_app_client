@@ -6,6 +6,12 @@ app-account-sessions .profile-shell {
   padding: clamp(1rem, 3vw, 2rem);
   gap: 1rem;
 
+  // Portfolio already pads .portfolio-page — keep Sessions flush with other cards.
+  .portfolio-page & {
+    padding: 0;
+    width: 100%;
+  }
+
   &__header {
     min-width: 0;
 

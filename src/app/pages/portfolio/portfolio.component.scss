@@ -88,8 +88,17 @@
 
 .portfolio-grid {
   display: grid;
+  width: 100%;
   gap: 1rem;
   grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.85fr);
+  margin-bottom: 1rem;
+}
+
+.portfolio-page > app-portfolio-security,
+.portfolio-page > app-account-sessions {
+  display: block;
+  width: 100%;
+  min-width: 0;
 }
 
 .portfolio-modal {

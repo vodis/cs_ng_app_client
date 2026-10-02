@@ -111,10 +111,10 @@ Flow direction:
   in Manage wallets. Wallet setup is not a blocking interstitial.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
-  `/portfolio` (holdings, sessions, and sign-out). The header also shows a
-  notifications control and a wallets control beside the account icon. Wallets
-  opens the existing wallet MFE drawer; notifications remains a UI placeholder
-  until a feed is wired.
+  `/portfolio` (holdings, 2FA/passkey security controls, sessions, and
+  sign-out). The header also shows a notifications control and a wallets
+  control beside the account icon. Wallets opens the existing wallet MFE
+  drawer; notifications remains a UI placeholder until a feed is wired.
 
 Profile boundary rules:
 
@@ -356,7 +356,7 @@ prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 | Route              | Guard       | Purpose                                               |
 | ------------------ | ----------- | ----------------------------------------------------- |
 | `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, wallets |
-| `/portfolio`       | `AuthGuard` | Holdings, agent authorization, sessions, sign-out     |
+| `/portfolio`       | `AuthGuard` | Holdings, 2FA/passkey security, sessions, sign-out    |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                         |
 
 ### Login methods on `/login`
