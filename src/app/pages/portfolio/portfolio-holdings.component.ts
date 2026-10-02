@@ -16,21 +16,6 @@ export class PortfolioHoldingsComponent {
     return POSITION_COLORS[index % POSITION_COLORS.length];
   }
 
-  allocationGradient(): string {
-    const valued = this.snapshot.positions.filter(
-      position => Number(position.allocationPercent) > 0
-    );
-    let offset = 0;
-    const stops = valued.map((position, index) => {
-      const start = offset;
-      offset += Math.max(0, Math.min(100, Number(position.allocationPercent)));
-      return `${this.positionColor(index)} ${start}% ${offset}%`;
-    });
-    return stops.length
-      ? `conic-gradient(${stops.join(',')})`
-      : 'conic-gradient(var(--gray-80) 0 100%)';
-  }
-
   currency(value: string | null): string {
     if (value === null) return 'Unpriced';
     const parsed = Number(value);
@@ -60,13 +45,6 @@ export class PortfolioHoldingsComponent {
     return value
       .replaceAll('_', ' ')
       .replace(/\b\w/g, char => char.toUpperCase());
-  }
-
-  date(value: string | null): string {
-    if (!value) {
-      return '—';
-    }
-    return new Date(value).toLocaleString();
   }
 
   trackPosition(_index: number, item: PortfolioPosition): string {

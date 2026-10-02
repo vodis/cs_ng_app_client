@@ -1,13 +1,13 @@
 import { PortfolioHoldingsComponent } from './portfolio-holdings.component';
 
 describe('PortfolioHoldingsComponent', () => {
-  it('builds a bounded allocation gradient from server percentages', () => {
+  it('formats priced and unpriced position values', () => {
     const component = new PortfolioHoldingsComponent();
     component.snapshot = {
       asOf: '2026-08-19T12:00:00Z',
       valuationCurrency: 'USD',
       totalValue: '100',
-      unpricedPositionCount: 0,
+      unpricedPositionCount: 1,
       positions: [
         {
           walletRef: 'opaque-wallet',
@@ -24,6 +24,8 @@ describe('PortfolioHoldingsComponent', () => {
       ],
     };
 
-    expect(component.allocationGradient()).toContain('#43e6a0 0% 100%');
+    expect(component.currency('100')).toBe('$100.00');
+    expect(component.currency(null)).toBe('Unpriced');
+    expect(component.percent(component.snapshot.positions[0])).toBe('100.0%');
   });
 });

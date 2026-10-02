@@ -236,7 +236,7 @@ Host auth routes live under `src/app/pages/auth/`.
 | `/login`           | Public      | Passkey, Google, Apple, Telegram always shown; email code fallback |
 | `/register`        | Public      | Account creation only; wallet setup is separate                    |
 | `/profile`         | `AuthGuard` | Balance hero, onboarding, activity, wallets                        |
-| `/portfolio`       | `AuthGuard` | Holdings, agent authorization, sessions, sign-out                  |
+| `/portfolio`       | `AuthGuard` | Agent preferences, sessions, sign-out (no balance/holdings UI) |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                                      |
 
 ### Login expectations
