@@ -303,6 +303,10 @@ export class HomeComponent {
         this.loadWalletBalances();
       });
 
+    this.walletsService.swapSettled
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadWalletBalances());
+
     this.walletsService.swapPreviewRefreshRequested
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(traceId => {

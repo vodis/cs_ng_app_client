@@ -142,6 +142,11 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
                 this.walletGatewayBridge.handleTransactionSubmitted(payload);
               });
             },
+            onSwapSettled: payload => {
+              this.ngZone.run(() =>
+                this.walletsService.publishSwapSettled(payload)
+              );
+            },
             onSwapSubmitted: payload => {
               this.ngZone.run(() => {
                 this.walletsService.publishSwapSubmitted(payload);

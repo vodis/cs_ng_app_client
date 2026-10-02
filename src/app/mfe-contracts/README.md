@@ -304,3 +304,12 @@ If/when extracting typed contracts into code, place them under:
 - `src/app/mfe-contracts/api-envelope.ts`
 
 Keep this README updated alongside those files.
+
+### Exchange settlement notification
+
+The optional `onSwapSettled({ traceId, status })` callback reports confirmed
+`SUCCESS`, `REFUNDED`, `FAILED`, or `INCOMPLETE_DEPOSIT` from the MFE's status
+actor. It is separate from `onSwapSubmitted`, which only confirms submission.
+The host refreshes wallet balances on settlement because a submission-time
+refresh may run before destination funds arrive. The callback does not dismiss
+the receipt. Older remotes remain compatible but do not emit this notification.

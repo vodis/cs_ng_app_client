@@ -156,3 +156,8 @@ export type WalletSwapQuoteOptions = { traceId: string; signal: AbortSignal };
 export type SwapReviewQuoteRequest = Omit<SwapReviewPrepareRequest, 'dry'> & {
   dry: true;
 };
+
+export type SwapSettlementResult = {
+  traceId: string;
+  status: 'SUCCESS' | 'REFUNDED' | 'FAILED' | 'INCOMPLETE_DEPOSIT';
+};
