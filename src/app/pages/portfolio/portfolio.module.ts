@@ -6,6 +6,7 @@ import { AgentAuthorizationComponent } from './agent-authorization.component';
 import { AccountSessionsComponent } from './account-sessions.component';
 import { PortfolioContextComponent } from './portfolio-context.component';
 import { PortfolioComponent } from './portfolio.component';
+import { PortfolioSecurityComponent } from './portfolio-security.component';
 
 const routes: Routes = [
   { path: '', component: PortfolioComponent, canActivate: [AuthGuard] },
@@ -22,6 +23,7 @@ const routes: Routes = [
     PortfolioComponent,
     PortfolioContextComponent,
     AgentAuthorizationComponent,
+    PortfolioSecurityComponent,
     AccountSessionsComponent,
   ],
 })
