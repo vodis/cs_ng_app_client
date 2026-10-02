@@ -289,3 +289,10 @@ Host auth routes live under `src/app/pages/auth/`.
    balance that animates up once portfolio returns (no `Loading…` flicker).
 5. Verify the Onboarding portfolio Set up wallet CTA opens the wallets MFE
    modal, and Generate wallet creates an embedded wallet.
+
+### Swap funding validation
+
+Follow [Exchange swap funding](exchange-page.md) and the
+[final review contract](../src/app/mfe-contracts/README.md) for source-balance
+routing and confirmation. Funding validation tightens the existing contract
+without changing payload versions.

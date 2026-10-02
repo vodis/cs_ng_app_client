@@ -149,10 +149,18 @@ Final preparation sends the user's bearer token; the BFF checks that the signer
 is an active wallet link before the MFE asks the wallet to sign. Deploy this host
 change before enforcing the authenticated preparation endpoint in the BFF.
 
-Public Intents custody is the default. The Confidential swap checkbox requests
-`CONFIDENTIAL_INTENTS` for the deposit and refund balances. The final quote and
-unsigned message come from 1Click through the BFF. The MFE signs that exact
-message and submits it once; it then polls 1Click status through the host.
+Exchange balances represent assets in the connected wallet. Both dry quotes
+and final preparation use `depositType: ORIGIN_CHAIN`, `refundType: ORIGIN_CHAIN`,
+and `recipientType: DESTINATION_CHAIN`. A NEP-141 execution asset identifier
+identifies the token; it does not mean the wallet has an Intents balance.
+Confidential mode is unavailable for this wallet-funded flow until its separate
+1Click confidentiality contract is supported. Never substitute
+`CONFIDENTIAL_INTENTS` funding for a wallet balance.
+Native NEAR deposits are supported. The MFE rejects other origin-chain deposits
+before confirmation until their chain/token transfer adapters are implemented.
+The MFE discloses the source wallet and recipient, requests a wallet transfer,
+and tracks settlement through the BFF. Existing Intents-balance callers may
+still sign the provider-generated message and submit it through the backend.
 The MFE selects `one-click` in its final preparation request so the BFF does
 not substitute a solver-relay quote for this flow.
 An intent hash confirms submission. Only `SUCCESS` confirms settlement;

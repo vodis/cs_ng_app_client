@@ -440,13 +440,6 @@ export class HomeComponent {
     amount: string,
     authMethod: SupportedSwapAuthMethod
   ): SwapFormInput {
-    const nativeNear =
-      authMethod === 'near' && this.fromToken.assetId === 'near:native';
-    const fundingType = nativeNear
-      ? 'ORIGIN_CHAIN'
-      : this.confidentialSwap
-        ? 'CONFIDENTIAL_INTENTS'
-        : 'INTENTS';
     return {
       originAsset: this.executionAssetId(this.fromToken),
       destinationAsset: this.executionAssetId(this.toToken),
@@ -454,8 +447,8 @@ export class HomeComponent {
       signerId: this.walletAddress.toLowerCase(),
       recipient: this.effectiveRecipient(),
       recipientType: 'DESTINATION_CHAIN',
-      depositType: fundingType,
-      refundType: fundingType,
+      depositType: 'ORIGIN_CHAIN',
+      refundType: 'ORIGIN_CHAIN',
       slippageTolerance: this.slippageToleranceBps,
       deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       authMethod,
@@ -1621,8 +1614,8 @@ export class HomeComponent {
   }
 
   public fundingSourceError(): string {
-    return this.fromToken.assetId === 'near:native' && this.confidentialSwap
-      ? 'Native NEAR requires a public wallet deposit. Turn off confidential mode to continue.'
+    return this.confidentialSwap
+      ? 'Wallet-funded swaps require a public wallet deposit. Turn off confidential mode to continue.'
       : '';
   }
 

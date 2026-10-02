@@ -190,10 +190,12 @@ fields and retain the signer-as-recipient behavior.
 The host exposes foreign-recipient routes only when
 `environment.crossNetworkRecipientIntentSignEnabled` is enabled. Keep it
 disabled until the deployed BFF accepts `recipient` / `recipientType` on both
-quote and prepare requests. Native NEAR sends `depositType: ORIGIN_CHAIN` and
-`refundType: ORIGIN_CHAIN`; other sources retain their Intents routing. The
-prepared execution mode must match the requested funding source. Native NEAR
-cannot use confidential mode without first funding a confidential balance.
+quote and prepare requests. Wallet-funded swaps send `depositType: ORIGIN_CHAIN`
+and `refundType: ORIGIN_CHAIN`, including NEP-141 assets. Only native NEAR deposits
+are currently executable; the MFE rejects unsupported deposit assets before
+confirmation. The prepared execution mode must match the requested funding
+source. The wallet-funded flow must not request confidential Intents custody
+for a wallet balance.
 
 Host files:
 

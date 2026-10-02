@@ -452,7 +452,7 @@ describe('HomeComponent market overview', () => {
     );
   });
 
-  it('keeps NEP-141 sources on intent execution', () => {
+  it('quotes wallet-held NEP-141 tokens from the origin chain', () => {
     expectComparisonRequest({
       base: 'USDC',
       quote: 'NEAR',
@@ -480,16 +480,19 @@ describe('HomeComponent market overview', () => {
     expect(component['buildSwapInput']('1000000', 'near')).toEqual(
       jasmine.objectContaining({
         recipientType: 'DESTINATION_CHAIN',
-        depositType: 'INTENTS',
-        refundType: 'INTENTS',
+        depositType: 'ORIGIN_CHAIN',
+        refundType: 'ORIGIN_CHAIN',
       })
     );
 
     component.setConfidentialSwap(true);
+    expect(component.fundingSourceError()).toContain(
+      'Turn off confidential mode'
+    );
     expect(component['buildSwapInput']('1000000', 'near')).toEqual(
       jasmine.objectContaining({
-        depositType: 'CONFIDENTIAL_INTENTS',
-        refundType: 'CONFIDENTIAL_INTENTS',
+        depositType: 'ORIGIN_CHAIN',
+        refundType: 'ORIGIN_CHAIN',
       })
     );
   });
@@ -1511,8 +1514,8 @@ describe('HomeComponent market overview', () => {
         signerId: '0x0000000000000000000000000000000000000001',
         recipient: 'BYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z',
         recipientType: 'DESTINATION_CHAIN',
-        depositType: 'INTENTS',
-        refundType: 'INTENTS',
+        depositType: 'ORIGIN_CHAIN',
+        refundType: 'ORIGIN_CHAIN',
       })
     );
     expect(balancesService.calls).toContain(
@@ -1665,7 +1668,7 @@ describe('HomeComponent market overview', () => {
     expect(component.quoteError).toBe('');
   });
 
-  it('keeps native NEAR swaps on intent signing and publishing', () => {
+  it('opens native NEAR review with origin-chain funding', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
     ) as unknown as WalletBalancesServiceStub;
