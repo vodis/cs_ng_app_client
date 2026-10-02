@@ -881,6 +881,42 @@
     text-align: right;
   }
 
+  .marketMeta {
+    display: grid;
+    min-width: 10.5rem;
+    margin: 0;
+    gap: 10px;
+
+    &__row {
+      display: grid;
+      align-items: baseline;
+      justify-content: end;
+      gap: 0.75rem;
+      grid-template-columns: auto auto;
+    }
+
+    dt {
+      margin: 0;
+      color: #8b9294;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      line-height: 1.2;
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    dd {
+      margin: 0;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.2;
+      text-align: right;
+      white-space: nowrap;
+    }
+  }
+
   .advanced {
     display: block;
     padding: 0;
@@ -937,6 +973,12 @@
     .change {
       grid-column: 1;
       grid-row: 3;
+    }
+
+    .marketMeta {
+      grid-column: 2;
+      grid-row: 2 / span 2;
+      place-self: center end;
     }
 
     .advanced {
@@ -1350,6 +1392,7 @@
       .price,
       .change,
       .advanced,
+      .marketMeta,
       .marketSummary .market-skeleton {
         grid-column: auto;
         grid-row: auto;
@@ -1358,6 +1401,21 @@
 
       .note {
         white-space: normal;
+      }
+
+      .marketMeta {
+        min-width: 0;
+        width: 100%;
+
+        &__row {
+          justify-content: start;
+          grid-template-columns: 5.5rem 1fr;
+        }
+
+        dt,
+        dd {
+          text-align: left;
+        }
       }
     }
 

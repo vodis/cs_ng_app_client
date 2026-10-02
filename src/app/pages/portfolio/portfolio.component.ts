@@ -9,7 +9,6 @@ import {
   InvestmentHorizon,
   InvestmentObjective,
   InvestmentProfile,
-  PortfolioSnapshot,
   RiskTolerance,
 } from './portfolio.models';
 
@@ -20,7 +19,6 @@ import {
   styleUrls: ['./portfolio.component.scss'],
 })
 export class PortfolioComponent implements OnInit {
-  portfolio?: PortfolioSnapshot;
   profile?: InvestmentProfile;
   config?: AgentIntegrationConfig;
   connections: AgentConnection[] = [];
@@ -28,7 +26,6 @@ export class PortfolioComponent implements OnInit {
   connectionsLoaded = false;
   connectionsError = '';
   loading = true;
-  error = '';
   actionError = '';
   profileOpen = false;
   agentOpen = false;
@@ -59,21 +56,16 @@ export class PortfolioComponent implements OnInit {
 
   async load(): Promise<void> {
     this.loading = true;
-    this.error = '';
-    const [portfolio, profile, config] = await Promise.allSettled([
-      this.api.loadPortfolio(),
+    this.actionError = '';
+    const [profile, config] = await Promise.allSettled([
       this.api.loadInvestmentProfile(),
       this.api.loadAgentConfig(),
     ]);
 
-    if (portfolio.status === 'fulfilled') this.portfolio = portfolio.value;
     if (profile.status === 'fulfilled') this.applyProfile(profile.value);
     if (config.status === 'fulfilled') {
       this.config = config.value;
       if (config.value.enabled) await this.reloadConnections();
-    }
-    if (portfolio.status === 'rejected') {
-      this.error = 'Portfolio data is temporarily unavailable.';
     }
     this.loading = false;
   }

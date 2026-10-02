@@ -12,7 +12,6 @@ describe('PortfolioComponent', () => {
 
   beforeEach(() => {
     api = jasmine.createSpyObj<PortfolioApiService>('PortfolioApiService', [
-      'loadPortfolio',
       'loadInvestmentProfile',
       'loadAgentConfig',
       'loadConnections',
@@ -34,26 +33,6 @@ describe('PortfolioComponent', () => {
         },
       } as ActivatedRoute['snapshot'],
     } as unknown as ActivatedRoute;
-    api.loadPortfolio.and.resolveTo({
-      asOf: '2026-08-19T12:00:00Z',
-      valuationCurrency: 'USD',
-      totalValue: '100',
-      unpricedPositionCount: 0,
-      positions: [
-        {
-          walletRef: 'opaque-wallet',
-          chain: 'near',
-          assetId: 'near',
-          symbol: 'NEAR',
-          quantity: '20',
-          priceUsd: '5',
-          valueUsd: '100',
-          allocationPercent: '100.00',
-          priceUpdatedAt: '2026-08-19T12:00:00Z',
-          balanceUpdatedAt: '2026-08-19T12:00:00Z',
-        },
-      ],
-    });
     api.loadInvestmentProfile.and.resolveTo({
       objective: 'growth',
       riskTolerance: 'balanced',
@@ -70,10 +49,9 @@ describe('PortfolioComponent', () => {
     component = new PortfolioComponent(api, events, route);
   });
 
-  it('loads portfolio, preferences, capability, and connections', async () => {
+  it('loads preferences, capability, and connections without holdings', async () => {
     await component.load();
 
-    expect(component.portfolio?.totalValue).toBe('100');
     expect(component.profile?.riskTolerance).toBe('balanced');
     expect(api.loadConnections).toHaveBeenCalledTimes(1);
     expect(component.loading).toBeFalse();

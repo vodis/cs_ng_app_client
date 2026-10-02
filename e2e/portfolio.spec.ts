@@ -4,26 +4,6 @@ import { mockJsonApi, useAuthenticatedSession } from './utils/auth-fixtures';
 test.describe('Portfolio and agent access', () => {
   test.beforeEach(async ({ page }) => {
     await useAuthenticatedSession(page);
-    await mockJsonApi(page, '/api/v1/portfolio', {
-      asOf: '2026-08-19T12:00:00Z',
-      valuationCurrency: 'USD',
-      totalValue: '1250.50',
-      unpricedPositionCount: 0,
-      positions: [
-        {
-          walletRef: 'opaque-1',
-          chain: 'near',
-          assetId: 'near',
-          symbol: 'NEAR',
-          quantity: '250.1',
-          priceUsd: '5',
-          valueUsd: '1250.50',
-          allocationPercent: '100.00',
-          priceUpdatedAt: '2026-08-19T12:00:00Z',
-          balanceUpdatedAt: '2026-08-19T12:00:00Z',
-        },
-      ],
-    });
     await mockJsonApi(page, '/api/v1/investment-profile', {
       objective: 'growth',
       riskTolerance: 'balanced',
@@ -41,7 +21,7 @@ test.describe('Portfolio and agent access', () => {
     });
   });
 
-  test('shows valued holdings and a provider-neutral connection flow', async ({
+  test('shows agent context, sessions, and a provider-neutral connection flow', async ({
     page,
   }) => {
     await page.goto('/en/portfolio');
@@ -49,8 +29,13 @@ test.describe('Portfolio and agent access', () => {
     await expect(
       page.getByRole('heading', { name: 'Your portfolio' })
     ).toBeVisible();
-    await expect(page.getByText('$1,250.50').first()).toBeVisible();
-    await expect(page.getByText('250.1 NEAR')).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Investment preferences' })
+    ).toBeVisible();
+    await expect(page.getByText('Agent context')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sessions' })).toBeVisible();
+    await expect(page.getByText('$1,250.50')).toHaveCount(0);
+    await expect(page.getByText('250.1 NEAR')).toHaveCount(0);
     await expect(page.getByText('e2e@craftscript.test')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Connect AI agent' }).click();

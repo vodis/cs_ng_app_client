@@ -109,12 +109,15 @@ Flow direction:
   explicit balances refresh — not on every session tick. The wallet address
   pill above the balance is omitted — wallet identity and token balances live
   in Manage wallets. Wallet setup is not a blocking interstitial.
+- Connected wallets on `/profile` render as a table (Wallet, Network, Status,
+  Action), not a stacked list.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
-  `/portfolio` (holdings, 2FA/passkey security controls, sessions, and
-  sign-out). The header also shows a notifications control and a wallets
-  control beside the account icon. Wallets opens the existing wallet MFE
-  drawer; notifications remains a UI placeholder until a feed is wired.
+  `/portfolio` (agent preferences, 2FA/passkey security, sessions, and
+  sign-out — balance/holdings UI removed). The header also shows a
+  notifications control and a wallets control beside the account icon. Wallets
+  opens the existing wallet MFE drawer; notifications remains a UI placeholder
+  until a feed is wired.
 
 Profile boundary rules:
 
@@ -356,7 +359,7 @@ prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 | Route              | Guard       | Purpose                                               |
 | ------------------ | ----------- | ----------------------------------------------------- |
 | `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, wallets |
-| `/portfolio`       | `AuthGuard` | Holdings, 2FA/passkey security, sessions, sign-out    |
+| `/portfolio`       | `AuthGuard` | Agent preferences, 2FA/passkey, sessions (no holdings) |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                         |
 
 ### Login methods on `/login`

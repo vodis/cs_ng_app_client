@@ -19,10 +19,6 @@
     </button>
   </header>
 
-  <p class="portfolio-page__alert portfolio-page__alert--error" *ngIf="error">
-    {{ error }}
-    <button type="button" mat-button (click)="load()">Try again</button>
-  </p>
   <p
     class="portfolio-page__alert portfolio-page__alert--error"
     *ngIf="actionError">
@@ -33,12 +29,11 @@
     <span class="portfolio-page__loading-dot"></span
     ><span class="portfolio-page__loading-dot"></span
     ><span class="portfolio-page__loading-dot"></span>
-    <p>Building your latest portfolio snapshot…</p>
+    <p>Loading your account…</p>
   </section>
 
-  <ng-container *ngIf="!loading && portfolio as snapshot">
+  <ng-container *ngIf="!loading">
     <div class="portfolio-grid">
-      <app-portfolio-holdings [snapshot]="snapshot"></app-portfolio-holdings>
       <app-portfolio-context
         [profile]="profile"
         [config]="config"
@@ -51,11 +46,10 @@
         (connectAgent)="openAgent()"
         (retryConnections)="reloadConnections()"
         (revokeAgent)="revoke($event)"></app-portfolio-context>
+      <app-portfolio-security></app-portfolio-security>
+      <app-account-sessions></app-account-sessions>
     </div>
   </ng-container>
-
-  <app-portfolio-security></app-portfolio-security>
-  <app-account-sessions></app-account-sessions>
 </main>
 
 <app-side-modal [isOpen]="profileOpen" (closeModal)="profileOpen = false">
