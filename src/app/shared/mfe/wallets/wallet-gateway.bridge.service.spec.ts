@@ -1,7 +1,7 @@
 import { AppLoggerService } from '@core/logging/app-logger.service';
 import { fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { IDLE_WALLET_BALANCES_SNAPSHOT } from '@mfe-contracts/wallet-balances.types';
-import type { SwapReviewIntent } from '@mfe-contracts/swap-review.types';
+import type { WalletSwapReview } from '@mfe-contracts/swap-review.types';
 import {
   WalletConnectionSnapshot,
   WalletsMfeMountApi,
@@ -142,7 +142,8 @@ describe('WalletGatewayBridgeService', () => {
   });
 
   it('opens and closes swap review through the mounted wallet MFE', () => {
-    mountApi.openSwapReview = jasmine.createSpy('openSwapReview');
+    mountApi.swapContractVersion = '2.0.0';
+    mountApi.openWalletSwapReview = jasmine.createSpy('openWalletSwapReview');
     mountApi.closeSwapReview = jasmine.createSpy('closeSwapReview');
     service.registerMountApi(mountApi);
     const intent = swapReviewIntent();
@@ -150,8 +151,32 @@ describe('WalletGatewayBridgeService', () => {
     service.openSwapReview(intent);
     service.closeSwapReview();
 
-    expect(mountApi.openSwapReview).toHaveBeenCalledOnceWith(intent);
+    expect(mountApi.openWalletSwapReview).toHaveBeenCalledOnceWith(intent);
     expect(mountApi.closeSwapReview).toHaveBeenCalledTimes(1);
+  });
+
+  it('delegates product choices and cancellation to the v2 remote', async () => {
+    mountApi.swapContractVersion = '2.0.0';
+    mountApi.requestSwapQuote = jasmine
+      .createSpy('requestSwapQuote')
+      .and.resolveTo({ amountOut: '1' });
+    service.registerMountApi(mountApi);
+    const input = swapReviewIntent().input;
+    const options = { traceId: 'quote', signal: new AbortController().signal };
+    await service.requestSwapQuote(input, options);
+    expect(mountApi.requestSwapQuote).toHaveBeenCalledOnceWith(input, options);
+  });
+
+  it('rejects quote requests with an old remote instead of preparing them in the host', async () => {
+    service.registerMountApi(mountApi);
+    await expectAsync(
+      service.requestSwapQuote(swapReviewIntent().input, {
+        traceId: 'quote',
+        signal: new AbortController().signal,
+      })
+    ).toBeRejectedWith(
+      jasmine.objectContaining({ code: 'GATEWAY_UNAVAILABLE' })
+    );
   });
 
   it('reports the wallet MFE busy state as execution in progress', () => {
@@ -181,7 +206,7 @@ describe('WalletGatewayBridgeService', () => {
     expect(thrown).toEqual(
       jasmine.objectContaining({
         code: 'GATEWAY_UNAVAILABLE',
-        message: 'Swap review is not available in the loaded wallet remote',
+        message: 'Update the wallet remote to review this swap.',
         retryable: true,
       })
     );
@@ -389,38 +414,37 @@ function nearDepositRequest() {
   };
 }
 
-function swapReviewIntent(): SwapReviewIntent {
+function swapReviewIntent(): WalletSwapReview {
   return {
-    contractVersion: '1.0.0',
+    contractVersion: '2.0.0',
     traceId: 'trace-review',
-    source: {
-      assetId: 'near:native',
-      executionAssetId: 'nep141:wrap.near',
-      symbol: 'NEAR',
-      name: 'NEAR Protocol',
-      decimals: 24,
-      amountAtomic: '1000000000000000000000000',
-      amountDisplay: '1',
+    input: {
+      source: {
+        assetId: 'near:native',
+        executionAssetId: 'nep141:wrap.near',
+        symbol: 'NEAR',
+        name: 'NEAR',
+        decimals: 24,
+      },
+      destination: {
+        assetId: 'nep141:usdc.near',
+        executionAssetId: 'nep141:usdc.near',
+        symbol: 'USDC',
+        name: 'USDC',
+        decimals: 6,
+      },
+      amount: '1000000000000000000000000',
+      account: 'alice.near',
+      recipient: 'alice.near',
+      network: { id: 'near:mainnet', label: 'NEAR' },
+      slippageToleranceBps: 35,
+      confidential: false,
     },
-    destination: {
-      assetId: 'nep141:usdc.near',
-      executionAssetId: 'nep141:usdc.near',
-      symbol: 'USDC',
-      name: 'USD Coin',
-      decimals: 6,
-    },
+    sourceDisplay: { amountDisplay: '1' },
     preview: {
       amountOutAtomic: '1000000',
       amountOutDisplay: '1',
       expiresAt: '2099-01-01T00:00:00.000Z',
     },
-    signer: { account: 'alice.near', chainType: 'near' },
-    network: { id: 'near:mainnet', label: 'NEAR' },
-    recipient: 'alice.near',
-    recipientType: 'DESTINATION_CHAIN',
-    depositType: 'ORIGIN_CHAIN',
-    refundType: 'ORIGIN_CHAIN',
-    authMethod: 'near',
-    slippageToleranceBps: 35,
   };
 }

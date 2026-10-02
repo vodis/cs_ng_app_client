@@ -1,3 +1,4 @@
+import type { WalletSwapQuote } from '@mfe-contracts/swap-review.types';
 import type { NearIntentsSwapPrepareRequest } from '@mfe-contracts/intent-prepare.contract';
 import type { ApiErrorEnvelope } from '@mfe-contracts/api-envelope';
 
@@ -11,14 +12,7 @@ export type SwapFlowState =
   | 'completed'
   | 'failed';
 
-export type SwapQuotePreview = {
-  amountOut: string;
-  amountOutAtomic: string;
-  expiresAt: string;
-  traceId?: string;
-  quoteReference?: string;
-  raw: Record<string, unknown>;
-};
+export type SwapQuotePreview = WalletSwapQuote;
 
 export type SwapQuoteRequest = {
   traceId: string;

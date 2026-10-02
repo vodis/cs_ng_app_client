@@ -190,29 +190,47 @@ fields and retain the signer-as-recipient behavior.
 The host exposes foreign-recipient routes only when
 `environment.crossNetworkRecipientIntentSignEnabled` is enabled. Keep it
 disabled until the deployed BFF accepts `recipient` / `recipientType` on both
-quote and prepare requests. Native NEAR sends `depositType: ORIGIN_CHAIN` and
-`refundType: ORIGIN_CHAIN`; other sources retain their Intents routing. The
-prepared execution mode must match the requested funding source. Native NEAR
-cannot use confidential mode without first funding a confidential balance.
+quote and prepare requests. Wallet-funded swaps send `depositType: ORIGIN_CHAIN`
+and `refundType: ORIGIN_CHAIN`, including NEP-141 assets. Only native NEAR deposits
+are currently executable; the MFE rejects unsupported deposit assets before
+confirmation. The prepared execution mode must match the requested funding
+source. The wallet-funded flow must not request confidential Intents custody
+for a wallet balance.
 
 Host files:
 
 - `src/app/mfe-contracts/intent-prepare.contract.ts`
 - `src/app/mfe-contracts/gateway-events.ts`
-- `src/app/domains/exchange/application/swap-execution.workflow.ts`
+- `src/app/domains/exchange/application/swap-quote.gateway.ts`
 - `src/app/shared/mfe/wallets/wallet-gateway.bridge.service.ts`
 
 Wallet MFE must expose `sendGatewayEvent` on `WalletsMfeMountApi`. Intent-sign
 execution completes through `onIntentSigned`, after which the host publishes
 the signed package through `POST /api/v1/swaps/execute`.
 
-### Final swap review contract (2.3)
+### Wallet swap contract (2.0.0)
 
-`WalletsMfeMountApi.openSwapReview(intent)` switches the existing right-side
-drawer to the executable review surface. The host supplies canonical display
-asset ids, separate execution asset ids, exact atomic input, account/network,
-slippage, and the current dry preview. It also supplies typed transport ports
-for prepare, signing, and submission.
+The mount capability `swapContractVersion: '2.0.0'` exposes
+`requestSwapQuote(input, { traceId, signal })` and `openWalletSwapReview(review)`.
+Angular supplies product choices: backend-provided source/destination metadata,
+atomic amount, expected account/network, recipient, slippage, and privacy choice.
+It does not choose the provider, authentication method, funding/refund channels,
+or request deadline. The MFE derives these from the live wallet and uses the
+same mapping for dry previews and final preparation. Backend validation remains
+authoritative; the host supplies authenticated transport ports, including
+`quoteSwap`, and maps the existing BFF response into the quote contract.
+
+The quote includes an MFE-owned `action` with support status, label, and user
+explanation. Angular renders this guidance and disables review when unsupported.
+Quote input changes cancel the transport through `AbortSignal`; a result for a
+changed wallet is rejected by the MFE. No signing or deposit occurs on preview.
+The review input adds display values and the current preview, then opens the
+existing right-side drawer.
+
+Deploy the MFE first. The new host rejects quote/review attempts on remotes
+without v2 capability with an update message. The MFE retains legacy
+`openSwapReview(SwapReviewIntent)` for old hosts during migration; it must not
+infer Intents custody from a token identifier.
 
 The MFE calls the prepare port for the final `dry: false` package, rejects
 results whose amount/account/auth context does not match the immutable intent,
@@ -225,8 +243,8 @@ settlement tracking. It reports submission through `onSwapSubmitted` and request
 `onSwapPreviewRefreshRequested` when the executable change is outside policy.
 
 The host remains responsible for the Trade form, shared balance source, dry
-quote cancellation/versioning, and opening/closing the drawer. The MFE must not
-fetch token catalogs or dry quotes.
+quote cancellation/versioning, and opening/closing the drawer. The MFE orchestrates
+quote requests through the host transport; it does not own prices or token catalogs.
 
 The optional `isSwapReviewBusy()` mount method reports signing, submission,
 deposit, or settlement tracking. The host checks it before dismissing the swap

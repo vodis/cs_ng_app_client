@@ -24,7 +24,10 @@ import {
 import { AppLoggerService } from '@core/logging/app-logger.service';
 import type {
   SwapReviewDepositRequest,
-  SwapReviewIntent,
+  WalletSwapInput,
+  WalletSwapQuote,
+  WalletSwapQuoteOptions,
+  WalletSwapReview,
 } from '@mfe-contracts/swap-review.types';
 
 const SIGNATURE_WAIT_MS = 120_000;
@@ -295,16 +298,31 @@ export class WalletGatewayBridgeService {
     this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
   }
 
-  openSwapReview(intent: SwapReviewIntent): void {
-    const open = this.mountApi?.openSwapReview;
-    if (!open) {
+  async requestSwapQuote(
+    input: WalletSwapInput,
+    options: WalletSwapQuoteOptions
+  ): Promise<WalletSwapQuote> {
+    const api = this.mountApi;
+    if (api?.swapContractVersion !== '2.0.0' || !api.requestSwapQuote) {
       throw this.executionFailure(
         'GATEWAY_UNAVAILABLE',
-        'Swap review is not available in the loaded wallet remote',
+        'Update the wallet remote to request swap quotes.',
         true
       );
     }
-    open(intent);
+    return api.requestSwapQuote(input, options);
+  }
+
+  openSwapReview(review: WalletSwapReview): void {
+    const api = this.mountApi;
+    if (api?.swapContractVersion !== '2.0.0' || !api.openWalletSwapReview) {
+      throw this.executionFailure(
+        'GATEWAY_UNAVAILABLE',
+        'Update the wallet remote to review this swap.',
+        true
+      );
+    }
+    api.openWalletSwapReview(review);
   }
 
   closeSwapReview(): void {

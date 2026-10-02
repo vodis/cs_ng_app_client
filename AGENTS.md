@@ -99,11 +99,16 @@ Production host rules:
 
 Any contract change in wallets (routes, exposed modules, events, required inputs) must be mirrored in this host.
 
-Native NEAR swaps use `ORIGIN_CHAIN` deposits and refunds with a 1Click
+The MFE owns wallet-funded quote/prepare configuration through the v2 wallet
+swap contract. Home supplies product choices and renders MFE action guidance;
+it must not select provider, authentication, funding/refund fields, or deadlines.
+The host retains authenticated BFF transport and quote refresh/cancellation.
+Wallet-funded swaps use `ORIGIN_CHAIN` deposits and refunds with a 1Click
 `deposit_address` package. The wallet MFE sends the native NEAR transfer only
 on explicit confirmation, then tracks settlement through the BFF. Native wallet
-NEAR is not an Intents balance. Other sources retain `intent_sign`; reject any
-execution package that does not match the requested funding source.
+NEAR is not an Intents balance. Only native NEAR deposits are currently
+executable; other deposit adapters remain unsupported. Reject any execution package that does not match the
+requested funding source. Token identifiers never imply Intents custody.
 
 The canonical auth-provider runtime contract is open in
 `cs_mfe-wallets/src/contracts/auth-provider-contract.ts`. The MFE loads backend
