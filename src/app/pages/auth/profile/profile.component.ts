@@ -22,6 +22,7 @@ import {
   type ActivityHeatmapWeek,
 } from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
+import { atomicToDecimal } from '@shared/utils/amount-format.utils';
 import { isNearWalletAddress } from '@shared/utils/network.utils';
 import {
   MockProfileActivitySource,
@@ -823,14 +824,11 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private rawToDecimal(rawBalance: string, decimals: number): string {
-    if (!/^\d+$/.test(rawBalance) || decimals <= 0) {
+    try {
+      return atomicToDecimal(rawBalance, decimals);
+    } catch {
       return rawBalance;
     }
-
-    const padded = rawBalance.padStart(decimals + 1, '0');
-    const whole = padded.slice(0, -decimals);
-    const fraction = padded.slice(-decimals).replace(/0+$/, '');
-    return fraction ? `${whole}.${fraction}` : whole;
   }
 
   private capitalizeLabel(value: string | null | undefined): string {

@@ -1,4 +1,10 @@
-import { Component, DestroyRef, inject } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  ViewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
@@ -25,8 +31,11 @@ import {
 } from './home-price.utils';
 import {
   AMOUNT_DECIMAL_SEPARATOR,
+  atomicToDecimal,
+  decimalToAtomic,
   displayHasDecimalSeparator,
   formatSwapAmountDisplay,
+  isCanonicalDecimalAmount,
   normalizeAmountInputChars,
   normalizeAmountStorage as normalizeSwapAmountStorage,
   resolveAmountKeydownAction,
@@ -206,6 +215,8 @@ export class HomeComponent {
   ];
 
   public amount = '';
+  /** When set by clicking To balance, shown in the To field instead of the quote. */
+  public toAmountManual = '';
   public walletAddress = '';
   public walletChainId: number | null = null;
   public walletChainType: 'ethereum' | 'near' | 'ton' | undefined;
@@ -242,6 +253,9 @@ export class HomeComponent {
   public exchangeAssetsError = '';
   public balancesLoading = false;
   public balancesError = '';
+
+  @ViewChild('fromAmountInput')
+  private fromAmountInput?: ElementRef<HTMLInputElement>;
 
   private walletBalances: WalletBalance[] = [];
   private balanceRequestId = 0;
@@ -399,7 +413,8 @@ export class HomeComponent {
       /^\d+$/.test(preview.amountOutAtomic) &&
       !/^0+$/.test(preview.amountOutAtomic) &&
       Date.parse(preview.expiresAt) > Date.now() &&
-      !this.validateSourceBalance(input.amount)
+      !this.validateSourceBalance(input.amount) &&
+      this.destinationTargetMatchesQuote()
     );
   }
 
@@ -477,8 +492,11 @@ export class HomeComponent {
       destination: this.reviewToken(this.toToken),
       preview: {
         amountOutAtomic: preview.amountOutAtomic,
-        amountOutDisplay: this.toAmountDisplay(),
-        fiatValue: this.toFiatEstimate(),
+        amountOutDisplay: this.quotedToAmountDisplay(),
+        fiatValue: this.fiatEstimate(
+          this.toToken.symbol,
+          this.quotedToAmountDisplay()
+        ),
         expiresAt: preview.expiresAt,
         rate: this.swapRateLabel(),
         minimumReceived: `${this.formatSwapAmount(
@@ -594,6 +612,7 @@ export class HomeComponent {
     const previousFrom = this.fromToken;
     this.fromToken = this.toToken;
     this.toToken = previousFrom;
+    this.toAmountManual = '';
     this.refreshSwapQuotePreview();
     this.loadMarketComparison();
   }
@@ -683,15 +702,12 @@ export class HomeComponent {
 
   public toAmountFormatted(): string {
     const raw = this.toAmountUi();
-    if (
-      !raw.trim() ||
-      this.isZeroAmountValue(this.normalizeAmountStorage(raw))
-    ) {
+    if (!raw.trim() || this.isZeroAmountValue(raw)) {
       return '0,00';
     }
 
     return this.formatSwapAmount(
-      raw,
+      this.canonicalAmountStorage(raw),
       this.swapAmountFractionDigits(this.toToken.symbol)
     );
   }
@@ -796,6 +812,15 @@ export class HomeComponent {
   }
 
   public toAmountDisplay(): string {
+    if (this.toAmountManual.trim()) {
+      return this.toAmountManual;
+    }
+
+    return this.quotedToAmountDisplay();
+  }
+
+  /** Quote output only — never the To-balance override. */
+  public quotedToAmountDisplay(): string {
     const amount = this.rawQuoteAmount();
     if (!amount) {
       return '';
@@ -833,6 +858,30 @@ export class HomeComponent {
     }
 
     return `Balance: — ${this.tokenSymbolLabel(token)}`;
+  }
+
+  public canApplyMaxBalance(token: ExchangeToken): boolean {
+    return this.canUseBalanceAsMax(this.balanceForToken(token));
+  }
+
+  public applyMaxBalance(side: 'from' | 'to'): void {
+    if (side === 'from') {
+      this.toAmountManual = '';
+      this.fillAmountFromTokenBalance(this.fromToken);
+      return;
+    }
+
+    const toBalance = this.balanceForToken(this.toToken);
+    if (!this.canUseBalanceAsMax(toBalance)) {
+      return;
+    }
+
+    const canonical = this.balanceCanonicalDecimal(toBalance);
+    if (!canonical) {
+      return;
+    }
+
+    this.toAmountManual = canonical;
   }
 
   public swapRateLabel(): string {
@@ -1036,33 +1085,32 @@ export class HomeComponent {
     const previousAmount = this.amount;
     this.amount = sanitized;
 
-    if (!input) {
-      return;
-    }
+    if (input) {
+      const display = this.formatSwapAmount(
+        sanitized,
+        this.maxAmountFractionDigits,
+        true
+      );
 
-    const display = this.formatSwapAmount(
-      sanitized,
-      this.maxAmountFractionDigits,
-      true
-    );
+      input.value = display;
 
-    input.value = display;
-
-    if (sanitized.endsWith('.')) {
-      const commaIndex = display.lastIndexOf(AMOUNT_DECIMAL_SEPARATOR);
-      if (commaIndex !== -1) {
-        input.setSelectionRange(commaIndex + 1, commaIndex + 1);
+      if (sanitized.endsWith('.')) {
+        const commaIndex = display.lastIndexOf(AMOUNT_DECIMAL_SEPARATOR);
+        if (commaIndex !== -1) {
+          input.setSelectionRange(commaIndex + 1, commaIndex + 1);
+        }
+      } else if (previousValue !== display) {
+        this.restoreCaretAfterDigits(input, previousValue, caret, display);
       }
-    } else if (previousValue !== display) {
-      this.restoreCaretAfterDigits(input, previousValue, caret, display);
+
+      if (display.length > previousValue.length) {
+        this.scrollAmountToEnd(input);
+      }
     }
 
     if (sanitized !== previousAmount) {
+      this.toAmountManual = '';
       this.refreshSwapQuotePreview();
-    }
-
-    if (display.length > previousValue.length) {
-      this.scrollAmountToEnd(input);
     }
   }
 
@@ -1211,13 +1259,37 @@ export class HomeComponent {
   }
 
   private isZeroAmountValue(value: string): boolean {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '.') {
+      return true;
+    }
+
+    if (isCanonicalDecimalAmount(trimmed)) {
+      const [whole, fraction = ''] = trimmed.split('.');
+      return /^0*$/.test(whole) && /^0*$/.test(fraction);
+    }
+
     const normalized = this.normalizeAmountStorage(value);
     if (!normalized || normalized === '.') {
       return true;
     }
 
+    if (isCanonicalDecimalAmount(normalized)) {
+      const [whole, fraction = ''] = normalized.split('.');
+      return /^0*$/.test(whole) && /^0*$/.test(fraction);
+    }
+
     const parsed = Number.parseFloat(normalized);
     return !Number.isNaN(parsed) && parsed === 0;
+  }
+
+  private canonicalAmountStorage(value: string): string {
+    const trimmed = value.trim();
+    if (isCanonicalDecimalAmount(trimmed)) {
+      return trimmed;
+    }
+
+    return this.normalizeAmountStorage(trimmed);
   }
 
   public openTokenSelector(side: TokenSelectorSide): void {
@@ -1237,6 +1309,7 @@ export class HomeComponent {
       this.fromToken = selected;
     } else if (this.tokenSelectorSide === 'to') {
       this.toToken = selected;
+      this.toAmountManual = '';
       this.recipientAddress = '';
     }
 
@@ -1448,17 +1521,25 @@ export class HomeComponent {
             this.pickDefaultFromToken()
           ) ?? tokens[0]
         );
-        this.toToken = this.enrichToken(
+        const nextToToken = this.enrichToken(
           this.resolveSelectedToken(previousTo, this.pickDefaultToToken()) ??
             tokens[Math.min(1, tokens.length - 1)]
         );
+        if (nextToToken.assetId !== this.toToken.assetId) {
+          this.toAmountManual = '';
+        }
+        this.toToken = nextToToken;
 
         this.alignSelectionsToWallet();
 
         if (this.fromToken.assetId === this.toToken.assetId) {
-          this.toToken =
+          const fallbackTo =
             tokens.find(token => token.assetId !== this.fromToken.assetId) ??
             this.toToken;
+          if (fallbackTo.assetId !== this.toToken.assetId) {
+            this.toAmountManual = '';
+          }
+          this.toToken = fallbackTo;
         }
 
         this.loadMarketComparison();
@@ -1583,13 +1664,108 @@ export class HomeComponent {
     );
   }
 
+  private canUseBalanceAsMax(
+    balance: WalletBalance | undefined
+  ): balance is WalletBalance {
+    if (!balance || !this.isBalanceUsable(balance)) {
+      return false;
+    }
+
+    try {
+      return BigInt(balance.balanceRaw) > 0n;
+    } catch {
+      return false;
+    }
+  }
+
+  private destinationTargetMatchesQuote(): boolean {
+    const target = this.toAmountManual.trim();
+    if (!target) {
+      return true;
+    }
+
+    const quoted = this.quotedToAmountDisplay().trim();
+    if (!quoted) {
+      return false;
+    }
+
+    const targetAtomic = this.toBaseUnits(target, this.toToken.decimals);
+    const quotedAtomic = this.toBaseUnits(quoted, this.toToken.decimals);
+
+    return Boolean(
+      targetAtomic &&
+      quotedAtomic &&
+      !/^0+$/.test(targetAtomic) &&
+      targetAtomic === quotedAtomic
+    );
+  }
+
+  private balanceCanonicalDecimal(
+    balance: WalletBalance | undefined
+  ): string | undefined {
+    if (!balance) {
+      return undefined;
+    }
+
+    const decimals = this.tokenDecimals(balance.decimals);
+    const raw = balance.balanceRaw?.trim();
+    if (raw && /^\d+$/.test(raw)) {
+      try {
+        return atomicToDecimal(raw, decimals);
+      } catch {
+        return undefined;
+      }
+    }
+
+    const decimal = balance.balanceDecimal?.trim();
+    if (!decimal) {
+      return undefined;
+    }
+
+    try {
+      return atomicToDecimal(decimalToAtomic(decimal, decimals), decimals);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private fillAmountFromTokenBalance(token: ExchangeToken): void {
+    const balance = this.balanceForToken(token);
+    if (!this.canUseBalanceAsMax(balance)) {
+      return;
+    }
+
+    const canonical = this.balanceCanonicalDecimal(balance);
+    if (!canonical) {
+      return;
+    }
+
+    this.fillAmountValue(canonical);
+  }
+
+  private fillAmountValue(value: string): void {
+    const previousAmount = this.amount;
+    this.amount = value;
+
+    const input = this.fromAmountInput?.nativeElement;
+    if (input) {
+      input.value = this.formatSwapAmount(
+        value,
+        this.maxAmountFractionDigits,
+        true
+      );
+      this.scrollAmountToEnd(input);
+    }
+
+    if (value !== previousAmount) {
+      this.toAmountManual = '';
+      this.refreshSwapQuotePreview();
+    }
+  }
+
   private formatBalance(balance: WalletBalance): string {
     const decimal =
-      balance.balanceDecimal ??
-      this.fromBaseUnits(
-        balance.balanceRaw,
-        this.tokenDecimals(balance.decimals)
-      );
+      this.balanceCanonicalDecimal(balance) ?? balance.balanceDecimal ?? '0';
 
     return this.formatSwapAmount(
       decimal,
@@ -1685,7 +1861,7 @@ export class HomeComponent {
       this.toToken.blockchain !== blockchain ||
       this.toToken.assetId === this.fromToken.assetId
     ) {
-      this.toToken =
+      const nextToToken =
         this.exchangeTokens.find(
           token =>
             token.blockchain === blockchain &&
@@ -1699,6 +1875,10 @@ export class HomeComponent {
             token.assetId !== this.fromToken.assetId
         ) ??
         this.toToken;
+      if (nextToToken.assetId !== this.toToken.assetId) {
+        this.toAmountManual = '';
+      }
+      this.toToken = nextToToken;
     }
   }
 
@@ -2148,7 +2328,25 @@ export class HomeComponent {
   }
 
   private normalizeQuoteAmount(rawAmount: string, decimals?: number): string {
-    const normalized = this.normalizeAmountStorage(rawAmount);
+    const trimmed = rawAmount.trim();
+    if (!trimmed) {
+      return '';
+    }
+
+    // Quote payloads often send atomic integers without a decimal point.
+    if (/^\d+$/.test(trimmed)) {
+      try {
+        return atomicToDecimal(trimmed, this.tokenDecimals(decimals));
+      } catch {
+        return '';
+      }
+    }
+
+    if (isCanonicalDecimalAmount(trimmed)) {
+      return trimmed;
+    }
+
+    const normalized = this.normalizeAmountStorage(trimmed);
     if (!normalized) {
       return '';
     }
@@ -2157,44 +2355,33 @@ export class HomeComponent {
       return normalized;
     }
 
-    return this.fromBaseUnits(normalized, this.tokenDecimals(decimals));
+    try {
+      return atomicToDecimal(normalized, this.tokenDecimals(decimals));
+    } catch {
+      return '';
+    }
   }
 
   private toBaseUnits(value: string, decimals?: number): string {
-    const normalized = this.normalizeAmountStorage(value);
     const precision = this.tokenDecimals(decimals);
-    const decimalPattern = new RegExp(`^\\d+(\\.\\d{0,${precision}})?$`);
-
-    if (!decimalPattern.test(normalized)) {
+    const canonical = this.canonicalAmountStorage(value);
+    if (!canonical || canonical === '.') {
       return '';
     }
 
-    const [whole, fraction = ''] = normalized.split('.');
-    const digits = `${whole}${fraction.padEnd(precision, '0')}`.replace(
-      /^0+(?=\d)/,
-      ''
-    );
-    return digits || '0';
+    try {
+      return decimalToAtomic(canonical, precision);
+    } catch {
+      return '';
+    }
   }
 
   private fromBaseUnits(value: string, decimals: number): string {
-    const digits = value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
-    if (!digits) {
+    try {
+      return atomicToDecimal(value, decimals);
+    } catch {
       return '0';
     }
-
-    if (decimals <= 0) {
-      return digits;
-    }
-
-    if (digits.length <= decimals) {
-      const padded = digits.padStart(decimals, '0');
-      return `0.${padded}`.replace(/\.?0+$/, '') || '0';
-    }
-
-    const whole = digits.slice(0, digits.length - decimals);
-    const fraction = digits.slice(digits.length - decimals).replace(/0+$/, '');
-    return fraction ? `${whole}.${fraction}` : whole;
   }
 
   private tokenDecimals(value?: number): number {
