@@ -455,20 +455,59 @@ app-account-sessions .profile-shell {
     overflow-wrap: anywhere;
   }
 
-  &__wallets {
-    display: grid;
-    padding: 0;
-    margin: 0;
-    gap: 0.65rem;
-    list-style: none;
+  &__wallets-wrap {
+    min-width: 0;
+    overflow-x: auto;
+  }
 
-    li {
-      display: flex;
-      min-width: 0;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
+  &__wallets-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: 0.9rem 1.25rem 0.9rem 0;
+      text-align: left;
+      vertical-align: middle;
     }
+
+    th {
+      border-bottom: 1px solid rgb(255 255 255 / 10%);
+      color: var(--secondary-text-color);
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    td {
+      border-bottom: 1px solid rgb(255 255 255 / 10%);
+      color: var(--gray-30);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+    thead th {
+      padding-top: 0;
+    }
+
+    th:last-child,
+    td:last-child {
+      padding-right: 0;
+      text-align: right;
+    }
+
+    tbody tr:last-child td {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+  }
+
+  &__wallet-network {
+    color: var(--secondary-text-color);
+    font-size: 0.86rem;
+    line-height: 1.3;
+    white-space: nowrap;
   }
 
   &__wallet-main {
@@ -498,7 +537,6 @@ app-account-sessions .profile-shell {
     display: flex;
     flex-shrink: 0;
     align-items: center;
-    margin-left: auto;
     gap: 0.65rem;
   }
 
@@ -1082,18 +1120,60 @@ app-account-sessions .profile-shell {
       display: inline-block;
     }
 
-    &__wallets {
-      gap: 0.5rem;
+    &__wallets-wrap {
+      overflow: visible;
+    }
 
-      li {
-        align-items: center;
+    &__wallets-table {
+      thead {
+        display: none;
+      }
+
+      tbody {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      tr {
+        display: grid;
+        padding: 1rem 0;
+        border-bottom: 1px solid rgb(255 255 255 / 10%);
         gap: 0.75rem;
+
+        &:first-child {
+          padding-top: 0;
+        }
+
+        &:last-child {
+          padding-bottom: 0;
+          border-bottom: 0;
+        }
+      }
+
+      td {
+        display: grid;
+        padding: 0;
+        border-bottom: 0;
+        gap: 0.25rem;
+
+        &::before {
+          color: var(--secondary-text-color);
+          content: attr(data-label);
+          font-size: 0.72rem;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          text-transform: uppercase;
+        }
+
+        &:last-child {
+          text-align: left;
+        }
       }
     }
 
     &__wallet-actions,
     &__wallet-live-actions {
-      justify-content: flex-end;
+      justify-content: flex-start;
     }
 
     &__balances li {

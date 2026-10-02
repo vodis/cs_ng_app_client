@@ -345,19 +345,36 @@
 
       <div *ngIf="activeSession.wallets.length > 0">
         <h3 class="profile-shell__section-title">Connected wallets</h3>
-        <ul class="profile-shell__wallets">
-          <li *ngFor="let wallet of activeSession.wallets">
-            <div class="profile-shell__wallet-identity">
-              <img
-                *ngIf="walletChainIcon(wallet.chainType) as chainIcon"
-                class="profile-shell__chain-logo"
-                [src]="chainIcon"
-                alt="" />
-              <div class="profile-shell__wallet-main">
-                <div class="profile-shell__wallet-heading">
-                  <span class="profile-shell__wallet-address">{{
-                    shortAddress(wallet.address)
+        <div class="profile-shell__wallets-wrap">
+          <table class="profile-shell__wallets-table">
+            <thead>
+              <tr>
+                <th scope="col">Wallet</th>
+                <th scope="col">Network</th>
+                <th scope="col">Status</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let wallet of activeSession.wallets">
+                <td data-label="Wallet">
+                  <div class="profile-shell__wallet-identity">
+                    <img
+                      *ngIf="walletChainIcon(wallet.chainType) as chainIcon"
+                      class="profile-shell__chain-logo"
+                      [src]="chainIcon"
+                      alt="" />
+                    <span class="profile-shell__wallet-address">{{
+                      shortAddress(wallet.address)
+                    }}</span>
+                  </div>
+                </td>
+                <td data-label="Network">
+                  <span class="profile-shell__wallet-network">{{
+                    walletMeta(wallet)
                   }}</span>
+                </td>
+                <td data-label="Status">
                   <div class="profile-shell__wallet-status">
                     <span
                       class="profile-shell__wallet-badge"
@@ -366,36 +383,37 @@
                     >
                     <span
                       class="profile-shell__wallet-locked"
-                      *ngIf="isEmbeddedWallet(wallet)"
+                      *ngIf="isEmbeddedWallet(wallet) && !wallet.isPrimary"
                       >Linked</span
                     >
                   </div>
-                </div>
-                <small>{{ walletMeta(wallet) }}</small>
-              </div>
-            </div>
-            <div
-              class="profile-shell__wallet-actions"
-              *ngIf="!wallet.isPrimary || canRemoveLinkedWallet(wallet)">
-              <button
-                type="button"
-                mat-button
-                *ngIf="!wallet.isPrimary"
-                [disabled]="busyWalletId === wallet.id"
-                (click)="setPrimaryWallet(wallet)">
-                Make active
-              </button>
-              <button
-                type="button"
-                mat-button
-                *ngIf="canRemoveLinkedWallet(wallet)"
-                [disabled]="busyWalletId === wallet.id"
-                (click)="deleteWallet(wallet)">
-                Remove
-              </button>
-            </div>
-          </li>
-        </ul>
+                </td>
+                <td data-label="Action">
+                  <div
+                    class="profile-shell__wallet-actions"
+                    *ngIf="!wallet.isPrimary || canRemoveLinkedWallet(wallet)">
+                    <button
+                      type="button"
+                      mat-button
+                      *ngIf="!wallet.isPrimary"
+                      [disabled]="busyWalletId === wallet.id"
+                      (click)="setPrimaryWallet(wallet)">
+                      Make active
+                    </button>
+                    <button
+                      type="button"
+                      mat-button
+                      *ngIf="canRemoveLinkedWallet(wallet)"
+                      [disabled]="busyWalletId === wallet.id"
+                      (click)="deleteWallet(wallet)">
+                      Remove
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
