@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import {
@@ -53,6 +54,7 @@ export type ConnectedWalletBalancesState = {
   network: string;
   rows: WalletBalance[];
   errorMessage?: string;
+  sessionExpired?: boolean;
 };
 
 export type ConnectedWalletBalancesRequest = {
@@ -147,12 +149,15 @@ export class ConnectedWalletBalancesFacade {
             : undefined,
         };
       }),
-      catchError(() =>
+      catchError((error: unknown) =>
         of({
           status: 'error' as const,
           account,
           network: request.network,
           rows: [],
+          sessionExpired:
+            (error instanceof HttpErrorResponse && error.status === 401) ||
+            (error instanceof Error && error.message === 'No active session'),
           errorMessage: 'Failed to load balances.',
         })
       ),

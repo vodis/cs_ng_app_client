@@ -379,7 +379,11 @@
                     <span
                       class="profile-shell__wallet-badge"
                       *ngIf="wallet.isPrimary"
-                      >Active</span
+                      >Active{{
+                        activeWalletId === wallet.id && isLiveConnected()
+                          ? ' · Connected'
+                          : ' · Reconnect required'
+                      }}</span
                     >
                     <span
                       class="profile-shell__wallet-locked"
@@ -396,7 +400,7 @@
                       type="button"
                       mat-button
                       *ngIf="!wallet.isPrimary"
-                      [disabled]="busyWalletId === wallet.id"
+                      [disabled]="!!busyWalletId"
                       (click)="setPrimaryWallet(wallet)">
                       Make active
                     </button>
@@ -404,7 +408,7 @@
                       type="button"
                       mat-button
                       *ngIf="canRemoveLinkedWallet(wallet)"
-                      [disabled]="busyWalletId === wallet.id"
+                      [disabled]="!!busyWalletId"
                       (click)="deleteWallet(wallet)">
                       Remove
                     </button>
@@ -434,8 +438,13 @@
       <div
         class="profile-shell__empty"
         *ngIf="!balancesLoading && balances.length === 0">
-        No cached balances yet.
+        {{ balanceStateMessage }}
       </div>
+      <p
+        class="profile-shell__error"
+        *ngIf="!balancesLoading && balances.length > 0 && balanceStateMessage">
+        {{ balanceStateMessage }}
+      </p>
       <ul
         class="profile-shell__balances"
         *ngIf="!balancesLoading && balances.length > 0">
@@ -456,9 +465,7 @@
   <p class="profile-shell__message" *ngIf="walletMessage">
     {{ walletMessage }}
   </p>
-  <p class="profile-shell__message" *ngIf="balanceMessage">
-    {{ balanceMessage }}
-  </p>
+
   <p class="profile-shell__message" *ngIf="passkeyMessage">
     {{ passkeyMessage }}
   </p>

@@ -20,7 +20,10 @@
       [isOpen]="isOpenWalletConnectMenu"
       (closeRequested)="handleCloseWalletMenu()">
       @if (
-        isGatewayConnected && !needsNearWalletLink && drawerMode === 'wallet'
+        isOpenWalletConnectMenu &&
+        isGatewayConnected &&
+        !needsNearWalletLink &&
+        drawerMode === 'wallet'
       ) {
         <app-connected-wallet-board />
       }

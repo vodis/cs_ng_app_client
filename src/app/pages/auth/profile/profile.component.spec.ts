@@ -1,9 +1,14 @@
+import type { SwapSettlementResult } from '@mfe-contracts/swap-review.types';
+import {
+  ActiveWalletFacade,
+  type ActiveWalletState,
+} from '@domains/wallet/application/active-wallet.facade';
 /// <reference types="jasmine" />
 
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, Subject, combineLatest, map, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
-import type { AuthSession } from '@core/auth/auth-session.types';
+import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
@@ -17,7 +22,9 @@ import { ProfileFacade } from './profile.facade';
 import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
 
 describe('ProfileComponent', () => {
+  let activeWallet: jasmine.SpyObj<ActiveWalletFacade>;
   let component: ProfileComponent;
+  let settlementSubject: Subject<SwapSettlementResult>;
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let walletsService: jasmine.SpyObj<WalletsService>;
   let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
@@ -84,6 +91,7 @@ describe('ProfileComponent', () => {
   };
 
   beforeEach(() => {
+    settlementSubject = new Subject<SwapSettlementResult>();
     sessionSubject = new BehaviorSubject<AuthSession | null>(disabledSession);
     accountSubject = new BehaviorSubject<
       { account: string; chainId: number | null } | undefined
@@ -122,6 +130,7 @@ describe('ProfileComponent', () => {
         account: accountSubject,
         lastConnected: lastConnectedSubject,
         swapSubmitted: swapSubmittedSubject,
+        swapSettled: settlementSubject,
       }
     );
     walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
@@ -158,13 +167,53 @@ describe('ProfileComponent', () => {
       positions: [],
     });
 
+    activeWallet = jasmine.createSpyObj<ActiveWalletFacade>(
+      'ActiveWalletFacade',
+      ['refreshBalances', 'requestConnection'],
+      {
+        state: {
+          wallet: linkedWalletSession.wallets[0],
+          connected: false,
+          canSign: false,
+          reason: 'Reconnect',
+        },
+        state$: combineLatest([sessionSubject, accountSubject]).pipe(
+          map(
+            ([session, account]): ActiveWalletState => ({
+              session: session ?? undefined,
+              wallet:
+                session?.wallets.find(wallet => wallet.isPrimary) ??
+                session?.wallets[0],
+              connected: Boolean(account),
+              canSign: Boolean(account),
+              reason: '',
+              snapshot: account
+                ? {
+                    ...account,
+                    status: 'connected',
+                    isVerified: true,
+                    safetyStatus: 'safe',
+                    isBypassed: false,
+                    executionState: 'operating.idle',
+                  }
+                : undefined,
+            })
+          )
+        ),
+        balances$: of({ status: 'idle', rows: [], account: '', network: '' }),
+      }
+    );
+    activeWallet.requestConnection.and.callFake(() =>
+      walletsService.requestOpen()
+    );
     const profile = new ProfileFacade(
       authSession,
       walletsService,
       walletGatewayBridge,
       router,
       localizedRouting,
-      portfolioApi
+      portfolioApi,
+      activeWallet
     );
     component = new ProfileComponent(profile, new MockProfileActivitySource());
     component.ngOnInit();
@@ -470,9 +519,9 @@ describe('ProfileComponent', () => {
     await Promise.resolve();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
 
-    swapSubmittedSubject.next({
+    settlementSubject.next({
       traceId: 'trace-1',
-      intentHash: 'intent-1',
+      status: 'SUCCESS',
     });
     await Promise.resolve();
 
@@ -594,7 +643,7 @@ describe('ProfileComponent', () => {
     expect(component.walletMessage).toBe('Wallet disconnected');
   });
 
-  it('shows a last-connected section after disconnect when wallet is not linked', () => {
+  it('ignores browser history for wallets absent from the authenticated account', () => {
     lastConnectedSubject.next({
       account: linkedWalletSession.wallets[0].address,
       chainId: null,
@@ -603,10 +652,8 @@ describe('ProfileComponent', () => {
       connectorId: 'privy',
     });
 
-    expect(component.showLastConnectedSection()).toBeTrue();
-    expect(
-      component.isEmbeddedWallet(component.resolveLastConnectedWallet())
-    ).toBeTrue();
+    expect(component.showLastConnectedSection()).toBeFalse();
+
     expect(
       component.canRemoveLinkedWallet(linkedWalletSession.wallets[0])
     ).toBeFalse();
@@ -695,6 +742,7 @@ describe('ProfileComponent', () => {
   });
 
   it('reconnects by syncing without opening the wallets MFE', async () => {
+    activeWallet.state.connected = true;
     await component.reconnectWallet();
 
     expect(walletGatewayBridge.syncConnectedWallet).toHaveBeenCalledTimes(1);
@@ -739,6 +787,24 @@ describe('ProfileComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalledTimes(1);
   });
 
+  it('blocks competing wallet mutations until activation finishes', async () => {
+    let finish: ((wallet: BackendWallet) => void) | undefined;
+    authSession.setPrimaryWallet.and.returnValue(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const wallet = { ...externalWalletSession.wallets[0], isPrimary: false };
+    const pending = component.setPrimaryWallet(wallet);
+    await component.setPrimaryWallet({ ...wallet, id: 'other' });
+    await component.deleteWallet(wallet);
+    expect(authSession.setPrimaryWallet).toHaveBeenCalledTimes(1);
+    expect(authSession.deleteWallet).not.toHaveBeenCalled();
+    finish?.(wallet);
+    await pending;
+    expect(component.busyWalletId).toBe('');
+  });
+
   it('blocks removing embedded wallets', async () => {
     sessionSubject.next(linkedWalletSession);
 
@@ -748,19 +814,16 @@ describe('ProfileComponent', () => {
     expect(component.error).toContain('cannot be removed');
   });
 
-  it('seeds last connected from primary linked wallet', () => {
+  it('resolves the backend primary wallet without rewriting browser history', () => {
     sessionSubject.next(linkedWalletSession);
-
-    expect(walletsService.rememberConnectedWallet).toHaveBeenCalledWith(
-      jasmine.objectContaining({
-        account: linkedWalletSession.wallets[0].address,
-        walletType: 'embedded',
-      })
+    expect(walletsService.rememberConnectedWallet).not.toHaveBeenCalled();
+    expect(component.resolveLastConnectedWallet()?.account).toBe(
+      linkedWalletSession.wallets[0].address
     );
     expect(component.showLastConnectedSection()).toBeTrue();
   });
 
-  it('shows empty connect section only when there is no wallet history', () => {
+  it('shows connect when browser history does not belong to the account', () => {
     expect(component.showEmptyConnectSection()).toBeTrue();
 
     lastConnectedSubject.next({
@@ -769,7 +832,7 @@ describe('ProfileComponent', () => {
       walletType: 'embedded',
     });
 
-    expect(component.showEmptyConnectSection()).toBeFalse();
+    expect(component.showEmptyConnectSection()).toBeTrue();
   });
 
   it('treats a live account as connected', () => {

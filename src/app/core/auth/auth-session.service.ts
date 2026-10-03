@@ -38,7 +38,10 @@ export class AuthSessionService {
     null
   );
   private readonly loadingSubject = new BehaviorSubject<boolean>(false);
-  private accessToken: string | null = null;
+  private sessionRevision = 0;
+  private walletRequestVersion = 0;
+  private primaryRequestVersion = 0;
+  private primaryPending = false;
 
   readonly session$ = this.sessionSubject.asObservable();
   readonly loading$ = this.loadingSubject.asObservable();
@@ -81,10 +84,17 @@ export class AuthSessionService {
   async refresh(options?: {
     clearOnFailure?: boolean;
   }): Promise<AuthSession | null> {
+    const revision = this.sessionRevision;
+    const walletVersion = this.walletRequestVersion;
     const clearOnFailure = options?.clearOnFailure !== false;
     const token = await this.currentAccessToken();
     if (!token) {
-      if (clearOnFailure) {
+      if (
+        clearOnFailure &&
+        revision === this.sessionRevision &&
+        walletVersion === this.walletRequestVersion &&
+        !this.primaryPending
+      ) {
         this.sessionSubject.next(null);
       }
       return null;
@@ -105,11 +115,22 @@ export class AuthSessionService {
           )
         ),
       ]);
+      if (
+        revision !== this.sessionRevision ||
+        walletVersion !== this.walletRequestVersion ||
+        this.primaryPending
+      )
+        return this.session;
       const session = { user: me.user, wallets: wallets.wallets };
       this.sessionSubject.next(session);
       return session;
     } catch {
-      if (clearOnFailure) {
+      if (
+        clearOnFailure &&
+        revision === this.sessionRevision &&
+        walletVersion === this.walletRequestVersion &&
+        !this.primaryPending
+      ) {
         this.sessionSubject.next(null);
       }
       return null;
@@ -129,7 +150,7 @@ export class AuthSessionService {
       if (!token) {
         throw new Error('Account provider access token is unavailable');
       }
-      this.accessToken = token;
+      this.sessionRevision++;
       this.sessionSubject.next(session);
       this.productEvents.record({
         eventName: 'auth.login',
@@ -165,7 +186,7 @@ export class AuthSessionService {
       if (!token) {
         throw new Error('Account provider access token is unavailable');
       }
-      this.accessToken = token;
+      this.sessionRevision++;
       this.sessionSubject.next(session);
       return session;
     } finally {
@@ -181,7 +202,7 @@ export class AuthSessionService {
       if (!token) {
         throw new Error('Account provider access token is unavailable');
       }
-      this.accessToken = token;
+      this.sessionRevision++;
       this.sessionSubject.next(session);
       return session;
     } finally {
@@ -229,6 +250,8 @@ export class AuthSessionService {
   }
 
   async reloadWallets(): Promise<BackendWallet[]> {
+    const revision = this.sessionRevision;
+    const requestVersion = ++this.walletRequestVersion;
     const token = await this.currentAccessToken();
     if (!token) {
       throw new Error('No active session');
@@ -242,25 +265,50 @@ export class AuthSessionService {
         }
       )
     );
-    this.updateWallets(response.wallets);
+    if (
+      revision === this.sessionRevision &&
+      requestVersion === this.walletRequestVersion &&
+      !this.primaryPending
+    ) {
+      this.updateWallets(response.wallets);
+    }
     return response.wallets;
   }
 
   async setPrimaryWallet(walletId: string): Promise<BackendWallet> {
-    const token = await this.currentAccessToken();
-    if (!token) {
-      throw new Error('No active session');
+    const revision = this.sessionRevision;
+    const requestVersion = ++this.primaryRequestVersion;
+    ++this.walletRequestVersion;
+    this.primaryPending = true;
+    try {
+      const token = await this.currentAccessToken();
+      if (!token) throw new Error('No active session');
+      const response = await firstValueFrom(
+        this.httpClient.patch<WalletResponse>(
+          `${environment.apiUrl}/api/v1/wallets/${walletId}/primary`,
+          {},
+          { headers: this.authHeaders(token) }
+        )
+      );
+      if (
+        revision === this.sessionRevision &&
+        requestVersion === this.primaryRequestVersion
+      ) {
+        this.primaryPending = false;
+        ++this.walletRequestVersion;
+        this.updateWallets(
+          (this.session?.wallets ?? []).map(wallet => ({
+            ...wallet,
+            isPrimary: wallet.id === response.wallet.id,
+          }))
+        );
+        await this.reloadWallets();
+      }
+      return response.wallet;
+    } finally {
+      if (requestVersion === this.primaryRequestVersion)
+        this.primaryPending = false;
     }
-
-    const response = await firstValueFrom(
-      this.httpClient.patch<WalletResponse>(
-        `${environment.apiUrl}/api/v1/wallets/${walletId}/primary`,
-        {},
-        { headers: this.authHeaders(token) }
-      )
-    );
-    await this.reloadWallets();
-    return response.wallet;
   }
 
   async deleteWallet(walletId: string): Promise<void> {
@@ -299,7 +347,10 @@ export class AuthSessionService {
   }
 
   clear(): void {
-    this.accessToken = null;
+    this.sessionRevision++;
+    this.walletRequestVersion++;
+    this.primaryRequestVersion++;
+    this.primaryPending = false;
     this.sessionSubject.next(null);
   }
 
@@ -331,12 +382,11 @@ export class AuthSessionService {
   }
 
   private async currentAccessToken(): Promise<string | null> {
-    if (this.accessToken) {
-      return this.accessToken;
-    }
+    const revision = this.sessionRevision;
     const token = await this.authProvider.getAccessToken().catch(() => null);
-    this.accessToken = token ?? null;
-    return this.accessToken;
+    if (revision !== this.sessionRevision) return null;
+    if (!token) this.clear();
+    return token ?? null;
   }
 
   private authHeaders(token: string): HttpHeaders {
