@@ -226,7 +226,7 @@
             (change)="setConfidentialSwap(confidentialToggle.checked)" />
           <span>Confidential swap</span>
         </label>
-        @if (fundingSourceError(); as fundingError) {
+        @if (reviewBlockingReason(); as fundingError) {
           <p class="exchange-error" role="alert">{{ fundingError }}</p>
         }
 

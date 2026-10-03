@@ -1,3 +1,4 @@
+import type { WalletConnectionSnapshot } from '../../src/app/mfe-contracts/wallet-mfe.types';
 import type { Page, Route } from '@playwright/test';
 
 import { resolveWalletRemoteEntryUrl } from '../../src/app/mfe-contracts/wallet-remote-entrypoints';
@@ -39,6 +40,7 @@ export type E2eAuthenticatedSession = {
   user: E2eAuthUser;
   wallets: E2eAuthWallet[];
   accessToken: string;
+  connection?: WalletConnectionSnapshot;
 };
 
 const DEFAULT_AUTHENTICATED_SESSION: E2eAuthenticatedSession = {
@@ -171,15 +173,17 @@ const snapshot = {
   embeddedWalletEnabled: true
 };
 const session = ${serializedSession};
-const walletSnapshot = {
-  status: 'disconnected',
-  account: null,
-  chainId: null,
-  isVerified: false,
-  safetyStatus: null,
-  isBypassed: false,
-  executionState: 'operating.idle'
-};
+const walletSnapshot = ${JSON.stringify(
+    session?.connection ?? {
+      status: 'disconnected',
+      account: null,
+      chainId: null,
+      isVerified: false,
+      safetyStatus: null,
+      isBypassed: false,
+      executionState: 'operating.idle',
+    }
+  )};
 const modules = {
   'auth-provider': {
     mountAuthProvider: function () {
