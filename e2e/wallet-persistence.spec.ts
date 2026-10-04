@@ -72,6 +72,12 @@ test.describe('active-wallet persistence with the real gateway', () => {
             available: true, getPairingPrompt: () => null,
             subscribeToPairingPrompt: () => () => {}, cancelPairingPrompt: () => {},
             connect: async () => {
+              if (sessionStorage.getItem('test.defer-connect')) {
+                await new Promise(resolve => {
+                  window.addEventListener('test.release-connect', resolve, { once: true });
+                  window.dispatchEvent(new Event('test.connect-started'));
+                });
+              }
               const mode = sessionStorage.getItem('test.reconnect-success') ? 'connected' : '${mode}';
               if (mode === 'rejected') throw new Error('Connection cancelled');
               const address = mode === 'wrong' ? 'other.near' : 'active.near';
@@ -186,6 +192,83 @@ test.describe('active-wallet persistence with the real gateway', () => {
       expect(writes).toEqual([]);
       expect(browserErrors).toEqual([]);
       if (providerDelay === 0 && mode === 'connected') {
+        const cancellationResults = await page.evaluate(async url => {
+          const remote: {
+            mount: (
+              container: HTMLElement,
+              props: { context: WalletsMfeContext }
+            ) => WalletsMfeMountApi;
+          } = await import(url);
+          const container = document.createElement('div');
+          document.body.appendChild(container);
+          const api = remote.mount(container, {
+            context: {
+              selection: {
+                status: 'authenticated',
+                userId: 'user',
+                wallet: {
+                  id: 'near',
+                  address: 'active.near',
+                  chainType: 'near',
+                  walletType: 'external',
+                  source: 'near',
+                },
+              },
+            },
+          });
+          const results: string[] = [];
+          try {
+            const sync = api.syncConnectedWallet;
+            if (!sync) throw new Error('Reconnect API unavailable');
+            for (const type of ['RESET', 'ABORT'] as const) {
+              sessionStorage.setItem('test.defer-connect', '1');
+              let started = false;
+              const onStarted = () => {
+                started = true;
+              };
+              window.addEventListener('test.connect-started', onStarted);
+              let pending: Promise<string> = Promise.resolve('not started');
+              for (let attempt = 0; attempt < 50 && !started; attempt++) {
+                pending = sync().then(
+                  () => 'connected',
+                  error => error.message
+                );
+                await new Promise(resolve => setTimeout(resolve, 20));
+              }
+              window.removeEventListener('test.connect-started', onStarted);
+              if (!started) throw new Error('Reconnect did not start');
+              api.sendGatewayEvent({ type });
+              results.push(
+                await Promise.race([
+                  pending,
+                  new Promise<string>(resolve =>
+                    setTimeout(() => resolve('timed out'), 1000)
+                  ),
+                ])
+              );
+              sessionStorage.removeItem('test.defer-connect');
+              window.dispatchEvent(new Event('test.release-connect'));
+              await new Promise(resolve => setTimeout(resolve, 20));
+              const retry = await sync();
+              results.push(retry.account ?? 'no account');
+              api.sendGatewayEvent({ type: 'RESET' });
+              await new Promise(resolve => setTimeout(resolve, 20));
+            }
+            return results;
+          } finally {
+            sessionStorage.removeItem('test.defer-connect');
+            window.dispatchEvent(new Event('test.release-connect'));
+            api.unmount();
+            container.remove();
+          }
+        }, `${gatewayUrl}/src/mount.tsx`);
+        expect(cancellationResults).toEqual([
+          'Wallet connection cancelled.',
+          'active.near',
+          'Wallet connection cancelled.',
+          'active.near',
+        ]);
+
         const staleAccounts = await page.evaluate(async url => {
           const remote: {
             mount: (
