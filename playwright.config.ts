@@ -16,6 +16,7 @@ export default defineConfig({
   },
   use: {
     baseURL: BASE_URL,
+    channel: process.env.PLAYWRIGHT_CHANNEL,
     locale: 'en-US',
     trace: 'on-first-retry',
   },

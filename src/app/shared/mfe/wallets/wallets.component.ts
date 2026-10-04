@@ -1,4 +1,11 @@
-import { fromEvent, takeUntil } from 'rxjs';
+import {
+  combineLatest,
+  distinctUntilChanged,
+  map,
+  Subscription,
+  fromEvent,
+  takeUntil,
+} from 'rxjs';
 import {
   Component,
   ViewChild,
@@ -12,6 +19,7 @@ import { firstValueFrom } from 'rxjs';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import {
   WalletConnectionSnapshot,
+  WalletSelection,
   WalletsMfeModule,
   WalletsMfeMountApi,
 } from '@mfe-contracts/wallet-mfe.types';
@@ -41,6 +49,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   @ViewChild('container', { read: ElementRef })
   public containerRef!: ElementRef<HTMLElement>;
 
+  private selectionSubscription?: Subscription;
   private unmountMfe: (() => void) | undefined;
   private unsubscribeEvents: (() => void) | undefined;
   private isDestroyed = false;
@@ -90,6 +99,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
+      this.selectionSubscription?.unsubscribe();
       this.unmountMfe?.();
       if (!container || typeof mfeModule.mount !== 'function') {
         throw new Error('MFE mount function is not available');
@@ -99,6 +109,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         mfeModule.mount(container, {
           context: {
             contractVersion: '2.3.0',
+            selection: this.walletSelection(),
             apiBaseUrl: environment.apiUrl,
             environment: this.mfeEnvironment(),
           },
@@ -210,6 +221,31 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
 
       if (this.isMountApi(mountResult)) {
         this.unmountMfe = mountResult.unmount;
+        if (
+          mountResult.selectionContractVersion !== '1.0.0' ||
+          !mountResult.updateSelection
+        ) {
+          mountResult.unmount();
+          this.unmountMfe = undefined;
+          throw new Error(
+            'Update the wallet remote to restore your selected wallet.'
+          );
+        }
+        this.selectionSubscription = combineLatest([
+          this.authSession.session$,
+          this.authSession.restored$,
+        ])
+          .pipe(
+            map(() => this.walletSelection()),
+            distinctUntilChanged(
+              (a, b) => JSON.stringify(a) === JSON.stringify(b)
+            )
+          )
+          .subscribe(selection =>
+            this.ngZone.runOutsideAngular(() =>
+              mountResult.updateSelection?.(selection)
+            )
+          );
         this.ngZone.run(() => {
           this.walletGatewayBridge.registerMountApi(mountResult);
           this.applyConnectionSnapshot(mountResult.getSnapshot());
@@ -230,7 +266,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       this.logger.log('info', 'Wallets MFE: mounted successfully');
     } catch (error) {
       container.innerHTML =
-        '<div style="padding:12px;color:#ef4444;font-size:12px;" role="alert">Wallet connection is temporarily unavailable.</div>';
+        '<div style="padding:12px;color:#ef4444;font-size:12px;" role="alert">Update the wallet remote or retry to restore your selected wallet.</div>';
       this.logger.log('error', 'Wallets MFE: failed to mount', {
         component: 'WalletsComponent',
         action: 'loadAndMount',
@@ -238,6 +274,35 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         errorMessage: this.errorMessage(error),
       });
     }
+  }
+
+  private walletSelection(): WalletSelection {
+    const session = this.authSession.session;
+    if (!session)
+      return {
+        status: this.authSession.sessionRestored
+          ? 'unauthenticated'
+          : 'pending',
+      };
+    const wallet = session.wallets.find(
+      item =>
+        item.isPrimary &&
+        !item.deletedAt &&
+        (!item.status || item.status === 'active')
+    );
+    return {
+      status: 'authenticated',
+      userId: session.user.id,
+      wallet: wallet
+        ? {
+            id: wallet.id,
+            address: wallet.address,
+            chainType: wallet.chainType,
+            walletType: wallet.walletType,
+            source: wallet.source,
+          }
+        : null,
+    };
   }
 
   private applyConnectionSnapshot(snapshot: WalletConnectionSnapshot): void {
@@ -342,6 +407,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.isDestroyed = true;
+    this.selectionSubscription?.unsubscribe();
     this.unsubscribeEvents?.();
     this.unsubscribeEvents = undefined;
     this.walletGatewayBridge.clearMountApi();

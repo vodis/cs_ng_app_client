@@ -299,3 +299,11 @@ Follow [Exchange swap funding](exchange-page.md) and the
 [final review contract](../src/app/mfe-contracts/README.md) for source-balance
 routing and confirmation. Funding validation tightens the existing contract
 without changing payload versions.
+
+### Active-wallet persistence regression
+
+Run the sibling wallet MFE dev server on port 5002, then run
+`WALLET_MFE_TEST_URL=http://127.0.0.1:5002 pnpm exec playwright test e2e/wallet-persistence.spec.ts --workers=1`.
+This uses the real remote and gateway actors with mocked provider I/O. Set
+`PLAYWRIGHT_CHANNEL=chrome` to use installed Chrome instead of bundled Chromium.
+The normal browser suite skips this integration when the MFE URL is absent.

@@ -13,6 +13,21 @@ import {
 } from './payloads';
 import type { SwapReviewIntent, SwapReviewServices } from './swap-review.types';
 
+/** Backend-owned preference; never evidence of a live provider session. */
+export type WalletSelection =
+  | { status: 'pending' | 'unauthenticated' }
+  | {
+      status: 'authenticated';
+      userId: string;
+      wallet: {
+        id: string;
+        address: string;
+        chainType: string;
+        walletType: string;
+        source?: string;
+      } | null;
+    };
+
 export type WalletConnectionStatus =
   | 'idle'
   | 'connecting'
@@ -78,6 +93,7 @@ export type WalletsMfeEvent =
   | { type: 'balances.updated'; payload: WalletBalancesSnapshot };
 
 export type WalletsMfeContext = {
+  selection?: WalletSelection;
   contractVersion?: '2.0.0' | '2.1.0' | '2.2.0' | '2.3.0';
   apiBaseUrl?: string;
   sessionId?: string;
@@ -112,6 +128,8 @@ export type WalletsMfeCallbacks = {
 };
 
 export type WalletsMfeMountApi = {
+  selectionContractVersion?: '1.0.0';
+  updateSelection?: (selection: WalletSelection) => void;
   unmount: () => void;
   subscribe: (listener: (event: WalletsMfeEvent) => void) => () => void;
   getSnapshot: () => WalletConnectionSnapshot;

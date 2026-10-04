@@ -83,6 +83,7 @@ export class WalletGatewayBridgeService {
 
   clearMountApi(): void {
     this.mountApi = undefined;
+    this.snapshotSubject.next(undefined);
     this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
     this.rejectPendingSignature({
       code: 'GATEWAY_UNAVAILABLE',
@@ -348,12 +349,9 @@ export class WalletGatewayBridgeService {
 
   async syncConnectedWallet(): Promise<WalletConnectionSnapshot> {
     const snapshot = this.snapshotSubject.value ?? this.mountApi?.getSnapshot();
-    if (snapshot?.account) {
-      return snapshot;
-    }
-
     const syncConnectedWallet = this.mountApi?.syncConnectedWallet;
     if (!syncConnectedWallet) {
+      if (snapshot?.account) return snapshot;
       throw this.executionFailure(
         'GATEWAY_UNAVAILABLE',
         'Wallet connection sync is not available',

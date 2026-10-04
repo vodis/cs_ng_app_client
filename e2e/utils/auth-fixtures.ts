@@ -74,9 +74,10 @@ export async function useGuestSession(page: Page): Promise<void> {
 
 export async function useAuthenticatedSession(
   page: Page,
-  session: E2eAuthenticatedSession = DEFAULT_AUTHENTICATED_SESSION
+  session: E2eAuthenticatedSession = DEFAULT_AUTHENTICATED_SESSION,
+  realGatewayUrl?: string
 ): Promise<void> {
-  await mockAuthProviderRemote(page, session);
+  await mockAuthProviderRemote(page, session, realGatewayUrl);
   await mockAuthSessionApi(page, session);
 }
 
@@ -93,7 +94,8 @@ export async function mockJsonApi(
 
 async function mockAuthProviderRemote(
   page: Page,
-  session: E2eAuthenticatedSession | null
+  session: E2eAuthenticatedSession | null,
+  realGatewayUrl?: string
 ): Promise<void> {
   await page.route(
     url => matchesOriginPath(url, AUTH_PROVIDER_REMOTE_ENTRY_URL),
@@ -110,7 +112,7 @@ async function mockAuthProviderRemote(
         status: 200,
         contentType: 'application/javascript',
         headers: CROSS_ORIGIN_HEADERS,
-        body: createAuthProviderRemoteEntry(session),
+        body: createAuthProviderRemoteEntry(session, realGatewayUrl),
       });
     }
   );
@@ -151,7 +153,8 @@ function matchesOriginPath(url: URL, expected: string): boolean {
 }
 
 function createAuthProviderRemoteEntry(
-  session: E2eAuthenticatedSession | null
+  session: E2eAuthenticatedSession | null,
+  realGatewayUrl?: string
 ): string {
   const serializedSession = JSON.stringify(
     session
@@ -263,6 +266,8 @@ const modules = {
             }, 100);
           }
         },
+        selectionContractVersion: '1.0.0',
+        updateSelection: function () {},
         syncConnectedWallet: function () { return Promise.resolve(walletSnapshot); }
       };
     }
@@ -274,6 +279,9 @@ export function init() {
 }
 
 export function get(exposedModule) {
+  if (exposedModule === './mount' && ${JSON.stringify(realGatewayUrl ?? '')}) {
+    return import(${JSON.stringify(realGatewayUrl ?? '')}).then(module => () => module);
+  }
   const key = exposedModule.replace(/^\\.\\//, '');
   const module = modules[key];
   if (!module) {

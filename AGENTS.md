@@ -259,3 +259,8 @@ Compatibility policy:
 
 - Do not tightly couple host to wallet private implementation details.
 - Do not embed undocumented implicit behavior between repositories.
+
+Active-wallet restoration uses the additive selection 1.0.0 wallet mount
+capability documented in `src/app/mfe-contracts/README.md`. Forward backend
+selection before hydration; provider callbacks and browser hints must never
+choose the primary wallet.
