@@ -135,6 +135,28 @@ describe('WalletGatewayBridgeService', () => {
     );
   });
 
+  it('asks the MFE to match the selected wallet even when another account is connected', async () => {
+    const selected = { ...connectedSnapshot, account: 'selected.near' };
+    const sync = jasmine
+      .createSpy('syncConnectedWallet')
+      .and.resolveTo(selected);
+    mountApi.syncConnectedWallet = sync;
+    service.registerMountApi(mountApi);
+    await expectAsync(service.syncConnectedWallet()).toBeResolvedTo(selected);
+    expect(sync).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the live connection when the MFE unmounts', () => {
+    service.registerMountApi(mountApi);
+    let snapshot: WalletConnectionSnapshot | undefined;
+    const subscription = service.snapshot$.subscribe(
+      value => (snapshot = value)
+    );
+    service.clearMountApi();
+    expect(snapshot).toBeUndefined();
+    subscription.unsubscribe();
+  });
+
   it('resets the gateway when a connection is dismissed', () => {
     service.registerMountApi(mountApi);
 

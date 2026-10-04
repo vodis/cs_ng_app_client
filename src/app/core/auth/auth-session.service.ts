@@ -43,6 +43,13 @@ export class AuthSessionService {
   private primaryRequestVersion = 0;
   private primaryPending = false;
 
+  private readonly restoredSubject = new BehaviorSubject(false);
+  readonly restored$ = this.restoredSubject.asObservable();
+
+  get sessionRestored(): boolean {
+    return this.restoredSubject.value;
+  }
+
   readonly session$ = this.sessionSubject.asObservable();
   readonly loading$ = this.loadingSubject.asObservable();
   readonly providerSnapshot$ = this.authProvider.snapshot$;
@@ -363,7 +370,8 @@ export class AuthSessionService {
         }
         await this.refresh({ clearOnFailure: false });
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => this.restoredSubject.next(true));
   }
 
   private async clearAuthenticatedState(): Promise<void> {

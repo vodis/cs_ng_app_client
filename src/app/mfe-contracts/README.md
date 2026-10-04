@@ -313,3 +313,21 @@ actor. It is separate from `onSwapSubmitted`, which only confirms submission.
 The host refreshes wallet balances on settlement because a submission-time
 refresh may run before destination funds arrive. The callback does not dismiss
 the receipt. Older remotes remain compatible but do not emit this notification.
+
+### Active wallet selection (selection capability 1.0.0)
+
+The backend `WalletLink.isPrimary` is the persisted account preference. The host
+passes `context.selection` before mounting and forwards confirmed session changes
+through `updateSelection`. Pending/unauthenticated context cannot automatically
+hydrate a wallet. Authenticated context carries user ID and the selected wallet's
+ID, address, chain, type and source, or null when none remains.
+
+Selection is independent of `WalletConnectionSnapshot`: an external wallet stays
+selected with Reconnect required until its provider connects. Browser hints and
+provider readiness cannot change selection. The MFE owns connector routing; the
+host does not read MFE storage. Selection changes reset the gateway and invalidate
+pending restoration; unmount clears the host's live snapshot.
+
+Deploy backend registration protection, then the selection-capable MFE, then the
+host. The host requires `selectionContractVersion: '1.0.0'` and `updateSelection`;
+older remotes show an update/retry message. Authentication remains at 2.3.0.
