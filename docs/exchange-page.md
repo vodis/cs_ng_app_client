@@ -151,7 +151,12 @@ Late wallet-list responses cannot overwrite an active primary-wallet mutation.
 Review accepts a valid dry-run preview; the MFE obtains the execution quote in
 the review flow. Authentication, signing readiness, source balance freshness,
 amount, network, and quote expiry remain required. The UI explains unmet
-requirements and re-evaluates expiry without a wallet event.
+requirements and re-evaluates expiry without a wallet event. A connected,
+account-linked wallet awaiting verification exposes **Verify wallet** before
+quote review, using the existing MFE `VERIFY_REQUESTED` event. While the wallet
+prompt is open the action is disabled. A failed/cancelled verification offers
+**Reconnect to verify**, since the public gateway contract has no retry event.
+Quotes and review remain blocked until a verified snapshot arrives.
 
 ### Quote and review lifecycle
 

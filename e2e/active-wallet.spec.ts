@@ -34,10 +34,10 @@ test('restores the backend active wallet and loads balances without Refresh afte
       status: 'connected',
       account: address,
       chainId: null,
-      isVerified: true,
+      isVerified: false,
       safetyStatus: 'safe',
       isBypassed: false,
-      executionState: 'operating.idle',
+      executionState: 'operating.verificationPending',
       linkStatus: 'linked',
       identity: {
         address,
@@ -107,4 +107,18 @@ test('restores the backend active wallet and loads balances without Refresh afte
     .click();
   await expect.poll(() => balanceRequests.length).toBe(3);
   await expect(balances).toContainText('NEAR');
+
+  await page.goto('/en');
+  const verify = page.getByRole('button', {
+    name: 'VERIFY WALLET',
+    exact: true,
+  });
+  await expect(verify).toBeEnabled();
+  await verify.click();
+  await expect(
+    page.getByRole('button', { name: 'REVIEW', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByText('Verify the active wallet before signing.')
+  ).toHaveCount(0);
 });

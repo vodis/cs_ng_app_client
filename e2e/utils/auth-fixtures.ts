@@ -173,7 +173,7 @@ const snapshot = {
   embeddedWalletEnabled: true
 };
 const session = ${serializedSession};
-const walletSnapshot = ${JSON.stringify(
+let walletSnapshot = ${JSON.stringify(
     session?.connection ?? {
       status: 'disconnected',
       account: null,
@@ -225,6 +225,11 @@ const modules = {
   },
   'mount': {
     mount: function (container) {
+      const listeners = new Set();
+      function publishWallet(next) {
+        walletSnapshot = next;
+        listeners.forEach(listener => listener({ type: 'connection.snapshot.updated', payload: next }));
+      }
       if (container) {
         container.innerHTML = ${JSON.stringify(`<div class="wallets-mfe">
   <div class="connect-wallet">
@@ -247,10 +252,17 @@ const modules = {
             container.innerHTML = '';
           }
         },
-        subscribe: function () { return function () {}; },
+        subscribe: function (listener) { listeners.add(listener); return function () { listeners.delete(listener); }; },
         getSnapshot: function () { return walletSnapshot; },
         disconnectWallet: function () {},
-        sendGatewayEvent: function () {},
+        sendGatewayEvent: function (event) {
+          if (event.type === 'VERIFY_REQUESTED' && walletSnapshot.executionState === 'operating.verificationPending') {
+            publishWallet({ ...walletSnapshot, executionState: 'operating.verifyingSignature' });
+            setTimeout(function () {
+              publishWallet({ ...walletSnapshot, isVerified: true, executionState: 'operating.verified' });
+            }, 100);
+          }
+        },
         syncConnectedWallet: function () { return Promise.resolve(walletSnapshot); }
       };
     }

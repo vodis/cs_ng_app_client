@@ -55,6 +55,9 @@ describe('backend-owned active wallet', () => {
   let snapshots: BehaviorSubject<WalletConnectionSnapshot | undefined>;
   let settled: Subject<unknown>;
   let facade: ActiveWalletFacade;
+  let verify: jasmine.Spy;
+  let disconnect: jasmine.Spy;
+  let open: jasmine.Spy;
   let transport: jasmine.SpyObj<ConnectedWalletBalancesFacade>;
   let requests: Subject<ConnectedWalletBalancesState>[];
   let states: ActiveWalletBalances[];
@@ -65,6 +68,9 @@ describe('backend-owned active wallet', () => {
       undefined
     );
     settled = new Subject();
+    verify = jasmine.createSpy('requestVerification');
+    disconnect = jasmine.createSpy('disconnectWallet');
+    open = jasmine.createSpy('requestOpen');
     requests = [];
     states = [];
     transport = jasmine.createSpyObj('ConnectedWalletBalancesFacade', ['load']);
@@ -87,9 +93,16 @@ describe('backend-owned active wallet', () => {
         },
         {
           provide: WalletGatewayBridgeService,
-          useValue: { snapshot$: snapshots },
+          useValue: {
+            snapshot$: snapshots,
+            requestVerification: verify,
+            disconnectWallet: disconnect,
+          },
         },
-        { provide: WalletsService, useValue: { swapSettled: settled } },
+        {
+          provide: WalletsService,
+          useValue: { swapSettled: settled, requestOpen: open },
+        },
         { provide: ConnectedWalletBalancesFacade, useValue: transport },
       ],
     });
@@ -235,6 +248,62 @@ describe('backend-owned active wallet', () => {
     expect(facade.state.network).toBe('eip155:1');
     snapshots.next(connected(address));
     expect(facade.state.connected).toBeFalse();
+  });
+
+  it('offers explicit verification, waits for success, and reconnects after rejection', () => {
+    sessions.next(session);
+    const pending = {
+      ...connected(),
+      isVerified: false,
+      executionState: 'operating.verificationPending',
+    };
+    snapshots.next(pending);
+    expect(verify).not.toHaveBeenCalled();
+    expect(facade.state.canSign).toBeFalse();
+    expect(facade.state.verificationAction).toBe('verify');
+    facade.requestVerification();
+    expect(verify).toHaveBeenCalledTimes(1);
+    snapshots.next({
+      ...pending,
+      executionState: 'operating.verifyingSignature',
+    });
+    expect(facade.state.verificationAction).toBeUndefined();
+    facade.requestVerification();
+    expect(verify).toHaveBeenCalledTimes(1);
+    snapshots.next({
+      ...pending,
+      executionState: 'operating.verificationFailed',
+    });
+    expect(facade.state.verificationAction).toBe('reconnect');
+    facade.requestVerification();
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledTimes(1);
+    snapshots.next(connected());
+    expect(facade.state.canSign).toBeTrue();
+    expect(facade.state.verificationAction).toBeUndefined();
+  });
+
+  it('does not verify unsafe, unlinked, mismatched or signed-out wallets', () => {
+    sessions.next(session);
+    const pending = {
+      ...connected(),
+      isVerified: false,
+      executionState: 'operating.verificationPending',
+    };
+    for (const snapshot of [
+      { ...pending, safetyStatus: 'unsafe' as const },
+      { ...pending, linkStatus: 'unlinked' as const },
+      { ...pending, account: 'bob.near' },
+    ]) {
+      snapshots.next(snapshot);
+      expect(facade.state.verificationAction).toBeUndefined();
+      facade.requestVerification();
+    }
+    sessions.next(null);
+    snapshots.next(pending);
+    facade.requestVerification();
+    expect(verify).not.toHaveBeenCalled();
+    expect(disconnect).not.toHaveBeenCalled();
   });
 
   it('clears an expired session and distinguishes connection from signing readiness', () => {

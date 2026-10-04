@@ -387,6 +387,17 @@ export class HomeComponent {
       return;
     }
 
+    if (!this.activeWallet.canSign) {
+      this.quoteError = '';
+      try {
+        this.activeWalletFacade.requestVerification();
+      } catch {
+        this.quoteError =
+          'Wallet verification is unavailable. Reconnect and try again.';
+      }
+      return;
+    }
+
     const recipientError = this.recipientValidationError();
     if (recipientError) {
       this.quoteError = recipientError;
@@ -466,6 +477,7 @@ export class HomeComponent {
   public isPrimaryActionDisabled(): boolean {
     return (
       this.activeWallet.connected &&
+      !this.activeWallet.verificationAction &&
       !this.canReviewSwap() &&
       !this.canRetryQuote()
     );
@@ -820,6 +832,16 @@ export class HomeComponent {
     if (!this.activeWallet.connected) {
       return this.activeWallet.wallet ? 'Reconnect wallet' : 'Connect wallet';
     }
+
+    if (this.activeWallet.verificationAction === 'verify')
+      return 'Verify wallet';
+    if (this.activeWallet.verificationAction === 'reconnect')
+      return 'Reconnect to verify';
+    if (
+      this.activeWallet.snapshot?.executionState ===
+      'operating.verifyingSignature'
+    )
+      return 'Verifying wallet…';
 
     return this.canRetryQuote()
       ? 'Retry quote'
@@ -1534,7 +1556,8 @@ export class HomeComponent {
   }
 
   public reviewBlockingReason(): string {
-    if (this.activeWallet.reason) return this.activeWallet.reason;
+    if (this.activeWallet.reason)
+      return this.quoteError || this.activeWallet.reason;
     if (this.recipientValidationError()) return this.recipientValidationError();
     const amount = this.toBaseUnits(this.amount, this.fromToken.decimals);
     if (!amount || /^0+$/.test(amount)) return 'Enter a valid amount.';

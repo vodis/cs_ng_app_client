@@ -202,6 +202,7 @@ class ActiveWalletStub {
   refreshBalances() {
     this.refresh.next(this.refresh.value + 1);
   }
+  requestVerification() {}
   requestConnection() {
     this.wallets.requestOpen();
   }
@@ -233,6 +234,43 @@ describe('HomeComponent market overview', () => {
 
   afterEach(() => {
     httpMock.verify();
+  });
+
+  it('lets an unverified wallet request verification before entering an amount', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    const active = TestBed.inject(ActiveWalletFacade);
+    const verify = spyOn(active, 'requestVerification');
+    component.activeWallet = {
+      connected: true,
+      canSign: false,
+      verificationAction: 'verify',
+      reason: 'Verify the active wallet before signing.',
+    };
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    expect(component.primaryActionLabel()).toBe('Verify wallet');
+    expect(component.canReviewSwap()).toBeFalse();
+    component.submitQuote();
+    expect(verify).toHaveBeenCalledTimes(1);
+    component.activeWallet = {
+      ...component.activeWallet,
+      verificationAction: undefined,
+    };
+    expect(component.isPrimaryActionDisabled()).toBeTrue();
+    component.activeWallet = {
+      ...component.activeWallet,
+      verificationAction: 'reconnect',
+    };
+    expect(component.primaryActionLabel()).toBe('Reconnect to verify');
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    verify.and.throwError('Gateway unavailable');
+    component.submitQuote();
+    expect(component.reviewBlockingReason()).toContain(
+      'verification is unavailable'
+    );
   });
 
   it('requests comparison data with backend-supported symbols and timeframes', () => {

@@ -30,6 +30,7 @@ export type ActiveWalletState = {
   network?: string;
   connected: boolean;
   canSign: boolean;
+  verificationAction?: 'verify' | 'reconnect';
   reason: string;
 };
 
@@ -107,6 +108,15 @@ export class ActiveWalletFacade {
     this.wallets.requestOpen();
   }
 
+  requestVerification(): void {
+    if (this.state.verificationAction === 'reconnect') {
+      this.gateway.disconnectWallet();
+      this.wallets.requestOpen();
+    } else if (this.state.verificationAction === 'verify') {
+      this.gateway.requestVerification();
+    }
+  }
+
   refreshBalances(): void {
     this.refreshSubject.next(this.refreshSubject.value + 1);
   }
@@ -178,6 +188,19 @@ export class ActiveWalletFacade {
       snapshot: snapshot ?? undefined,
       network,
       connected,
+      verificationAction:
+        connected &&
+        network &&
+        snapshot &&
+        !snapshot.isVerified &&
+        (snapshot.safetyStatus === 'safe' || snapshot.isBypassed) &&
+        (!snapshot.linkStatus || snapshot.linkStatus === 'linked')
+          ? snapshot.executionState === 'operating.verificationPending'
+            ? 'verify'
+            : snapshot.executionState === 'operating.verificationFailed'
+              ? 'reconnect'
+              : undefined
+          : undefined,
       canSign: !reason,
       reason,
     });
