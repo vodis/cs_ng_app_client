@@ -49,6 +49,14 @@ describe('WalletGatewayBridgeService', () => {
     window.localStorage.removeItem('mfe-wallets.session.v1');
   });
 
+  it('requests verification without preparing or signing a transaction', () => {
+    service.registerMountApi(mountApi);
+    service.requestVerification();
+    expect(mountApi.sendGatewayEvent).toHaveBeenCalledOnceWith({
+      type: 'VERIFY_REQUESTED',
+    });
+  });
+
   it('reports whether the mounted wallet remote supplies connection snapshots', () => {
     expect(service.supportsConnectionSnapshots()).toBeFalse();
     service.registerMountApi(mountApi);

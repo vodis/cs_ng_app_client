@@ -132,6 +132,32 @@ unavailable/zero-like balance. Trade now consumes the same
 deduplication, and invalidates its balance subscription on account or network
 changes.
 
+### Active wallet and automatic balances
+
+The authenticated backend wallet list owns the active selection through
+`isPrimary` and `PATCH /api/v1/wallets/:walletId/primary`. Profile and Trade
+consume `ActiveWalletFacade`; browser connection history does not select an
+account wallet. An available primary wallet is restored after session loading,
+and a matching live MFE connection is required to sign. A linked wallet without
+that connection shows an explicit reconnect state.
+
+The facade shares balance loading across Profile and Trade once session,
+selected wallet, and network are resolved. Requests are scoped to account,
+session, wallet, and network; switching context cancels old subscriptions and
+clears their rows. Manual Refresh retries failures, and confirmed settlement
+refreshes balances. A closed wallet drawer does not mount another balance view.
+Late wallet-list responses cannot overwrite an active primary-wallet mutation.
+
+Review accepts a valid dry-run preview; the MFE obtains the execution quote in
+the review flow. Authentication, signing readiness, source balance freshness,
+amount, network, and quote expiry remain required. The UI explains unmet
+requirements and re-evaluates expiry without a wallet event. A connected,
+account-linked wallet awaiting verification exposes **Verify wallet** before
+quote review, using the existing MFE `VERIFY_REQUESTED` event. While the wallet
+prompt is open the action is disabled. A failed/cancelled verification offers
+**Reconnect to verify**, since the public gateway contract has no retry event.
+Quotes and review remain blocked until a verified snapshot arrives.
+
 ### Quote and review lifecycle
 
 The host owns amount/token/settings input, balance gating, and debounced dry

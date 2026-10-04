@@ -279,6 +279,10 @@ export class WalletGatewayBridgeService {
     });
   }
 
+  requestVerification(): void {
+    this.sendGatewayEvent({ type: 'VERIFY_REQUESTED' });
+  }
+
   resetConnection(): void {
     if (!this.canSendGatewayEvent()) {
       return;

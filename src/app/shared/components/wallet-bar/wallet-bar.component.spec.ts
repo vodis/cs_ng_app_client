@@ -139,6 +139,10 @@ describe('WalletBarComponent', () => {
 
     expect(component.needsNearWalletLink).toBeFalse();
     expect(component.isOpenWalletConnectMenu).toBeFalse();
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('app-connected-wallet-board')
+    ).toBeNull();
     component.handleOpenWalletMenu();
     fixture.detectChanges();
     expect(

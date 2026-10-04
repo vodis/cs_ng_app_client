@@ -1,4 +1,10 @@
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { nearNetworkForAddress } from '@shared/utils/network.utils';
+import {
+  ActiveWalletFacade,
+  type ActiveWalletState,
+} from '@domains/wallet/application/active-wallet.facade';
+import { ConnectedWalletBalancesFacade } from '@domains/wallet/application/connected-wallet-balances.facade';
+import { Injectable, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   HttpClientTestingModule,
@@ -6,7 +12,15 @@ import {
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { BehaviorSubject, Subject, map, of } from 'rxjs';
+import {
+  BehaviorSubject,
+  Subject,
+  map,
+  of,
+  combineLatest,
+  switchMap,
+  shareReplay,
+} from 'rxjs';
 import { SwapFlowFacade } from '@domains/exchange/application/swap-flow.facade';
 import {
   SwapFlowError,
@@ -125,6 +139,75 @@ class WalletBalancesServiceStub {
   }
 }
 
+@Injectable()
+class ActiveWalletStub {
+  private refresh = new BehaviorSubject(0);
+  readonly state$ = this.wallets.account.pipe(
+    map(account => {
+      const state: ActiveWalletState = {
+        userId: 'user',
+        sessionId: 'session',
+        connected: Boolean(account),
+        canSign: Boolean(account),
+        reason: account ? '' : 'Connect wallet',
+        wallet: account
+          ? {
+              id: account.account,
+              address: account.account,
+              chainType:
+                account.identity?.chainType ??
+                (account.account.startsWith('0x') ? 'ethereum' : 'near'),
+              walletType: 'external',
+              providerWalletId: '',
+              isPrimary: true,
+            }
+          : undefined,
+        snapshot: account
+          ? {
+              status: 'connected',
+              account: account.account,
+              chainId: account.chainId,
+              isVerified: true,
+              safetyStatus: 'safe',
+              isBypassed: false,
+              executionState: 'operating.idle',
+            }
+          : undefined,
+        network: account
+          ? account.account.startsWith('0x')
+            ? `eip155:${account.chainId}`
+            : nearNetworkForAddress(account.account)
+          : undefined,
+      };
+      return state;
+    })
+  );
+  readonly balances$ = combineLatest([this.state$, this.refresh]).pipe(
+    switchMap(([state]) =>
+      state.wallet && state.network
+        ? this.balances.load({
+            account: state.wallet.address,
+            network: state.network,
+          })
+        : of({ status: 'idle', rows: [] })
+    ),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
+  constructor(
+    private wallets: WalletsService,
+    private balances: ConnectedWalletBalancesFacade
+  ) {
+    this.wallets.swapSettled.subscribe(() => this.refreshBalances());
+  }
+  refreshBalances() {
+    this.refresh.next(this.refresh.value + 1);
+  }
+  requestVerification() {}
+  requestConnection() {
+    this.wallets.requestOpen();
+  }
+}
+
 describe('HomeComponent market overview', () => {
   let component: HomeComponent;
   let fixture: ComponentFixture<HomeComponent>;
@@ -135,6 +218,7 @@ describe('HomeComponent market overview', () => {
       imports: [CommonModule, FormsModule, HttpClientTestingModule],
       declarations: [HomeComponent],
       providers: [
+        { provide: ActiveWalletFacade, useClass: ActiveWalletStub },
         { provide: WalletsService, useClass: WalletsServiceStub },
         { provide: SwapFlowFacade, useClass: SwapFlowFacadeStub },
         { provide: ExchangeAssetsService, useClass: ExchangeAssetsServiceStub },
@@ -150,6 +234,43 @@ describe('HomeComponent market overview', () => {
 
   afterEach(() => {
     httpMock.verify();
+  });
+
+  it('lets an unverified wallet request verification before entering an amount', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    const active = TestBed.inject(ActiveWalletFacade);
+    const verify = spyOn(active, 'requestVerification');
+    component.activeWallet = {
+      connected: true,
+      canSign: false,
+      verificationAction: 'verify',
+      reason: 'Verify the active wallet before signing.',
+    };
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    expect(component.primaryActionLabel()).toBe('Verify wallet');
+    expect(component.canReviewSwap()).toBeFalse();
+    component.submitQuote();
+    expect(verify).toHaveBeenCalledTimes(1);
+    component.activeWallet = {
+      ...component.activeWallet,
+      verificationAction: undefined,
+    };
+    expect(component.isPrimaryActionDisabled()).toBeTrue();
+    component.activeWallet = {
+      ...component.activeWallet,
+      verificationAction: 'reconnect',
+    };
+    expect(component.primaryActionLabel()).toBe('Reconnect to verify');
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    verify.and.throwError('Gateway unavailable');
+    component.submitQuote();
+    expect(component.reviewBlockingReason()).toContain(
+      'verification is unavailable'
+    );
   });
 
   it('requests comparison data with backend-supported symbols and timeframes', () => {
@@ -504,6 +625,7 @@ describe('HomeComponent market overview', () => {
     }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
 
     walletsService.account.next(nearWallet());
+    component.fromToken = { ...component.toToken };
     component.amount = '1';
     component['refreshSwapQuotePreview']();
     swapFlowFacade.emitError({
@@ -968,6 +1090,27 @@ describe('HomeComponent market overview', () => {
     });
 
     expect(component.canReviewSwap()).toBeTrue();
+    component.activeWallet = {
+      ...component.activeWallet,
+      canSign: false,
+      reason: 'Verify the active wallet before signing.',
+    };
+    expect(component.canReviewSwap()).toBeFalse();
+    expect(component.reviewBlockingReason()).toContain('Verify');
+    component.activeWallet = {
+      ...component.activeWallet,
+      canSign: true,
+      reason: '',
+    };
+    if (!component.quotePreview) throw new Error('Missing quote fixture');
+    const validPreview = component.quotePreview;
+    component.quotePreview = { ...validPreview, expiresAt: 'invalid' };
+    expect(component.canReviewSwap()).toBeFalse();
+    expect(component.reviewBlockingReason()).toContain('expired');
+    expect(component.canRetryQuote()).toBeTrue();
+    component.quotePreview = validPreview;
+    expect(component.canReviewSwap()).toBeTrue();
+
     swapFlowFacade.emitQuote({
       amountOut: '1',
       amountOutAtomic: '1000000',
@@ -1681,6 +1824,7 @@ describe('HomeComponent market overview', () => {
     }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
 
     walletsService.account.next({ account: implicitAccount, chainId: null });
+    component.fromToken = { ...component.toToken };
     component.amount = '1';
     component.submitQuote();
 

@@ -1,11 +1,9 @@
+import { map } from 'rxjs';
+import { ActiveWalletFacade } from '@domains/wallet/application/active-wallet.facade';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
-import type {
-  AuthSession,
-  BackendBalance,
-  BackendWallet,
-} from '@core/auth/auth-session.types';
+import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import type { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
@@ -52,14 +50,24 @@ export type ProfileOnboardingState = {
 
 @Injectable()
 export class ProfileFacade {
-  public readonly session$ = this.authSession.session$;
   public readonly loading$ = this.authSession.loading$;
   public readonly providerSnapshot$ = this.authSession.providerSnapshot$;
-  public readonly account$ = this.walletsService.account.asObservable();
-  public readonly lastConnected$ =
-    this.walletsService.lastConnected.asObservable();
-  public readonly swapSubmitted$ =
-    this.walletsService.swapSubmitted.asObservable();
+  public readonly activeWallet$ = this.activeWallet.state$;
+  public readonly balances$ = this.activeWallet.balances$;
+  public readonly lastConnected$ = this.activeWallet.state$.pipe(
+    map(state => {
+      const wallet = state.wallet;
+      if (!wallet) return undefined;
+      const remembered: LastConnectedWallet = {
+        account: wallet.address,
+        chainId: state.connected ? (state.snapshot?.chainId ?? null) : null,
+        walletType: wallet.walletType === 'embedded' ? 'embedded' : 'external',
+        source: wallet.source,
+      };
+      return remembered;
+    })
+  );
+  public readonly swapSettled$ = this.walletsService.swapSettled.asObservable();
 
   constructor(
     private readonly authSession: AuthSessionService,
@@ -67,7 +75,8 @@ export class ProfileFacade {
     private readonly walletGatewayBridge: WalletGatewayBridgeService,
     private readonly router: Router,
     private readonly localizedRouting: LocalizedRoutingService,
-    private readonly portfolioApi: PortfolioApiService
+    private readonly portfolioApi: PortfolioApiService,
+    private readonly activeWallet: ActiveWalletFacade
   ) {}
 
   public get passkeyLinkEnabled(): boolean {
@@ -167,7 +176,7 @@ export class ProfileFacade {
     this.walletsService.requestOpen();
   }
 
-  public async generateWallet(): Promise<BackendBalance[]> {
+  public async generateWallet(): Promise<void> {
     await this.authSession.ensureEmbeddedWallet();
     const wallets = await this.authSession.reloadWallets();
     if (wallets.length === 0) {
@@ -175,7 +184,6 @@ export class ProfileFacade {
         'Wallet was created but profile refresh returned no wallets.'
       );
     }
-    return this.authSession.loadBalances();
   }
 
   public disconnectWallet(
@@ -207,8 +215,8 @@ export class ProfileFacade {
   ): Promise<boolean> {
     try {
       const snapshot = await this.walletGatewayBridge.syncConnectedWallet();
-      if (!snapshot.account) {
-        this.walletsService.requestOpen();
+      if (!snapshot.account || !this.activeWallet.state.connected) {
+        this.activeWallet.requestConnection();
         return false;
       }
 
@@ -238,16 +246,12 @@ export class ProfileFacade {
     this.walletsService.requestOpen();
   }
 
-  public rememberConnectedWallet(wallet: LastConnectedWallet): void {
-    this.walletsService.rememberConnectedWallet(wallet);
-  }
-
   public reloadWallets(): Promise<BackendWallet[]> {
     return this.authSession.reloadWallets();
   }
 
-  public loadBalances(): Promise<BackendBalance[]> {
-    return this.authSession.loadBalances();
+  public refreshBalances(): void {
+    this.activeWallet.refreshBalances();
   }
 
   public loadPortfolio(

@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   ElementRef,
@@ -10,7 +11,7 @@ import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import { WalletBalance } from '@shared/services/wallet-balances.service';
-import { Subscription } from 'rxjs';
+import { timer } from 'rxjs';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import {
   SwapFlowFacade,
@@ -60,7 +61,10 @@ import {
   recipientAddressError,
   walletBlockchain,
 } from '@shared/utils/network.utils';
-import { ConnectedWalletBalancesFacade } from '@domains/wallet/application/connected-wallet-balances.facade';
+import {
+  ActiveWalletFacade,
+  type ActiveWalletState,
+} from '@domains/wallet/application/active-wallet.facade';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import type { WalletSwapReview } from '@mfe-contracts/swap-review.types';
 import { createTraceId } from '@core/trace/create-trace-id';
@@ -126,6 +130,7 @@ interface RecentActivityItem {
 })
 export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly maxAmountFractionDigits = 18;
 
   public readonly recentActivity: RecentActivityItem[] = [
@@ -260,8 +265,12 @@ export class HomeComponent {
   private fromAmountInput?: ElementRef<HTMLInputElement>;
 
   private walletBalances: WalletBalance[] = [];
-  private balanceRequestId = 0;
-  private balanceSubscription?: Subscription;
+  public activeWallet: ActiveWalletState = {
+    connected: false,
+    canSign: false,
+    reason: 'Sign in to use your wallet.',
+  };
+  private walletContextKey = '';
   private activeReviewTraceId = '';
 
   constructor(
@@ -269,29 +278,61 @@ export class HomeComponent {
     private readonly walletsService: WalletsService,
     private readonly swapFlowFacade: SwapFlowFacade,
     private readonly exchangeAssetsService: ExchangeAssetsService,
-    private readonly connectedBalances: ConnectedWalletBalancesFacade,
+    private readonly activeWalletFacade: ActiveWalletFacade,
     private readonly walletGatewayBridge: WalletGatewayBridgeService
   ) {
-    this.walletsService.account
+    this.activeWalletFacade.state$
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(account => {
-        const nextWalletAddress = account?.account ?? '';
-        const nextWalletChainId = account?.chainId ?? null;
-        const nextWalletChainType = account?.identity?.chainType;
+      .subscribe(state => {
+        const previous = this.activeWallet;
         if (
-          this.walletAddress !== nextWalletAddress ||
-          this.walletChainId !== nextWalletChainId ||
-          this.walletChainType !== nextWalletChainType
+          previous.userId !== state.userId ||
+          previous.sessionId !== state.sessionId ||
+          previous.wallet?.id !== state.wallet?.id ||
+          previous.network !== state.network
         ) {
-          this.walletAddress = nextWalletAddress;
-          this.walletChainId = nextWalletChainId;
-          this.walletChainType = nextWalletChainType;
-          this.recipientAddress = '';
-          this.alignSelectionsToWallet();
-          this.loadWalletBalances();
-          this.refreshSwapQuotePreview();
+          this.walletBalances = [];
+          this.balancesError = '';
         }
+        this.activeWallet = state;
+        const key = [
+          state.userId,
+          state.sessionId,
+          state.wallet?.id,
+          state.network,
+          state.canSign,
+        ].join('|');
+        if (key === this.walletContextKey) return;
+        this.walletContextKey = key;
+        this.walletAddress = state.wallet?.address ?? '';
+        this.walletChainId = state.connected
+          ? (state.snapshot?.chainId ?? null)
+          : null;
+        const chainType = state.wallet?.chainType;
+        this.walletChainType =
+          chainType === 'near' ||
+          chainType === 'ethereum' ||
+          chainType === 'ton'
+            ? chainType
+            : undefined;
+        this.recipientAddress = '';
+        this.swapFlowFacade.reset();
+        this.alignSelectionsToWallet();
+        this.refreshSwapQuotePreview();
       });
+    this.activeWalletFacade.balances$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        this.walletBalances = state.rows;
+        this.balancesLoading = state.status === 'loading';
+        this.balancesError = state.errorMessage ?? '';
+        if (state.status === 'ready' || state.status === 'partial')
+          this.refreshSwapQuotePreview();
+      });
+    // Re-evaluate time-based quote/balance eligibility even without wallet events.
+    timer(1_000, 1_000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.changeDetector.markForCheck());
 
     this.walletsService.swapSubmitted
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -300,12 +341,7 @@ export class HomeComponent {
         this.activeReviewTraceId = '';
         this.swapFlowFacade.reset();
         this.intentHash = result.intentHash;
-        this.loadWalletBalances();
       });
-
-    this.walletsService.swapSettled
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadWalletBalances());
 
     this.walletsService.swapPreviewRefreshRequested
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -345,9 +381,20 @@ export class HomeComponent {
   }
 
   public submitQuote(): void {
-    if (!this.walletAddress) {
+    if (!this.activeWallet.connected) {
       this.quoteError = '';
-      this.walletsService.requestOpen();
+      this.activeWalletFacade.requestConnection();
+      return;
+    }
+
+    if (!this.activeWallet.canSign) {
+      this.quoteError = '';
+      try {
+        this.activeWalletFacade.requestVerification();
+      } catch {
+        this.quoteError =
+          'Wallet verification is unavailable. Reconnect and try again.';
+      }
       return;
     }
 
@@ -401,6 +448,7 @@ export class HomeComponent {
     const preview = this.quotePreview;
     const input = this.buildQuotePreviewInput();
     return Boolean(
+      this.activeWallet.canSign &&
       preview &&
       input &&
       /^\d+$/.test(preview.amountOutAtomic) &&
@@ -414,8 +462,13 @@ export class HomeComponent {
   public canRetryQuote(): boolean {
     const input = this.buildQuotePreviewInput();
     return (
+      this.activeWallet.canSign &&
       this.swapFlowState === 'idle' &&
-      Boolean(this.quoteError) &&
+      Boolean(
+        this.quoteError ||
+        (this.quotePreview &&
+          !(Date.parse(this.quotePreview.expiresAt) > Date.now()))
+      ) &&
       !this.canReviewSwap() &&
       Boolean(input && !this.validateSourceBalance(input.amount))
     );
@@ -423,7 +476,8 @@ export class HomeComponent {
 
   public isPrimaryActionDisabled(): boolean {
     return (
-      Boolean(this.walletAddress) &&
+      this.activeWallet.connected &&
+      !this.activeWallet.verificationAction &&
       !this.canReviewSwap() &&
       !this.canRetryQuote()
     );
@@ -775,9 +829,19 @@ export class HomeComponent {
   }
 
   public primaryActionLabel(): string {
-    if (!this.walletAddress) {
-      return 'Connect wallet';
+    if (!this.activeWallet.connected) {
+      return this.activeWallet.wallet ? 'Reconnect wallet' : 'Connect wallet';
     }
+
+    if (this.activeWallet.verificationAction === 'verify')
+      return 'Verify wallet';
+    if (this.activeWallet.verificationAction === 'reconnect')
+      return 'Reconnect to verify';
+    if (
+      this.activeWallet.snapshot?.executionState ===
+      'operating.verifyingSignature'
+    )
+      return 'Verifying wallet…';
 
     return this.canRetryQuote()
       ? 'Retry quote'
@@ -1073,7 +1137,7 @@ export class HomeComponent {
   }
 
   private buildQuotePreviewInput(): SwapFormInput | undefined {
-    if (!this.walletAddress) {
+    if (!this.activeWallet.canSign || !this.walletAddress) {
       return undefined;
     }
 
@@ -1477,7 +1541,7 @@ export class HomeComponent {
         }
 
         this.loadMarketComparison();
-        this.loadWalletBalances();
+        this.refreshSwapQuotePreview();
       },
       error: () => {
         this.exchangeTokens = [];
@@ -1488,70 +1552,32 @@ export class HomeComponent {
   }
 
   private loadWalletBalances(): void {
-    const requestId = ++this.balanceRequestId;
-    this.balanceSubscription?.unsubscribe();
-    this.balanceSubscription = undefined;
-    this.walletBalances = [];
-    this.balancesError = '';
+    this.activeWalletFacade.refreshBalances();
+  }
 
-    const network = this.balanceNetwork();
-    if (!this.walletAddress || !network) {
-      this.balancesLoading = false;
-      return;
-    }
-
-    const walletAddress = this.walletAddress;
-    this.balancesLoading = true;
-
-    this.balanceSubscription = this.connectedBalances
-      .load({
-        account: this.walletAddress,
-        network,
-      })
-      .subscribe({
-        next: state => {
-          if (
-            requestId !== this.balanceRequestId ||
-            this.walletAddress !== walletAddress ||
-            this.balanceNetwork() !== network
-          ) {
-            return;
-          }
-
-          if (state.status === 'loading') {
-            this.balancesLoading = true;
-            return;
-          }
-          if (state.status === 'error') {
-            this.walletBalances = [];
-            this.balancesLoading = false;
-            this.balancesError =
-              state.errorMessage ?? 'Failed to load wallet balance.';
-            return;
-          }
-
-          this.walletBalances = state.rows;
-          this.balancesLoading = false;
-          this.balancesError = state.errorMessage ?? '';
-          const sourceBalance = this.balanceForToken(this.fromToken);
-          if (sourceBalance && this.isBalanceUsable(sourceBalance)) {
-            this.refreshSwapQuotePreview();
-          }
-        },
-        error: () => {
-          if (
-            requestId !== this.balanceRequestId ||
-            this.walletAddress !== walletAddress ||
-            this.balanceNetwork() !== network
-          ) {
-            return;
-          }
-
-          this.walletBalances = [];
-          this.balancesLoading = false;
-          this.balancesError = 'Failed to load wallet balance.';
-        },
-      });
+  public reviewBlockingReason(): string {
+    if (this.activeWallet.reason)
+      return this.quoteError || this.activeWallet.reason;
+    if (this.recipientValidationError()) return this.recipientValidationError();
+    const amount = this.toBaseUnits(this.amount, this.fromToken.decimals);
+    if (!amount || /^0+$/.test(amount)) return 'Enter a valid amount.';
+    if (!this.canFetchBalance(this.fromToken))
+      return 'Select a token on the active wallet network.';
+    const balanceError = this.validateSourceBalance(amount);
+    if (balanceError) return balanceError;
+    if (this.isQuoteLoading()) return 'Getting a quote…';
+    if (this.quoteError) return this.quoteError;
+    if (!this.quotePreview) return 'Waiting for a quote.';
+    if (!(Date.parse(this.quotePreview.expiresAt) > Date.now()))
+      return 'Quote expired. Request a new quote.';
+    if (
+      !/^\d+$/.test(this.quotePreview.amountOutAtomic) ||
+      /^0+$/.test(this.quotePreview.amountOutAtomic)
+    )
+      return 'Quote output is invalid. Request a new quote.';
+    if (!this.destinationTargetMatchesQuote())
+      return 'The receive amount does not match this quote.';
+    return '';
   }
 
   public fundingSourceError(): string {
@@ -1563,7 +1589,7 @@ export class HomeComponent {
     const fundingError = this.fundingSourceError();
     if (fundingError) return fundingError;
     if (!this.canFetchBalance(this.fromToken)) {
-      return '';
+      return 'Select a token on the active wallet network.';
     }
 
     const balance = this.balanceForToken(this.fromToken);
