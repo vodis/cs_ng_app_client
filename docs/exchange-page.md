@@ -69,6 +69,16 @@ Under the chart, the right-hand info area shows temporary **Market** and
 **Product** mock labels (`Spot` / `Token Exchange`) until the BFF exposes real
 metadata.
 
+Directly under the pair summary inside the same market panel, a compact
+**Token details** block shows From (left) and To (right) metadata: symbol,
+name, icon, network, shortened contract (when present), and decimals. Price
+comes from the active market comparison for the selected From/To pair
+(positional base/quote), with optional snapshot price override when
+`GET /api/v1/markets/snapshots` returns a non-zero `priceUsd`. Market Cap and
+24h Volume render only when snapshots include non-zero values — never as empty
+placeholders. On viewports `<= 1100px` the two columns stack. Details update
+when the swap pair changes or flips.
+
 ### Recent activity
 
 The activity table shows time, pair, sold amount, received amount, and status.

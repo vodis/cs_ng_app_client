@@ -10,7 +10,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
+import { MarketSnapshotsService } from '@shared/services/market-snapshots.service';
 import { WalletBalance } from '@shared/services/wallet-balances.service';
+import {
+  formatCompactUsd,
+  type WalletMarketSnapshot,
+} from '@shared/utils/market-display.util';
 import { timer } from 'rxjs';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import {
@@ -265,6 +270,8 @@ export class HomeComponent {
   private fromAmountInput?: ElementRef<HTMLInputElement>;
 
   private walletBalances: WalletBalance[] = [];
+  private tokenMarkets = new Map<string, WalletMarketSnapshot>();
+  private comparisonRequestKey = '';
   public activeWallet: ActiveWalletState = {
     connected: false,
     canSign: false,
@@ -278,6 +285,7 @@ export class HomeComponent {
     private readonly walletsService: WalletsService,
     private readonly swapFlowFacade: SwapFlowFacade,
     private readonly exchangeAssetsService: ExchangeAssetsService,
+    private readonly marketSnapshots: MarketSnapshotsService,
     private readonly activeWalletFacade: ActiveWalletFacade,
     private readonly walletGatewayBridge: WalletGatewayBridgeService
   ) {
@@ -1392,6 +1400,54 @@ export class HomeComponent {
     return networkLabel(token.blockchain);
   }
 
+  public tokenOverviewHasPrice(token: ExchangeToken): boolean {
+    return this.tokenOverviewPrice(token) !== undefined;
+  }
+
+  public tokenOverviewPriceLabel(token: ExchangeToken): string {
+    const price = this.tokenOverviewPrice(token);
+    if (price === undefined) {
+      return '';
+    }
+    return formatCurrencyPrice(price);
+  }
+
+  public tokenOverviewHasMarketCap(token: ExchangeToken): boolean {
+    return (this.marketSnapshotFor(token)?.marketCapUsd ?? 0) > 0;
+  }
+
+  public tokenOverviewMarketCapLabel(token: ExchangeToken): string {
+    return formatCompactUsd(this.marketSnapshotFor(token)?.marketCapUsd ?? 0);
+  }
+
+  public tokenOverviewHasVolume(token: ExchangeToken): boolean {
+    return (this.marketSnapshotFor(token)?.volume24hUsd ?? 0) > 0;
+  }
+
+  public tokenOverviewVolumeLabel(token: ExchangeToken): string {
+    return formatCompactUsd(this.marketSnapshotFor(token)?.volume24hUsd ?? 0);
+  }
+
+  public tokenOverviewDecimalsLabel(token: ExchangeToken): string {
+    return String(this.tokenDecimals(token.decimals));
+  }
+
+  public tokenContractLabel(token: ExchangeToken): string {
+    const address = token.contractAddress?.trim();
+    if (!address) {
+      return '';
+    }
+    if (address.length <= 14) {
+      return address;
+    }
+    return `${address.slice(0, 6)}…${address.slice(-4)}`;
+  }
+
+  public tokenContractTitle(token: ExchangeToken): string | null {
+    const address = token.contractAddress?.trim();
+    return address || null;
+  }
+
   public isForeignDestination(): boolean {
     const walletNetwork = this.connectedWalletBlockchain();
     return Boolean(walletNetwork && this.toToken.blockchain !== walletNetwork);
@@ -1917,24 +1973,29 @@ export class HomeComponent {
   }
 
   private loadMarketComparison(): void {
+    const base = this.marketSymbolFor(this.fromToken);
+    const quote = this.marketSymbolFor(this.toToken);
     const timeframe = this.selectedComparisonTimeframe;
+    const requestKey = `${base}|${quote}|${timeframe}`;
+    this.comparisonRequestKey = requestKey;
     this.comparisonLoading = true;
     this.comparisonError = '';
+    this.loadTokenMarketingSnapshots();
 
     this.httpClient
       .get<MarketComparisonResponse>(
         `${environment.apiUrl}/api/v1/markets/comparison`,
         {
           params: {
-            base: this.marketSymbolFor(this.fromToken),
-            quote: this.marketSymbolFor(this.toToken),
+            base,
+            quote,
             timeframe,
           },
         }
       )
       .subscribe({
         next: response => {
-          if (this.selectedComparisonTimeframe !== timeframe) {
+          if (this.comparisonRequestKey !== requestKey) {
             return;
           }
 
@@ -1946,9 +2007,10 @@ export class HomeComponent {
               ? 'Comparison data unavailable'
               : '';
           this.comparisonLoading = false;
+          this.changeDetector.markForCheck();
         },
         error: () => {
-          if (this.selectedComparisonTimeframe !== timeframe) {
+          if (this.comparisonRequestKey !== requestKey) {
             return;
           }
 
@@ -1956,8 +2018,82 @@ export class HomeComponent {
           this.clearComparisonChart();
           this.comparisonError = 'Comparison data unavailable';
           this.comparisonLoading = false;
+          this.changeDetector.markForCheck();
         },
       });
+  }
+
+  private loadTokenMarketingSnapshots(): void {
+    const symbols = [
+      this.marketSymbolFor(this.fromToken),
+      this.marketSymbolFor(this.toToken),
+    ];
+    const requestKey = symbols.join('|');
+
+    this.marketSnapshots.load(symbols).subscribe({
+      next: snapshots => {
+        if (
+          [
+            this.marketSymbolFor(this.fromToken),
+            this.marketSymbolFor(this.toToken),
+          ].join('|') !== requestKey
+        ) {
+          return;
+        }
+
+        this.tokenMarkets = new Map(
+          snapshots.map(snapshot => [snapshot.symbol, snapshot])
+        );
+        this.changeDetector.markForCheck();
+      },
+      error: () => {
+        if (
+          [
+            this.marketSymbolFor(this.fromToken),
+            this.marketSymbolFor(this.toToken),
+          ].join('|') !== requestKey
+        ) {
+          return;
+        }
+
+        this.tokenMarkets = new Map();
+        this.changeDetector.markForCheck();
+      },
+    });
+  }
+
+  private marketSnapshotFor(
+    token: ExchangeToken
+  ): WalletMarketSnapshot | undefined {
+    return (
+      this.tokenMarkets.get(this.marketSymbolFor(token)) ??
+      this.tokenMarkets.get(this.normalizeMarketSymbol(token.symbol))
+    );
+  }
+
+  private tokenOverviewPrice(token: ExchangeToken): number | undefined {
+    const snapshotPrice = this.marketSnapshotFor(token)?.priceUsd ?? 0;
+    if (snapshotPrice > 0) {
+      return snapshotPrice;
+    }
+
+    const comparison = this.comparison;
+    if (!comparison) {
+      return undefined;
+    }
+
+    // Comparison is always requested as from=base / to=quote.
+    if (token.assetId === this.fromToken.assetId) {
+      return comparison.baseToken.currentPrice;
+    }
+    if (token.assetId === this.toToken.assetId) {
+      return comparison.quoteToken.currentPrice;
+    }
+
+    return (
+      this.tokenPrice(this.marketSymbolFor(token)) ??
+      this.tokenPrice(token.symbol)
+    );
   }
 
   private buildComparisonChart(response: MarketComparisonResponse): void {
@@ -2232,11 +2368,24 @@ export class HomeComponent {
       return undefined;
     }
 
-    if (comparison.baseToken.symbol === symbol) {
+    const normalized = this.normalizeMarketSymbol(symbol);
+    const matches = (tokenSymbol: string): boolean => {
+      const candidate = this.normalizeMarketSymbol(tokenSymbol);
+      if (!candidate || !normalized) {
+        return false;
+      }
+      if (candidate === normalized) {
+        return true;
+      }
+      const unwrap = (value: string): string => value.replace(/^W/, '');
+      return unwrap(candidate) === unwrap(normalized);
+    };
+
+    if (matches(comparison.baseToken.symbol)) {
       return comparison.baseToken.currentPrice;
     }
 
-    if (comparison.quoteToken.symbol === symbol) {
+    if (matches(comparison.quoteToken.symbol)) {
       return comparison.quoteToken.currentPrice;
     }
 
