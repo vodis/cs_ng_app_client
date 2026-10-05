@@ -1,6 +1,6 @@
-import { map } from 'rxjs';
+import { map, Subscription } from 'rxjs';
 import { ActiveWalletFacade } from '@domains/wallet/application/active-wallet.facade';
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
@@ -8,10 +8,6 @@ import { LocalizedRoutingService } from '@core/routing/localized-routing.service
 import type { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
-import {
-  isNearWalletAddress,
-  nearNetworkForAddress,
-} from '@shared/utils/network.utils';
 import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
 import type { PortfolioSnapshot } from '../../portfolio/portfolio.models';
 
@@ -48,8 +44,16 @@ export type ProfileOnboardingState = {
   walletLabel: string;
 };
 
-@Injectable()
-export class ProfileFacade {
+@Injectable({ providedIn: 'root' })
+export class ProfileFacade implements OnDestroy {
+  private portfolioCache?: {
+    key: string;
+    loadedAt: number;
+    result: Promise<PortfolioSnapshot>;
+  };
+  private readonly subscriptions = new Subscription();
+  private contextKey = '';
+
   public readonly loading$ = this.authSession.loading$;
   public readonly providerSnapshot$ = this.authSession.providerSnapshot$;
   public readonly activeWallet$ = this.activeWallet.state$;
@@ -77,7 +81,33 @@ export class ProfileFacade {
     private readonly localizedRouting: LocalizedRoutingService,
     private readonly portfolioApi: PortfolioApiService,
     private readonly activeWallet: ActiveWalletFacade
-  ) {}
+  ) {
+    this.subscriptions.add(
+      this.activeWallet.state$.subscribe(state => {
+        const key = JSON.stringify([
+          state.userId ?? state.session?.user.id,
+          state.sessionId ?? state.session?.user.sessionId,
+          state.wallet?.id,
+          state.network,
+        ]);
+        if (key !== this.contextKey) this.portfolioCache = undefined;
+        this.contextKey = key;
+      })
+    );
+    this.subscriptions.add(
+      this.walletsService.swapSettled.subscribe(() => {
+        this.portfolioCache = undefined;
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  revalidateBalances(): void {
+    this.activeWallet.revalidateBalances();
+  }
 
   public get passkeyLinkEnabled(): boolean {
     return this.authSession.passkeyLinkEnabled;
@@ -173,7 +203,7 @@ export class ProfileFacade {
 
   public async openWalletModal(): Promise<void> {
     await this.walletGatewayBridge.syncConnectedWallet().catch(() => undefined);
-    this.walletsService.requestOpen();
+    this.walletsService.requestOpen('connect');
   }
 
   public async generateWallet(): Promise<void> {
@@ -237,13 +267,13 @@ export class ProfileFacade {
       });
       return true;
     } catch (error) {
-      this.walletsService.requestOpen();
+      this.walletsService.requestOpen('connect');
       throw error;
     }
   }
 
   public requestWalletOpen(): void {
-    this.walletsService.requestOpen();
+    this.walletsService.requestOpen('connect');
   }
 
   public reloadWallets(): Promise<BackendWallet[]> {
@@ -251,15 +281,40 @@ export class ProfileFacade {
   }
 
   public refreshBalances(): void {
+    this.portfolioCache = undefined;
     this.activeWallet.refreshBalances();
   }
 
   public loadPortfolio(
     account?: string | null,
-    chainId?: number | null
+    network?: string
   ): Promise<PortfolioSnapshot> {
-    const connected = this.connectedPortfolioQuery(account, chainId);
-    return this.portfolioApi.loadPortfolio(connected);
+    if (!account || !network)
+      return Promise.reject(
+        new Error('Select a wallet network to load its portfolio.')
+      );
+    const query = { walletAddress: account, network };
+    const key = `${this.contextKey}|${JSON.stringify(query)}`;
+    if (
+      this.portfolioCache?.key === key &&
+      Date.now() - this.portfolioCache.loadedAt < 15_000
+    )
+      return this.portfolioCache.result;
+    const entry = {
+      key,
+      loadedAt: Infinity,
+      result: this.portfolioApi.loadPortfolio(query),
+    };
+    this.portfolioCache = entry;
+    void entry.result.then(
+      () => {
+        entry.loadedAt = Date.now();
+      },
+      () => {
+        if (this.portfolioCache === entry) this.portfolioCache = undefined;
+      }
+    );
+    return entry.result;
   }
 
   public setPrimaryWallet(walletId: string): Promise<BackendWallet> {
@@ -280,27 +335,5 @@ export class ProfileFacade {
 
   public navigateTo(path: '/' | '/portfolio'): Promise<boolean> {
     return this.router.navigateByUrl(this.localizedRouting.path(path));
-  }
-
-  private connectedPortfolioQuery(
-    account?: string | null,
-    chainId?: number | null
-  ): { walletAddress?: string; network?: string } | undefined {
-    if (!account) {
-      return undefined;
-    }
-    if (isNearWalletAddress(account)) {
-      return {
-        walletAddress: account,
-        network: nearNetworkForAddress(account),
-      };
-    }
-    if (/^0x[a-f0-9]{40}$/i.test(account) && chainId != null) {
-      return {
-        walletAddress: account,
-        network: `eip155:${chainId}`,
-      };
-    }
-    return { walletAddress: account };
   }
 }

@@ -2,7 +2,10 @@
   <div class="profile-shell__top">
     <section class="profile-shell__hero" aria-label="Portfolio balance">
       <p class="profile-shell__balance" aria-live="polite">
-        <span #usdBalanceValue>$0.00</span>
+        <span #usdBalanceValue>Loading…</span>
+        <small *ngIf="portfolioStatus === 'error'"
+          >Portfolio refresh failed. Use Refresh to retry.</small
+        >
         <small *ngIf="tokenBalanceLabel() as tokenBalance">
           · {{ tokenBalance }}
         </small>
@@ -284,7 +287,7 @@
       <div
         class="profile-shell__wallet-connect"
         *ngIf="showLastConnectedSection()">
-        <h3 class="profile-shell__section-title">Last connected</h3>
+        <h3 class="profile-shell__section-title">Active wallet</h3>
         <div
           class="profile-shell__last-wallet"
           *ngIf="resolveLastConnectedWallet() as lastWallet">
@@ -382,7 +385,9 @@
                       >Active{{
                         activeWalletId === wallet.id && isLiveConnected()
                           ? ' · Connected'
-                          : ' · Reconnect required'
+                          : walletRestoring
+                            ? ' · Restoring connection'
+                            : ' · Signing disconnected'
                       }}</span
                     >
                     <span
@@ -445,9 +450,7 @@
         *ngIf="!balancesLoading && balances.length > 0 && balanceStateMessage">
         {{ balanceStateMessage }}
       </p>
-      <ul
-        class="profile-shell__balances"
-        *ngIf="!balancesLoading && balances.length > 0">
+      <ul class="profile-shell__balances" *ngIf="balances.length > 0">
         <li *ngFor="let balance of balances">
           <div class="profile-shell__balance-asset">
             <span>{{ balance.symbol }}</span>

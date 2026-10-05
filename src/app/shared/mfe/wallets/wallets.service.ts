@@ -5,7 +5,7 @@ import {
   LastConnectedWallet,
   WalletAccount,
 } from '@domains/wallet/models/wallet.models';
-export type WalletDrawerMode = 'wallet' | 'swap-review';
+export type WalletDrawerMode = 'wallet' | 'connect' | 'swap-review';
 import { ProductEventsService } from '@core/product-events/product-events.service';
 
 const LAST_CONNECTED_STORAGE_KEY = 'cs-host.last-connected-wallet.v1';

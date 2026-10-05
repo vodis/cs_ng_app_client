@@ -1,11 +1,11 @@
 import { Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import {
-  ConnectedWalletBalancesFacade,
-  type ConnectedWalletBalancesState,
-} from '@domains/wallet/application/connected-wallet-balances.facade';
-import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+  ActiveWalletFacade,
+  type ActiveWalletState,
+  type ActiveWalletBalances,
+} from '@domains/wallet/application/active-wallet.facade';
+import { hasPositiveBalance } from '@shared/utils/balance-asset.utils';
 import { MarketSnapshotsService } from '@shared/services/market-snapshots.service';
 import type { WalletBalance } from '@shared/services/wallet-balances.service';
 import {
@@ -25,7 +25,6 @@ import { concat, interval, of, switchMap, type Subscription } from 'rxjs';
 import {
   EVM_CHAINS,
   findKnownEvmChain,
-  resolveConnectedEvmChainId,
   type EvmChainMock,
   type SupportedChainFamily,
 } from './connected-wallet-board.mock';
@@ -51,36 +50,45 @@ const marketRefreshMs = 60_000;
 })
 export class ConnectedWalletBoardComponent {
   private readonly destroyRef = inject(DestroyRef);
-  private readonly walletGatewayBridge = inject(WalletGatewayBridgeService);
-  private readonly balancesFacade = inject(ConnectedWalletBalancesFacade);
+  private readonly activeWallet = inject(ActiveWalletFacade);
   private readonly marketSnapshots = inject(MarketSnapshotsService);
 
-  public snapshot: WalletConnectionSnapshot | undefined;
-  public balances: ConnectedWalletBalancesState | undefined;
+  public state?: ActiveWalletState;
+  public balances?: ActiveWalletBalances;
   public selectedEvmChainId: number | null = null;
   public readonly networks = EVM_CHAINS;
-  private balanceRequestKey: string | undefined;
-  private balanceSubscription: Subscription | undefined;
   private marketRequestKey: string | undefined;
   private marketSubscription: Subscription | undefined;
   private markets = new Map<string, WalletMarketSnapshot>();
 
   constructor() {
-    this.walletGatewayBridge.snapshot$
+    this.activeWallet.revalidateBalances();
+    this.activeWallet.state$
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(snapshot => {
-        this.snapshot = snapshot;
-        this.selectedEvmChainId = resolveConnectedEvmChainId(snapshot?.chainId);
-        this.loadBalancesIfConnected(snapshot);
+      .subscribe(state => {
+        this.state = state;
+        this.selectedEvmChainId = state.network?.startsWith('eip155:')
+          ? Number(state.network.split(':')[1])
+          : null;
+      });
+    this.activeWallet.balances$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        this.balances = state;
+        this.refreshMarkets(state.rows);
       });
   }
 
+  public connectForSigning(): void {
+    this.activeWallet.requestConnection();
+  }
+
   public get account(): string {
-    return this.snapshot?.account ?? '';
+    return this.state?.wallet?.address ?? '';
   }
 
   public get chainFamily(): SupportedChainFamily {
-    const fromIdentity = this.snapshot?.identity?.chainType;
+    const fromIdentity = this.state?.wallet?.chainType;
     if (
       fromIdentity === 'near' ||
       fromIdentity === 'ton' ||
@@ -88,7 +96,7 @@ export class ConnectedWalletBoardComponent {
     ) {
       return fromIdentity;
     }
-    const account = this.snapshot?.account ?? '';
+    const account = this.account;
     if (isNearWalletAddress(account)) {
       return 'near';
     }
@@ -104,7 +112,7 @@ export class ConnectedWalletBoardComponent {
   }
 
   public get networkMeta(): string {
-    const walletType = this.snapshot?.identity?.walletType ?? 'external';
+    const walletType = this.state?.wallet?.walletType ?? 'external';
     if (this.isEvm) {
       const known = this.knownActiveNetwork;
       if (known) {
@@ -120,7 +128,7 @@ export class ConnectedWalletBoardComponent {
 
   public get rows(): ConnectedWalletBoardRow[] {
     return (this.balances?.rows ?? [])
-      .filter(row => this.hasPositiveBalance(row))
+      .filter(row => hasPositiveBalance(row))
       .map(row => {
         const symbol = row.symbol.trim().toUpperCase();
         return {
@@ -162,13 +170,15 @@ export class ConnectedWalletBoardComponent {
 
   public activeNetworkLabel(): string {
     if (this.chainFamily === 'near') {
-      const account = this.snapshot?.account ?? '';
+      const account = this.account;
       return nearNetworkForAddress(account) === 'near:testnet'
         ? 'NEAR · testnet'
         : 'NEAR · mainnet';
     }
     if (this.chainFamily === 'ton') {
-      return this.snapshot?.chainId === -3 ? 'TON · testnet' : 'TON · mainnet';
+      return this.state?.network === 'ton:testnet'
+        ? 'TON · testnet'
+        : 'TON · mainnet';
     }
     const known = this.knownActiveNetwork;
     if (known) {
@@ -195,7 +205,7 @@ export class ConnectedWalletBoardComponent {
   }
 
   public retryBalances(): void {
-    this.loadBalancesIfConnected(this.snapshot, true);
+    this.activeWallet.refreshBalances();
   }
 
   public priceLabel(market: WalletMarketSnapshot): string {
@@ -222,67 +232,11 @@ export class ConnectedWalletBoardComponent {
     return `${row.symbol} 7-day price trend`;
   }
 
-  private loadBalancesIfConnected(
-    snapshot: WalletConnectionSnapshot | undefined,
-    force = false
-  ): void {
-    const account =
-      snapshot?.status === 'connected'
-        ? (snapshot.account ?? undefined)
-        : undefined;
-    const network = account ? this.balanceNetwork(account) : undefined;
-
-    if (!account || !network) {
-      this.balanceSubscription?.unsubscribe();
-      this.balanceSubscription = undefined;
-      this.balanceRequestKey = undefined;
-      this.balances = undefined;
-      this.clearMarkets();
-      return;
-    }
-
-    const requestAccount = network.startsWith('eip155:')
-      ? account.toLowerCase()
-      : account;
-    const requestKey = `${requestAccount}|${network}`;
-    if (!force && requestKey === this.balanceRequestKey) {
-      return;
-    }
-
-    this.balanceRequestKey = requestKey;
-    this.balanceSubscription?.unsubscribe();
-    this.balanceSubscription = this.balancesFacade
-      .load({ account, network })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(state => {
-        if (this.balanceRequestKey === requestKey) {
-          this.balances = state;
-          this.refreshMarkets(state.rows);
-          if (state.status === 'error' || state.status === 'partial') {
-            this.balanceRequestKey = undefined;
-          }
-        }
-      });
-  }
-
-  private balanceNetwork(account: string): string | undefined {
-    if (this.chainFamily === 'near') {
-      return nearNetworkForAddress(account);
-    }
-    if (this.chainFamily === 'ton') {
-      return this.snapshot?.chainId === -3 ? 'ton:testnet' : 'ton:mainnet';
-    }
-    if (/^0x[a-f0-9]{40}$/i.test(account) && this.selectedEvmChainId != null) {
-      return `eip155:${this.selectedEvmChainId}`;
-    }
-    return undefined;
-  }
-
   private refreshMarkets(rows: WalletBalance[]): void {
     const symbols = [
       ...new Set(
         rows
-          .filter(row => this.hasPositiveBalance(row))
+          .filter(row => hasPositiveBalance(row))
           .map(row => row.symbol.trim().toUpperCase())
           .filter(symbol => symbol.length > 0)
       ),
@@ -315,37 +269,9 @@ export class ConnectedWalletBoardComponent {
       });
   }
 
-  private clearMarkets(): void {
-    this.marketSubscription?.unsubscribe();
-    this.marketSubscription = undefined;
-    this.marketRequestKey = undefined;
-    this.markets = new Map();
-  }
-
   private amountLabel(row: WalletBalance): string {
     const amount = row.balanceDecimal ?? row.balanceRaw;
     const suffix = row.stale ? ' (stale)' : '';
     return `${amount}${suffix}`;
-  }
-
-  private hasPositiveBalance(row: WalletBalance): boolean {
-    const decimal = row.balanceDecimal?.trim();
-    if (decimal) {
-      const value = Number(decimal.replace(/,/g, ''));
-      if (Number.isFinite(value)) {
-        return value > 0;
-      }
-    }
-
-    const raw = row.balanceRaw?.trim();
-    if (!raw) {
-      return false;
-    }
-    try {
-      return BigInt(raw) > 0n;
-    } catch {
-      const value = Number(raw);
-      return Number.isFinite(value) && value > 0;
-    }
   }
 }

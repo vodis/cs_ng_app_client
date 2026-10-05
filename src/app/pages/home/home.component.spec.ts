@@ -199,6 +199,7 @@ class ActiveWalletStub {
   ) {
     this.wallets.swapSettled.subscribe(() => this.refreshBalances());
   }
+  revalidateBalances() {}
   refreshBalances() {
     this.refresh.next(this.refresh.value + 1);
   }

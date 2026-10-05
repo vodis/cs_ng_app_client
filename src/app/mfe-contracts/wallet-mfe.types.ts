@@ -52,6 +52,7 @@ export type WalletIdentity = {
 };
 
 export type WalletConnectionSnapshot = {
+  restorationStatus?: 'pending' | 'restoring' | 'complete' | 'failed';
   status: WalletConnectionStatus;
   account: string | null;
   chainId: number | null;

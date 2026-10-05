@@ -331,3 +331,18 @@ pending restoration; unmount clears the host's live snapshot.
 Deploy backend registration protection, then the selection-capable MFE, then the
 host. The host requires `selectionContractVersion: '1.0.0'` and `updateSelection`;
 older remotes show an update/retry message. Authentication remains at 2.3.0.
+
+## Restoration status and read-only holdings
+
+`WalletConnectionSnapshot.restorationStatus` is an additive optional field:
+`pending`, `restoring`, `complete`, or `failed`. It describes the non-interactive
+provider-session attempt, not authentication or signing authorization. Older
+remotes may omit it. Selected external sessions are restored through connector
+session reads, matched against the backend selection; restoration never requests
+a signature or selects an embedded fallback. Verification and safety checks
+remain mandatory for signing.
+
+The host owns root-lifetime, authenticated balances for its selected wallet and
+network. Gateway invalidation clears signing readiness, not those read-only
+holdings. The standard connection drawer is opened explicitly for connection or
+signing; the wallet-details view consumes the same host balance source.

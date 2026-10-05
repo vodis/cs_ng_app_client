@@ -39,6 +39,7 @@ export class AuthSessionService {
   );
   private readonly loadingSubject = new BehaviorSubject<boolean>(false);
   private sessionRevision = 0;
+  private refreshVersion = 0;
   private walletRequestVersion = 0;
   private primaryRequestVersion = 0;
   private primaryPending = false;
@@ -91,6 +92,7 @@ export class AuthSessionService {
   async refresh(options?: {
     clearOnFailure?: boolean;
   }): Promise<AuthSession | null> {
+    const refreshVersion = ++this.refreshVersion;
     const revision = this.sessionRevision;
     const walletVersion = this.walletRequestVersion;
     const clearOnFailure = options?.clearOnFailure !== false;
@@ -98,6 +100,7 @@ export class AuthSessionService {
     if (!token) {
       if (
         clearOnFailure &&
+        refreshVersion === this.refreshVersion &&
         revision === this.sessionRevision &&
         walletVersion === this.walletRequestVersion &&
         !this.primaryPending
@@ -123,6 +126,7 @@ export class AuthSessionService {
         ),
       ]);
       if (
+        refreshVersion !== this.refreshVersion ||
         revision !== this.sessionRevision ||
         walletVersion !== this.walletRequestVersion ||
         this.primaryPending
@@ -134,6 +138,7 @@ export class AuthSessionService {
     } catch {
       if (
         clearOnFailure &&
+        refreshVersion === this.refreshVersion &&
         revision === this.sessionRevision &&
         walletVersion === this.walletRequestVersion &&
         !this.primaryPending

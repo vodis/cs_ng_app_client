@@ -1,4 +1,8 @@
 import {
+  tokenBalance,
+  hasPositiveBalance,
+} from '@shared/utils/balance-asset.utils';
+import {
   ChangeDetectorRef,
   Component,
   DestroyRef,
@@ -55,8 +59,6 @@ import {
   minimumReceivedAtomic,
 } from '@shared/components/slippage-settings-panel/slippage-settings.utils';
 import {
-  isNearWalletAddress,
-  nearNetworkForAddress,
   networkLabel,
   recipientAddressError,
   walletBlockchain,
@@ -281,6 +283,7 @@ export class HomeComponent {
     private readonly activeWalletFacade: ActiveWalletFacade,
     private readonly walletGatewayBridge: WalletGatewayBridgeService
   ) {
+    this.activeWalletFacade.revalidateBalances();
     this.activeWalletFacade.state$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(state => {
@@ -305,8 +308,8 @@ export class HomeComponent {
         if (key === this.walletContextKey) return;
         this.walletContextKey = key;
         this.walletAddress = state.wallet?.address ?? '';
-        this.walletChainId = state.connected
-          ? (state.snapshot?.chainId ?? null)
+        this.walletChainId = state.network?.startsWith('eip155:')
+          ? Number(state.network.split(':')[1])
           : null;
         const chainType = state.wallet?.chainType;
         this.walletChainType =
@@ -325,7 +328,13 @@ export class HomeComponent {
       .subscribe(state => {
         this.walletBalances = state.rows;
         this.balancesLoading = state.status === 'loading';
-        this.balancesError = state.errorMessage ?? '';
+        this.balancesError =
+          state.errorMessage ??
+          (state.status === 'idle'
+            ? this.activeWallet.wallet
+              ? 'Select a wallet network to load balances.'
+              : 'Select an active wallet to view holdings.'
+            : '');
         if (state.status === 'ready' || state.status === 'partial')
           this.refreshSwapQuotePreview();
       });
@@ -476,10 +485,11 @@ export class HomeComponent {
 
   public isPrimaryActionDisabled(): boolean {
     return (
-      this.activeWallet.connected &&
-      !this.activeWallet.verificationAction &&
-      !this.canReviewSwap() &&
-      !this.canRetryQuote()
+      this.activeWallet.restoring === true ||
+      (this.activeWallet.connected &&
+        !this.activeWallet.verificationAction &&
+        !this.canReviewSwap() &&
+        !this.canRetryQuote())
     );
   }
 
@@ -829,8 +839,9 @@ export class HomeComponent {
   }
 
   public primaryActionLabel(): string {
+    if (this.activeWallet.restoring) return 'Restoring wallet…';
     if (!this.activeWallet.connected) {
-      return this.activeWallet.wallet ? 'Reconnect wallet' : 'Connect wallet';
+      return 'Connect wallet';
     }
 
     if (this.activeWallet.verificationAction === 'verify')
@@ -1367,7 +1378,7 @@ export class HomeComponent {
 
     return this.tokenSelectorTokens().flatMap(token => {
       const balance = this.balanceForToken(token);
-      if (!balance || /^0+$/.test(balance.balanceRaw)) return [];
+      if (!balance || !hasPositiveBalance(balance)) return [];
 
       return [
         {
@@ -1616,11 +1627,7 @@ export class HomeComponent {
   }
 
   private balanceForToken(token: ExchangeToken): WalletBalance | undefined {
-    const network = this.balanceNetwork();
-    return this.walletBalances.find(
-      balance =>
-        balance.network === network && balance.assetId === token.assetId
-    );
+    return tokenBalance(this.walletBalances, token, this.balanceNetwork());
   }
 
   private canUseBalanceAsMax(
@@ -1742,18 +1749,7 @@ export class HomeComponent {
   }
 
   private balanceNetwork(): string | undefined {
-    if (
-      this.walletChainType === 'near' ||
-      isNearWalletAddress(this.walletAddress)
-    ) {
-      return nearNetworkForAddress(this.walletAddress);
-    }
-    if (/^0x[a-f0-9]{40}$/i.test(this.walletAddress)) {
-      return this.walletChainId == null
-        ? undefined
-        : `eip155:${this.walletChainId}`;
-    }
-    return undefined;
+    return this.activeWallet.network;
   }
 
   private canFetchBalance(token: ExchangeToken): boolean {
