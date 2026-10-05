@@ -1,3 +1,4 @@
+import { canonicalBalanceAssetId } from '@shared/utils/balance-asset.utils';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
@@ -68,7 +69,11 @@ export class ExchangeAssetsService {
       color: this.colorForSymbol(asset.symbol),
     };
 
-    if (asset.assetId !== WRAPPED_NEAR_ASSET_ID) {
+    if (
+      token.blockchain !== 'near' ||
+      canonicalBalanceAssetId(asset.assetId, 'near:mainnet') !==
+        WRAPPED_NEAR_ASSET_ID
+    ) {
       return [token];
     }
 

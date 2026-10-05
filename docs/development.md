@@ -307,3 +307,20 @@ Run the sibling wallet MFE dev server on port 5002, then run
 This uses the real remote and gateway actors with mocked provider I/O. Set
 `PLAYWRIGHT_CHANNEL=chrome` to use installed Chrome instead of bundled Chromium.
 The normal browser suite skips this integration when the MFE URL is absent.
+
+## Wallet regression smoke
+
+`pnpm run e2e:smoke` covers email login, primary-wallet restoration, Profile
+valuation/holdings, reload, client-side navigation to Trade and its token picker,
+and direct reload on Trade. NEAR cases cover both available and absent signers;
+an EVM case uses a MetaMask connection snapshot. The browser UI, API clients and
+host stores are real; auth, wallet gateway and BFF responses are mocked. No
+private keys, extension installation or funded wallets are needed.
+
+The develop/PR Playwright job runs this smoke automatically with the existing
+suite and uploads `test-results/` on failure. MFE mounted tests separately use
+the real gateway/NEAR adapter with wallet SDK and HTTP boundaries mocked, covering
+silent restoration, missing provider sessions and the standard connection UI.
+For local installed Chrome, set `PLAYWRIGHT_CHANNEL=chrome`; CI installs Playwright
+Chromium. Tests against a separately running real MFE remain available through
+`WALLET_MFE_TEST_URL`.

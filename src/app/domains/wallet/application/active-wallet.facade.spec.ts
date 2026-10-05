@@ -150,12 +150,112 @@ describe('backend-owned active wallet', () => {
     snapshots.next(connected());
     expect(facade.state.wallet?.id).toBe('bob');
     expect(facade.state.canSign).toBeFalse();
-    expect(facade.state.reason).toContain('Reconnect');
-    expect(transport.load).not.toHaveBeenCalled();
+    expect(facade.state.reason).toContain('Connect');
+    expect(transport.load).toHaveBeenCalledTimes(1);
     snapshots.next(connected('bob.near'));
     expect(facade.state.canSign).toBeTrue();
     expect(transport.load).toHaveBeenCalledTimes(1);
     subscription.unsubscribe();
+  });
+
+  it('loads without a signer and retains the shared result across route subscription gaps', () => {
+    sessions.next(session);
+    expect(transport.load).toHaveBeenCalledTimes(1);
+    expect(facade.state.network).toBe('near:mainnet');
+    expect(facade.state.canSign).toBeFalse();
+    const first = watch();
+    requests[0].next({
+      status: 'ready',
+      account: 'alice.near',
+      network: 'near:mainnet',
+      rows: [],
+    });
+    first.unsubscribe();
+    snapshots.next(undefined);
+    const nextRoute = watch();
+    expect(last().status).toBe('ready');
+    expect(transport.load).toHaveBeenCalledTimes(1);
+    nextRoute.unsubscribe();
+  });
+
+  it('retains same-wallet rows on refresh failure and revalidates on focus after expiry', () => {
+    const now = 1_800_000_000_000;
+    const clock = spyOn(Date, 'now').and.returnValue(now);
+    const row = {
+      walletId: 'alice',
+      walletAddress: 'alice.near',
+      chainType: 'near',
+      network: 'near:mainnet',
+      assetId: 'near:native',
+      symbol: 'NEAR',
+      decimals: 24,
+      balanceRaw: '7',
+      balanceDecimal: '0.000000000000000000000007',
+      source: 'rpc',
+      fetchedAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + 15_000).toISOString(),
+      stale: false,
+    };
+    sessions.next(session);
+    const sub = watch();
+    requests[0].next({
+      status: 'ready',
+      account: 'alice.near',
+      network: 'near:mainnet',
+      rows: [row],
+    });
+    facade.revalidateBalances();
+    expect(transport.load).toHaveBeenCalledTimes(1);
+    clock.and.returnValue(now + 16_000);
+    window.dispatchEvent(new Event('focus'));
+    expect(transport.load).toHaveBeenCalledTimes(2);
+    expect(last().status).toBe('loading');
+    expect(last().rows).toEqual([row]);
+    requests[1].next({
+      status: 'error',
+      account: 'alice.near',
+      network: 'near:mainnet',
+      rows: [],
+      errorMessage: 'RPC unavailable',
+    });
+    expect(last().rows[0].stale).toBeTrue();
+    expect(last().errorMessage).toBe('RPC unavailable');
+    sessions.next({ ...session, wallets: [{ ...bob, isPrimary: true }] });
+    expect(last().rows).toEqual([]);
+    sub.unsubscribe();
+  });
+
+  it('restores a scoped network preference for reads without claiming a live signer', () => {
+    localStorage.setItem('app:v1:wallet-network:user:evm', 'eip155:137');
+    const evm = {
+      ...alice,
+      id: 'evm',
+      address: '0x' + 'a'.repeat(40),
+      chainType: 'ethereum',
+    };
+    sessions.next({ ...session, wallets: [evm] });
+    expect(facade.state.network).toBe('eip155:137');
+    expect(facade.state.canSign).toBeFalse();
+    expect(transport.load).toHaveBeenCalledOnceWith(
+      jasmine.objectContaining({ network: 'eip155:137' })
+    );
+    sessions.next({
+      ...session,
+      user: { ...session.user, id: 'new-user' },
+      wallets: [evm],
+    });
+    expect(facade.state.network).toBeUndefined();
+    expect(transport.load).toHaveBeenCalledTimes(1);
+    localStorage.removeItem('app:v1:wallet-network:user:evm');
+  });
+
+  it('does not replace a missing primary selection with the embedded wallet', () => {
+    sessions.next({
+      ...session,
+      wallets: [{ ...alice, walletType: 'embedded', isPrimary: false }],
+    });
+    expect(facade.state.wallet).toBeUndefined();
+    expect(transport.load).not.toHaveBeenCalled();
   });
 
   it('cancels pending balances on wallet changes and ignores stale responses', () => {
@@ -246,6 +346,9 @@ describe('backend-owned active wallet', () => {
     });
     expect(facade.state.connected).toBeTrue();
     expect(facade.state.network).toBe('eip155:1');
+    snapshots.next({ ...facade.state.snapshot!, chainId: null });
+    expect(facade.state.network).toBe('eip155:1');
+    expect(facade.state.canSign).toBeFalse();
     snapshots.next(connected(address));
     expect(facade.state.connected).toBeFalse();
   });

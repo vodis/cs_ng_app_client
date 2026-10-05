@@ -41,6 +41,7 @@ export type E2eAuthenticatedSession = {
   wallets: E2eAuthWallet[];
   accessToken: string;
   connection?: WalletConnectionSnapshot;
+  requireLogin?: boolean;
 };
 
 const DEFAULT_AUTHENTICATED_SESSION: E2eAuthenticatedSession = {
@@ -176,6 +177,8 @@ const snapshot = {
   embeddedWalletEnabled: true
 };
 const session = ${serializedSession};
+const requireLogin = ${JSON.stringify(session?.requireLogin ?? false)};
+function completeLogin() { sessionStorage.setItem('e2e:logged-in', 'true'); return session ? Promise.resolve(session) : Promise.reject(new Error('No e2e session')); }
 let walletSnapshot = ${JSON.stringify(
     session?.connection ?? {
       status: 'disconnected',
@@ -198,17 +201,9 @@ const modules = {
           return function () {};
         },
         getSnapshot: function () { return snapshot; },
-        login: function () {
-          return session
-            ? Promise.resolve(session)
-            : Promise.reject(new Error('No e2e session'));
-        },
+        login: completeLogin,
         sendEmailCode: function () { return Promise.resolve(); },
-        verifyEmailCode: function () {
-          return session
-            ? Promise.resolve(session)
-            : Promise.reject(new Error('No e2e session'));
-        },
+        verifyEmailCode: completeLogin,
         linkPasskey: function () {
           return session
             ? Promise.resolve(session)
@@ -221,7 +216,7 @@ const modules = {
         },
         logout: function () { return Promise.resolve(); },
         getAccessToken: function () {
-          return Promise.resolve(${serializedAccessToken});
+          return Promise.resolve(!requireLogin || sessionStorage.getItem('e2e:logged-in') ? ${serializedAccessToken} : null);
         }
       };
     }

@@ -35,13 +35,13 @@ panels. At `1100px` and below, it changes to a single-column layout.
 
 ### Swap panel
 
-| Block          | Markup            | Behavior                                                 |
-| -------------- | ----------------- | -------------------------------------------------------- |
-| From row       | `.swapRow.first`  | Token selector, clickable max balance, amount input, USD estimate |
-| Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison  |
+| Block          | Markup            | Behavior                                                           |
+| -------------- | ----------------- | ------------------------------------------------------------------ |
+| From row       | `.swapRow.first`  | Token selector, clickable max balance, amount input, USD estimate  |
+| Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison            |
 | To row         | `.swapRow`        | Token selector, clickable max balance, quoted amount, USD estimate |
-| Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee   |
-| Primary action | `.connectMain`    | Opens final MFE review after a current dry quote         |
+| Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee             |
+| Primary action | `.connectMain`    | Opens final MFE review after a current dry quote                   |
 
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
@@ -77,13 +77,13 @@ until backend history is integrated.
 
 ## API and asset ownership
 
-| Action            | Endpoint                         | Owner                             |
-| ----------------- | -------------------------------- | --------------------------------- |
-| Dry quote         | `POST /api/v1/quotes/one-click`  | NestJS BFF                        |
-| Market comparison | `GET /api/v1/markets/comparison` | NestJS BFF                        |
-| Wallet balances   | `POST /api/v1/balances`          | NestJS BFF                        |
-| Final preparation | `POST /api/v1/swaps/prepare`     | Wallet MFE through host transport |
-| Swap submission   | `POST /api/v1/swaps/execute`     | Wallet MFE through host transport |
+| Action            | Endpoint                                  | Owner                             |
+| ----------------- | ----------------------------------------- | --------------------------------- |
+| Dry quote         | `POST /api/v1/quotes/one-click`           | NestJS BFF                        |
+| Market comparison | `GET /api/v1/markets/comparison`          | NestJS BFF                        |
+| Wallet balances   | `POST /api/v1/balances`                   | NestJS BFF                        |
+| Final preparation | `POST /api/v1/swaps/prepare`              | Wallet MFE through host transport |
+| Swap submission   | `POST /api/v1/swaps/execute`              | Wallet MFE through host transport |
 | Settlement status | `GET /api/v1/swaps/status/:preparationId` | Wallet MFE through host transport |
 
 Client token metadata in `HomeComponent.exchangeTokens` is display and
@@ -129,7 +129,7 @@ id. Portfolio used the shared connected-wallet balance feed, whose native row is
 `near:native`, so Trade could not match the known native row and displayed an
 unavailable/zero-like balance. Trade now consumes the same
 `ConnectedWalletBalancesFacade`, preserves exact asset ids during filtering and
-deduplication, and invalidates its balance subscription on account or network
+deduplication, and invalidates shared balance requests on account or network
 changes.
 
 ### Active wallet and automatic balances
@@ -139,7 +139,7 @@ The authenticated backend wallet list owns the active selection through
 consume `ActiveWalletFacade`; browser connection history does not select an
 account wallet. An available primary wallet is restored after session loading,
 and a matching live MFE connection is required to sign. A linked wallet without
-that connection shows an explicit reconnect state.
+that connection remains readable; signing actions offer the standard connection flow.
 
 The facade shares balance loading across Profile and Trade once session,
 selected wallet, and network are resolved. Requests are scoped to account,
@@ -242,3 +242,10 @@ The MFE shows exchange progress and a receipt after confirmation. Its additive
 `onSwapSettled` callback refreshes wallet balances after confirmed completion or
 another terminal provider result; submission alone is too early to show the
 updated destination balance. Closing the receipt remains a user action.
+
+Balance loading is independent of connector restoration. The shared root store
+survives route subscriptions, retains same-wallet rows while revalidating, and
+rejects responses from previous user/wallet/network contexts. Empty, loading,
+partial and failed reads have distinct UI states. Asset matching uses canonical
+IDs plus network, including equivalent NEP-141 prefixes and EVM native-address
+sentinels; native NEAR and wrapped NEAR remain separate holdings.

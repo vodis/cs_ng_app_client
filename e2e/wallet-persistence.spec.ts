@@ -49,6 +49,7 @@ test.describe('active-wallet persistence with the real gateway', () => {
             subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
             getSnapshot: () => snapshot,
             getAccessToken: async () => 'test-token',
+            getWalletSession: async () => ({ account: '0xa000000000000000000000000000000000000001', chainId: 1 }),
             peekEmbeddedWallet: async () => {
               if (sessionStorage.getItem('test.defer-peek')) {
                 await new Promise(resolve => {
@@ -69,8 +70,15 @@ test.describe('active-wallet persistence with the real gateway', () => {
           headers: { 'Access-Control-Allow-Origin': '*' },
           body: `
           const connector = {
-            available: true, getPairingPrompt: () => null,
+            id: 'near', label: 'NEAR', available: true, getPairingPrompt: () => null,
             subscribeToPairingPrompt: () => () => {}, cancelPairingPrompt: () => {},
+            subscribeToSessionChanges: () => () => {},
+            getSession: async () => {
+              if (sessionStorage.getItem('test.defer-connect')) return null;
+              const mode = sessionStorage.getItem('test.reconnect-success') ? 'connected' : '${mode}';
+              if (mode === 'rejected') return null;
+              return { account: mode === 'wrong' ? 'other.near' : 'active.near' };
+            },
             connect: async () => {
               if (sessionStorage.getItem('test.defer-connect')) {
                 await new Promise(resolve => {
@@ -84,7 +92,8 @@ test.describe('active-wallet persistence with the real gateway', () => {
               return { account: address, identity: { connectorId: 'near', address, chainType: 'near', walletType: 'external' } };
             }
           };
-          export const connectorFactory = { create: () => connector, list: () => [connector] };
+          const embedded = { ...connector, id: 'privy', label: 'Passkey', getSession: async () => ({ account: '0xa000000000000000000000000000000000000001', chainId: 1 }) };
+          export const connectorFactory = { create: id => id === 'privy' ? embedded : connector, list: () => [connector, embedded] };
         `,
         })
       );
@@ -143,14 +152,13 @@ test.describe('active-wallet persistence with the real gateway', () => {
       for (let reload = 0; reload < 3; reload++) {
         await expect(page.locator('.wallets-mfe')).toBeAttached();
         await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-          mode === 'embedded'
+          mode === 'embedded' || mode === 'connected'
             ? 'Active · Connected'
-            : 'Active · Reconnect required'
+            : 'Active · Signing disconnected'
         );
-        if (mode !== 'embedded')
-          await expect(
-            page.locator('.wallets-mfe section[aria-label="Active wallet"]')
-          ).toContainText('active.near');
+        await expect(
+          page.locator('.wallets-mfe section[aria-label="Active wallet"]')
+        ).toHaveCount(0);
         await page.reload();
       }
       await expect(page.locator('.wallets-mfe')).toBeAttached();
@@ -162,34 +170,31 @@ test.describe('active-wallet persistence with the real gateway', () => {
         expect(browserErrors).toEqual([]);
         return;
       }
-      await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-        'Active · Reconnect required'
-      );
-      await expect(
-        page.locator('.wallets-mfe section[aria-label="Active wallet"]')
-      ).toContainText('active.near');
-      await page
-        .getByRole('button', { name: 'Reconnect', exact: true })
-        .click();
+      // Silent external restoration must never register or mutate a wallet.
+      expect(writes).toEqual([]);
       if (mode === 'wrong' || mode === 'rejected') {
         await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-          'Active · Reconnect required'
+          'Active · Signing disconnected'
         );
+        await page
+          .getByRole('button', { name: 'Reconnect', exact: true })
+          .click();
         await expect(
-          page.locator('.wallets-mfe section[aria-label="Active wallet"]')
+          page
+            .locator('.wallets-mfe')
+            .getByRole('button', { name: 'NEAR Wallet', exact: true })
         ).toBeVisible();
         await page.evaluate(() =>
           sessionStorage.setItem('test.reconnect-success', '1')
         );
         await page
           .locator('.wallets-mfe')
-          .getByRole('button', { name: 'Reconnect', exact: true })
+          .getByRole('button', { name: 'NEAR Wallet', exact: true })
           .click();
       }
       await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
         'Active · Connected'
       );
-      expect(writes).toEqual([]);
       expect(browserErrors).toEqual([]);
       if (providerDelay === 0 && mode === 'connected') {
         const cancellationResults = await page.evaluate(async url => {
@@ -201,6 +206,7 @@ test.describe('active-wallet persistence with the real gateway', () => {
           } = await import(url);
           const container = document.createElement('div');
           document.body.appendChild(container);
+          sessionStorage.setItem('test.defer-connect', '1');
           const api = remote.mount(container, {
             context: {
               selection: {
@@ -251,6 +257,7 @@ test.describe('active-wallet persistence with the real gateway', () => {
               await new Promise(resolve => setTimeout(resolve, 20));
               const retry = await sync();
               results.push(retry.account ?? 'no account');
+              sessionStorage.setItem('test.defer-connect', '1');
               api.sendGatewayEvent({ type: 'RESET' });
               await new Promise(resolve => setTimeout(resolve, 20));
             }
@@ -327,7 +334,10 @@ test.describe('active-wallet persistence with the real gateway', () => {
             sessionStorage.removeItem('test.defer-peek');
           }
         }, `${gatewayUrl}/src/mount.tsx`);
-        expect(staleAccounts).toEqual([]);
+        expect(staleAccounts).not.toContain(
+          '0xa000000000000000000000000000000000000001'
+        );
+        expect(staleAccounts).toEqual(['active.near']);
 
         await mockJsonApi(page, '/api/v1/wallets', {
           wallets: [

@@ -60,7 +60,8 @@
                 class="token-select-panel__section-status token-select-panel__section-status--error">
                 {{ walletTokensError }}
               </p>
-            } @else if (filteredWalletTokens.length > 0) {
+            }
+            @if (filteredWalletTokens.length > 0) {
               <ul
                 class="token-select-panel__list token-select-panel__list--wallet"
                 role="listbox"
@@ -106,7 +107,7 @@
                   </li>
                 }
               </ul>
-            } @else {
+            } @else if (!walletTokensLoading && !walletTokensError) {
               <p class="token-select-panel__section-status">
                 {{
                   filterQuery

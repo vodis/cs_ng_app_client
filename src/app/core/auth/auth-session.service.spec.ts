@@ -739,6 +739,49 @@ describe('AuthSessionService provider restore', () => {
     expect(service.session?.user.id).toBe('account-1');
   }));
 
+  it('ignores an older session refresh that completes after a newer wallet list', fakeAsync(() => {
+    configure(Promise.resolve(readySnapshot));
+    flushMicrotasks();
+    const oldMe = httpMock.expectOne(`${environment.apiUrl}/api/v1/me`);
+    const oldWallets = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/wallets`
+    );
+    void service.refresh();
+    flushMicrotasks();
+    const user = {
+      id: 'account-1',
+      providerUserId: 'provider-user-1',
+      sessionId: 'session-1',
+    };
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/me`).flush({ user });
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`).flush({
+      wallets: [
+        {
+          id: 'new',
+          address: 'new.near',
+          chainType: 'near',
+          walletType: 'external',
+          isPrimary: true,
+        },
+      ],
+    });
+    flushMicrotasks();
+    oldMe.flush({ user });
+    oldWallets.flush({
+      wallets: [
+        {
+          id: 'old',
+          address: 'old.near',
+          chainType: 'near',
+          walletType: 'external',
+          isPrimary: true,
+        },
+      ],
+    });
+    flushMicrotasks();
+    expect(service.session?.wallets[0].id).toBe('new');
+  }));
+
   it('skips restore when the provider settles without a ready status', fakeAsync(() => {
     configure(
       Promise.resolve({

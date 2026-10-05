@@ -1,3 +1,4 @@
+import { ActiveWalletFacade } from '@domains/wallet/application/active-wallet.facade';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import {
   ComponentFixture,
@@ -5,7 +6,7 @@ import {
   flushMicrotasks,
   TestBed,
 } from '@angular/core/testing';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
@@ -72,6 +73,7 @@ describe('WalletBarComponent', () => {
     TestBed.configureTestingModule({
       declarations: [WalletBarComponent],
       providers: [
+        { provide: ActiveWalletFacade, useValue: { state$: of({}) } },
         { provide: WalletGatewayBridgeService, useValue: gateway },
         { provide: WalletsService, useValue: wallets },
       ],
@@ -143,6 +145,7 @@ describe('WalletBarComponent', () => {
     expect(
       fixture.nativeElement.querySelector('app-connected-wallet-board')
     ).toBeNull();
+    component.hasActiveWallet = true;
     component.handleOpenWalletMenu();
     fixture.detectChanges();
     expect(

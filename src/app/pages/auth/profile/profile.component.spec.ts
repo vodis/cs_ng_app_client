@@ -6,6 +6,7 @@ import {
 /// <reference types="jasmine" />
 
 import { BehaviorSubject, Subject, combineLatest, map, of } from 'rxjs';
+import { ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
@@ -39,6 +40,19 @@ describe('ProfileComponent', () => {
   let swapSubmittedSubject: BehaviorSubject<
     { traceId: string; intentHash: string } | undefined
   >;
+
+  it('initializes the rendered portfolio label when no wallet or network is selected', () => {
+    const total = document.createElement('span');
+    total.textContent = 'Loading…';
+    Object.assign(component, { usdBalanceValue: new ElementRef(total) });
+    component.activeAccount = null;
+    component.ngAfterViewInit();
+    expect(total.textContent).toBe('Select a wallet');
+    component.activeAccount = '0xabc';
+    component.activeNetwork = undefined;
+    component.ngAfterViewInit();
+    expect(total.textContent).toBe('Select a network');
+  });
 
   const enabledSession: AuthSession = {
     user: {
@@ -169,7 +183,7 @@ describe('ProfileComponent', () => {
 
     activeWallet = jasmine.createSpyObj<ActiveWalletFacade>(
       'ActiveWalletFacade',
-      ['refreshBalances', 'requestConnection'],
+      ['refreshBalances', 'revalidateBalances', 'requestConnection'],
       {
         state: {
           wallet: linkedWalletSession.wallets[0],
@@ -184,6 +198,12 @@ describe('ProfileComponent', () => {
               wallet:
                 session?.wallets.find(wallet => wallet.isPrimary) ??
                 session?.wallets[0],
+              network:
+                session?.wallets[0]?.chainType === 'near'
+                  ? 'near:mainnet'
+                  : account?.chainId
+                    ? `eip155:${account.chainId}`
+                    : undefined,
               connected: Boolean(account),
               canSign: Boolean(account),
               reason: '',
@@ -304,8 +324,8 @@ describe('ProfileComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalled();
   });
 
-  it('shows $0.00 while portfolio is loading instead of Loading…', () => {
-    expect(component.usdBalanceLabel()).toBe('$0.00');
+  it('does not claim a zero portfolio before a wallet is selected', () => {
+    expect(component.usdBalanceLabel()).toBe('Select a wallet');
     expect(component.usdChangeLabel()).toBe('+$0.00');
     expect(component.usdChangePercentLabel()).toBe('0.00%');
     expect(component.walletPillLabel()).toBe('No wallet');
@@ -313,6 +333,8 @@ describe('ProfileComponent', () => {
   });
 
   it('renders the BFF portfolio total in the balance hero', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     portfolioApi.loadPortfolio.and.resolveTo({
       asOf: '2026-08-19T12:00:00Z',
       valuationCurrency: 'USD',
@@ -342,6 +364,8 @@ describe('ProfileComponent', () => {
   });
 
   it('shows an unavailable state when portfolio valuation fails', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     portfolioApi.loadPortfolio.and.rejectWith(new Error('RPC unavailable'));
 
     await component.refreshPortfolio();
@@ -380,6 +404,8 @@ describe('ProfileComponent', () => {
   });
 
   it('keeps Unavailable when portfolio fails during a balance animation', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     const el = document.createElement('span');
     (
       component as unknown as {
@@ -429,6 +455,8 @@ describe('ProfileComponent', () => {
   });
 
   it('ignores a stale portfolio response after a newer request completes', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await Promise.resolve();
     let resolveFirst!: (
       value: Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
@@ -449,6 +477,7 @@ describe('ProfileComponent', () => {
     portfolioApi.loadPortfolio.and.returnValues(first, second);
 
     const olderRequest = component.refreshPortfolio();
+    component.activeAccount = 'bob.near';
     const newerRequest = component.refreshPortfolio();
     resolveSecond({
       asOf: null,
@@ -471,7 +500,18 @@ describe('ProfileComponent', () => {
   });
 
   it('requests live mainnet valuation for a connected .tg account', async () => {
-    accountSubject.next({ account: 'alice.tg', chainId: null });
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
+    sessionSubject.next({
+      ...disabledSession,
+      wallets: [
+        {
+          ...externalWalletSession.wallets[0],
+          address: 'alice.tg',
+          chainType: 'near',
+        },
+      ],
+    });
     await Promise.resolve();
 
     expect(portfolioApi.loadPortfolio).toHaveBeenCalledWith({
@@ -481,6 +521,8 @@ describe('ProfileComponent', () => {
   });
 
   it('does not refetch portfolio for the same session and account', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await component.ensurePortfolioLoaded();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
 
@@ -492,9 +534,11 @@ describe('ProfileComponent', () => {
   });
 
   it('reuses portfolio cache when a new session object arrives for the same user/account', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await Promise.resolve();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
-    expect(callsAfterInit).toBe(1);
+    expect(callsAfterInit).toBe(0);
 
     sessionSubject.next({
       user: { ...disabledSession.user },
@@ -507,6 +551,8 @@ describe('ProfileComponent', () => {
   });
 
   it('forces a portfolio reload only from an explicit balances refresh', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await Promise.resolve();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
 
@@ -516,6 +562,8 @@ describe('ProfileComponent', () => {
   });
 
   it('refetches portfolio after a completed swap', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await Promise.resolve();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
 

@@ -62,7 +62,6 @@ function formatUsdCurrency(value: number): string {
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],
   providers: [
-    ProfileFacade,
     { provide: ProfileActivitySource, useClass: MockProfileActivitySource },
   ],
 })
@@ -82,6 +81,9 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public portfolio: PortfolioSnapshot | null = null;
   public portfolioStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
   public activeWalletId?: string;
+  public activeAccount: string | null = null;
+  public activeNetwork?: string;
+  public walletRestoring = false;
   public connectedAccount: string | null = null;
   public connectedChainId: number | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
@@ -109,24 +111,26 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public ngOnInit(): void {
+    this.profile.revalidateBalances();
     this.subscription = new Subscription();
     this.subscription.add(
       this.profile.activeWallet$.subscribe(state => {
+        const identityChanged =
+          this.activeWalletId !== state.wallet?.id ||
+          this.activeNetwork !== state.network ||
+          this.session?.user.id !== state.session?.user.id;
+        if (identityChanged) this.resetPortfolioDisplay();
         this.activeWalletId = state.wallet?.id;
+        this.activeAccount = state.wallet?.address ?? null;
+        this.activeNetwork = state.network;
+        this.walletRestoring = state.restoring === true;
         const session = state.session ?? null;
         const account = state.connected ? state.snapshot : undefined;
-        const previousAccount = this.connectedAccount;
-        const previousChainId = this.connectedChainId;
         this.connectedAccount = account?.account ?? null;
         this.connectedChainId = account?.chainId ?? null;
         this.session = session;
-        if (session) {
-          const accountChanged =
-            this.connectedAccount !== previousAccount ||
-            this.connectedChainId !== previousChainId;
-          // Automatic session ticks reuse cache / in-flight; force only via
-          // refreshBalances(), swaps, or a real account change.
-          void this.ensurePortfolioLoaded(accountChanged);
+        if (session && this.activeAccount && this.activeNetwork) {
+          void this.ensurePortfolioLoaded();
         } else {
           this.balances = [];
           this.resetPortfolioDisplay();
@@ -142,13 +146,17 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     );
     this.subscription.add(
       this.profile.balances$.subscribe(state => {
+        if (state.status === 'ready' || state.status === 'partial')
+          void this.ensurePortfolioLoaded(true);
         this.balances = state.rows;
         this.balancesLoading = state.status === 'loading';
         this.balanceStateMessage =
           state.errorMessage ??
           (state.status === 'idle'
-            ? 'Reconnect the active wallet to load balances.'
-            : state.rows.length === 0
+            ? this.activeAccount
+              ? 'Select a wallet network to load balances.'
+              : 'Select an active wallet to load balances.'
+            : state.status === 'ready' && state.rows.length === 0
               ? 'No balances found for this wallet.'
               : '');
       })
@@ -164,6 +172,8 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.pendingBalanceAnimation != null) {
       this.animateBalanceTo(this.pendingBalanceAnimation);
       this.pendingBalanceAnimation = null;
+    } else if (this.usdBalanceValue) {
+      this.usdBalanceValue.nativeElement.textContent = this.usdBalanceLabel();
     }
   }
 
@@ -353,7 +363,11 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
       const total = Number(this.portfolio?.totalValue ?? 0);
       return formatUsdCurrency(total);
     }
-    return ZERO_USD_LABEL;
+    return !this.activeAccount
+      ? 'Select a wallet'
+      : !this.activeNetwork
+        ? 'Select a network'
+        : 'Loading…';
   }
 
   public tokenBalanceLabel(): string {
@@ -570,7 +584,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public async ensurePortfolioLoaded(force = false): Promise<void> {
-    if (!this.session) {
+    if (!this.session || !this.activeAccount || !this.activeNetwork) {
       this.resetPortfolioDisplay();
       return;
     }
@@ -587,17 +601,20 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public async refreshPortfolio(): Promise<void> {
     const requestId = ++this.portfolioRequestId;
-    if (!this.session) {
+    if (!this.session || !this.activeAccount || !this.activeNetwork) {
       this.resetPortfolioDisplay();
       return;
     }
     const cacheKey = this.portfolioCacheKey();
     this.portfolioInFlightKey = cacheKey;
     this.portfolioStatus = 'loading';
+    this.cancelBalanceAnimation();
+    if (!this.portfolio && this.usdBalanceValue)
+      this.usdBalanceValue.nativeElement.textContent = 'Loading…';
     try {
       const portfolio = await this.profile.loadPortfolio(
-        this.connectedAccount,
-        this.connectedChainId
+        this.activeAccount,
+        this.activeNetwork
       );
       if (requestId !== this.portfolioRequestId) {
         return;
@@ -612,15 +629,15 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
       if (requestId !== this.portfolioRequestId) {
         return;
       }
-      this.portfolio = null;
       this.portfolioStatus = 'error';
       this.portfolioCacheKeyLoaded = null;
       this.portfolioInFlightKey = null;
-      this.displayedBalanceValue = 0;
       this.cancelBalanceAnimation();
       const el = this.usdBalanceValue?.nativeElement;
       if (el) {
-        el.textContent = 'Unavailable';
+        el.textContent = this.portfolio
+          ? formatUsdCurrency(Number(this.portfolio.totalValue))
+          : 'Unavailable';
       }
     }
   }
@@ -671,8 +688,8 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
       this.session?.user.id ?? '',
       this.session?.user.sessionId ?? '',
       this.activeWalletId ?? '',
-      this.connectedAccount ?? '',
-      this.connectedChainId ?? '',
+      this.activeAccount ?? '',
+      this.activeNetwork ?? '',
     ].join(':');
   }
 
@@ -683,7 +700,12 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     this.portfolioInFlightKey = null;
     this.portfolioRequestId += 1;
     this.cancelBalanceAnimation();
-    this.setBalanceLabelImmediate(0);
+    if (this.usdBalanceValue)
+      this.usdBalanceValue.nativeElement.textContent = this.activeAccount
+        ? this.activeNetwork
+          ? 'Loading…'
+          : 'Select a network'
+        : 'Select a wallet';
   }
 
   private settleBalanceDisplay(value: number): void {

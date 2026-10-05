@@ -1,3 +1,4 @@
+import { ActiveWalletFacade } from '@domains/wallet/application/active-wallet.facade';
 import {
   ChangeDetectorRef,
   Component,
@@ -28,10 +29,18 @@ export class WalletBarComponent {
   public isOpenWalletConnectMenu = false;
   public account: WalletAccount | undefined;
   public isGatewayConnected = false;
+  public hasActiveWallet = false;
+  private readonly activeWallet = inject(ActiveWalletFacade);
   public needsNearWalletLink = false;
   public drawerMode: WalletDrawerMode = 'wallet';
 
   constructor() {
+    this.activeWallet.state$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        this.hasActiveWallet = Boolean(state.wallet);
+        this.changeDetector.markForCheck();
+      });
     this.walletGatewayBridge.snapshot$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(snapshot => {
@@ -44,7 +53,7 @@ export class WalletBarComponent {
         if (
           this.hostModal &&
           this.isOpenWalletConnectMenu &&
-          this.drawerMode === 'wallet' &&
+          this.drawerMode !== 'swap-review' &&
           !wasGatewayConnected &&
           this.isGatewayConnected &&
           Boolean(snapshot?.account) &&
@@ -116,7 +125,7 @@ export class WalletBarComponent {
       return;
     }
 
-    this.walletsService.requestOpen();
+    this.walletsService.requestOpen('wallet');
   }
 
   public handleCloseWalletMenu(): void {
