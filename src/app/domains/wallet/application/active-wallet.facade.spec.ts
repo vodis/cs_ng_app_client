@@ -225,6 +225,57 @@ describe('backend-owned active wallet', () => {
     sub.unsubscribe();
   });
 
+  it('merges partial refreshes by canonical asset ID and retains only missing holdings as stale', () => {
+    const row = {
+      walletId: 'alice',
+      walletAddress: 'alice.near',
+      chainType: 'near',
+      network: 'near:mainnet',
+      assetId: 'near:native',
+      symbol: 'NEAR',
+      decimals: 24,
+      balanceRaw: '7',
+      source: 'rpc',
+      fetchedAt: '',
+      expiresAt: '',
+      stale: false,
+    };
+    const wrapped = { ...row, assetId: 'nep141:wrap.near', symbol: 'wNEAR' };
+    const result = {
+      account: 'alice.near',
+      network: 'near:mainnet',
+    };
+    sessions.next(session);
+    const sub = watch();
+    requests[0].next({ ...result, status: 'ready', rows: [row, wrapped] });
+    facade.refreshBalances();
+    const refreshed = {
+      ...wrapped,
+      assetId: '1cs_v1:near:nep141:wrap.near',
+      balanceRaw: '0',
+    };
+    requests[1].next({
+      ...result,
+      status: 'partial',
+      rows: [refreshed],
+      errorMessage: 'Some balances could not be loaded.',
+    });
+    expect(last().status).toBe('partial');
+    expect(last().errorMessage).toBe('Some balances could not be loaded.');
+    expect(last().rows).toEqual([refreshed, { ...row, stale: true }]);
+
+    facade.refreshBalances();
+    requests[2].next({ ...result, status: 'partial', rows: [] });
+    expect(last().rows).toEqual([
+      { ...refreshed, stale: true },
+      { ...row, stale: true },
+    ]);
+    facade.refreshBalances();
+    requests[3].next({ ...result, status: 'ready', rows: [] });
+    expect(last().rows).toEqual([]);
+    sub.unsubscribe();
+  });
+
   it('restores a scoped network preference for reads without claiming a live signer', () => {
     localStorage.setItem('app:v1:wallet-network:user:evm', 'eip155:137');
     const evm = {

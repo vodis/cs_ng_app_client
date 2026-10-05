@@ -6,6 +6,7 @@ import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { nearNetworkForAddress } from '@shared/utils/network.utils';
+import { canonicalBalanceAssetId } from '@shared/utils/balance-asset.utils';
 import {
   BehaviorSubject,
   combineLatest,
@@ -117,6 +118,30 @@ export class ActiveWalletFacade {
                     ...next,
                     rows: retained.rows.map(row => ({ ...row, stale: true })),
                   };
+                if (next.status === 'partial') {
+                  const refreshed = new Set(
+                    next.rows.map(row =>
+                      canonicalBalanceAssetId(row.assetId, request.network)
+                    )
+                  );
+                  return {
+                    ...next,
+                    rows: [
+                      ...next.rows,
+                      ...retained.rows
+                        .filter(
+                          row =>
+                            !refreshed.has(
+                              canonicalBalanceAssetId(
+                                row.assetId,
+                                request.network
+                              )
+                            )
+                        )
+                        .map(row => ({ ...row, stale: true })),
+                    ],
+                  };
+                }
                 return next;
               },
               {

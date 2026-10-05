@@ -179,18 +179,14 @@ test.describe('active-wallet persistence with the real gateway', () => {
         await page
           .getByRole('button', { name: 'Reconnect', exact: true })
           .click();
-        await expect(
-          page
-            .locator('.wallets-mfe')
-            .getByRole('button', { name: 'NEAR Wallet', exact: true })
-        ).toBeVisible();
+        const nearWallet = page
+          .locator('.wallets-mfe')
+          .getByRole('button', { name: /NEAR Wallet/ });
+        await expect(nearWallet).toBeVisible();
         await page.evaluate(() =>
           sessionStorage.setItem('test.reconnect-success', '1')
         );
-        await page
-          .locator('.wallets-mfe')
-          .getByRole('button', { name: 'NEAR Wallet', exact: true })
-          .click();
+        await nearWallet.click();
       }
       await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
         'Active · Connected'

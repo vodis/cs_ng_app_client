@@ -249,3 +249,6 @@ rejects responses from previous user/wallet/network contexts. Empty, loading,
 partial and failed reads have distinct UI states. Asset matching uses canonical
 IDs plus network, including equivalent NEP-141 prefixes and EVM native-address
 sentinels; native NEAR and wrapped NEAR remain separate holdings.
+Partial refreshes replace successfully read assets and retain missing holdings
+as stale within the same user/wallet/network context. A complete response
+replaces the retained holdings, including confirmed zero or empty balances.
