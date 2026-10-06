@@ -19,6 +19,7 @@ import {
 export class SideModalComponent implements AfterViewInit, OnDestroy {
   @Input() isOpen = false;
   @Input() placement: 'left' | 'right' = 'right';
+  @Input() showCloseButton = true;
   @Output() closeRequested = new EventEmitter<void>();
   @ViewChild('dialog') public dialog?: ElementRef<HTMLElement>;
 
@@ -44,6 +45,14 @@ export class SideModalComponent implements AfterViewInit, OnDestroy {
       this.onDialogClickCapture,
       true
     );
+  }
+
+  public handleHostClose(event: Event): void {
+    event.stopPropagation();
+    if (!this.isOpen) {
+      return;
+    }
+    this.closeRequested.emit();
   }
 
   public handleBackdropClick(): void {

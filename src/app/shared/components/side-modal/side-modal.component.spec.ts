@@ -1,6 +1,7 @@
 /// <reference types="jasmine" />
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatIconModule } from '@angular/material/icon';
 import { SideModalComponent } from './side-modal.component';
 
 describe('SideModalComponent', () => {
@@ -10,6 +11,7 @@ describe('SideModalComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [SideModalComponent],
+      imports: [MatIconModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SideModalComponent);
@@ -95,5 +97,24 @@ describe('SideModalComponent', () => {
     component.handleEscape();
 
     expect(emitSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('emits closeRequested from the host close button', () => {
+    const emitSpy = spyOn(component.closeRequested, 'emit');
+    const closeButton = fixture.nativeElement.querySelector(
+      '.side-modal__close'
+    ) as HTMLButtonElement;
+
+    expect(closeButton).toBeTruthy();
+    closeButton.click();
+
+    expect(emitSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the host close button when showCloseButton is false', () => {
+    component.showCloseButton = false;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.side-modal__close')).toBeNull();
   });
 });
