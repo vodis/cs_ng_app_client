@@ -6,7 +6,9 @@
         <small *ngIf="portfolioStatus === 'error'"
           >Portfolio refresh failed. Use Refresh to retry.</small
         >
-        <small *ngIf="tokenBalanceLabel() as tokenBalance">
+        <small
+          class="profile-shell__token-balances"
+          *ngIf="tokenBalanceLabel() as tokenBalance">
           · {{ tokenBalance }}
         </small>
       </p>
