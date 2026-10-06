@@ -937,7 +937,7 @@ app-account-sessions .profile-shell {
     display: grid;
     padding: 0;
     margin: 0;
-    gap: 0.65rem;
+    gap: 0;
     list-style: none;
 
     li {
@@ -946,11 +946,16 @@ app-account-sessions .profile-shell {
       align-items: center;
       padding: 0.7rem 0;
       border-top: 1px solid rgb(255 255 255 / 10%);
-      gap: 1rem;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 0.75rem 1rem;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
 
       &:first-child {
         border-top: 0;
+        padding-top: 0.35rem;
+      }
+
+      &:last-child {
+        padding-bottom: 0;
       }
     }
   }
@@ -959,22 +964,53 @@ app-account-sessions .profile-shell {
   &__balance-value {
     display: grid;
     min-width: 0;
-    gap: 0.15rem;
+    gap: 0.2rem;
+  }
 
-    span,
-    small {
-      overflow-wrap: anywhere;
-    }
+  &__balance-symbol,
+  &__balance-amount {
+    overflow: hidden;
+    color: var(--gray-30);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__balance-id,
+  &__balance-meta {
+    overflow: hidden;
+    color: var(--secondary-text-color);
+    font-size: 0.72rem;
+    font-weight: 400;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__balance-meta {
+    opacity: 0.78;
+  }
+
+  &__balance-network {
+    display: none;
+    color: var(--secondary-text-color);
+    font-size: 0.72rem;
+    font-weight: 400;
+    line-height: 1.2;
+    white-space: nowrap;
   }
 
   &__balance-value {
     justify-items: end;
     text-align: right;
+  }
 
-    span {
-      color: var(--gray-30);
-      font-weight: 600;
-    }
+  &__balances-warning {
+    margin: 0.35rem 0 0.5rem;
+    font-size: 0.82rem;
+    line-height: 1.25;
   }
 
   &__primary {
@@ -1182,14 +1218,83 @@ app-account-sessions .profile-shell {
       justify-content: flex-start;
     }
 
+    &__panel--balances {
+      padding: 1rem 0.85rem 1.25rem;
+    }
+
+    &__panel--balances .profile-shell__panel-header {
+      margin-bottom: 0.2rem;
+    }
+
+    &__panel--balances .profile-shell__refresh {
+      min-height: 2.5rem;
+      padding: 0 0.35rem;
+    }
+
+    &__panel--balances .profile-shell__balances-warning {
+      margin: 0.15rem 0 0.3rem;
+      font-size: 0.75rem;
+      line-height: 1.2;
+    }
+
     &__balances li {
-      gap: 0.35rem;
-      grid-template-columns: 1fr;
+      align-items: start;
+      padding: 0.55rem 0;
+      gap: 0.15rem 1rem;
+      grid-template-columns: minmax(0, 1fr) max-content;
+    }
+
+    &__balance-asset {
+      min-width: 0;
+      overflow: hidden;
+      gap: 0.08rem;
     }
 
     &__balance-value {
-      justify-items: start;
-      text-align: left;
+      min-width: max-content;
+      overflow: visible;
+      justify-items: end;
+      text-align: right;
+      gap: 0.08rem;
+    }
+
+    &__balance-symbol {
+      max-width: 100%;
+      font-size: 0.9rem;
+      line-height: 1.2;
+    }
+
+    &__balance-amount {
+      overflow: visible;
+      max-width: none;
+      font-size: 0.9rem;
+      line-height: 1.2;
+      text-overflow: unset;
+      white-space: nowrap;
+    }
+
+    &__balance-id {
+      max-width: 100%;
+      font-size: 0.65rem;
+      line-height: 1.15;
+    }
+
+    &__balance-meta {
+      display: none;
+    }
+
+    &__balance-network {
+      display: block;
+      overflow: visible;
+      width: max-content;
+      max-width: none;
+      color: rgb(118 118 118 / 78%);
+      font-size: 0.6rem;
+      font-weight: 400;
+      line-height: 1.15;
+      opacity: 0.7;
+      text-overflow: unset;
+      white-space: nowrap;
     }
 
     &__sessions-wrap {

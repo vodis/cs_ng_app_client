@@ -426,12 +426,13 @@
       </div>
     </section>
 
-    <section class="profile-shell__panel">
+    <section class="profile-shell__panel profile-shell__panel--balances">
       <div class="profile-shell__panel-header">
         <h2>Balances</h2>
         <button
           type="button"
           mat-button
+          class="profile-shell__refresh"
           [disabled]="balancesLoading"
           (click)="refreshBalances()">
           Refresh
@@ -446,19 +447,34 @@
         {{ balanceStateMessage }}
       </div>
       <p
-        class="profile-shell__error"
+        class="profile-shell__error profile-shell__balances-warning"
         *ngIf="!balancesLoading && balances.length > 0 && balanceStateMessage">
         {{ balanceStateMessage }}
       </p>
       <ul class="profile-shell__balances" *ngIf="balances.length > 0">
         <li *ngFor="let balance of balances">
           <div class="profile-shell__balance-asset">
-            <span>{{ balance.symbol }}</span>
-            <small>{{ balance.assetId }}</small>
+            <span class="profile-shell__balance-symbol">{{
+              balance.symbol
+            }}</span>
+            <small
+              class="profile-shell__balance-id"
+              [attr.title]="balance.assetId"
+              >{{ balance.assetId }}</small
+            >
           </div>
           <div class="profile-shell__balance-value">
-            <span>{{ balanceAmount(balance) }}</span>
-            <small>{{ balanceMeta(balance) }}</small>
+            <span class="profile-shell__balance-amount">{{
+              balanceAmount(balance)
+            }}</span>
+            <small
+              class="profile-shell__balance-meta"
+              [attr.title]="balanceMeta(balance)"
+              >{{ balanceMeta(balance) }}</small
+            >
+            <small class="profile-shell__balance-network">{{
+              balanceNetworkLabel(balance)
+            }}</small>
           </div>
         </li>
       </ul>
