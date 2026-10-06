@@ -32,6 +32,7 @@ import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
+import { MarketSnapshotsService } from '@shared/services/market-snapshots.service';
 import {
   WalletBalance,
   WalletBalancesService,
@@ -101,6 +102,10 @@ class ExchangeAssetsServiceStub {
   public loadAssets() {
     return of(this.tokens);
   }
+}
+
+class MarketSnapshotsServiceStub {
+  public load = jasmine.createSpy('load').and.returnValue(of([]));
 }
 
 class WalletBalancesServiceStub {
@@ -223,6 +228,10 @@ describe('HomeComponent market overview', () => {
         { provide: WalletsService, useClass: WalletsServiceStub },
         { provide: SwapFlowFacade, useClass: SwapFlowFacadeStub },
         { provide: ExchangeAssetsService, useClass: ExchangeAssetsServiceStub },
+        {
+          provide: MarketSnapshotsService,
+          useClass: MarketSnapshotsServiceStub,
+        },
         { provide: WalletBalancesService, useClass: WalletBalancesServiceStub },
       ],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -364,6 +373,138 @@ describe('HomeComponent market overview', () => {
     expect(component.marketSummaryChangeText()).toBe(
       'USDC +1.20% · NEAR +3.40% (1H)'
     );
+  });
+
+  it('renders compact From/To token details inside the market overview', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.fromToken = {
+      ...component.fromToken,
+      name: 'USD Coin',
+      contractAddress: '0x1234567890abcdef1234567890abcdef12345678',
+      decimals: 6,
+    };
+    component.toToken = {
+      ...component.toToken,
+      name: 'NEAR Protocol',
+      contractAddress: undefined,
+      decimals: 24,
+    };
+    fixture.detectChanges();
+
+    const details = fixture.nativeElement.querySelector(
+      '.tokenDetails'
+    ) as HTMLElement | null;
+    const standalone = fixture.nativeElement.querySelector('.tokenOverview');
+    expect(standalone).toBeNull();
+    expect(details).toBeTruthy();
+    expect(details?.textContent).toContain('USD Coin');
+    expect(details?.textContent).toContain('NEAR Protocol');
+    expect(details?.textContent).not.toContain('Market Cap');
+    expect(details?.textContent).not.toContain('24h Volume');
+    expect(component.tokenContractLabel(component.fromToken)).toBe(
+      '0x1234…5678'
+    );
+    expect(component.tokenContractLabel(component.toToken)).toBe('');
+    expect(details?.textContent).not.toContain('—');
+    expect(component.tokenOverviewHasPrice(component.fromToken)).toBeTrue();
+    expect(component.tokenOverviewHasPrice(component.toToken)).toBeTrue();
+  });
+
+  it('shows quote-token USD price from the active comparison pair', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.toToken = {
+      assetId: 'nep141:eth-0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9.omft.near',
+      symbol: 'AAVE',
+      displaySymbol: 'AAVE',
+      name: 'Aave',
+      color: '#b6509e',
+      blockchain: 'eth',
+      decimals: 18,
+      contractAddress: '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9',
+    };
+    component['loadMarketComparison']();
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'AAVE',
+      timeframe: '1H',
+    }).flush({
+      ...comparisonResponse('USDC', 'AAVE', '1H'),
+      baseToken: {
+        symbol: 'USDC',
+        currentPrice: 0.9999,
+        changePercent: 0.1,
+        historyAvailable: true,
+      },
+      quoteToken: {
+        symbol: 'AAVE',
+        currentPrice: 184.2,
+        changePercent: 2.1,
+        historyAvailable: true,
+      },
+    });
+
+    expect(component.tokenOverviewHasPrice(component.fromToken)).toBeTrue();
+    expect(component.tokenOverviewHasPrice(component.toToken)).toBeTrue();
+    expect(component.tokenOverviewPriceLabel(component.fromToken)).toContain(
+      '0.9999'
+    );
+    expect(component.tokenOverviewPriceLabel(component.toToken)).toContain(
+      '184'
+    );
+  });
+
+  it('renders market cap and volume only when snapshots include them', () => {
+    const markets = TestBed.inject(
+      MarketSnapshotsService
+    ) as unknown as MarketSnapshotsServiceStub;
+    markets.load.and.returnValue(
+      of([
+        {
+          symbol: 'USDC',
+          priceUsd: 1,
+          change24hPercent: 0,
+          marketCapUsd: 32_000_000_000,
+          volume24hUsd: 4_500_000_000,
+          sparkline7d: [1, 1],
+        },
+        {
+          symbol: 'NEAR',
+          priceUsd: 5,
+          change24hPercent: 0,
+          marketCapUsd: 0,
+          volume24hUsd: 0,
+          sparkline7d: [5, 5],
+        },
+      ])
+    );
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    component['loadTokenMarketingSnapshots']();
+    fixture.detectChanges();
+
+    const details = fixture.nativeElement.querySelector(
+      '.tokenDetails'
+    ) as HTMLElement | null;
+    expect(details?.textContent).toContain('Market Cap');
+    expect(details?.textContent).toContain('$32B');
+    expect(details?.textContent).toContain('24h Volume');
+    expect(component.tokenOverviewHasMarketCap(component.toToken)).toBeFalse();
+    expect(component.tokenOverviewHasVolume(component.toToken)).toBeFalse();
   });
 
   it('uses base/quote direction for fallback swap rate', () => {

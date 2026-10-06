@@ -399,6 +399,162 @@
                 </div>
               </dl>
             </div>
+
+            <div class="tokenDetails" aria-label="Token details">
+              <article class="tokenDetails__col">
+                <header class="tokenDetails__head">
+                  @if (tokenIconFor(fromToken); as fromIcon) {
+                    <span
+                      class="tokenDetails__iconWrap"
+                      [style.backgroundColor]="fromToken.color"
+                      aria-hidden="true">
+                      <img
+                        class="tokenDetails__icon"
+                        [src]="fromIcon"
+                        [alt]=""
+                        loading="lazy"
+                        width="18"
+                        height="18" />
+                    </span>
+                  } @else {
+                    <span class="tokenDetails__fallback" aria-hidden="true">{{
+                      tokenDisplay(tokenSymbolLabel(fromToken))
+                    }}</span>
+                  }
+                  <div class="tokenDetails__titles">
+                    <p class="tokenDetails__symbol">
+                      {{ tokenSymbolLabel(fromToken) }}
+                    </p>
+                    <p class="tokenDetails__name">{{ fromToken.name }}</p>
+                  </div>
+                </header>
+                <div class="tokenDetails__facts">
+                  @if (tokenOverviewHasPrice(fromToken)) {
+                    <div class="tokenDetails__row">
+                      <span class="tokenDetails__label">Price</span>
+                      <span class="tokenDetails__value">{{
+                        tokenOverviewPriceLabel(fromToken)
+                      }}</span>
+                    </div>
+                  }
+                  @if (tokenOverviewHasMarketCap(fromToken)) {
+                    <div class="tokenDetails__row">
+                      <span class="tokenDetails__label">Market Cap</span>
+                      <span class="tokenDetails__value">{{
+                        tokenOverviewMarketCapLabel(fromToken)
+                      }}</span>
+                    </div>
+                  }
+                  @if (tokenOverviewHasVolume(fromToken)) {
+                    <div class="tokenDetails__row">
+                      <span class="tokenDetails__label">24h Volume</span>
+                      <span class="tokenDetails__value">{{
+                        tokenOverviewVolumeLabel(fromToken)
+                      }}</span>
+                    </div>
+                  }
+                  <div class="tokenDetails__row">
+                    <span class="tokenDetails__label">Network</span>
+                    <span class="tokenDetails__value">{{
+                      tokenNetworkLabel(fromToken)
+                    }}</span>
+                  </div>
+                  @if (tokenContractTitle(fromToken)) {
+                    <div class="tokenDetails__row">
+                      <span class="tokenDetails__label">Contract</span>
+                      <span
+                        class="tokenDetails__value"
+                        [attr.title]="tokenContractTitle(fromToken)">
+                        {{ tokenContractLabel(fromToken) }}
+                      </span>
+                    </div>
+                  }
+                  <div class="tokenDetails__row">
+                    <span class="tokenDetails__label">Decimals</span>
+                    <span class="tokenDetails__value">{{
+                      tokenOverviewDecimalsLabel(fromToken)
+                    }}</span>
+                  </div>
+                </div>
+              </article>
+
+              <article class="tokenDetails__col">
+                <header class="tokenDetails__head">
+                  @if (tokenIconFor(toToken); as toIcon) {
+                    <span
+                      class="tokenDetails__iconWrap"
+                      [style.backgroundColor]="toToken.color"
+                      aria-hidden="true">
+                      <img
+                        class="tokenDetails__icon"
+                        [src]="toIcon"
+                        [alt]=""
+                        loading="lazy"
+                        width="18"
+                        height="18" />
+                    </span>
+                  } @else {
+                    <span class="tokenDetails__fallback" aria-hidden="true">{{
+                      tokenDisplay(tokenSymbolLabel(toToken))
+                    }}</span>
+                  }
+                  <div class="tokenDetails__titles">
+                    <p class="tokenDetails__symbol">
+                      {{ tokenSymbolLabel(toToken) }}
+                    </p>
+                    <p class="tokenDetails__name">{{ toToken.name }}</p>
+                  </div>
+                </header>
+                <div class="tokenDetails__facts">
+                  @if (tokenOverviewHasPrice(toToken)) {
+                    <div class="tokenDetails__row">
+                      <span class="tokenDetails__label">Price</span>
+                      <span class="tokenDetails__value">{{
+                        tokenOverviewPriceLabel(toToken)
+                      }}</span>
+                    </div>
+                  }
+                  @if (tokenOverviewHasMarketCap(toToken)) {
+                    <div class="tokenDetails__row">
+                      <span class="tokenDetails__label">Market Cap</span>
+                      <span class="tokenDetails__value">{{
+                        tokenOverviewMarketCapLabel(toToken)
+                      }}</span>
+                    </div>
+                  }
+                  @if (tokenOverviewHasVolume(toToken)) {
+                    <div class="tokenDetails__row">
+                      <span class="tokenDetails__label">24h Volume</span>
+                      <span class="tokenDetails__value">{{
+                        tokenOverviewVolumeLabel(toToken)
+                      }}</span>
+                    </div>
+                  }
+                  <div class="tokenDetails__row">
+                    <span class="tokenDetails__label">Network</span>
+                    <span class="tokenDetails__value">{{
+                      tokenNetworkLabel(toToken)
+                    }}</span>
+                  </div>
+                  @if (tokenContractTitle(toToken)) {
+                    <div class="tokenDetails__row">
+                      <span class="tokenDetails__label">Contract</span>
+                      <span
+                        class="tokenDetails__value"
+                        [attr.title]="tokenContractTitle(toToken)">
+                        {{ tokenContractLabel(toToken) }}
+                      </span>
+                    </div>
+                  }
+                  <div class="tokenDetails__row">
+                    <span class="tokenDetails__label">Decimals</span>
+                    <span class="tokenDetails__value">{{
+                      tokenOverviewDecimalsLabel(toToken)
+                    }}</span>
+                  </div>
+                </div>
+              </article>
+            </div>
           </div>
         </div>
       }
