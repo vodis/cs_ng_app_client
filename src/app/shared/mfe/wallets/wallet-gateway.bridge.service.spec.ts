@@ -173,6 +173,7 @@ describe('WalletGatewayBridgeService', () => {
 
   it('opens and closes swap review through the mounted wallet MFE', () => {
     mountApi.swapContractVersion = '2.0.0';
+    mountApi.executionReadinessVersion = '1.0.0';
     mountApi.openWalletSwapReview = jasmine.createSpy('openWalletSwapReview');
     mountApi.closeSwapReview = jasmine.createSpy('closeSwapReview');
     service.registerMountApi(mountApi);
@@ -187,6 +188,7 @@ describe('WalletGatewayBridgeService', () => {
 
   it('delegates product choices and cancellation to the v2 remote', async () => {
     mountApi.swapContractVersion = '2.0.0';
+    mountApi.executionReadinessVersion = '1.0.0';
     mountApi.requestSwapQuote = jasmine
       .createSpy('requestSwapQuote')
       .and.resolveTo({ amountOut: '1' });
@@ -197,7 +199,10 @@ describe('WalletGatewayBridgeService', () => {
     expect(mountApi.requestSwapQuote).toHaveBeenCalledOnceWith(input, options);
   });
 
-  it('rejects quote requests with an old remote instead of preparing them in the host', async () => {
+  it('rejects a v2 remote without execution readiness support', async () => {
+    mountApi.swapContractVersion = '2.0.0';
+    mountApi.requestSwapQuote = jasmine.createSpy('requestSwapQuote');
+    mountApi.openWalletSwapReview = jasmine.createSpy('openWalletSwapReview');
     service.registerMountApi(mountApi);
     await expectAsync(
       service.requestSwapQuote(swapReviewIntent().input, {
@@ -207,6 +212,11 @@ describe('WalletGatewayBridgeService', () => {
     ).toBeRejectedWith(
       jasmine.objectContaining({ code: 'GATEWAY_UNAVAILABLE' })
     );
+    expect(() => service.openSwapReview(swapReviewIntent())).toThrow(
+      jasmine.objectContaining({ code: 'GATEWAY_UNAVAILABLE' })
+    );
+    expect(mountApi.requestSwapQuote).not.toHaveBeenCalled();
+    expect(mountApi.openWalletSwapReview).not.toHaveBeenCalled();
   });
 
   it('reports the wallet MFE busy state as execution in progress', () => {

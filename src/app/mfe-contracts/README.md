@@ -212,11 +212,16 @@ the signed package through `POST /api/v1/swaps/execute`.
 
 The mount capability `swapContractVersion: '2.0.0'` exposes
 `requestSwapQuote(input, { traceId, signal })` and `openWalletSwapReview(review)`.
+The host also requires `executionReadinessVersion: '1.0.0'`: previews use the
+authenticated selection and the MFE checks/reconnects the live provider on review.
+Deploy the MFE before this host; older remotes receive an explicit update error.
 Angular supplies product choices: backend-provided source/destination metadata,
 atomic amount, expected account/network, recipient, slippage, and privacy choice.
 It does not choose the provider, authentication method, funding/refund channels,
-or request deadline. The MFE derives these from the live wallet and uses the
-same mapping for dry previews and final preparation. Backend validation remains
+or request deadline. The MFE derives preview fields from the backend-selected wallet, then validates
+the live account/network and backend ownership before final preparation. A
+verified NEAR link is reused without another ownership signature. Missing proof
+still uses the link challenge, and transaction/intent approvals remain required. Backend validation remains
 authoritative; the host supplies authenticated transport ports, including
 `quoteSwap`, and maps the existing BFF response into the quote contract.
 

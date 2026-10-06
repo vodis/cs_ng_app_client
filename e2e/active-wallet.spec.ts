@@ -109,12 +109,6 @@ test('restores the backend active wallet and loads balances without Refresh afte
   await expect(balances).toContainText('NEAR');
 
   await page.goto('/en');
-  const verify = page.getByRole('button', {
-    name: 'VERIFY WALLET',
-    exact: true,
-  });
-  await expect(verify).toBeEnabled();
-  await verify.click();
   await expect(
     page.getByRole('button', { name: 'REVIEW', exact: true })
   ).toBeVisible();

@@ -269,7 +269,7 @@ export class HomeComponent {
   private walletBalances: WalletBalance[] = [];
   public activeWallet: ActiveWalletState = {
     connected: false,
-    canSign: false,
+    canRequestSwap: false,
     reason: 'Sign in to use your wallet.',
   };
   private walletContextKey = '';
@@ -303,7 +303,7 @@ export class HomeComponent {
           state.sessionId,
           state.wallet?.id,
           state.network,
-          state.canSign,
+          state.canRequestSwap,
         ].join('|');
         if (key === this.walletContextKey) return;
         this.walletContextKey = key;
@@ -390,20 +390,9 @@ export class HomeComponent {
   }
 
   public submitQuote(): void {
-    if (!this.activeWallet.connected) {
+    if (!this.activeWallet.wallet) {
       this.quoteError = '';
       this.activeWalletFacade.requestConnection();
-      return;
-    }
-
-    if (!this.activeWallet.canSign) {
-      this.quoteError = '';
-      try {
-        this.activeWalletFacade.requestVerification();
-      } catch {
-        this.quoteError =
-          'Wallet verification is unavailable. Reconnect and try again.';
-      }
       return;
     }
 
@@ -457,7 +446,7 @@ export class HomeComponent {
     const preview = this.quotePreview;
     const input = this.buildQuotePreviewInput();
     return Boolean(
-      this.activeWallet.canSign &&
+      this.activeWallet.canRequestSwap &&
       preview &&
       input &&
       /^\d+$/.test(preview.amountOutAtomic) &&
@@ -471,7 +460,7 @@ export class HomeComponent {
   public canRetryQuote(): boolean {
     const input = this.buildQuotePreviewInput();
     return (
-      this.activeWallet.canSign &&
+      this.activeWallet.canRequestSwap &&
       this.swapFlowState === 'idle' &&
       Boolean(
         this.quoteError ||
@@ -484,12 +473,8 @@ export class HomeComponent {
   }
 
   public isPrimaryActionDisabled(): boolean {
-    return (
-      this.activeWallet.restoring === true ||
-      (this.activeWallet.connected &&
-        !this.activeWallet.verificationAction &&
-        !this.canReviewSwap() &&
-        !this.canRetryQuote())
+    return Boolean(
+      this.activeWallet.wallet && !this.canReviewSwap() && !this.canRetryQuote()
     );
   }
 
@@ -839,20 +824,7 @@ export class HomeComponent {
   }
 
   public primaryActionLabel(): string {
-    if (this.activeWallet.restoring) return 'Restoring wallet…';
-    if (!this.activeWallet.connected) {
-      return 'Connect wallet';
-    }
-
-    if (this.activeWallet.verificationAction === 'verify')
-      return 'Verify wallet';
-    if (this.activeWallet.verificationAction === 'reconnect')
-      return 'Reconnect to verify';
-    if (
-      this.activeWallet.snapshot?.executionState ===
-      'operating.verifyingSignature'
-    )
-      return 'Verifying wallet…';
+    if (!this.activeWallet.wallet) return 'Connect wallet';
 
     return this.canRetryQuote()
       ? 'Retry quote'
@@ -1148,7 +1120,7 @@ export class HomeComponent {
   }
 
   private buildQuotePreviewInput(): SwapFormInput | undefined {
-    if (!this.activeWallet.canSign || !this.walletAddress) {
+    if (!this.activeWallet.canRequestSwap || !this.walletAddress) {
       return undefined;
     }
 

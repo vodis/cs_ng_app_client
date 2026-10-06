@@ -148,15 +148,17 @@ clears their rows. Manual Refresh retries failures, and confirmed settlement
 refreshes balances. A closed wallet drawer does not mount another balance view.
 Late wallet-list responses cannot overwrite an active primary-wallet mutation.
 
-Review accepts a valid dry-run preview; the MFE obtains the execution quote in
-the review flow. Authentication, signing readiness, source balance freshness,
-amount, network, and quote expiry remain required. The UI explains unmet
-requirements and re-evaluates expiry without a wallet event. A connected,
-account-linked wallet awaiting verification exposes **Verify wallet** before
-quote review, using the existing MFE `VERIFY_REQUESTED` event. While the wallet
-prompt is open the action is disabled. A failed/cancelled verification offers
-**Reconnect to verify**, since the public gateway contract has no retry event.
-Quotes and review remain blocked until a verified snapshot arrives.
+Review accepts a valid dry-run preview for the authenticated backend-selected
+wallet. The host checks product inputs, source balance freshness, network and
+quote expiry. Quotes do not require a connected or verified browser signer.
+There is no separate host **Verify wallet** action or safety-provider gate.
+
+When the user opens review, the MFE reconnects the selected provider if needed,
+checks the live account/network and confirms backend ownership before final
+preparation. Existing verified NEAR links are reused without another message
+signature; a missing ownership marker requires the initial link proof. The
+transaction or intent approval remains an explicit action after review. Wallet
+or user changes cancel pending readiness and prevent stale execution.
 
 ### Quote and review lifecycle
 

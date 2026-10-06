@@ -139,6 +139,8 @@ export type WalletsMfeMountApi = {
   syncConnectedWallet?: () => Promise<WalletConnectionSnapshot>;
   disconnectWallet?: () => void;
   swapContractVersion?: '2.0.0';
+  /** Selected-wallet previews and MFE-owned execution readiness. */
+  executionReadinessVersion?: '1.0.0';
   requestSwapQuote?: (
     input: WalletSwapInput,
     options: WalletSwapQuoteOptions

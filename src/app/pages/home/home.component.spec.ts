@@ -148,7 +148,7 @@ class ActiveWalletStub {
         userId: 'user',
         sessionId: 'session',
         connected: Boolean(account),
-        canSign: Boolean(account),
+        canRequestSwap: Boolean(account),
         reason: account ? '' : 'Connect wallet',
         wallet: account
           ? {
@@ -237,41 +237,30 @@ describe('HomeComponent market overview', () => {
     httpMock.verify();
   });
 
-  it('lets an unverified wallet request verification before entering an amount', () => {
+  it('does not offer a separate verification action for the selected wallet', () => {
     expectComparisonRequest({
       base: 'USDC',
       quote: 'NEAR',
       timeframe: '1H',
     }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
-    const active = TestBed.inject(ActiveWalletFacade);
-    const verify = spyOn(active, 'requestVerification');
     component.activeWallet = {
-      connected: true,
-      canSign: false,
-      verificationAction: 'verify',
-      reason: 'Verify the active wallet before signing.',
+      ...component.activeWallet,
+      connected: false,
+      canRequestSwap: true,
+      restoring: true,
+      reason: '',
+      wallet: {
+        id: 'near',
+        address: 'alice.near',
+        chainType: 'near',
+        walletType: 'external',
+        providerWalletId: '',
+        isPrimary: true,
+      },
     };
-    expect(component.isPrimaryActionDisabled()).toBeFalse();
-    expect(component.primaryActionLabel()).toBe('Verify wallet');
+    expect(component.primaryActionLabel()).toBe('Review');
     expect(component.canReviewSwap()).toBeFalse();
-    component.submitQuote();
-    expect(verify).toHaveBeenCalledTimes(1);
-    component.activeWallet = {
-      ...component.activeWallet,
-      verificationAction: undefined,
-    };
     expect(component.isPrimaryActionDisabled()).toBeTrue();
-    component.activeWallet = {
-      ...component.activeWallet,
-      verificationAction: 'reconnect',
-    };
-    expect(component.primaryActionLabel()).toBe('Reconnect to verify');
-    expect(component.isPrimaryActionDisabled()).toBeFalse();
-    verify.and.throwError('Gateway unavailable');
-    component.submitQuote();
-    expect(component.reviewBlockingReason()).toContain(
-      'verification is unavailable'
-    );
   });
 
   it('requests comparison data with backend-supported symbols and timeframes', () => {
@@ -1093,14 +1082,14 @@ describe('HomeComponent market overview', () => {
     expect(component.canReviewSwap()).toBeTrue();
     component.activeWallet = {
       ...component.activeWallet,
-      canSign: false,
-      reason: 'Verify the active wallet before signing.',
+      canRequestSwap: false,
+      reason: 'Select a supported wallet network.',
     };
     expect(component.canReviewSwap()).toBeFalse();
-    expect(component.reviewBlockingReason()).toContain('Verify');
+    expect(component.reviewBlockingReason()).toContain('network');
     component.activeWallet = {
       ...component.activeWallet,
-      canSign: true,
+      canRequestSwap: true,
       reason: '',
     };
     if (!component.quotePreview) throw new Error('Missing quote fixture');

@@ -193,10 +193,9 @@ export class WalletGatewayBridgeService {
     }
 
     if (!snapshot.isVerified) {
-      this.sendGatewayEvent({ type: 'VERIFY_REQUESTED' });
       throw this.executionFailure(
         'NOT_VERIFIED',
-        'Complete wallet verification before signing',
+        'Wallet readiness changed. Reopen the swap review.',
         true
       );
     }
@@ -231,9 +230,9 @@ export class WalletGatewayBridgeService {
       traceId: input.traceId,
     });
 
+    const signature = this.waitForIntentSignature(input.traceId);
     this.sendGatewayEvent({ type: 'SIGN_REQUESTED' });
-
-    return this.waitForIntentSignature(input.traceId);
+    return signature;
   }
 
   async runNearDepositFlow(
@@ -248,10 +247,9 @@ export class WalletGatewayBridgeService {
       );
     }
     if (!snapshot.isVerified) {
-      this.sendGatewayEvent({ type: 'VERIFY_REQUESTED' });
       throw this.executionFailure(
         'NOT_VERIFIED',
-        'Complete wallet verification before depositing',
+        'Wallet readiness changed. Reopen the swap review.',
         true
       );
     }
@@ -308,7 +306,11 @@ export class WalletGatewayBridgeService {
     options: WalletSwapQuoteOptions
   ): Promise<WalletSwapQuote> {
     const api = this.mountApi;
-    if (api?.swapContractVersion !== '2.0.0' || !api.requestSwapQuote) {
+    if (
+      api?.swapContractVersion !== '2.0.0' ||
+      api.executionReadinessVersion !== '1.0.0' ||
+      !api.requestSwapQuote
+    ) {
       throw this.executionFailure(
         'GATEWAY_UNAVAILABLE',
         'Update the wallet remote to request swap quotes.',
@@ -320,7 +322,11 @@ export class WalletGatewayBridgeService {
 
   openSwapReview(review: WalletSwapReview): void {
     const api = this.mountApi;
-    if (api?.swapContractVersion !== '2.0.0' || !api.openWalletSwapReview) {
+    if (
+      api?.swapContractVersion !== '2.0.0' ||
+      api.executionReadinessVersion !== '1.0.0' ||
+      !api.openWalletSwapReview
+    ) {
       throw this.executionFailure(
         'GATEWAY_UNAVAILABLE',
         'Update the wallet remote to review this swap.',
