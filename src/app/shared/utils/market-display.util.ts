@@ -1,3 +1,17 @@
+export type WalletMarketSocialKind =
+  | 'x'
+  | 'github'
+  | 'discord'
+  | 'telegram'
+  | 'reddit'
+  | 'other';
+
+export type WalletMarketSocialLink = {
+  kind: WalletMarketSocialKind;
+  url: string;
+  label: string;
+};
+
 export type WalletMarketSnapshot = {
   symbol: string;
   priceUsd: number;
@@ -5,6 +19,10 @@ export type WalletMarketSnapshot = {
   marketCapUsd: number;
   volume24hUsd: number;
   sparkline7d: number[];
+  websiteUrl?: string;
+  whitepaperUrl?: string;
+  explorerUrl?: string;
+  socialLinks?: WalletMarketSocialLink[];
 };
 
 export function emptyMarketSnapshot(symbol: string): WalletMarketSnapshot {
@@ -99,4 +117,12 @@ export function marketIsDown(snapshot: WalletMarketSnapshot): boolean {
   }
   const values = snapshot.sparkline7d;
   return values.length >= 2 && values[values.length - 1] < values[0];
+}
+
+export function hostnameLabel(url: string, fallback: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '') || fallback;
+  } catch {
+    return fallback;
+  }
 }
