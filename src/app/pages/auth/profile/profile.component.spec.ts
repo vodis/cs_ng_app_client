@@ -188,7 +188,7 @@ describe('ProfileComponent', () => {
         state: {
           wallet: linkedWalletSession.wallets[0],
           connected: false,
-          canSign: false,
+          canRequestSwap: false,
           reason: 'Reconnect',
         },
         state$: combineLatest([sessionSubject, accountSubject]).pipe(
@@ -205,7 +205,7 @@ describe('ProfileComponent', () => {
                     ? `eip155:${account.chainId}`
                     : undefined,
               connected: Boolean(account),
-              canSign: Boolean(account),
+              canRequestSwap: Boolean(account),
               reason: '',
               snapshot: account
                 ? {

@@ -45,7 +45,7 @@ describe('shared active wallet details', () => {
       wallet,
       network: 'near:mainnet',
       connected: false,
-      canSign: false,
+      canRequestSwap: false,
       reason: 'Connect to sign',
     });
     balances = new BehaviorSubject<ActiveWalletBalances>({

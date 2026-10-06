@@ -31,8 +31,7 @@ export type ActiveWalletState = {
   network?: string;
   restoring?: boolean;
   connected: boolean;
-  canSign: boolean;
-  verificationAction?: 'verify' | 'reconnect';
+  canRequestSwap: boolean;
   reason: string;
 };
 
@@ -48,7 +47,7 @@ export type ActiveWalletBalances = Omit<
 export class ActiveWalletFacade {
   private readonly stateSubject = new BehaviorSubject<ActiveWalletState>({
     connected: false,
-    canSign: false,
+    canRequestSwap: false,
     reason: 'Sign in to use your wallet.',
   });
   private readonly destroyRef = inject(DestroyRef);
@@ -182,15 +181,6 @@ export class ActiveWalletFacade {
     this.wallets.requestOpen('connect');
   }
 
-  requestVerification(): void {
-    if (this.state.verificationAction === 'reconnect') {
-      this.gateway.disconnectWallet();
-      this.wallets.requestOpen('connect');
-    } else if (this.state.verificationAction === 'verify') {
-      this.gateway.requestVerification();
-    }
-  }
-
   revalidateBalances(): void {
     const current = this.balancesSubject.value;
     if (current.status === 'loading') return;
@@ -275,7 +265,7 @@ export class ActiveWalletFacade {
     if (!session) {
       this.stateSubject.next({
         connected: false,
-        canSign: false,
+        canRequestSwap: false,
         reason: 'Sign in to use your wallet.',
       });
       return;
@@ -298,27 +288,12 @@ export class ActiveWalletFacade {
     const restoring =
       snapshot?.restorationStatus === 'pending' ||
       snapshot?.restorationStatus === 'restoring';
-    const signingNetworkReady = Boolean(
-      network &&
-      (wallet?.chainType !== 'ethereum' ||
-        (Number.isSafeInteger(snapshot?.chainId) &&
-          (snapshot?.chainId ?? 0) > 0))
-    );
+    // Selection permits product quotes; the MFE checks the live signer on execution.
     const reason = !wallet
       ? 'Connect a wallet linked to this account.'
-      : !connected
-        ? restoring
-          ? 'Restoring wallet connection…'
-          : 'Connect the active wallet to sign.'
-        : !signingNetworkReady
-          ? 'Select a supported wallet network.'
-          : !snapshot?.isVerified
-            ? 'Verify the active wallet before signing.'
-            : snapshot.safetyStatus !== 'safe' && !snapshot.isBypassed
-              ? 'Complete the wallet safety check.'
-              : snapshot.linkStatus && snapshot.linkStatus !== 'linked'
-                ? 'Link the active wallet to this account.'
-                : '';
+      : !network
+        ? 'Select a supported wallet network.'
+        : '';
     this.stateSubject.next({
       session,
       userId: session.user.id,
@@ -328,20 +303,7 @@ export class ActiveWalletFacade {
       network,
       connected,
       restoring,
-      verificationAction:
-        connected &&
-        signingNetworkReady &&
-        snapshot &&
-        !snapshot.isVerified &&
-        (snapshot.safetyStatus === 'safe' || snapshot.isBypassed) &&
-        (!snapshot.linkStatus || snapshot.linkStatus === 'linked')
-          ? snapshot.executionState === 'operating.verificationPending'
-            ? 'verify'
-            : snapshot.executionState === 'operating.verificationFailed'
-              ? 'reconnect'
-              : undefined
-          : undefined,
-      canSign: !reason,
+      canRequestSwap: !reason,
       reason,
     });
   }
