@@ -58,9 +58,8 @@ describe('MobileBottomNavComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('keeps the first level to Home, Exchange, Profile, and More', () => {
+  it('keeps the first level to Exchange, Profile, and More', () => {
     expect(component.links.map(link => link.fallback)).toEqual([
-      'Home',
       'Exchange',
       'Profile',
       'More',
@@ -79,21 +78,20 @@ describe('MobileBottomNavComponent', () => {
     expect(fixture.nativeElement.querySelector('.bottom-bar')).toBeNull();
   });
 
-  it('renders the four primary destinations', () => {
+  it('renders the three primary destinations', () => {
     const labels = Array.from(
       fixture.nativeElement.querySelectorAll(
         '.floating-nav__level--primary .nav-label'
       ) as NodeListOf<HTMLElement>
     ).map(el => el.textContent?.trim());
 
-    expect(labels).toEqual(['Home', 'Exchange', 'Profile', 'More']);
+    expect(labels).toEqual(['Exchange', 'Profile', 'More']);
   });
 
   it('keeps visible internal destinations unique', () => {
     const destinations = component.internalDestinations();
 
     expect(destinations).toEqual([
-      '/home',
       '/',
       '/profile',
       '/farm',
