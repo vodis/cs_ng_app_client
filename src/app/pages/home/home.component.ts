@@ -1403,11 +1403,13 @@ export class HomeComponent {
   }
 
   public tokenOverviewHasMarketCap(token: ExchangeToken): boolean {
-    return this.tokenOverviewMarketCapValue(token) > 0;
+    // Only show snapshot-backed caps. Mock figures must not look like live data.
+    return (this.marketSnapshotFor(token)?.marketCapUsd ?? 0) > 0;
   }
 
   public tokenOverviewMarketCapLabel(token: ExchangeToken): string {
-    return formatCompactUsd(this.tokenOverviewMarketCapValue(token));
+    const marketCapUsd = this.marketSnapshotFor(token)?.marketCapUsd ?? 0;
+    return marketCapUsd > 0 ? formatCompactUsd(marketCapUsd) : '';
   }
 
   public tokenOverviewHasVolume(token: ExchangeToken): boolean {
@@ -1458,14 +1460,6 @@ export class HomeComponent {
       return fromSnapshot;
     }
     return this.tokenProjectMock(token)?.socialLinks ?? [];
-  }
-
-  private tokenOverviewMarketCapValue(token: ExchangeToken): number {
-    const snapshotValue = this.marketSnapshotFor(token)?.marketCapUsd ?? 0;
-    if (snapshotValue > 0) {
-      return snapshotValue;
-    }
-    return this.tokenProjectMock(token)?.marketCapUsd ?? 0;
   }
 
   private tokenOverviewVolumeValue(token: ExchangeToken): number {

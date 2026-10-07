@@ -404,8 +404,8 @@ describe('HomeComponent market overview', () => {
     expect(details).toBeTruthy();
     expect(details?.textContent).toContain('USD Coin');
     expect(details?.textContent).toContain('NEAR Protocol');
-    expect(details?.textContent).toContain('Market Cap');
-    expect(details?.textContent).toContain('$32B');
+    expect(details?.textContent).not.toContain('Market Cap');
+    expect(details?.textContent).not.toContain('$32B');
     expect(details?.textContent).not.toContain('24h Volume');
     expect(details?.textContent).not.toContain('Price');
     expect(details?.textContent).toContain('Website');
@@ -416,6 +416,7 @@ describe('HomeComponent market overview', () => {
     expect(details?.textContent).not.toContain('Contract');
     expect(details?.textContent).not.toContain('Decimals');
     expect(details?.textContent).not.toContain('—');
+    expect(component.tokenOverviewHasMarketCap(component.fromToken)).toBeFalse();
     expect(component.tokenOverviewHasPrice(component.fromToken)).toBeTrue();
     expect(component.tokenOverviewHasPrice(component.toToken)).toBeTrue();
   });
@@ -532,7 +533,8 @@ describe('HomeComponent market overview', () => {
     expect(details?.textContent).toContain('etherscan.io');
     expect(details?.textContent).not.toContain('Network');
     expect(details?.textContent).not.toContain('Decimals');
-    expect(component.tokenOverviewHasMarketCap(component.toToken)).toBeTrue();
+    expect(component.tokenOverviewHasMarketCap(component.fromToken)).toBeTrue();
+    expect(component.tokenOverviewHasMarketCap(component.toToken)).toBeFalse();
     expect(component.tokenOverviewWebsiteUrl(component.toToken)).toBe(
       'https://near.org'
     );

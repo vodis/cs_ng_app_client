@@ -72,15 +72,16 @@ metadata.
 Directly under the pair summary inside the same market panel, a compact
 **Token marketing** block shows From (left) and To (right) in a CoinMarketCap-
 style row layout: muted labels on the left, compact pills/icons on the right.
-Market Cap, Website, Whitepaper, Socials, and Explorers currently use
-host-owned mocks in `token-project.mock.ts` (same pattern as Market/Product
-labels) until `GET /api/v1/markets/snapshots` returns those fields. Snapshot
-values override mocks when present, except Explorers: the selected token’s
-network and contract resolve first via `explorerUrlForToken`, so bridged assets
-(e.g. USDC on Base) do not open the Ethereum mock link. Price and 24h Volume
-are omitted from this block (pair price stays in the market summary). Technical
-fields (Network, Contract, Decimals) are omitted. On viewports `<= 1100px` the
-two columns stack.
+Market Cap is shown only when
+`GET /api/v1/markets/snapshots` returns a positive `marketCapUsd` — host mocks
+are not used for that figure, so a failed/empty snapshot does not invent values
+like `$32B`. Website, Whitepaper, Socials, and Explorers still use host-owned
+mocks in `token-project.mock.ts` until those snapshot fields exist. Explorers
+prefer the selected token’s network and contract via `explorerUrlForToken`, so
+bridged assets (e.g. USDC on Base) do not open the Ethereum mock link. Price and
+24h Volume are omitted from this block (pair price stays in the market summary).
+Technical fields (Network, Contract, Decimals) are omitted. On viewports
+`<= 1100px` the two columns stack.
 
 ### Recent activity
 
