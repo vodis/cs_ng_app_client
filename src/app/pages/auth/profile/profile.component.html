@@ -464,9 +464,11 @@
             >
           </div>
           <div class="profile-shell__balance-value">
-            <span class="profile-shell__balance-amount">{{
-              balanceAmount(balance)
-            }}</span>
+            <span
+              class="profile-shell__balance-amount"
+              [attr.title]="balanceAmount(balance)"
+              >{{ balanceAmount(balance) }}</span
+            >
             <small
               class="profile-shell__balance-meta"
               [attr.title]="balanceMeta(balance)"

@@ -1241,7 +1241,7 @@ app-account-sessions .profile-shell {
       align-items: start;
       padding: 0.55rem 0;
       gap: 0.15rem 1rem;
-      grid-template-columns: minmax(0, 1fr) max-content;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 46%);
     }
 
     &__balance-asset {
@@ -1251,8 +1251,9 @@ app-account-sessions .profile-shell {
     }
 
     &__balance-value {
-      min-width: max-content;
-      overflow: visible;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
       justify-items: end;
       text-align: right;
       gap: 0.08rem;
@@ -1265,12 +1266,14 @@ app-account-sessions .profile-shell {
     }
 
     &__balance-amount {
-      overflow: visible;
-      max-width: none;
+      max-width: 100%;
+      overflow-wrap: anywhere;
       font-size: 0.9rem;
       line-height: 1.2;
+      text-align: right;
       text-overflow: unset;
-      white-space: nowrap;
+      white-space: normal;
+      word-break: break-word;
     }
 
     &__balance-id {
@@ -1285,15 +1288,14 @@ app-account-sessions .profile-shell {
 
     &__balance-network {
       display: block;
-      overflow: visible;
-      width: max-content;
-      max-width: none;
+      overflow: hidden;
+      max-width: 100%;
       color: rgb(118 118 118 / 78%);
       font-size: 0.6rem;
       font-weight: 400;
       line-height: 1.15;
       opacity: 0.7;
-      text-overflow: unset;
+      text-overflow: ellipsis;
       white-space: nowrap;
 
       &--stale {
