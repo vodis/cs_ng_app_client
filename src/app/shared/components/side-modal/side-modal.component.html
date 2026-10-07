@@ -6,11 +6,24 @@
 <div
   #dialog
   class="side-modal"
-  [ngClass]="{ open: isOpen, 'side-modal--left': placement === 'left' }"
+  [ngClass]="{
+    open: isOpen,
+    'side-modal--left': placement === 'left',
+    'side-modal--with-close': showCloseButton,
+  }"
   role="dialog"
   [attr.aria-modal]="isOpen"
   [attr.aria-hidden]="!isOpen"
   [attr.inert]="isOpen ? null : ''"
   (click)="handleDialogClick($event)">
+  @if (showCloseButton && isOpen) {
+    <button
+      type="button"
+      class="side-modal__close"
+      aria-label="Close dialog"
+      (click)="handleHostClose($event)">
+      <mat-icon aria-hidden="true">close</mat-icon>
+    </button>
+  }
   <ng-content></ng-content>
 </div>

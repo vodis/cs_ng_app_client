@@ -52,7 +52,7 @@
   </ng-container>
 </main>
 
-<app-side-modal [isOpen]="profileOpen" (closeModal)="profileOpen = false">
+<app-side-modal [isOpen]="profileOpen" (closeRequested)="profileOpen = false">
   <section class="portfolio-modal" *ngIf="profileOpen">
     <header>
       <p class="portfolio-modal__eyebrow">Agent context</p>
@@ -101,7 +101,7 @@
   </section>
 </app-side-modal>
 
-<app-side-modal [isOpen]="agentOpen" (closeModal)="agentOpen = false">
+<app-side-modal [isOpen]="agentOpen" (closeRequested)="agentOpen = false">
   <section class="portfolio-modal agent-connect" *ngIf="agentOpen">
     <header>
       <p class="portfolio-modal__eyebrow">Bring your own capacity</p>

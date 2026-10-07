@@ -627,6 +627,7 @@
 
   <app-side-modal
     [isOpen]="isTokenSelectorOpen"
+    [showCloseButton]="false"
     (closeRequested)="closeTokenSelector()">
     <app-token-select-panel
       [title]="tokenSelectorTitle()"
@@ -648,6 +649,7 @@
   <app-side-modal
     placement="left"
     [isOpen]="isRecipientPanelOpen"
+    [showCloseButton]="false"
     (closeRequested)="closeRecipientPanel()">
     <app-recipient-address-panel
       [isOpen]="isRecipientPanelOpen"
