@@ -541,6 +541,29 @@ describe('HomeComponent market overview', () => {
     ).toBe('https://www.circle.com/en/usdc');
   });
 
+  it('prefers the selected network explorer over the symbol mock', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.fromToken = {
+      ...component.fromToken,
+      symbol: 'USDC',
+      displaySymbol: 'USDC',
+      blockchain: 'base',
+      contractAddress: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+      assetId:
+        'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
+    };
+    fixture.detectChanges();
+
+    expect(component.tokenOverviewExplorerUrl(component.fromToken)).toBe(
+      'https://basescan.org/token/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
+    );
+  });
+
   it('uses base/quote direction for fallback swap rate', () => {
     expectComparisonRequest({
       base: 'USDC',

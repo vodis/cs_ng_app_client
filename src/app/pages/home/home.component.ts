@@ -1435,10 +1435,13 @@ export class HomeComponent {
   }
 
   public tokenOverviewExplorerUrl(token: ExchangeToken): string | null {
+    // Prefer network + contract from the selected token. Symbol mocks (and
+    // symbol-keyed snapshots) can point at the wrong chain for bridged assets.
     return (
+      explorerUrlForToken(token) ||
       this.marketSnapshotFor(token)?.explorerUrl?.trim() ||
       this.tokenProjectMock(token)?.explorerUrl ||
-      explorerUrlForToken(token)
+      null
     );
   }
 
