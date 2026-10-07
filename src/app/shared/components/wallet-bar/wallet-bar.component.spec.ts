@@ -105,6 +105,31 @@ describe('WalletBarComponent', () => {
     expect(component.isOpenWalletConnectMenu).toBeFalse();
   });
 
+  it('hides the host close button while an MFE dialog owns the drawer', () => {
+    component.hostModal = true;
+    component.hasActiveWallet = true;
+    wallets.drawerMode.next('swap-review');
+    expect(component.showHostCloseButton).toBeFalse();
+
+    wallets.drawerMode.next('connect');
+    expect(component.showHostCloseButton).toBeFalse();
+
+    wallets.drawerMode.next('wallet');
+    expect(component.showHostCloseButton).toBeTrue();
+  });
+
+  it('closes the host shell when the MFE propagates onCloseRequested', () => {
+    component.hostModal = true;
+    component.isOpenWalletConnectMenu = true;
+    wallets.drawerMode.next('swap-review');
+
+    wallets.closeRequested.next(true);
+
+    expect(component.isOpenWalletConnectMenu).toBeFalse();
+    expect(wallets.drawerMode.value).toBe('wallet');
+    expect(wallets.clearCloseRequest).toHaveBeenCalled();
+  });
+
   [true, false].forEach(accountFirst => {
     it(`keeps the unlinked NEAR drawer open with ${accountFirst ? 'account-first' : 'snapshot-first'} delivery`, fakeAsync(() => {
       component.hostModal = true;

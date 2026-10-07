@@ -34,6 +34,11 @@ export class WalletBarComponent {
   public needsNearWalletLink = false;
   public drawerMode: WalletDrawerMode = 'wallet';
 
+  /** Host X only when the connected board owns the drawer; MFE dialogs bring their own close. */
+  public get showHostCloseButton(): boolean {
+    return this.hasActiveWallet && this.drawerMode === 'wallet';
+  }
+
   constructor() {
     this.activeWallet.state$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -96,6 +101,10 @@ export class WalletBarComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(closeRequested => {
         if (this.hostModal && closeRequested) {
+          // MFE already closed its dialog; sync the host shell and drawer mode.
+          if (this.drawerMode === 'swap-review') {
+            this.walletsService.drawerMode.next('wallet');
+          }
           this.setWalletMenuOpen(false);
           this.walletsService.clearCloseRequest();
         }

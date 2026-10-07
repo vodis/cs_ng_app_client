@@ -18,6 +18,7 @@
   @if (hostModal) {
     <app-side-modal
       [isOpen]="isOpenWalletConnectMenu"
+      [showCloseButton]="showHostCloseButton"
       (closeRequested)="handleCloseWalletMenu()">
       @if (
         isOpenWalletConnectMenu && hasActiveWallet && drawerMode === 'wallet'
