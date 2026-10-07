@@ -15,7 +15,6 @@ import {
 import { environment } from '../../../environments/environment';
 
 export type MobileNavIcon =
-  | 'home'
   | 'exchange'
   | 'portfolio'
   | 'profile'
@@ -67,13 +66,6 @@ export class MobileBottomNavComponent implements OnDestroy {
   }
 
   public readonly links: MobileNavItem[] = [
-    {
-      name: 'Texts.sidebar-home',
-      fallback: 'Home',
-      url: '/home',
-      icon: 'home',
-      exact: true,
-    },
     {
       name: 'Texts.sidebar-swap',
       fallback: 'Exchange',
