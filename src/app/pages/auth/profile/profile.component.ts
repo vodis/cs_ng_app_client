@@ -227,6 +227,14 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return caipNetworkLabel(balance.network);
   }
 
+  public balanceNetworkMeta(balance: WalletBalance): string {
+    const network = this.balanceNetworkLabel(balance);
+    if (!network) {
+      return balance.stale ? 'stale' : '';
+    }
+    return balance.stale ? `${network} · stale` : network;
+  }
+
   public canEnablePasskey(): boolean {
     return this.profile.passkeyLinkEnabled;
   }

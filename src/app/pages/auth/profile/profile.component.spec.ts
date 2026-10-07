@@ -374,6 +374,29 @@ describe('ProfileComponent', () => {
     expect(component.usdBalanceLabel()).toBe('Unavailable');
   });
 
+  it('keeps a per-token stale marker in the mobile network meta', () => {
+    const fresh = {
+      walletId: 'wallet-1',
+      walletAddress: 'alice.near',
+      chainType: 'near',
+      network: 'near:mainnet',
+      assetId: 'near:native',
+      symbol: 'NEAR',
+      balanceRaw: '1',
+      balanceDecimal: '1',
+      decimals: 24,
+      source: 'bff',
+      fetchedAt: '2026-08-19T12:00:00Z',
+      expiresAt: '2026-08-19T12:30:00Z',
+      stale: false,
+    };
+    const stale = { ...fresh, symbol: 'USDC', assetId: 'usdc', stale: true };
+
+    expect(component.balanceNetworkMeta(fresh)).toBe('NEAR');
+    expect(component.balanceNetworkMeta(stale)).toBe('NEAR · stale');
+    expect(component.balanceMeta(stale)).toContain('stale /');
+  });
+
   it('cancels the previous CountUp before starting a new balance animation', () => {
     const el = document.createElement('span');
     (

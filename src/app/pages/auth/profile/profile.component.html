@@ -472,9 +472,12 @@
               [attr.title]="balanceMeta(balance)"
               >{{ balanceMeta(balance) }}</small
             >
-            <small class="profile-shell__balance-network">{{
-              balanceNetworkLabel(balance)
-            }}</small>
+            <small
+              class="profile-shell__balance-network"
+              [class.profile-shell__balance-network--stale]="balance.stale"
+              [attr.title]="balanceMeta(balance)"
+              >{{ balanceNetworkMeta(balance) }}</small
+            >
           </div>
         </li>
       </ul>
