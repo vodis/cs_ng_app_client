@@ -18,8 +18,15 @@ import { MarketSnapshotsService } from '@shared/services/market-snapshots.servic
 import { WalletBalance } from '@shared/services/wallet-balances.service';
 import {
   formatCompactUsd,
+  hostnameLabel,
   type WalletMarketSnapshot,
+  type WalletMarketSocialLink,
 } from '@shared/utils/market-display.util';
+import { explorerUrlForToken } from '@shared/utils/token-explorer.utils';
+import {
+  TOKEN_PROJECT_MOCKS,
+  type TokenProjectMock,
+} from './token-project.mock';
 import { timer } from 'rxjs';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import {
@@ -1396,39 +1403,78 @@ export class HomeComponent {
   }
 
   public tokenOverviewHasMarketCap(token: ExchangeToken): boolean {
+    // Only show snapshot-backed caps. Mock figures must not look like live data.
     return (this.marketSnapshotFor(token)?.marketCapUsd ?? 0) > 0;
   }
 
   public tokenOverviewMarketCapLabel(token: ExchangeToken): string {
-    return formatCompactUsd(this.marketSnapshotFor(token)?.marketCapUsd ?? 0);
+    const marketCapUsd = this.marketSnapshotFor(token)?.marketCapUsd ?? 0;
+    return marketCapUsd > 0 ? formatCompactUsd(marketCapUsd) : '';
   }
 
   public tokenOverviewHasVolume(token: ExchangeToken): boolean {
-    return (this.marketSnapshotFor(token)?.volume24hUsd ?? 0) > 0;
+    return this.tokenOverviewVolumeValue(token) > 0;
   }
 
   public tokenOverviewVolumeLabel(token: ExchangeToken): string {
-    return formatCompactUsd(this.marketSnapshotFor(token)?.volume24hUsd ?? 0);
+    return formatCompactUsd(this.tokenOverviewVolumeValue(token));
   }
 
-  public tokenOverviewDecimalsLabel(token: ExchangeToken): string {
-    return String(this.tokenDecimals(token.decimals));
+  public tokenOverviewWebsiteUrl(token: ExchangeToken): string | null {
+    return (
+      this.marketSnapshotFor(token)?.websiteUrl?.trim() ||
+      this.tokenProjectMock(token)?.websiteUrl ||
+      null
+    );
   }
 
-  public tokenContractLabel(token: ExchangeToken): string {
-    const address = token.contractAddress?.trim();
-    if (!address) {
-      return '';
+  public tokenOverviewWhitepaperUrl(token: ExchangeToken): string | null {
+    return (
+      this.marketSnapshotFor(token)?.whitepaperUrl?.trim() ||
+      this.tokenProjectMock(token)?.whitepaperUrl ||
+      null
+    );
+  }
+
+  public tokenOverviewExplorerUrl(token: ExchangeToken): string | null {
+    // Prefer network + contract from the selected token. Symbol mocks (and
+    // symbol-keyed snapshots) can point at the wrong chain for bridged assets.
+    return (
+      explorerUrlForToken(token) ||
+      this.marketSnapshotFor(token)?.explorerUrl?.trim() ||
+      this.tokenProjectMock(token)?.explorerUrl ||
+      null
+    );
+  }
+
+  public tokenOverviewExplorerLabel(token: ExchangeToken): string {
+    const explorer = this.tokenOverviewExplorerUrl(token);
+    return explorer ? hostnameLabel(explorer, 'Explorer') : 'Explorer';
+  }
+
+  public tokenOverviewSocialLinks(
+    token: ExchangeToken
+  ): WalletMarketSocialLink[] {
+    const fromSnapshot = this.marketSnapshotFor(token)?.socialLinks;
+    if (fromSnapshot && fromSnapshot.length > 0) {
+      return fromSnapshot;
     }
-    if (address.length <= 14) {
-      return address;
-    }
-    return `${address.slice(0, 6)}…${address.slice(-4)}`;
+    return this.tokenProjectMock(token)?.socialLinks ?? [];
   }
 
-  public tokenContractTitle(token: ExchangeToken): string | null {
-    const address = token.contractAddress?.trim();
-    return address || null;
+  private tokenOverviewVolumeValue(token: ExchangeToken): number {
+    const snapshotValue = this.marketSnapshotFor(token)?.volume24hUsd ?? 0;
+    if (snapshotValue > 0) {
+      return snapshotValue;
+    }
+    return this.tokenProjectMock(token)?.volume24hUsd ?? 0;
+  }
+
+  private tokenProjectMock(token: ExchangeToken): TokenProjectMock | undefined {
+    return (
+      TOKEN_PROJECT_MOCKS[this.marketSymbolFor(token)] ??
+      TOKEN_PROJECT_MOCKS[this.normalizeMarketSymbol(token.symbol)]
+    );
   }
 
   public isForeignDestination(): boolean {

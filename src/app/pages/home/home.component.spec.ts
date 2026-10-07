@@ -405,12 +405,18 @@ describe('HomeComponent market overview', () => {
     expect(details?.textContent).toContain('USD Coin');
     expect(details?.textContent).toContain('NEAR Protocol');
     expect(details?.textContent).not.toContain('Market Cap');
+    expect(details?.textContent).not.toContain('$32B');
     expect(details?.textContent).not.toContain('24h Volume');
-    expect(component.tokenContractLabel(component.fromToken)).toBe(
-      '0x1234…5678'
-    );
-    expect(component.tokenContractLabel(component.toToken)).toBe('');
+    expect(details?.textContent).not.toContain('Price');
+    expect(details?.textContent).toContain('Website');
+    expect(details?.textContent).toContain('Whitepaper');
+    expect(details?.textContent).toContain('Socials');
+    expect(details?.textContent).toContain('Explorers');
+    expect(details?.textContent).not.toContain('Network');
+    expect(details?.textContent).not.toContain('Contract');
+    expect(details?.textContent).not.toContain('Decimals');
     expect(details?.textContent).not.toContain('—');
+    expect(component.tokenOverviewHasMarketCap(component.fromToken)).toBeFalse();
     expect(component.tokenOverviewHasPrice(component.fromToken)).toBeTrue();
     expect(component.tokenOverviewHasPrice(component.toToken)).toBeTrue();
   });
@@ -464,7 +470,7 @@ describe('HomeComponent market overview', () => {
     );
   });
 
-  it('renders market cap and volume only when snapshots include them', () => {
+  it('renders market cap, volume, and project chips only when snapshots include them', () => {
     const markets = TestBed.inject(
       MarketSnapshotsService
     ) as unknown as MarketSnapshotsServiceStub;
@@ -477,6 +483,22 @@ describe('HomeComponent market overview', () => {
           marketCapUsd: 32_000_000_000,
           volume24hUsd: 4_500_000_000,
           sparkline7d: [1, 1],
+          websiteUrl: 'https://www.circle.com/en/usdc',
+          whitepaperUrl: 'https://www.circle.com/en/usdc/whitepaper',
+          explorerUrl:
+            'https://etherscan.io/token/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+          socialLinks: [
+            {
+              kind: 'x' as const,
+              url: 'https://x.com/circle',
+              label: 'X',
+            },
+            {
+              kind: 'github' as const,
+              url: 'https://github.com/circlefin',
+              label: 'GitHub',
+            },
+          ],
         },
         {
           symbol: 'NEAR',
@@ -502,9 +524,46 @@ describe('HomeComponent market overview', () => {
     ) as HTMLElement | null;
     expect(details?.textContent).toContain('Market Cap');
     expect(details?.textContent).toContain('$32B');
-    expect(details?.textContent).toContain('24h Volume');
+    expect(details?.textContent).not.toContain('24h Volume');
+    expect(details?.textContent).not.toContain('Price');
+    expect(details?.textContent).toContain('Website');
+    expect(details?.textContent).toContain('Whitepaper');
+    expect(details?.textContent).toContain('Socials');
+    expect(details?.textContent).toContain('Explorers');
+    expect(details?.textContent).toContain('etherscan.io');
+    expect(details?.textContent).not.toContain('Network');
+    expect(details?.textContent).not.toContain('Decimals');
+    expect(component.tokenOverviewHasMarketCap(component.fromToken)).toBeTrue();
     expect(component.tokenOverviewHasMarketCap(component.toToken)).toBeFalse();
-    expect(component.tokenOverviewHasVolume(component.toToken)).toBeFalse();
+    expect(component.tokenOverviewWebsiteUrl(component.toToken)).toBe(
+      'https://near.org'
+    );
+    expect(
+      details?.querySelector('a.tokenDetails__chip')?.getAttribute('href')
+    ).toBe('https://www.circle.com/en/usdc');
+  });
+
+  it('prefers the selected network explorer over the symbol mock', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.fromToken = {
+      ...component.fromToken,
+      symbol: 'USDC',
+      displaySymbol: 'USDC',
+      blockchain: 'base',
+      contractAddress: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+      assetId:
+        'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
+    };
+    fixture.detectChanges();
+
+    expect(component.tokenOverviewExplorerUrl(component.fromToken)).toBe(
+      'https://basescan.org/token/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
+    );
   });
 
   it('uses base/quote direction for fallback swap rate', () => {

@@ -89,6 +89,56 @@ describe('MarketSnapshotsService', () => {
     ]);
   });
 
+  it('keeps optional project links from snapshot payloads', () => {
+    let result: WalletMarketSnapshot[] | undefined;
+    service.load(['USDC']).subscribe(snapshots => {
+      result = snapshots;
+    });
+
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/markets/snapshots?symbols=USDC`)
+      .flush({
+        data: [
+          {
+            symbol: 'USDC',
+            priceUsd: 1,
+            marketCapUsd: 1,
+            volume24hUsd: 1,
+            sparkline7d: [1, 1],
+            websiteUrl: 'https://www.circle.com/usdc',
+            whitepaper: 'https://www.circle.com/usdc.pdf',
+            explorerUrl: 'https://etherscan.io/token/0xusdc',
+            urls: {
+              twitter: 'https://x.com/circle',
+              github: 'https://github.com/circlefin',
+            },
+          },
+        ],
+      });
+
+    expect(result).toEqual([
+      {
+        symbol: 'USDC',
+        priceUsd: 1,
+        change24hPercent: 0,
+        marketCapUsd: 1,
+        volume24hUsd: 1,
+        sparkline7d: [1, 1],
+        websiteUrl: 'https://www.circle.com/usdc',
+        whitepaperUrl: 'https://www.circle.com/usdc.pdf',
+        explorerUrl: 'https://etherscan.io/token/0xusdc',
+        socialLinks: [
+          { kind: 'x', url: 'https://x.com/circle', label: 'X' },
+          {
+            kind: 'github',
+            url: 'https://github.com/circlefin',
+            label: 'GitHub',
+          },
+        ],
+      },
+    ]);
+  });
+
   it('batches over 30 symbols and keeps successful batches when another fails', () => {
     const symbols = Array.from({ length: 31 }, (_, index) => `S${index}`);
     let result: WalletMarketSnapshot[] | undefined;

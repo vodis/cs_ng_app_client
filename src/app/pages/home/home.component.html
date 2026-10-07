@@ -400,166 +400,218 @@
               </dl>
             </div>
 
-            <div class="tokenDetails" aria-label="Token details">
-              <article class="tokenDetails__col">
-                <header class="tokenDetails__head">
-                  @if (tokenIconFor(fromToken); as fromIcon) {
-                    <span
-                      class="tokenDetails__iconWrap"
-                      [style.backgroundColor]="fromToken.color"
-                      aria-hidden="true">
-                      <img
-                        class="tokenDetails__icon"
-                        [src]="fromIcon"
-                        [alt]=""
-                        loading="lazy"
-                        width="18"
-                        height="18" />
-                    </span>
-                  } @else {
-                    <span class="tokenDetails__fallback" aria-hidden="true">{{
-                      tokenDisplay(tokenSymbolLabel(fromToken))
-                    }}</span>
-                  }
-                  <div class="tokenDetails__titles">
-                    <p class="tokenDetails__symbol">
-                      {{ tokenSymbolLabel(fromToken) }}
-                    </p>
-                    <p class="tokenDetails__name">{{ fromToken.name }}</p>
-                  </div>
-                </header>
-                <div class="tokenDetails__facts">
-                  @if (tokenOverviewHasPrice(fromToken)) {
-                    <div class="tokenDetails__row">
-                      <span class="tokenDetails__label">Price</span>
-                      <span class="tokenDetails__value">{{
-                        tokenOverviewPriceLabel(fromToken)
-                      }}</span>
-                    </div>
-                  }
-                  @if (tokenOverviewHasMarketCap(fromToken)) {
-                    <div class="tokenDetails__row">
-                      <span class="tokenDetails__label">Market Cap</span>
-                      <span class="tokenDetails__value">{{
-                        tokenOverviewMarketCapLabel(fromToken)
-                      }}</span>
-                    </div>
-                  }
-                  @if (tokenOverviewHasVolume(fromToken)) {
-                    <div class="tokenDetails__row">
-                      <span class="tokenDetails__label">24h Volume</span>
-                      <span class="tokenDetails__value">{{
-                        tokenOverviewVolumeLabel(fromToken)
-                      }}</span>
-                    </div>
-                  }
-                  <div class="tokenDetails__row">
-                    <span class="tokenDetails__label">Network</span>
-                    <span class="tokenDetails__value">{{
-                      tokenNetworkLabel(fromToken)
-                    }}</span>
-                  </div>
-                  @if (tokenContractTitle(fromToken)) {
-                    <div class="tokenDetails__row">
-                      <span class="tokenDetails__label">Contract</span>
-                      <span
-                        class="tokenDetails__value"
-                        [attr.title]="tokenContractTitle(fromToken)">
-                        {{ tokenContractLabel(fromToken) }}
-                      </span>
-                    </div>
-                  }
-                  <div class="tokenDetails__row">
-                    <span class="tokenDetails__label">Decimals</span>
-                    <span class="tokenDetails__value">{{
-                      tokenOverviewDecimalsLabel(fromToken)
-                    }}</span>
-                  </div>
-                </div>
-              </article>
-
-              <article class="tokenDetails__col">
-                <header class="tokenDetails__head">
-                  @if (tokenIconFor(toToken); as toIcon) {
-                    <span
-                      class="tokenDetails__iconWrap"
-                      [style.backgroundColor]="toToken.color"
-                      aria-hidden="true">
-                      <img
-                        class="tokenDetails__icon"
-                        [src]="toIcon"
-                        [alt]=""
-                        loading="lazy"
-                        width="18"
-                        height="18" />
-                    </span>
-                  } @else {
-                    <span class="tokenDetails__fallback" aria-hidden="true">{{
-                      tokenDisplay(tokenSymbolLabel(toToken))
-                    }}</span>
-                  }
-                  <div class="tokenDetails__titles">
-                    <p class="tokenDetails__symbol">
-                      {{ tokenSymbolLabel(toToken) }}
-                    </p>
-                    <p class="tokenDetails__name">{{ toToken.name }}</p>
-                  </div>
-                </header>
-                <div class="tokenDetails__facts">
-                  @if (tokenOverviewHasPrice(toToken)) {
-                    <div class="tokenDetails__row">
-                      <span class="tokenDetails__label">Price</span>
-                      <span class="tokenDetails__value">{{
-                        tokenOverviewPriceLabel(toToken)
-                      }}</span>
-                    </div>
-                  }
-                  @if (tokenOverviewHasMarketCap(toToken)) {
-                    <div class="tokenDetails__row">
-                      <span class="tokenDetails__label">Market Cap</span>
-                      <span class="tokenDetails__value">{{
-                        tokenOverviewMarketCapLabel(toToken)
-                      }}</span>
-                    </div>
-                  }
-                  @if (tokenOverviewHasVolume(toToken)) {
-                    <div class="tokenDetails__row">
-                      <span class="tokenDetails__label">24h Volume</span>
-                      <span class="tokenDetails__value">{{
-                        tokenOverviewVolumeLabel(toToken)
-                      }}</span>
-                    </div>
-                  }
-                  <div class="tokenDetails__row">
-                    <span class="tokenDetails__label">Network</span>
-                    <span class="tokenDetails__value">{{
-                      tokenNetworkLabel(toToken)
-                    }}</span>
-                  </div>
-                  @if (tokenContractTitle(toToken)) {
-                    <div class="tokenDetails__row">
-                      <span class="tokenDetails__label">Contract</span>
-                      <span
-                        class="tokenDetails__value"
-                        [attr.title]="tokenContractTitle(toToken)">
-                        {{ tokenContractLabel(toToken) }}
-                      </span>
-                    </div>
-                  }
-                  <div class="tokenDetails__row">
-                    <span class="tokenDetails__label">Decimals</span>
-                    <span class="tokenDetails__value">{{
-                      tokenOverviewDecimalsLabel(toToken)
-                    }}</span>
-                  </div>
-                </div>
-              </article>
+            <div class="tokenDetails" aria-label="Token market overview">
+              <ng-container
+                *ngTemplateOutlet="
+                  tokenMarketCol;
+                  context: { $implicit: fromToken }
+                " />
+              <ng-container
+                *ngTemplateOutlet="
+                  tokenMarketCol;
+                  context: { $implicit: toToken }
+                " />
             </div>
           </div>
         </div>
       }
     </div>
   </section>
+
+  <ng-template #tokenMarketCol let-token>
+    <article class="tokenDetails__col">
+      <header class="tokenDetails__head">
+        @if (tokenIconFor(token); as tokenIcon) {
+          <span
+            class="tokenDetails__iconWrap"
+            [style.backgroundColor]="token.color"
+            aria-hidden="true">
+            <img
+              class="tokenDetails__icon"
+              [src]="tokenIcon"
+              [alt]=""
+              loading="lazy"
+              width="18"
+              height="18" />
+          </span>
+        } @else {
+          <span class="tokenDetails__fallback" aria-hidden="true">{{
+            tokenDisplay(tokenSymbolLabel(token))
+          }}</span>
+        }
+        <div class="tokenDetails__titles">
+          <p class="tokenDetails__symbol">{{ tokenSymbolLabel(token) }}</p>
+          <p class="tokenDetails__name">{{ token.name }}</p>
+        </div>
+      </header>
+      <div class="tokenDetails__facts">
+        @if (tokenOverviewHasMarketCap(token)) {
+          <div class="tokenDetails__row">
+            <span class="tokenDetails__label">Market Cap</span>
+            <span class="tokenDetails__value">{{
+              tokenOverviewMarketCapLabel(token)
+            }}</span>
+          </div>
+        }
+        @if (
+          tokenOverviewWebsiteUrl(token) || tokenOverviewWhitepaperUrl(token)
+        ) {
+          <div class="tokenDetails__row">
+            <span class="tokenDetails__label">Website</span>
+            <span class="tokenDetails__links">
+              @if (tokenOverviewWebsiteUrl(token); as website) {
+                <a
+                  class="tokenDetails__chip"
+                  [href]="website"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.title]="website">
+                  <svg
+                    class="tokenDetails__chipIcon"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    focusable="false">
+                    <circle
+                      cx="8"
+                      cy="8"
+                      r="5.5"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.3" />
+                    <path
+                      d="M2.5 8h11M8 2.5c1.6 1.7 2.4 3.5 2.4 5.5S9.6 11.8 8 13.5C6.4 11.8 5.6 10 5.6 8S6.4 4.2 8 2.5Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.3" />
+                  </svg>
+                  Website
+                </a>
+              }
+              @if (tokenOverviewWhitepaperUrl(token); as whitepaper) {
+                <a
+                  class="tokenDetails__chip"
+                  [href]="whitepaper"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.title]="whitepaper">
+                  <svg
+                    class="tokenDetails__chipIcon"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    focusable="false">
+                    <path
+                      d="M4.2 2.2h5.1L12 4.9v8.9H4.2V2.2Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.3"
+                      stroke-linejoin="round" />
+                    <path
+                      d="M9.2 2.3v2.8H12"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.3" />
+                  </svg>
+                  Whitepaper
+                </a>
+              }
+            </span>
+          </div>
+        }
+        @if (tokenOverviewSocialLinks(token).length > 0) {
+          <div class="tokenDetails__row">
+            <span class="tokenDetails__label">Socials</span>
+            <span class="tokenDetails__links">
+              @for (
+                social of tokenOverviewSocialLinks(token);
+                track social.url
+              ) {
+                <a
+                  class="tokenDetails__social"
+                  [href]="social.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.title]="social.label">
+                  @switch (social.kind) {
+                    @case ('github') {
+                      <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <path
+                          fill="currentColor"
+                          d="M8 1.5A6.5 6.5 0 0 0 6.2 14c.33.06.45-.14.45-.32v-1.12c-1.84.4-2.23-.79-2.23-.79-.3-.76-.73-.96-.73-.96-.6-.41.05-.4.05-.4.66.05 1 .68 1 .68.59 1 1.55.71 1.93.54.06-.43.23-.71.42-.87-1.47-.17-3.02-.74-3.02-3.28 0-.72.26-1.32.68-1.78-.07-.17-.3-.85.06-1.77 0 0 .55-.18 1.81.67A6.3 6.3 0 0 1 8 5.07c.56 0 1.12.08 1.64.22 1.26-.85 1.8-.67 1.8-.67.37.92.14 1.6.07 1.77.43.46.68 1.06.68 1.78 0 2.55-1.55 3.11-3.03 3.27.24.21.45.61.45 1.24v1.84c0 .18.12.39.46.32A6.5 6.5 0 0 0 8 1.5Z" />
+                      </svg>
+                    }
+                    @case ('reddit') {
+                      <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <circle
+                          cx="8"
+                          cy="9"
+                          r="5.2"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.3" />
+                        <circle cx="6.1" cy="9" r=".9" fill="currentColor" />
+                        <circle cx="9.9" cy="9" r=".9" fill="currentColor" />
+                        <path
+                          d="M6.3 11c.5.4 1.1.6 1.7.6s1.2-.2 1.7-.6"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.2"
+                          stroke-linecap="round" />
+                      </svg>
+                    }
+                    @case ('discord') {
+                      <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <path
+                          fill="currentColor"
+                          d="M12.4 4.2A10 10 0 0 0 10 3.4l-.3.6a9 9 0 0 0-3.4 0l-.3-.6a10 10 0 0 0-2.4.8C1.8 7 1.4 9.7 1.6 12.4c1 .8 2 1.3 3 1.6l.6-.9c-.5-.2-1-.5-1.4-.8.1-.1.3-.2.4-.3 1.6.8 3.4.8 5 0 .2.1.3.2.4.3-.4.3-.9.6-1.4.8l.6.9c1-.3 2-.8 3-1.6.3-3.1-.4-5.7-2.4-8.2ZM6.3 10.6c-.5 0-1-.5-1-1.1s.5-1.1 1-1.1 1 .5 1 1.1-.4 1.1-1 1.1Zm3.4 0c-.5 0-1-.5-1-1.1s.4-1.1 1-1.1 1 .5 1 1.1-.5 1.1-1 1.1Z" />
+                      </svg>
+                    }
+                    @case ('telegram') {
+                      <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <path
+                          fill="currentColor"
+                          d="M14.2 2.6 1.9 7.3c-.8.3-.8.8-.1 1l3.2 1 1.2 3.7c.1.4.3.5.6.3l1.8-1.5 3 2.2c.5.3.9.1 1-.5l1.9-9.3c.2-.8-.3-1.2-.8-1z" />
+                      </svg>
+                    }
+                    @case ('x') {
+                      <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <path
+                          fill="currentColor"
+                          d="M9.4 7.1 13.8 2h-1.2L8.9 6.3 6 2H2.2l4.6 6.7L2.2 14h1.2l4-4.7 3.2 4.7h3.8L9.4 7.1Zm-1.4 1.6-.5-.7-3.7-5.3h1.6l3 4.3.5.7 3.9 5.5h-1.6L8 8.7Z" />
+                      </svg>
+                    }
+                    @default {
+                      <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <circle
+                          cx="8"
+                          cy="8"
+                          r="5.5"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.3" />
+                      </svg>
+                    }
+                  }
+                </a>
+              }
+            </span>
+          </div>
+        }
+        @if (tokenOverviewExplorerUrl(token); as explorer) {
+          <div class="tokenDetails__row">
+            <span class="tokenDetails__label">Explorers</span>
+            <a
+              class="tokenDetails__chip"
+              [href]="explorer"
+              target="_blank"
+              rel="noopener noreferrer"
+              [attr.title]="explorer">
+              {{ tokenOverviewExplorerLabel(token) }}
+            </a>
+          </div>
+        }
+      </div>
+    </article>
+  </ng-template>
 
   <section class="panel activity">
     <div class="activityHead">
