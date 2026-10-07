@@ -54,6 +54,15 @@ app-account-sessions .profile-shell {
     line-height: 1;
   }
 
+  &__token-balances {
+    color: var(--secondary-text-color);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.2;
+  }
+
   &__change {
     display: inline-flex;
     align-items: center;
@@ -1087,6 +1096,10 @@ app-account-sessions .profile-shell {
 @media (width <= 720px) {
   app-profile .profile-shell,
   app-account-sessions .profile-shell {
+    &__token-balances {
+      display: none;
+    }
+
     &__grid {
       grid-template-columns: 1fr;
     }
