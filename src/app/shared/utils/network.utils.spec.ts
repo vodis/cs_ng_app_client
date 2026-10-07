@@ -1,5 +1,6 @@
 import {
   networkLabel,
+  caipNetworkLabel,
   nearNetworkForAddress,
   recipientAddressError,
   walletBlockchain,
@@ -17,6 +18,13 @@ describe('network utils', () => {
     expect(nearNetworkForAddress('alice.near')).toBe('near:mainnet');
     expect(nearNetworkForAddress('alice.testnet')).toBe('near:testnet');
     expect(networkLabel('bsc')).toBe('BNB Chain');
+  });
+
+  it('maps CAIP-2 network ids to short balance labels', () => {
+    expect(caipNetworkLabel('near:mainnet')).toBe('NEAR');
+    expect(caipNetworkLabel('eip155:1')).toBe('Ethereum');
+    expect(caipNetworkLabel('eip155:8453')).toBe('Base');
+    expect(caipNetworkLabel('solana:mainnet')).toBe('Solana');
   });
 
   it('validates destination addresses by network family', () => {

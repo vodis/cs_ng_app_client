@@ -71,7 +71,8 @@
           width: 100%;
           min-width: 0;
           flex: 1 1 auto;
-          padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+          /* Clear floating nav FAB (58px + offset) and home-indicator safe area. */
+          padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
           overflow-x: hidden;
         }
 
