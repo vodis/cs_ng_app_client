@@ -3,8 +3,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
-import { WalletBalance } from '@shared/services/wallet-balances.service';
-import { Subscription } from 'rxjs';
+import {
+  WalletBalance,
+  WalletBalancesService,
+} from '@shared/services/wallet-balances.service';
+import { catchError, map, of, Subscription } from 'rxjs';
+import { SwapExecutableQuoteCoordinator } from '@domains/exchange/application/swap-executable-quote.coordinator';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import {
   SwapFlowFacade,
@@ -242,10 +246,15 @@ export class HomeComponent {
   public exchangeAssetsError = '';
   public balancesLoading = false;
   public balancesError = '';
+  public reviewBusy = false;
+  public reviewActionError = '';
 
   private walletBalances: WalletBalance[] = [];
   private balanceRequestId = 0;
   private balanceSubscription?: Subscription;
+  private reviewBalanceSub?: Subscription;
+  private reviewQuote?: { cancel: () => void };
+  private reviewGeneration = 0;
   private activeReviewTraceId = '';
 
   constructor(
@@ -254,6 +263,8 @@ export class HomeComponent {
     private readonly swapFlowFacade: SwapFlowFacade,
     private readonly exchangeAssetsService: ExchangeAssetsService,
     private readonly connectedBalances: ConnectedWalletBalancesFacade,
+    private readonly walletBalancesService: WalletBalancesService,
+    private readonly executableQuotes: SwapExecutableQuoteCoordinator,
     private readonly walletGatewayBridge: WalletGatewayBridgeService
   ) {
     this.walletsService.account
@@ -320,6 +331,10 @@ export class HomeComponent {
         this.intentHash = intentHash ?? '';
       });
 
+    this.destroyRef.onDestroy(() => {
+      this.reviewQuote?.cancel();
+      this.reviewBalanceSub?.unsubscribe();
+    });
     this.loadExchangeAssets();
     this.loadMarketComparison();
   }
@@ -356,23 +371,12 @@ export class HomeComponent {
       return;
     }
 
-    const sourceBalance = this.balanceForToken(this.fromToken);
-    if (
-      sourceBalance &&
-      !this.isBalanceUsable(sourceBalance) &&
-      !this.balancesLoading
-    ) {
-      this.loadWalletBalances();
-    }
-
-    const balanceError = this.validateSourceBalance(amount);
-    if (balanceError) {
-      this.quoteError = balanceError;
+    if (this.fundingSourceError()) {
       return;
     }
 
     if (this.canReviewSwap()) {
-      this.openSwapReview(amount, authMethod);
+      this.beginSwapReview(amount, authMethod);
       return;
     }
 
@@ -399,7 +403,7 @@ export class HomeComponent {
       /^\d+$/.test(preview.amountOutAtomic) &&
       !/^0+$/.test(preview.amountOutAtomic) &&
       Date.parse(preview.expiresAt) > Date.now() &&
-      !this.validateSourceBalance(input.amount)
+      !this.fundingSourceError()
     );
   }
 
@@ -409,15 +413,17 @@ export class HomeComponent {
       this.swapFlowState === 'idle' &&
       Boolean(this.quoteError) &&
       !this.canReviewSwap() &&
-      Boolean(input && !this.validateSourceBalance(input.amount))
+      Boolean(input) &&
+      !this.fundingSourceError()
     );
   }
 
   public isPrimaryActionDisabled(): boolean {
     return (
-      Boolean(this.walletAddress) &&
-      !this.canReviewSwap() &&
-      !this.canRetryQuote()
+      this.reviewBusy ||
+      (Boolean(this.walletAddress) &&
+        !this.canReviewSwap() &&
+        !this.canRetryQuote())
     );
   }
 
@@ -813,6 +819,10 @@ export class HomeComponent {
       return 'Connect wallet';
     }
 
+    if (this.reviewActionError) {
+      return this.reviewActionError;
+    }
+
     return this.canRetryQuote() ? 'Retry quote' : 'Review';
   }
 
@@ -826,10 +836,6 @@ export class HomeComponent {
       const suffix =
         balance.stale || this.isBalanceExpired(balance) ? ' (stale)' : '';
       return `Balance: ${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}${suffix}`;
-    }
-
-    if (this.balancesLoading && this.canFetchBalance(token)) {
-      return `Balance: loading ${this.tokenSymbolLabel(token)}`;
     }
 
     return `Balance: — ${this.tokenSymbolLabel(token)}`;
@@ -1067,6 +1073,7 @@ export class HomeComponent {
   }
 
   private refreshSwapQuotePreview(): void {
+    this.cancelPendingReview();
     const input = this.buildQuotePreviewInput();
 
     if (!input) {
@@ -1518,10 +1525,6 @@ export class HomeComponent {
           this.walletBalances = state.rows;
           this.balancesLoading = false;
           this.balancesError = state.errorMessage ?? '';
-          const sourceBalance = this.balanceForToken(this.fromToken);
-          if (sourceBalance && this.isBalanceUsable(sourceBalance)) {
-            this.refreshSwapQuotePreview();
-          }
         },
         error: () => {
           if (
@@ -1545,34 +1548,123 @@ export class HomeComponent {
       : '';
   }
 
-  private validateSourceBalance(amountRaw: string): string {
-    const fundingError = this.fundingSourceError();
-    if (fundingError) return fundingError;
-    if (!this.canFetchBalance(this.fromToken)) {
-      return '';
+  private beginSwapReview(
+    amount: string,
+    authMethod: SupportedSwapAuthMethod
+  ): void {
+    const preview = this.quotePreview;
+    if (!preview || this.fundingSourceError()) {
+      return;
     }
 
-    const balance = this.balanceForToken(this.fromToken);
-    if (!balance) {
-      return this.balancesLoading
-        ? `${this.tokenSymbolLabel(this.fromToken)} balance is loading.`
-        : this.balancesError ||
-            `${this.tokenSymbolLabel(this.fromToken)} balance is unavailable.`;
+    this.reviewBalanceSub?.unsubscribe();
+    this.reviewQuote?.cancel();
+    const generation = ++this.reviewGeneration;
+    this.reviewActionError = '';
+    this.reviewBusy = true;
+    const input = this.buildSwapInput(amount, authMethod);
+    this.reviewQuote = this.executableQuotes.start({
+      ...input,
+      traceId: preview.traceId ?? createTraceId(),
+      providerId: 'one-click',
+    });
+
+    this.reviewBalanceSub = this.confirmSourceBalance(amount)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(error => {
+        if (generation !== this.reviewGeneration) {
+          return;
+        }
+        this.reviewBalanceSub = undefined;
+        this.reviewBusy = false;
+        if (error) {
+          this.reviewQuote?.cancel();
+          this.reviewQuote = undefined;
+          this.reviewActionError = error;
+          return;
+        }
+        this.reviewQuote = undefined;
+        this.openSwapReview(amount, authMethod);
+      });
+  }
+
+  private cancelPendingReview(): void {
+    this.reviewGeneration += 1;
+    this.reviewBalanceSub?.unsubscribe();
+    this.reviewBalanceSub = undefined;
+    this.reviewQuote?.cancel();
+    this.reviewQuote = undefined;
+    this.reviewBusy = false;
+    this.reviewActionError = '';
+  }
+
+  private confirmSourceBalance(amountRaw: string) {
+    const symbol = this.tokenSymbolLabel(this.fromToken);
+    const unavailable = `Could not confirm ${symbol} balance`;
+    const network = this.balanceNetwork();
+    const account = this.walletAddress;
+    if (!account || !network || !this.canFetchBalance(this.fromToken)) {
+      return of(unavailable);
     }
 
-    if (!this.isBalanceUsable(balance)) {
-      return `${this.tokenSymbolLabel(this.fromToken)} balance is loading.`;
-    }
+    const assetId = this.fromToken.assetId;
+    return this.walletBalancesService
+      .loadBalancesWithMeta({
+        walletAddress: account,
+        network,
+        assetIds: [assetId],
+      })
+      .pipe(
+        map(result => {
+          if (result.partial) {
+            return unavailable;
+          }
+          const balance = result.balances.find(row =>
+            this.balanceMatchesAccount(row, account, network, assetId)
+          );
+          if (!balance || !this.isBalanceUsable(balance)) {
+            return unavailable;
+          }
+          this.rememberConfirmedBalance(balance);
+          try {
+            if (BigInt(amountRaw) > BigInt(balance.balanceRaw)) {
+              return `Insufficient ${symbol} balance`;
+            }
+          } catch {
+            return unavailable;
+          }
+          return '';
+        }),
+        catchError(() => of(unavailable))
+      );
+  }
 
-    try {
-      if (BigInt(amountRaw) > BigInt(balance.balanceRaw)) {
-        return `Insufficient ${this.tokenSymbolLabel(this.fromToken)} balance.`;
-      }
-    } catch {
-      return `${this.tokenSymbolLabel(this.fromToken)} balance is unavailable.`;
+  private balanceMatchesAccount(
+    balance: WalletBalance,
+    account: string,
+    network: string,
+    assetId: string
+  ): boolean {
+    if (balance.network !== network || balance.assetId !== assetId) {
+      return false;
     }
+    if (network.startsWith('eip155:')) {
+      return balance.walletAddress.toLowerCase() === account.toLowerCase();
+    }
+    return balance.walletAddress === account;
+  }
 
-    return '';
+  private rememberConfirmedBalance(balance: WalletBalance): void {
+    const existing = this.walletBalances.findIndex(
+      row => row.network === balance.network && row.assetId === balance.assetId
+    );
+    if (existing === -1) {
+      this.walletBalances = [...this.walletBalances, balance];
+      return;
+    }
+    this.walletBalances = this.walletBalances.map((row, index) =>
+      index === existing ? balance : row
+    );
   }
 
   private balanceForToken(token: ExchangeToken): WalletBalance | undefined {

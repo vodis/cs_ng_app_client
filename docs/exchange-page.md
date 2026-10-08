@@ -41,7 +41,7 @@ panels. At `1100px` and below, it changes to a single-column layout.
 | Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison  |
 | To row         | `.swapRow`        | Token selector, balance, quoted amount, and USD estimate |
 | Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee   |
-| Primary action | `.connectMain`    | Opens final MFE review after a current dry quote         |
+| Primary action | `.connectMain`    | Confirms a fresh balance, then opens MFE review          |
 
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
@@ -69,13 +69,13 @@ until backend history is integrated.
 
 ## API and asset ownership
 
-| Action            | Endpoint                         | Owner                             |
-| ----------------- | -------------------------------- | --------------------------------- |
-| Dry quote         | `POST /api/v1/quotes/one-click`  | NestJS BFF                        |
-| Market comparison | `GET /api/v1/markets/comparison` | NestJS BFF                        |
-| Wallet balances   | `POST /api/v1/balances`          | NestJS BFF                        |
-| Final preparation | `POST /api/v1/swaps/prepare`     | Wallet MFE through host transport |
-| Swap submission   | `POST /api/v1/swaps/execute`     | Wallet MFE through host transport |
+| Action            | Endpoint                                  | Owner                             |
+| ----------------- | ----------------------------------------- | --------------------------------- |
+| Dry quote         | `POST /api/v1/quotes/one-click`           | NestJS BFF                        |
+| Market comparison | `GET /api/v1/markets/comparison`          | NestJS BFF                        |
+| Wallet balances   | `POST /api/v1/balances`                   | NestJS BFF                        |
+| Final preparation | `POST /api/v1/swaps/prepare`              | Wallet MFE through host transport |
+| Swap submission   | `POST /api/v1/swaps/execute`              | Wallet MFE through host transport |
 | Settlement status | `GET /api/v1/swaps/status/:preparationId` | Wallet MFE through host transport |
 
 Client token metadata in `HomeComponent.exchangeTokens` is display and
@@ -126,21 +126,31 @@ changes.
 
 ### Quote and review lifecycle
 
-The host owns amount/token/settings input, balance gating, and debounced dry
-quotes. Every quote-affecting value is part of the request key. Changing or
-invalidating input clears the preview and cancels the active observable; a
-monotonic request version additionally prevents late responses from updating
-state. The connected-wallet action is `Review` and is enabled only for a current,
-unexpired preview with no newer request pending. If a quote request fails, the
-action changes to `Retry quote` and remains available while the form and wallet
-balance are still valid, so the user can request a fresh quote manually.
+The host owns amount/token/settings input and debounced dry quotes. A dry quote
+does not require a spendable balance, so the user can preview a route before
+the wallet can fund it. Every quote-affecting value is part of the request key.
+Changing or invalidating input clears the preview and cancels the active
+observable; a monotonic request version additionally prevents late responses
+from updating state. Displayed balances are context only. The host does not
+block the dry quote on a missing, stale, or insufficient balance, and it does
+not show a balance-loading error.
 
-`Review` opens the wallet MFE in the existing right-side drawer and passes a
-versioned immutable swap intent. The MFE owns the non-dry prepare request, final
-amount disclosure, expiry/retry state, reconfirmation within slippage policy,
-wallet signing, single-flight submission, and success callback. Authenticated
-BFF calls remain host transport services so the MFE does not duplicate session
-or API-client logic.
+The connected-wallet action is `Review` and is enabled for a current, unexpired
+preview with no newer request pending. If a dry quote request fails, the action
+changes to `Retry quote` and stays available while the form is still valid.
+
+`Review` confirms the source balance with a fresh backend read for the linked
+address and starts the executable (`dry: false`) preparation at the same time.
+If that balance check fails, the host cancels the preparation and replaces the
+button label with the failure, for example `Insufficient NEAR balance`. A
+confirmed balance opens the wallet MFE in the existing right-side drawer with a
+versioned immutable swap intent. The dialog adopts the executable quote already
+in flight and renders its result, or an error with a requote action when
+preparation fails. The MFE owns final amount disclosure, expiry/retry state,
+reconfirmation within slippage policy, wallet signing, single-flight
+submission, and the success callback. Authenticated BFF calls remain host
+transport services so the MFE does not duplicate session or API-client logic.
+
 Final preparation sends the user's bearer token; the BFF checks that the signer
 is an active wallet link before the MFE asks the wallet to sign. Deploy this host
 change before enforcing the authenticated preparation endpoint in the BFF.

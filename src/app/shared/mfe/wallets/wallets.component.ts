@@ -24,6 +24,7 @@ import { AuthSessionService } from '@core/auth/auth-session.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { environment } from '../../../../environments/environment';
 import { SwapApiClient } from '@domains/exchange/data-access/swap-api.client';
+import { SwapExecutableQuoteCoordinator } from '@domains/exchange/application/swap-executable-quote.coordinator';
 import { IntentRelayService } from '@domains/exchange/data-access/intent-relay.service';
 import type {
   SwapReviewPrepareRequest,
@@ -51,6 +52,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
     private walletGatewayBridge: WalletGatewayBridgeService,
     private authSession: AuthSessionService,
     private swapApi: SwapApiClient,
+    private executableQuotes: SwapExecutableQuoteCoordinator,
     private intentRelay: IntentRelayService,
     private logger: AppLoggerService,
     private ngZone: NgZone
@@ -251,58 +253,14 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
     request: SwapReviewPrepareRequest,
     signal: AbortSignal
   ): Promise<SwapReviewPrepareResult> {
-    if (signal.aborted) {
-      return Promise.reject(
-        new DOMException('Swap preparation cancelled', 'AbortError')
-      );
-    }
-
-    return new Promise((resolve, reject) => {
-      const subscription = this.swapApi
-        .requestApprovedPreparePackage({
-          ...request,
-          deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        })
-        .subscribe({
-          next: result => {
-            const expectedMode =
-              request.depositType === 'ORIGIN_CHAIN'
-                ? 'deposit_address'
-                : 'intent_sign';
-            if (result.executionPackage.mode !== expectedMode) {
-              reject(
-                new Error(
-                  `Execution mode ${result.executionPackage.mode} does not match the requested funding source.`
-                )
-              );
-              return;
-            }
-            const preparationId =
-              result.executionPackage.payload['preparationId'];
-            this.activeSwapPreparation =
-              typeof preparationId === 'string'
-                ? { id: preparationId, traceId: request.traceId }
-                : undefined;
-            resolve({
-              prepareRequest: result,
-              providerId: result.providerId,
-              executionMode: result.executionPackage.mode,
-              amountIn: result.amountIn,
-              amountOut: result.amountOut,
-              quoteExpiration: result.quoteExpiration,
-            });
-          },
-          error: reject,
-        });
-
-      signal.addEventListener(
-        'abort',
-        () => {
-          subscription.unsubscribe();
-          reject(new DOMException('Swap preparation cancelled', 'AbortError'));
-        },
-        { once: true }
-      );
+    return this.executableQuotes.prepare(request, signal).then(result => {
+      const preparationId =
+        result.prepareRequest.executionPackage?.payload['preparationId'];
+      this.activeSwapPreparation =
+        typeof preparationId === 'string'
+          ? { id: preparationId, traceId: request.traceId }
+          : undefined;
+      return result;
     });
   }
 
