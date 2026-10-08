@@ -15,7 +15,11 @@ import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import { MarketSnapshotsService } from '@shared/services/market-snapshots.service';
-import { WalletBalance } from '@shared/services/wallet-balances.service';
+import {
+  WalletBalance,
+  WalletBalancesService,
+} from '@shared/services/wallet-balances.service';
+import { SwapExecutableQuoteCoordinator } from '@domains/exchange/application/swap-executable-quote.coordinator';
 import {
   formatCompactUsd,
   hostnameLabel,
@@ -27,7 +31,7 @@ import {
   TOKEN_PROJECT_MOCKS,
   type TokenProjectMock,
 } from './token-project.mock';
-import { timer } from 'rxjs';
+import { catchError, map, of, Subscription, timer } from 'rxjs';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import {
   SwapFlowFacade,
@@ -275,11 +279,16 @@ export class HomeComponent {
   public exchangeAssetsError = '';
   public balancesLoading = false;
   public balancesError = '';
+  public reviewBusy = false;
+  public reviewActionError = '';
 
   @ViewChild('fromAmountInput')
   private fromAmountInput?: ElementRef<HTMLInputElement>;
 
   private walletBalances: WalletBalance[] = [];
+  private reviewBalanceSub?: Subscription;
+  private reviewQuote?: { cancel: () => void };
+  private reviewGeneration = 0;
   private tokenMarkets = new Map<string, WalletMarketSnapshot>();
   private comparisonRequestKey = '';
   public activeWallet: ActiveWalletState = {
@@ -297,6 +306,8 @@ export class HomeComponent {
     private readonly exchangeAssetsService: ExchangeAssetsService,
     private readonly marketSnapshots: MarketSnapshotsService,
     private readonly activeWalletFacade: ActiveWalletFacade,
+    private readonly walletBalancesService: WalletBalancesService,
+    private readonly executableQuotes: SwapExecutableQuoteCoordinator,
     private readonly walletGatewayBridge: WalletGatewayBridgeService
   ) {
     this.activeWalletFacade.revalidateBalances();
@@ -351,8 +362,6 @@ export class HomeComponent {
               ? 'Select a wallet network to load balances.'
               : 'Select an active wallet to view holdings.'
             : '');
-        if (state.status === 'ready' || state.status === 'partial')
-          this.refreshSwapQuotePreview();
       });
     this.exchangeAssetsService
       .watchPrices()
@@ -416,6 +425,10 @@ export class HomeComponent {
         this.intentHash = intentHash ?? '';
       });
 
+    this.destroyRef.onDestroy(() => {
+      this.reviewQuote?.cancel();
+      this.reviewBalanceSub?.unsubscribe();
+    });
     this.loadExchangeAssets();
     this.loadMarketComparison();
   }
@@ -441,23 +454,12 @@ export class HomeComponent {
       return;
     }
 
-    const sourceBalance = this.balanceForToken(this.fromToken);
-    if (
-      sourceBalance &&
-      !this.isBalanceUsable(sourceBalance) &&
-      !this.balancesLoading
-    ) {
-      this.loadWalletBalances();
-    }
-
-    const balanceError = this.validateSourceBalance(amount);
-    if (balanceError) {
-      this.quoteError = balanceError;
+    if (this.fundingSourceError()) {
       return;
     }
 
     if (this.canReviewSwap()) {
-      this.openSwapReview(amount);
+      this.beginSwapReview(amount);
       return;
     }
 
@@ -483,7 +485,7 @@ export class HomeComponent {
       /^\d+$/.test(preview.amountOutAtomic) &&
       !/^0+$/.test(preview.amountOutAtomic) &&
       Date.parse(preview.expiresAt) > Date.now() &&
-      !this.validateSourceBalance(input.amount) &&
+      !this.fundingSourceError() &&
       this.destinationTargetMatchesQuote()
     );
   }
@@ -499,13 +501,19 @@ export class HomeComponent {
           !(Date.parse(this.quotePreview.expiresAt) > Date.now()))
       ) &&
       !this.canReviewSwap() &&
-      Boolean(input && !this.validateSourceBalance(input.amount))
+      Boolean(input) &&
+      !this.fundingSourceError()
     );
   }
 
   public isPrimaryActionDisabled(): boolean {
-    return Boolean(
-      this.activeWallet.wallet && !this.canReviewSwap() && !this.canRetryQuote()
+    return (
+      this.reviewBusy ||
+      Boolean(
+        this.activeWallet.wallet &&
+        !this.canReviewSwap() &&
+        !this.canRetryQuote()
+      )
     );
   }
 
@@ -856,6 +864,7 @@ export class HomeComponent {
 
   public primaryActionLabel(): string {
     if (!this.activeWallet.wallet) return 'Connect wallet';
+    if (this.reviewActionError) return this.reviewActionError;
 
     return this.canRetryQuote()
       ? 'Retry quote'
@@ -870,10 +879,6 @@ export class HomeComponent {
     const balance = this.balanceForToken(token);
     if (balance) {
       return `Balance: ${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}`;
-    }
-
-    if (this.balancesLoading && this.canFetchBalance(token)) {
-      return `Balance: loading ${this.tokenSymbolLabel(token)}`;
     }
 
     return `Balance: — ${this.tokenSymbolLabel(token)}`;
@@ -1134,6 +1139,7 @@ export class HomeComponent {
   }
 
   private refreshSwapQuotePreview(): void {
+    this.cancelPendingReview();
     const input = this.buildQuotePreviewInput();
 
     if (!input) {
@@ -1662,8 +1668,7 @@ export class HomeComponent {
     if (!amount || /^0+$/.test(amount)) return 'Enter a valid amount.';
     if (!this.canFetchBalance(this.fromToken))
       return 'Select a token on the active wallet network.';
-    const balanceError = this.validateSourceBalance(amount);
-    if (balanceError) return balanceError;
+    if (this.fundingSourceError()) return this.fundingSourceError();
     if (this.isQuoteLoading()) return 'Getting a quote…';
     if (this.quoteError) return this.quoteError;
     if (!this.quotePreview) return 'Waiting for a quote.';
@@ -1684,34 +1689,134 @@ export class HomeComponent {
     return action && !action.supported ? action.description : '';
   }
 
-  private validateSourceBalance(amountRaw: string): string {
-    const fundingError = this.fundingSourceError();
-    if (fundingError) return fundingError;
-    if (!this.canFetchBalance(this.fromToken)) {
-      return 'Select a token on the active wallet network.';
+  private beginSwapReview(amount: string): void {
+    const preview = this.quotePreview;
+    const network = this.balanceNetwork();
+    if (!preview || !network || this.fundingSourceError()) {
+      return;
     }
 
-    const balance = this.balanceForToken(this.fromToken);
-    if (!balance) {
-      return this.balancesLoading
-        ? `${this.tokenSymbolLabel(this.fromToken)} balance is loading.`
-        : this.balancesError ||
-            `${this.tokenSymbolLabel(this.fromToken)} balance is unavailable.`;
+    this.reviewBalanceSub?.unsubscribe();
+    this.reviewQuote?.cancel();
+    const generation = ++this.reviewGeneration;
+    this.reviewActionError = '';
+    this.reviewBusy = true;
+    const chainType = this.walletChainType;
+    this.reviewQuote = this.executableQuotes.start({
+      traceId: preview.traceId ?? createTraceId(),
+      providerId: 'one-click',
+      sourceAssetId: this.fromToken.assetId,
+      network,
+      originAsset: this.executionAssetId(this.fromToken),
+      destinationAsset: this.executionAssetId(this.toToken),
+      amount,
+      signerId: this.walletAddress,
+      recipient: this.effectiveRecipient(),
+      recipientType: 'DESTINATION_CHAIN',
+      depositType: 'ORIGIN_CHAIN',
+      refundType: 'ORIGIN_CHAIN',
+      authMethod:
+        chainType === 'ethereum' ? 'evm' : chainType === 'ton' ? 'ton' : 'near',
+      slippageTolerance: this.slippageToleranceBps,
+      deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    });
+
+    this.reviewBalanceSub = this.confirmSourceBalance(amount)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(error => {
+        if (generation !== this.reviewGeneration) {
+          return;
+        }
+        this.reviewBalanceSub = undefined;
+        this.reviewBusy = false;
+        if (error) {
+          this.reviewQuote?.cancel();
+          this.reviewQuote = undefined;
+          this.reviewActionError = error;
+          return;
+        }
+        this.reviewQuote = undefined;
+        this.openSwapReview(amount);
+      });
+  }
+
+  private cancelPendingReview(): void {
+    this.reviewGeneration += 1;
+    this.reviewBalanceSub?.unsubscribe();
+    this.reviewBalanceSub = undefined;
+    this.reviewQuote?.cancel();
+    this.reviewQuote = undefined;
+    this.reviewBusy = false;
+    this.reviewActionError = '';
+  }
+
+  private confirmSourceBalance(amountRaw: string) {
+    const symbol = this.tokenSymbolLabel(this.fromToken);
+    const unavailable = `Could not confirm ${symbol} balance`;
+    const network = this.balanceNetwork();
+    const account = this.walletAddress;
+    if (!account || !network || !this.canFetchBalance(this.fromToken)) {
+      return of(unavailable);
     }
 
-    if (!this.isBalanceUsable(balance)) {
-      return `${this.tokenSymbolLabel(this.fromToken)} balance is loading.`;
-    }
+    const assetId = this.fromToken.assetId;
+    return this.walletBalancesService
+      .loadBalancesWithMeta({
+        walletAddress: account,
+        network,
+        assetIds: [assetId],
+      })
+      .pipe(
+        map(result => {
+          if (result.partial) {
+            return unavailable;
+          }
+          const balance = result.balances.find(row =>
+            this.balanceMatchesAccount(row, account, network, assetId)
+          );
+          if (!balance || !this.isBalanceUsable(balance)) {
+            return unavailable;
+          }
+          this.rememberConfirmedBalance(balance);
+          try {
+            if (BigInt(amountRaw) > BigInt(balance.balanceRaw)) {
+              return `Insufficient ${symbol} balance`;
+            }
+          } catch {
+            return unavailable;
+          }
+          return '';
+        }),
+        catchError(() => of(unavailable))
+      );
+  }
 
-    try {
-      if (BigInt(amountRaw) > BigInt(balance.balanceRaw)) {
-        return `Insufficient ${this.tokenSymbolLabel(this.fromToken)} balance.`;
-      }
-    } catch {
-      return `${this.tokenSymbolLabel(this.fromToken)} balance is unavailable.`;
+  private balanceMatchesAccount(
+    balance: WalletBalance,
+    account: string,
+    network: string,
+    assetId: string
+  ): boolean {
+    if (balance.network !== network || balance.assetId !== assetId) {
+      return false;
     }
+    if (network.startsWith('eip155:')) {
+      return balance.walletAddress.toLowerCase() === account.toLowerCase();
+    }
+    return balance.walletAddress === account;
+  }
 
-    return '';
+  private rememberConfirmedBalance(balance: WalletBalance): void {
+    const existing = this.walletBalances.findIndex(
+      row => row.network === balance.network && row.assetId === balance.assetId
+    );
+    if (existing === -1) {
+      this.walletBalances = [...this.walletBalances, balance];
+      return;
+    }
+    this.walletBalances = this.walletBalances.map((row, index) =>
+      index === existing ? balance : row
+    );
   }
 
   private balanceForToken(token: ExchangeToken): WalletBalance | undefined {

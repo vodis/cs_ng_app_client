@@ -52,11 +52,11 @@
       &_router {
         position: relative;
         z-index: 1;
+        overflow: hidden auto;
         min-width: 0;
         max-width: 100%;
         min-height: 0;
         grid-column: 2 / 8;
-        overflow: hidden auto;
         overscroll-behavior: contain;
       }
 
@@ -71,6 +71,7 @@
           width: 100%;
           min-width: 0;
           flex: 1 1 auto;
+
           /* Clear floating nav FAB (58px + offset) and home-indicator safe area. */
           padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
           overflow-x: hidden;

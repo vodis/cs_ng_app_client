@@ -32,7 +32,11 @@ export const TOKEN_PROJECT_MOCKS: Record<string, TokenProjectMock> = {
     socialLinks: [
       { kind: 'x', url: 'https://x.com/NEARProtocol', label: 'X' },
       { kind: 'github', url: 'https://github.com/near', label: 'GitHub' },
-      { kind: 'discord', url: 'https://discord.gg/nearprotocol', label: 'Discord' },
+      {
+        kind: 'discord',
+        url: 'https://discord.gg/nearprotocol',
+        label: 'Discord',
+      },
     ],
   },
   WNEAR: {
@@ -56,7 +60,11 @@ export const TOKEN_PROJECT_MOCKS: Record<string, TokenProjectMock> = {
     socialLinks: [
       { kind: 'x', url: 'https://x.com/aave', label: 'X' },
       { kind: 'github', url: 'https://github.com/aave', label: 'GitHub' },
-      { kind: 'discord', url: 'https://discord.com/invite/aave', label: 'Discord' },
+      {
+        kind: 'discord',
+        url: 'https://discord.com/invite/aave',
+        label: 'Discord',
+      },
     ],
   },
   ETH: {
@@ -77,8 +85,16 @@ export const TOKEN_PROJECT_MOCKS: Record<string, TokenProjectMock> = {
     whitepaperUrl: 'https://bitcoin.org/bitcoin.pdf',
     explorerUrl: 'https://mempool.space',
     socialLinks: [
-      { kind: 'github', url: 'https://github.com/bitcoin/bitcoin', label: 'GitHub' },
-      { kind: 'reddit', url: 'https://www.reddit.com/r/Bitcoin/', label: 'Reddit' },
+      {
+        kind: 'github',
+        url: 'https://github.com/bitcoin/bitcoin',
+        label: 'GitHub',
+      },
+      {
+        kind: 'reddit',
+        url: 'https://www.reddit.com/r/Bitcoin/',
+        label: 'Reddit',
+      },
     ],
   },
   USDT: {

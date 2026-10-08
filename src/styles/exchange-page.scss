@@ -128,12 +128,6 @@
       flex-shrink: 0;
       margin-top: auto;
     }
-
-    .swap-confidential-option,
-    .connectMain,
-    .exchange-error {
-      flex-shrink: 0;
-    }
   }
 
   .swapRow {
@@ -407,9 +401,9 @@
 
   .balance {
     overflow: hidden;
-    margin-bottom: 6px;
     padding: 0;
     border: 0;
+    margin-bottom: 6px;
     background: transparent;
     color: #c4c6c7;
     cursor: pointer;
@@ -420,13 +414,13 @@
     text-transform: uppercase;
     white-space: nowrap;
 
-    &:hover:not(:disabled) {
-      color: var(--primary-text-color);
-    }
-
     &:disabled {
       cursor: default;
       opacity: 0.7;
+    }
+
+    &:hover:not(:disabled) {
+      color: var(--primary-text-color);
     }
   }
 
@@ -592,14 +586,16 @@
 
   .swap-confidential-option {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
-    gap: 8px;
     margin-top: 16px;
-    font-size: 14px;
     cursor: pointer;
+    font-size: 14px;
+    gap: 8px;
   }
 
   .exchange-error {
+    flex-shrink: 0;
     margin: 12px 0 0;
     color: var(--exchange-orange);
     font-size: 14px;
@@ -934,6 +930,16 @@
     white-space: nowrap;
   }
 
+  .tokenDetails {
+    display: grid;
+    min-width: 0;
+    padding-top: 6px;
+    border-top: 1px solid var(--exchange-line-soft);
+    margin-top: 4px;
+    gap: 6px 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .marketBelow {
     display: grid;
     align-items: center;
@@ -988,20 +994,10 @@
     }
 
     .tokenDetails {
+      align-self: stretch;
       grid-column: 1 / -1;
       grid-row: 4;
-      align-self: stretch;
     }
-  }
-
-  .tokenDetails {
-    display: grid;
-    min-width: 0;
-    margin-top: 4px;
-    padding-top: 6px;
-    border-top: 1px solid var(--exchange-line-soft);
-    gap: 6px 20px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .tokenDetails__col {
@@ -1017,9 +1013,9 @@
 
   .tokenDetails__iconWrap {
     display: grid;
+    overflow: hidden;
     width: 18px;
     height: 18px;
-    overflow: hidden;
     flex-shrink: 0;
     border-radius: 50%;
     place-items: center;
@@ -1053,8 +1049,8 @@
   }
 
   .tokenDetails__symbol {
-    margin: 0;
     overflow: hidden;
+    margin: 0;
     color: #fff;
     font-size: 11px;
     font-weight: 700;
@@ -1064,8 +1060,8 @@
   }
 
   .tokenDetails__name {
-    margin: 0;
     overflow: hidden;
+    margin: 0;
     color: #8b9294;
     font-size: 10px;
     font-weight: 500;
@@ -1082,11 +1078,11 @@
 
   .tokenDetails__row {
     display: flex;
+    min-height: 0;
     align-items: center;
     justify-content: space-between;
-    min-height: 0;
-    margin: 0;
     padding: 0 28px 0 0;
+    margin: 0;
     gap: 8px;
   }
 
@@ -1102,8 +1098,8 @@
   .tokenDetails__chip {
     display: inline-flex;
     overflow: hidden;
-    max-width: 100%;
     min-width: 0;
+    max-width: 100%;
     align-items: center;
     justify-content: center;
     padding: 2px 6px;
@@ -1113,20 +1109,19 @@
     color: #e8eaeb;
     font-size: 10px;
     font-weight: 600;
+    gap: 5px;
     line-height: 1.2;
     text-decoration: none;
     text-overflow: ellipsis;
     white-space: nowrap;
-    gap: 5px;
   }
 
   .tokenDetails__links {
     display: flex;
-    flex-wrap: nowrap;
     min-width: 0;
+    flex-wrap: nowrap;
     justify-content: flex-end;
-    column-gap: 6px;
-    row-gap: 0;
+    gap: 0 6px;
   }
 
   .tokenDetails__chipIcon {
@@ -1582,15 +1577,15 @@
       }
 
       .tokenDetails {
-        margin-top: 2px;
         padding-top: 6px;
+        margin-top: 2px;
         gap: 8px;
         grid-template-columns: minmax(0, 1fr);
       }
 
       .marketMeta {
-        min-width: 0;
         width: 100%;
+        min-width: 0;
 
         &__row {
           justify-content: start;

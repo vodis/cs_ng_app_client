@@ -38,6 +38,7 @@ import {
   WalletBalancesService,
 } from '@shared/services/wallet-balances.service';
 import { environment } from '../../../environments/environment';
+import { SwapExecutableQuoteCoordinator } from '@domains/exchange/application/swap-executable-quote.coordinator';
 import { HomeComponent } from './home.component';
 
 class WalletsServiceStub {
@@ -107,6 +108,14 @@ class ExchangeAssetsServiceStub {
   public loadAssets() {
     return of(this.tokens);
   }
+}
+
+class SwapExecutableQuoteCoordinatorStub {
+  public lastCancel = jasmine.createSpy('cancelExecutableQuote');
+  public start = jasmine.createSpy('start').and.callFake(() => {
+    this.lastCancel = jasmine.createSpy('cancelExecutableQuote');
+    return { cancel: this.lastCancel };
+  });
 }
 
 class MarketSnapshotsServiceStub {
@@ -240,6 +249,10 @@ describe('HomeComponent market overview', () => {
           useClass: MarketSnapshotsServiceStub,
         },
         { provide: WalletBalancesService, useClass: WalletBalancesServiceStub },
+        {
+          provide: SwapExecutableQuoteCoordinator,
+          useClass: SwapExecutableQuoteCoordinatorStub,
+        },
       ],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
@@ -1638,10 +1651,16 @@ describe('HomeComponent market overview', () => {
     ]);
   });
 
-  it('blocks NEAR quotes when entered amount exceeds live balance', () => {
+  it('still requests a dry quote when the entered amount exceeds the displayed balance', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
     ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
     balancesService.balances = [
       {
         walletId: 'wallet-1',
@@ -1659,9 +1678,6 @@ describe('HomeComponent market overview', () => {
         stale: false,
       },
     ];
-    const walletsService = TestBed.inject(
-      WalletsService
-    ) as unknown as WalletsServiceStub;
 
     expectComparisonRequest({
       base: 'USDC',
@@ -1676,10 +1692,100 @@ describe('HomeComponent market overview', () => {
       decimals: 24,
     };
     component.amount = '2';
+    swapFlowFacade.refreshQuotePreview.calls.reset();
 
     component.submitQuote();
 
-    expect(component.quoteError).toBe('Insufficient NEAR balance.');
+    expect(component.quoteError).toBe('');
+    expect(component.reviewActionError).toBe('');
+    expect(swapFlowFacade.refreshQuotePreview).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        amount: '2000000000000000000000000',
+      })
+    );
+  });
+
+  it('shows insufficient balance on Review and cancels the executable quote', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    const quotes = TestBed.inject(
+      SwapExecutableQuoteCoordinator
+    ) as unknown as SwapExecutableQuoteCoordinatorStub;
+    const walletGateway = TestBed.inject(WalletGatewayBridgeService);
+    const openReview = spyOn(walletGateway, 'openSwapReview');
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: 'near:native',
+        symbol: 'NEAR',
+        decimals: 24,
+        balanceRaw: '1000000000000000000000000',
+        balanceDecimal: '1',
+        source: 'near_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next(nearWallet());
+    component.fromToken = {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    component.amount = '2';
+    swapFlowFacade.emitQuote({
+      amountOut: '1000000',
+      amountOutAtomic: '1000000',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      traceId: 'trace-review',
+      raw: { amountOut: '1000000' },
+    });
+
+    component.submitQuote();
+
+    expect(component.quoteError).toBe('');
+    expect(component.primaryActionLabel()).toBe('Insufficient NEAR balance');
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    fixture.detectChanges();
+    const action = (fixture.nativeElement as HTMLElement).querySelector(
+      '.connectMain'
+    );
+    expect(action?.textContent?.trim()).toBe('INSUFFICIENT NEAR BALANCE');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'balance is loading'
+    );
+    expect(quotes.start).toHaveBeenCalled();
+    expect(quotes.lastCancel).toHaveBeenCalled();
+    expect(openReview).not.toHaveBeenCalled();
+    expect(
+      balancesService.calls.some(
+        call =>
+          call.walletAddress === 'alice.near' &&
+          call.assetIds?.[0] === 'near:native'
+      )
+    ).toBeTrue();
   });
 
   it('requests a one-click preview when an amount is pasted into From', () => {
@@ -1794,7 +1900,7 @@ describe('HomeComponent market overview', () => {
     );
   });
 
-  it('keeps Review disabled when the balance is stale', () => {
+  it('keeps Review available when the displayed balance is stale', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
     ) as unknown as WalletBalancesServiceStub;
@@ -1836,9 +1942,10 @@ describe('HomeComponent market overview', () => {
     });
 
     expect(component.balanceLabel(component.fromToken)).not.toContain('stale');
-    expect(component.canReviewSwap()).toBeFalse();
-    expect(component.isPrimaryActionDisabled()).toBeTrue();
+    expect(component.canReviewSwap()).toBeTrue();
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
     expect(component.primaryActionLabel()).toBe('Review');
+    expect(component.quoteError).toBe('');
   });
 
   it('keeps Review disabled when a formatted quote lacks atomic output', () => {
@@ -1881,7 +1988,7 @@ describe('HomeComponent market overview', () => {
     expect(component.isPrimaryActionDisabled()).toBeTrue();
   });
 
-  it('keeps Review disabled after the preview expiry passes', () => {
+  it('offers a quote retry after the preview expiry passes', () => {
     const walletsService = TestBed.inject(
       WalletsService
     ) as unknown as WalletsServiceStub;
@@ -1918,8 +2025,9 @@ describe('HomeComponent market overview', () => {
     });
 
     expect(component.canReviewSwap()).toBeFalse();
-    expect(component.isPrimaryActionDisabled()).toBeTrue();
-    expect(component.primaryActionLabel()).toBe('Review');
+    expect(component.canRetryQuote()).toBeTrue();
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    expect(component.primaryActionLabel()).toBe('Retry quote');
   });
 
   it('refreshes wallet balances after confirmed settlement, not just submission', () => {
@@ -2088,8 +2196,31 @@ describe('HomeComponent market overview', () => {
     component.amount = '1';
 
     expect(component.balanceLabel(component.fromToken)).toBe('Balance: 2 NEAR');
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    const quotes = TestBed.inject(
+      SwapExecutableQuoteCoordinator
+    ) as unknown as SwapExecutableQuoteCoordinatorStub;
+    const openReview = spyOn(
+      TestBed.inject(WalletGatewayBridgeService),
+      'openSwapReview'
+    );
+    swapFlowFacade.emitQuote({
+      amountOut: '1000000',
+      amountOutAtomic: '1000000',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      traceId: 'trace-stale',
+      raw: { amountOut: '1000000' },
+    });
     component.submitQuote();
-    expect(component.quoteError).toBe('NEAR balance is loading.');
+
+    expect(component.quoteError).toBe('');
+    expect(component.primaryActionLabel()).toBe(
+      'Could not confirm NEAR balance'
+    );
+    expect(quotes.lastCancel).toHaveBeenCalled();
+    expect(openReview).not.toHaveBeenCalled();
   });
 
   it('does not loop balance requests when the source is stale and another balance is fresh', () => {
@@ -2321,7 +2452,7 @@ describe('HomeComponent market overview', () => {
     ).toBeTrue();
   });
 
-  it('retries the quote preview after an asynchronous balance load', () => {
+  it('requests a dry quote without waiting for a wallet balance', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
     ) as unknown as WalletBalancesServiceStub;
@@ -2356,28 +2487,12 @@ describe('HomeComponent market overview', () => {
     };
     component.amount = '1';
     walletsService.account.next({ account: 'alice.near', chainId: null });
-    component.recipientAddress = '0x0000000000000000000000000000000000000002';
-
+    expect(balancesService.balancesSubject?.observed).toBeTrue();
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(undefined);
 
-    balancesService.balancesSubject.next([
-      {
-        walletId: 'wallet-1',
-        walletAddress: 'alice.near',
-        chainType: 'near',
-        network: 'near:mainnet',
-        assetId: 'near:native',
-        symbol: 'NEAR',
-        decimals: 24,
-        balanceRaw: '2000000000000000000000000',
-        balanceDecimal: '2',
-        source: 'near_rpc',
-        fetchedAt: '2026-08-12T12:00:00.000Z',
-        expiresAt: '2099-08-12T12:00:15.000Z',
-        stale: false,
-      },
-    ]);
-    balancesService.balancesSubject.complete();
+    component.saveRecipientAddress(
+      '0x0000000000000000000000000000000000000002'
+    );
 
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
       jasmine.objectContaining({
@@ -2386,9 +2501,10 @@ describe('HomeComponent market overview', () => {
         recipient: '0x0000000000000000000000000000000000000002',
       })
     );
+    expect(component.quoteError).toBe('');
   });
 
-  it('reloads an expired balance before allowing a NEAR quote', () => {
+  it('does not authorize review from an expired balance', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
     ) as unknown as WalletBalancesServiceStub;
@@ -2428,11 +2544,31 @@ describe('HomeComponent market overview', () => {
     component.amount = '1';
 
     expect(component.balanceLabel(component.fromToken)).toBe('Balance: 2 NEAR');
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    const openReview = spyOn(
+      TestBed.inject(WalletGatewayBridgeService),
+      'openSwapReview'
+    );
+    swapFlowFacade.emitQuote({
+      amountOut: '1000000',
+      amountOutAtomic: '1000000',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      traceId: 'trace-expired',
+      raw: { amountOut: '1000000' },
+    });
 
     component.submitQuote();
 
-    expect(balancesService.calls.length).toBe(2);
-    expect(component.quoteError).toBe('NEAR balance is loading.');
+    expect(
+      balancesService.calls.some(call => call.assetIds?.[0] === 'near:native')
+    ).toBeTrue();
+    expect(component.quoteError).toBe('');
+    expect(component.primaryActionLabel()).toBe(
+      'Could not confirm NEAR balance'
+    );
+    expect(openReview).not.toHaveBeenCalled();
   });
 
   it('prefers backend formatted quote amount from nested quote response', () => {

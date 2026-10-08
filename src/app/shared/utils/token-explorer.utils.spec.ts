@@ -21,7 +21,8 @@ describe('explorerUrlForToken', () => {
       explorerUrlForToken({
         symbol: 'USDC',
         name: 'USD Coin',
-        assetId: 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
+        assetId:
+          'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
         color: '#2f8cff',
         blockchain: 'base',
         contractAddress: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
