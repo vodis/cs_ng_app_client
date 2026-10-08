@@ -375,6 +375,13 @@ describe('backend-owned active wallet', () => {
     facade.refreshBalances();
     expect(last().status).toBe('loading');
     settled.next({ traceId: 'swap', status: 'SUCCESS' });
+    expect(transport.load).toHaveBeenCalledTimes(2);
+    requests[1].next({
+      status: 'ready',
+      account: 'alice.near',
+      network: 'near:mainnet',
+      rows: [],
+    });
     expect(transport.load).toHaveBeenCalledTimes(3);
     subscription.unsubscribe();
   });

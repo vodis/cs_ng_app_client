@@ -395,7 +395,7 @@ describe('WalletGatewayBridgeService', () => {
     service.registerMountApi(mountApi);
 
     let result: { transactionHash: string } | undefined;
-    void service.runNearDepositFlow(nearDepositRequest()).then(submission => {
+    void service.runWalletDepositFlow(nearDepositRequest()).then(submission => {
       result = submission;
     });
     expect(mountApi.sendGatewayEvent).toHaveBeenCalledWith({

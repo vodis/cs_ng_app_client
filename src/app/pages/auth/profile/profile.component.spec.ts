@@ -374,7 +374,7 @@ describe('ProfileComponent', () => {
     expect(component.usdBalanceLabel()).toBe('Unavailable');
   });
 
-  it('keeps a per-token stale marker in the mobile network meta', () => {
+  it('keeps freshness metadata out of the mobile network label', () => {
     const fresh = {
       walletId: 'wallet-1',
       walletAddress: 'alice.near',
@@ -393,8 +393,8 @@ describe('ProfileComponent', () => {
     const stale = { ...fresh, symbol: 'USDC', assetId: 'usdc', stale: true };
 
     expect(component.balanceNetworkMeta(fresh)).toBe('NEAR');
-    expect(component.balanceNetworkMeta(stale)).toBe('NEAR · stale');
-    expect(component.balanceMeta(stale)).toContain('stale /');
+    expect(component.balanceNetworkMeta(stale)).toBe('NEAR');
+    expect(component.balanceMeta(stale)).not.toContain('stale');
   });
 
   it('cancels the previous CountUp before starting a new balance animation', () => {

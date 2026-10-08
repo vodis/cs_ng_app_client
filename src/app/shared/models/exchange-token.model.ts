@@ -3,6 +3,7 @@ export interface ExchangeToken {
   displaySymbol?: string;
   name: string;
   assetId: string;
+  balanceAssetId?: string;
   /** Provider/BFF identifier used for quote and execution requests. */
   executionAssetId?: string;
   color: string;
@@ -10,4 +11,6 @@ export interface ExchangeToken {
   decimals?: number;
   blockchain: string;
   contractAddress?: string;
+  priceUsd?: string | number;
+  priceUpdatedAt?: string;
 }

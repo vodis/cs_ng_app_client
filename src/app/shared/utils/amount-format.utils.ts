@@ -118,7 +118,10 @@ export function parseDisplayedAmount(
       .replace(/\D/g, '');
     const head = cleaned.slice(0, lastDot);
     const tailIsDecimal =
-      tail.length > 0 && tail.length <= maxFractionDigits && tail.length < 3;
+      tail.length > 0 &&
+      tail.length <= maxFractionDigits &&
+      !head.includes('.') &&
+      (tail.length !== 3 || /^0*$/.test(head));
 
     if (tailIsDecimal) {
       return {

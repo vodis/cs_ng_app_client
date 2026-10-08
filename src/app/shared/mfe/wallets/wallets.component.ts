@@ -175,6 +175,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
             },
           },
           services: {
+            walletFundingVersion: '1.0.0',
             quoteSwap: (request, options) => {
               options.signal.throwIfAborted();
               return firstValueFrom(
@@ -188,7 +189,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
             signSwap: input =>
               this.walletGatewayBridge.runIntentSignFlow(input),
             depositSwap: request =>
-              this.walletGatewayBridge.runNearDepositFlow(request),
+              this.walletGatewayBridge.runWalletDepositFlow(request),
             submitSwap: async request => ({
               intentHash: await this.intentRelay.submitIntent({
                 traceId: request.traceId,

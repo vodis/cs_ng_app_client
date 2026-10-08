@@ -96,7 +96,12 @@ class SwapFlowFacadeStub {
   }
 }
 
+const assetPriceUpdates = new Subject<ExchangeToken[]>();
+
 class ExchangeAssetsServiceStub {
+  public watchPrices() {
+    return assetPriceUpdates.asObservable();
+  }
   public tokens: ExchangeToken[] = [];
 
   public loadAssets() {
@@ -179,9 +184,11 @@ class ActiveWalletStub {
             }
           : undefined,
         network: account
-          ? account.account.startsWith('0x')
-            ? `eip155:${account.chainId}`
-            : nearNetworkForAddress(account.account)
+          ? account.identity?.chainType === 'ton'
+            ? 'ton:mainnet'
+            : account.account.startsWith('0x')
+              ? `eip155:${account.chainId}`
+              : nearNetworkForAddress(account.account)
           : undefined,
       };
       return state;
@@ -244,6 +251,62 @@ describe('HomeComponent market overview', () => {
 
   afterEach(() => {
     httpMock.verify();
+  });
+
+  it('values canonical six-decimal USDC at cents without changing its atomic amount', () => {
+    const response = comparisonResponse('USDC', 'NEAR', '1H');
+    response.baseToken.currentPrice = 0.999734;
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(response);
+    component.fromToken = {
+      ...component.fromToken,
+      priceUsd: 0.999734,
+      priceUpdatedAt: new Date().toISOString(),
+    };
+    component.amount = '0.146146';
+    expect(component.fromFiatEstimate()).toBe('$0.15');
+    expect(component.fromAmountDisplay()).toBe('0,146146');
+    component.fromToken = { ...component.fromToken, priceUsd: undefined };
+    expect(component.fromFiatEstimate()).toBe('—');
+  });
+
+  it('updates fiat by asset identity without replacing the active selection or quote', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    const source = component.fromToken;
+    const destination = component.toToken;
+    component.amount = '2';
+    const quote = component.quotePreview;
+    assetPriceUpdates.next([
+      { ...source, priceUsd: '3', priceUpdatedAt: new Date().toISOString() },
+      {
+        ...source,
+        assetId: 'same-symbol-other-asset',
+        priceUsd: '999',
+        priceUpdatedAt: new Date().toISOString(),
+      },
+    ]);
+    expect(component.fromFiatEstimate()).toBe('$6.00');
+    expect(component.fromToken.assetId).toBe(source.assetId);
+    expect(component.toToken.assetId).toBe(destination.assetId);
+    expect(component.amount).toBe('2');
+    expect(component.quotePreview).toBe(quote);
+    assetPriceUpdates.next([
+      {
+        ...source,
+        priceUsd: '4',
+        priceUpdatedAt: new Date(Date.now() - 301_000).toISOString(),
+      },
+    ]);
+    expect(component.fromFiatEstimate()).toBe('—');
+    assetPriceUpdates.next([]);
+    expect(component.fromFiatEstimate()).toBe('—');
   });
 
   it('does not offer a separate verification action for the selected wallet', () => {
@@ -416,7 +479,9 @@ describe('HomeComponent market overview', () => {
     expect(details?.textContent).not.toContain('Contract');
     expect(details?.textContent).not.toContain('Decimals');
     expect(details?.textContent).not.toContain('—');
-    expect(component.tokenOverviewHasMarketCap(component.fromToken)).toBeFalse();
+    expect(
+      component.tokenOverviewHasMarketCap(component.fromToken)
+    ).toBeFalse();
     expect(component.tokenOverviewHasPrice(component.fromToken)).toBeTrue();
     expect(component.tokenOverviewHasPrice(component.toToken)).toBeTrue();
   });
@@ -429,7 +494,8 @@ describe('HomeComponent market overview', () => {
     }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
 
     component.toToken = {
-      assetId: 'nep141:eth-0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9.omft.near',
+      assetId:
+        'nep141:eth-0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9.omft.near',
       symbol: 'AAVE',
       displaySymbol: 'AAVE',
       name: 'Aave',
@@ -1319,6 +1385,105 @@ describe('HomeComponent market overview', () => {
     );
   });
 
+  for (const [
+    blockchain,
+    network,
+    assetId,
+    balanceAssetId,
+    symbol,
+    decimals,
+    account,
+    chainId,
+  ] of [
+    [
+      'eth',
+      'eip155:1',
+      'nep141:eth.omft.near',
+      'eip155:1/native',
+      'ETH',
+      18,
+      '0x' + '1'.repeat(40),
+      1,
+    ],
+    [
+      'ton',
+      'ton:mainnet',
+      'nep245:v2_1.omni.hot.tg:1117_',
+      'ton:native',
+      'GRAM',
+      9,
+      'UQ' + 'A'.repeat(46),
+      -239,
+    ],
+  ] as const) {
+    it(`allows review for funded native ${blockchain} using backend balance identity`, () => {
+      const balances = TestBed.inject(
+        WalletBalancesService
+      ) as unknown as WalletBalancesServiceStub;
+      const wallets = TestBed.inject(
+        WalletsService
+      ) as unknown as WalletsServiceStub;
+      const flow = TestBed.inject(
+        SwapFlowFacade
+      ) as unknown as SwapFlowFacadeStub;
+      balances.balances = [
+        {
+          ...nearBalance(),
+          walletAddress: account,
+          chainType: blockchain === 'eth' ? 'ethereum' : 'ton',
+          network,
+          assetId: balanceAssetId,
+          symbol,
+          decimals,
+          balanceRaw: (10n ** BigInt(decimals)).toString(),
+        },
+      ];
+      expectComparisonRequest({
+        base: 'USDC',
+        quote: 'NEAR',
+        timeframe: '1H',
+      }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+      wallets.account.next({
+        account,
+        chainId,
+        identity: {
+          connectorId: blockchain === 'eth' ? 'metamask' : 'tonkeeper',
+          address: account,
+          chainType: blockchain === 'eth' ? 'ethereum' : 'ton',
+          walletType: 'external',
+        },
+      });
+      component.fromToken = {
+        assetId,
+        balanceAssetId,
+        executionAssetId: assetId,
+        symbol,
+        name: symbol,
+        color: '',
+        decimals,
+        blockchain,
+      };
+      component.toToken = {
+        assetId: 'usdc',
+        symbol: 'USDC',
+        name: 'USDC',
+        color: '',
+        decimals: 6,
+        blockchain,
+      };
+      component.amount = '0.1';
+      flow.emitQuote({
+        amountOut: '100000',
+        amountOutAtomic: '100000',
+        expiresAt: '2099-01-01T00:00:00.000Z',
+        traceId: 'native',
+        raw: {},
+      });
+      expect(component.reviewBlockingReason()).toBe('');
+      expect(component.canReviewSwap()).toBeTrue();
+    });
+  }
+
   it('opens Review with quoted amountOutDisplay, never the To override', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
@@ -1670,7 +1835,7 @@ describe('HomeComponent market overview', () => {
       raw: { amountOut: '100' },
     });
 
-    expect(component.balanceLabel(component.fromToken)).toContain('(stale)');
+    expect(component.balanceLabel(component.fromToken)).not.toContain('stale');
     expect(component.canReviewSwap()).toBeFalse();
     expect(component.isPrimaryActionDisabled()).toBeTrue();
     expect(component.primaryActionLabel()).toBe('Review');
@@ -1922,9 +2087,7 @@ describe('HomeComponent market overview', () => {
     component.fromToken = { ...component.toToken, decimals: 24 };
     component.amount = '1';
 
-    expect(component.balanceLabel(component.fromToken)).toBe(
-      'Balance: 2 NEAR (stale)'
-    );
+    expect(component.balanceLabel(component.fromToken)).toBe('Balance: 2 NEAR');
     component.submitQuote();
     expect(component.quoteError).toBe('NEAR balance is loading.');
   });
@@ -2264,9 +2427,7 @@ describe('HomeComponent market overview', () => {
     };
     component.amount = '1';
 
-    expect(component.balanceLabel(component.fromToken)).toBe(
-      'Balance: 2 NEAR (stale)'
-    );
+    expect(component.balanceLabel(component.fromToken)).toBe('Balance: 2 NEAR');
 
     component.submitQuote();
 

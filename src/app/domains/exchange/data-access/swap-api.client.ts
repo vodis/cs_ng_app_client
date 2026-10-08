@@ -182,7 +182,10 @@ export class SwapApiClient {
       destinationAsset: request.destinationAsset,
       amount: request.amount,
       deadline: request.deadline,
-      userAddress: request.signerId.toLowerCase(),
+      userAddress:
+        request.authMethod === 'evm'
+          ? request.signerId.toLowerCase()
+          : request.signerId,
       recipient: request.recipient,
       recipientType: request.recipientType,
       depositType: request.depositType,
@@ -197,11 +200,16 @@ export class SwapApiClient {
   private toPrepareBody(request: SwapPrepareRequest): Record<string, unknown> {
     return {
       providerId: request.providerId,
+      sourceAssetId: request.sourceAssetId,
+      network: request.network,
       originAsset: request.originAsset,
       destinationAsset: request.destinationAsset,
       amount: request.amount,
       deadline: request.deadline,
-      signerId: request.signerId.toLowerCase(),
+      signerId:
+        request.authMethod === 'evm'
+          ? request.signerId.toLowerCase()
+          : request.signerId,
       recipient: request.recipient,
       recipientType: request.recipientType,
       depositType: request.depositType,
