@@ -8,6 +8,8 @@ import {
 } from 'rxjs';
 import {
   Component,
+  Output,
+  EventEmitter,
   ViewChild,
   ElementRef,
   AfterViewInit,
@@ -46,6 +48,7 @@ import type {
   styleUrls: ['wallets.component.scss'],
 })
 export class WalletsComponent implements AfterViewInit, OnDestroy {
+  @Output() readonly dialogCloseReady = new EventEmitter<boolean>();
   @ViewChild('container', { read: ElementRef })
   public containerRef!: ElementRef<HTMLElement>;
 
@@ -71,6 +74,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   }
 
   async initializeMfe() {
+    this.dialogCloseReady.emit(false);
     const container = this.containerRef?.nativeElement;
     if (!container) {
       this.logger.log('error', 'Wallets MFE: host container is not available', {
@@ -263,8 +267,13 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
           typeof mountResult === 'function' ? mountResult : undefined;
       }
 
+      this.dialogCloseReady.emit(
+        this.isMountApi(mountResult) &&
+          mountResult.dialogCloseVersion === '1.0.0'
+      );
       this.logger.log('info', 'Wallets MFE: mounted successfully');
     } catch (error) {
+      this.dialogCloseReady.emit(false);
       container.innerHTML =
         '<div style="padding:12px;color:#ef4444;font-size:12px;" role="alert">Update the wallet remote or retry to restore your selected wallet.</div>';
       this.logger.log('error', 'Wallets MFE: failed to mount', {
@@ -406,6 +415,7 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.dialogCloseReady.emit(false);
     this.isDestroyed = true;
     this.selectionSubscription?.unsubscribe();
     this.unsubscribeEvents?.();
