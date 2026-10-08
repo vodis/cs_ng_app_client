@@ -129,6 +129,7 @@ export type WalletsMfeCallbacks = {
 };
 
 export type WalletsMfeMountApi = {
+  dialogCloseVersion?: '1.0.0';
   selectionContractVersion?: '1.0.0';
   updateSelection?: (selection: WalletSelection) => void;
   unmount: () => void;

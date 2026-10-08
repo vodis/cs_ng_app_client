@@ -108,6 +108,7 @@ describe('WalletBarComponent', () => {
   it('hides the host close button while an MFE dialog owns the drawer', () => {
     component.hostModal = true;
     component.hasActiveWallet = true;
+    component.mfeProvidesClose = true;
     wallets.drawerMode.next('swap-review');
     expect(component.showHostCloseButton).toBeFalse();
 
@@ -128,6 +129,33 @@ describe('WalletBarComponent', () => {
     expect(component.isOpenWalletConnectMenu).toBeFalse();
     expect(wallets.drawerMode.value).toBe('wallet');
     expect(wallets.clearCloseRequest).toHaveBeenCalled();
+  });
+
+  it('keeps fallback close available until the remote provides it and after failure', () => {
+    component.hasActiveWallet = false;
+    wallets.drawerMode.next('connect');
+    expect(component.showHostCloseButton).toBeTrue();
+    component.mfeProvidesClose = true;
+    expect(component.showHostCloseButton).toBeFalse();
+    component.mfeProvidesClose = false;
+    expect(component.showHostCloseButton).toBeTrue();
+  });
+
+  it('preserves the connected gateway when closing through the remote callback', () => {
+    component.hostModal = true;
+    component.isGatewayConnected = true;
+    wallets.drawerMode.next('connect');
+    wallets.closeRequested.next(true);
+    expect(component.isOpenWalletConnectMenu).toBeFalse();
+    expect(gateway.resetConnection).not.toHaveBeenCalled();
+  });
+
+  it('keeps busy swaps open even for a remote close request', () => {
+    component.hostModal = true;
+    gateway.isExecutionInProgress.and.returnValue(true);
+    wallets.closeRequested.next(true);
+    expect(component.isOpenWalletConnectMenu).toBeTrue();
+    expect(wallets.drawerMode.value).toBe('swap-review');
   });
 
   [true, false].forEach(accountFirst => {

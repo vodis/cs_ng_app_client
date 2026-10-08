@@ -351,3 +351,17 @@ The host owns root-lifetime, authenticated balances for its selected wallet and
 network. Gateway invalidation clears signing readiness, not those read-only
 holdings. The standard connection drawer is opened explicitly for connection or
 signing; the wallet-details view consumes the same host balance source.
+
+### Dialog close ownership
+
+The optional mount capability `dialogCloseVersion: '1.0.0'` guarantees an MFE
+close control for connection, connected/linking, and swap views. `WalletsComponent`
+emits `dialogCloseReady` only after a compatible mount succeeds; loading,
+legacy remotes, failed mounts and unmount retain or restore the host fallback.
+The host board always keeps its own close control. Deploy the MFE before the
+host; older remotes may show both controls during migration.
+
+Remote close controls invoke `onCloseRequested`. The host never intercepts
+remote CSS selectors or accessible labels. All host close paths retain the
+busy-swap guard. Dismissal preserves a connected gateway; closing an unfinished
+connection cancels it. Disconnect remains an explicit wallet action.

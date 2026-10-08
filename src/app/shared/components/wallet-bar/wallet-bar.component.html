@@ -30,7 +30,7 @@
         [class.wallet-bar__mfe-host--hidden]="
           hasActiveWallet && drawerMode === 'wallet'
         ">
-        <app-wallets />
+        <app-wallets (dialogCloseReady)="mfeProvidesClose = $event" />
       </div>
     </app-side-modal>
   }
