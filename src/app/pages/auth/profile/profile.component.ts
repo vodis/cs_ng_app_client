@@ -19,7 +19,10 @@ import {
 } from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
 import { atomicToDecimal } from '@shared/utils/amount-format.utils';
-import { isNearWalletAddress, caipNetworkLabel } from '@shared/utils/network.utils';
+import {
+  isNearWalletAddress,
+  caipNetworkLabel,
+} from '@shared/utils/network.utils';
 import {
   MockProfileActivitySource,
   ProfileActivitySource,
@@ -219,7 +222,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     const expiresAt = Number.isNaN(expiry.getTime())
       ? 'cache'
       : `cache until ${expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    const freshness = balance.stale ? 'stale / ' : '';
+    const freshness = balance.stale ? 'Last known balance / ' : '';
     return `${this.shortAddress(balance.walletAddress)} / ${balance.network} / ${freshness}${expiresAt}`;
   }
 
@@ -229,10 +232,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public balanceNetworkMeta(balance: WalletBalance): string {
     const network = this.balanceNetworkLabel(balance);
-    if (!network) {
-      return balance.stale ? 'stale' : '';
-    }
-    return balance.stale ? `${network} · stale` : network;
+    return network;
   }
 
   public canEnablePasskey(): boolean {

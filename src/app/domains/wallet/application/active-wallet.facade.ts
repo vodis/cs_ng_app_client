@@ -58,6 +58,7 @@ export class ActiveWalletFacade {
     rows: [],
   });
   private loadedAt = 0;
+  private refreshQueued = false;
   private balanceKey = '';
   private readonly refreshSubject = new BehaviorSubject(0);
   readonly state$ = this.stateSubject.asObservable();
@@ -96,6 +97,7 @@ export class ActiveWalletFacade {
       .pipe(
         switchMap(([request]) => {
           const key = JSON.stringify(request) ?? '';
+          if (key !== this.balanceKey) this.refreshQueued = false;
           const previous =
             key === this.balanceKey ? this.balancesSubject.value.rows : [];
           this.balanceKey = key;
@@ -162,6 +164,10 @@ export class ActiveWalletFacade {
         if (state.status === 'ready' || state.status === 'partial')
           this.loadedAt = Date.now();
         this.balancesSubject.next(state);
+        if (state.status !== 'loading' && this.refreshQueued) {
+          this.refreshQueued = false;
+          this.refreshBalances();
+        }
       });
     this.wallets.swapSettled
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -195,6 +201,10 @@ export class ActiveWalletFacade {
   }
 
   refreshBalances(): void {
+    if (this.balancesSubject.value.status === 'loading') {
+      this.refreshQueued = true;
+      return;
+    }
     this.refreshSubject.next(this.refreshSubject.value + 1);
   }
 

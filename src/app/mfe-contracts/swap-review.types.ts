@@ -39,7 +39,7 @@ export type SwapReviewIntent = {
   recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
-  authMethod: 'evm' | 'near';
+  authMethod: 'evm' | 'near' | 'ton';
   slippageToleranceBps: number;
 };
 
@@ -47,6 +47,8 @@ export type SwapReviewPrepareRequest = {
   providerId: 'one-click';
   dry: false;
   traceId: string;
+  sourceAssetId?: string;
+  network?: string;
   originAsset: string;
   destinationAsset: string;
   amount: string;
@@ -55,7 +57,7 @@ export type SwapReviewPrepareRequest = {
   recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
-  authMethod: 'evm' | 'near';
+  authMethod: 'evm' | 'near' | 'ton';
   slippageTolerance: number;
   deadline: string;
 };
@@ -84,6 +86,7 @@ export type SwapReviewSubmitRequest = {
 };
 
 export type SwapReviewDepositRequest = {
+  transaction?: import('./wallet-funding.contract').WalletDepositTransaction;
   traceId: string;
   sourceAssetId: string;
   senderAccount: string;
@@ -101,6 +104,7 @@ export type SwapStatus =
   | 'FAILED';
 
 export type SwapReviewServices = {
+  walletFundingVersion?: '1.0.0';
   quoteSwap?: (
     request: SwapReviewQuoteRequest,
     options: { signal: AbortSignal }

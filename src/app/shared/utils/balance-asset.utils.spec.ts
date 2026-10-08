@@ -50,6 +50,29 @@ describe('canonical wallet holdings', () => {
       tokenBalance([balance], { ...usdc, blockchain: 'eth' }, row.network)
     ).toBeUndefined();
   });
+  it('uses backend native balance identity for contractless ETH and TON/GRAM routes', () => {
+    for (const [blockchain, network, assetId, balanceAssetId, symbol] of [
+      ['eth', 'eip155:1', 'nep141:eth.omft.near', 'eip155:1/native', 'ETH'],
+      [
+        'ton',
+        'ton:mainnet',
+        'nep245:v2_1.omni.hot.tg:1117_',
+        'ton:native',
+        'GRAM',
+      ],
+    ]) {
+      const balance = { ...row, network, assetId: balanceAssetId };
+      const asset = { ...token, assetId, blockchain, symbol, balanceAssetId };
+      expect(tokenBalance([balance], asset, network)).toBe(balance);
+      expect(
+        tokenBalance(
+          [balance],
+          { ...asset, balanceAssetId: undefined },
+          network
+        )
+      ).toBeUndefined();
+    }
+  });
   it('uses raw integers for positive holdings, including dust, without trusting display amounts', () => {
     expect(hasPositiveBalance({ ...row, balanceDecimal: '0' })).toBeTrue();
     for (const balanceRaw of ['0', '000', '-1', 'NaN', '0.5'])

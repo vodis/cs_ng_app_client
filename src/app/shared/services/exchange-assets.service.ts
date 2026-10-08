@@ -56,6 +56,7 @@ export class ExchangeAssetsService {
   ): ExchangeToken[] {
     const token: ExchangeToken = {
       assetId: asset.assetId,
+      ...(asset.balanceAssetId ? { balanceAssetId: asset.balanceAssetId } : {}),
       executionAssetId: asset.defuseAssetId ?? asset.assetId,
       symbol: asset.symbol,
       displaySymbol: this.displaySymbolFor(asset.symbol),
@@ -65,6 +66,12 @@ export class ExchangeAssetsService {
       blockchain: asset.blockchain?.trim().toLowerCase() || 'unknown',
       ...(asset.contractAddress?.trim()
         ? { contractAddress: asset.contractAddress.trim() }
+        : {}),
+      ...(asset.price !== undefined &&
+      /^(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(String(asset.price)) &&
+      Number.isFinite(Number(asset.price)) &&
+      Number(asset.price) >= 0
+        ? { priceUsd: asset.price }
         : {}),
       color: this.colorForSymbol(asset.symbol),
     };

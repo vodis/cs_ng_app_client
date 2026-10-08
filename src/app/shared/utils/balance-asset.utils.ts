@@ -13,7 +13,11 @@ export function canonicalBalanceAssetId(
 }
 
 export function isNativeEvmToken(token: ExchangeToken): boolean {
-  return /^(?:0x0{40}|0xe{40})$/i.test(token.contractAddress ?? '');
+  return (
+    (token.balanceAssetId?.startsWith('eip155:') === true &&
+      token.balanceAssetId.endsWith('/native')) ||
+    /^(?:0x0{40}|0xe{40})$/i.test(token.contractAddress ?? '')
+  );
 }
 
 export function tokenBalance(
@@ -29,9 +33,10 @@ export function tokenBalance(
       : walletBlockchain('', Number(network.split(':')[1]));
   if (token.blockchain !== blockchain) return undefined;
   const assetId =
-    network.startsWith('eip155:') && isNativeEvmToken(token)
+    token.balanceAssetId ??
+    (network.startsWith('eip155:') && isNativeEvmToken(token)
       ? `${network}/native`
-      : canonicalBalanceAssetId(token.assetId, network);
+      : canonicalBalanceAssetId(token.assetId, network));
   return rows.find(
     row =>
       row.network === network &&

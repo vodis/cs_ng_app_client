@@ -109,7 +109,7 @@ CAIP-2 network, splitting the catalog into API requests of at most 20 asset ids.
 Balance responses are matched by exact `network` and `assetId`, never display
 symbol, and a response containing a different wallet or network is rejected. A
 response with `meta.partial: true` is shown as incomplete even when it contains
-usable rows. Expired or `stale: true` values may be shown as stale context but
+usable rows. Expired or `stale: true` values may be retained as last known context but
 must not authorize a swap. The UI must not substitute demo or zero balances when
 the backend has no fresh result, and failed requests remain retryable after
 provider initialization or a transient backend failure.
@@ -268,3 +268,27 @@ sentinels; native NEAR and wrapped NEAR remain separate holdings.
 Partial refreshes replace successfully read assets and retain missing holdings
 as stale within the same user/wallet/network context. A complete response
 replaces the retained holdings, including confirmed zero or empty balances.
+
+### Balance refresh, USD estimates and wallet funding
+
+Ordinary refreshes retain the current balance label without a freshness suffix.
+Concurrent refresh requests coalesce into one pending refresh; a wallet/network
+change cancels old work and clears the queued refresh. Internal freshness still
+controls eligibility; partial/error responses never become authoritative balances.
+The UI never renders the word “stale”.
+
+Swap USD estimates multiply canonical decimal amounts by the exact asset's
+backend price using integer arithmetic and round to cents (`0.146146` USDC at
+`0.999734` USD becomes `$0.15`). Missing asset prices display `—`; symbol-based
+market comparison prices are not a fallback. Positive sub-cent values show
+`<$0.01`. Display grouping is never reparsed as a canonical amount.
+
+Origin-chain transfers now use the additive wallet funding contract documented
+in `src/app/mfe-contracts/README.md`; the backend, MFE, and host must be rolled
+out together in that order. A valid dry quote alone does not prove wallet
+ownership, available gas, or an executable transfer adapter.
+
+The assets API provides optional `balanceAssetId` for native provider routes.
+The host matches it to native RPC holdings while preserving `assetId` for quotes
+and execution. Native classification is backend-owned and never inferred from
+a missing contract or display symbol.

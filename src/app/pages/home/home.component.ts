@@ -533,7 +533,7 @@ export class HomeComponent {
         amountOutAtomic: preview.amountOutAtomic,
         amountOutDisplay: this.quotedToAmountDisplay(),
         fiatValue: this.fiatEstimate(
-          this.toToken.symbol,
+          this.toToken,
           this.quotedToAmountDisplay()
         ),
         expiresAt: preview.expiresAt,
@@ -682,11 +682,11 @@ export class HomeComponent {
   }
 
   public fromFiatEstimate(): string {
-    return this.fiatEstimate(this.fromToken.symbol, this.amount);
+    return this.fiatEstimate(this.fromToken, this.amount);
   }
 
   public toFiatEstimate(): string {
-    return this.fiatEstimate(this.toToken.symbol, this.toAmountUi());
+    return this.fiatEstimate(this.toToken, this.quotedToAmountDisplay());
   }
 
   public toAmountUi(): string {
@@ -853,9 +853,7 @@ export class HomeComponent {
   public balanceLabel(token: ExchangeToken): string {
     const balance = this.balanceForToken(token);
     if (balance) {
-      const suffix =
-        balance.stale || this.isBalanceExpired(balance) ? ' (stale)' : '';
-      return `Balance: ${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}${suffix}`;
+      return `Balance: ${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}`;
     }
 
     if (this.balancesLoading && this.canFetchBalance(token)) {
@@ -1177,8 +1175,8 @@ export class HomeComponent {
   }
 
   private parseAmount(value: string): number {
-    const normalized = this.normalizeAmountStorage(value);
-    if (!normalized) {
+    const normalized = this.canonicalAmountStorage(value);
+    if (!isCanonicalDecimalAmount(normalized)) {
       return Number.NaN;
     }
 
@@ -1990,7 +1988,7 @@ export class HomeComponent {
     const base = this.marketSymbolFor(this.fromToken);
     const quote = this.marketSymbolFor(this.toToken);
     const timeframe = this.selectedComparisonTimeframe;
-    const requestKey = `${base}|${quote}|${timeframe}`;
+    const requestKey = `${this.fromToken.assetId}|${this.toToken.assetId}|${base}|${quote}|${timeframe}`;
     this.comparisonRequestKey = requestKey;
     this.comparisonLoading = true;
     this.comparisonError = '';
@@ -2365,15 +2363,11 @@ export class HomeComponent {
     return undefined;
   }
 
-  private fiatEstimate(symbol: string, amountValue: string): string {
-    const price = this.tokenPrice(symbol);
-    const amount = this.parseAmount(amountValue);
-
-    if (price === undefined || Number.isNaN(amount)) {
-      return '$0';
-    }
-
-    return formatSwapFiatEstimate(price * amount);
+  private fiatEstimate(token: ExchangeToken, amountValue: string): string {
+    return formatSwapFiatEstimate(
+      token.priceUsd,
+      this.canonicalAmountStorage(amountValue)
+    );
   }
 
   private tokenPrice(symbol: string): number | undefined {

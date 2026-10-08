@@ -191,9 +191,7 @@ The host exposes foreign-recipient routes only when
 `environment.crossNetworkRecipientIntentSignEnabled` is enabled. Keep it
 disabled until the deployed BFF accepts `recipient` / `recipientType` on both
 quote and prepare requests. Wallet-funded swaps send `depositType: ORIGIN_CHAIN`
-and `refundType: ORIGIN_CHAIN`, including NEP-141 assets. Only native NEAR deposits
-are currently executable; the MFE rejects unsupported deposit assets before
-confirmation. The prepared execution mode must match the requested funding
+and `refundType: ORIGIN_CHAIN`, including NEP-141 assets. The MFE enables registered NEAR, EVM and TON funding adapters only when the host advertises `walletFundingVersion: '1.0.0'`; unsupported networks fail before confirmation. The prepared execution mode must match the requested funding
 source. The wallet-funded flow must not request confidential Intents custody
 for a wallet balance.
 
@@ -242,7 +240,7 @@ results whose amount/account/auth context does not match the immutable intent,
 and ignores any response that is not from its latest request. It owns quote
 expiry, refreshed-output disclosure, slippage-bound reconfirmation, and
 single-flight submission. `intent_sign` packages use `signSwap` followed by
-`submitSwap`. Native NEAR `deposit_address` packages use `depositSwap` on
+`submitSwap`. Wallet-funded `deposit_address` packages use `depositSwap` on
 explicit confirmation. Both routes use the backend's stored preparation ID for
 settlement tracking. It reports submission through `onSwapSubmitted` and requests a new host preview through
 `onSwapPreviewRefreshRequested` when the executable change is outside policy.
@@ -365,3 +363,20 @@ Remote close controls invoke `onCloseRequested`. The host never intercepts
 remote CSS selectors or accessible labels. All host close paths retain the
 busy-swap guard. Dismissal preserves a connected gateway; closing an unfinished
 connection cancels it. Disconnect remains an explicit wallet action.
+
+### Wallet funding v1
+
+Both mount capabilities and host services advertise optional
+`walletFundingVersion: '1.0.0'`. Prepare requests carry `sourceAssetId` and
+`network`; the BFF binds the selected quote's input atomics, sender, network,
+registered contract and provider destination/memo into persisted `payload.funding`.
+The MFE validates those bindings and sends `depositSwap.transaction` using the
+mirrored `wallet-funding.contract.ts` envelope: native/EVM fields, NEAR actions,
+or TON Connect messages. The host verifies the sender and forwards that exact
+envelope through the verified gateway. No arbitrary approval transaction is used.
+Older hosts retain native NEAR only; token routes must not fall back to a native
+transfer. Deploy BFF, then MFE, then host. Rolling back the host disables new
+non-native routes, while existing preparations remain available for settlement.
+TON submission reports `ton-message:<hash>` as an external-message reference;
+only backend settlement status confirms completion. Ambiguous submission errors
+must reconcile that preparation before another transfer.

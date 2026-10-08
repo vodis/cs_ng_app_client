@@ -235,14 +235,14 @@ export class WalletGatewayBridgeService {
     return signature;
   }
 
-  async runNearDepositFlow(
+  async runWalletDepositFlow(
     input: SwapReviewDepositRequest
   ): Promise<{ transactionHash: string }> {
     const snapshot = this.requireSnapshot();
     if (!snapshot.account || snapshot.account !== input.senderAccount) {
       throw this.executionFailure(
         'NOT_CONNECTED',
-        'Connected NEAR wallet does not match the swap sender',
+        'Connected wallet does not match the swap sender',
         false
       );
     }
@@ -254,9 +254,21 @@ export class WalletGatewayBridgeService {
       );
     }
 
+    if (
+      input.transaction &&
+      (input.transaction.from !== input.senderAccount ||
+        (input.transaction.chainId &&
+          BigInt(input.transaction.chainId) !== BigInt(snapshot.chainId ?? -1)))
+    ) {
+      throw this.executionFailure(
+        'NOT_CONNECTED',
+        'Wallet account or network changed. Review again.',
+        false
+      );
+    }
     this.sendGatewayEvent({
       type: 'PREPARE_REQUESTED',
-      payload: {
+      payload: input.transaction ?? {
         from: input.senderAccount,
         to: input.depositAddress,
         value: input.amount,

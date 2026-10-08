@@ -16,6 +16,7 @@ export type SwapQuotePreview = WalletSwapQuote;
 
 export type SwapQuoteRequest = {
   traceId: string;
+  sourceAssetId?: string;
   originAsset: string;
   destinationAsset: string;
   amount: string;
@@ -26,7 +27,7 @@ export type SwapQuoteRequest = {
   refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   slippageTolerance: number;
   deadline: string;
-  authMethod: 'evm' | 'near';
+  authMethod: 'evm' | 'near' | 'ton';
   network?: string;
   dry: boolean;
 };

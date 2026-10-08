@@ -271,7 +271,6 @@ export class ConnectedWalletBoardComponent {
 
   private amountLabel(row: WalletBalance): string {
     const amount = row.balanceDecimal ?? row.balanceRaw;
-    const suffix = row.stale ? ' (stale)' : '';
-    return `${amount}${suffix}`;
+    return amount;
   }
 }

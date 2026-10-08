@@ -20,6 +20,17 @@ describe('amount-format.utils', () => {
     init: Omit<KeyboardEventInit, 'key'> = {}
   ): KeyboardEvent => new KeyboardEvent('keydown', { key, ...init });
 
+  it('normalizes comma input and unambiguous decimal-point paste exactly once', () => {
+    for (const input of ['0,146146', '0.146146']) {
+      const canonical = normalizeAmountStorage(input, 6);
+      expect(canonical).toBe('0.146146');
+      expect(decimalToAtomic(canonical, 6)).toBe('146146');
+    }
+    expect(normalizeAmountStorage('0.123', 6)).toBe('0.123');
+    expect(normalizeAmountStorage('1.234', 6)).toBe('1234');
+    expect(normalizeAmountStorage('1.234,56', 6)).toBe('1234.56');
+  });
+
   describe('atomicToDecimal / decimalToAtomic', () => {
     it('round-trips 6-decimal tokens', () => {
       expect(atomicToDecimal('1000000', 6)).toBe('1');

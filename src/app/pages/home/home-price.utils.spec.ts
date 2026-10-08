@@ -27,20 +27,26 @@ describe('home-price.utils', () => {
   });
 
   describe('formatSwapFiatEstimate', () => {
-    it('uses comma decimals for regular values', () => {
-      expect(formatSwapFiatEstimate(886.71)).toBe('$886,71');
-      expect(formatSwapFiatEstimate(0.886767)).toBe('$0,8868');
+    it('rounds USD estimates to cents without reparsing token amounts', () => {
+      expect(formatSwapFiatEstimate(0.999734, '0.146146')).toBe('$0.15');
+      expect(formatSwapFiatEstimate(1, '0.146146')).toBe('$0.15');
+      expect(formatSwapFiatEstimate(886.71)).toBe('$886.71');
+      expect(formatSwapFiatEstimate(1.005)).toBe('$1.01');
+      expect(formatSwapFiatEstimate(1250)).toBe('$1,250.00');
+      expect(formatSwapFiatEstimate(1, '9007199254740993.12')).toBe(
+        '$9,007,199,254,740,993.12'
+      );
     });
 
-    it('uses neutral compact suffixes with comma decimals', () => {
-      expect(formatSwapFiatEstimate(9.98e12)).toBe('$9,98T');
-      expect(formatSwapFiatEstimate(99_840_000_000)).toBe('$99,84B');
-      expect(formatSwapFiatEstimate(9.98e12)).not.toContain('трлн');
-      expect(formatSwapFiatEstimate(99_840_000_000)).not.toContain('млрд');
-    });
-
-    it('formats thousands with dot grouping', () => {
-      expect(formatSwapFiatEstimate(1250)).toBe('$1.250');
+    it('distinguishes zero, sub-cent amounts, and unavailable estimates', () => {
+      expect(formatSwapFiatEstimate(1, '0')).toBe('$0.00');
+      expect(formatSwapFiatEstimate(1e-8)).toBe('<$0.01');
+      expect(formatSwapFiatEstimate(undefined)).toBe('—');
+      expect(formatSwapFiatEstimate(Infinity)).toBe('—');
+      expect(formatSwapFiatEstimate(1, '0,146146')).toBe('—');
+      expect(formatSwapFiatEstimate(1e21, '0.000000000000000000001')).toBe(
+        '$1.00'
+      );
     });
   });
 
@@ -75,4 +81,8 @@ describe('home-price.utils', () => {
       expect(formatDifferenceLabel(-2.34)).toBe('-2.3%');
     });
   });
+});
+
+it('preserves decimal string prices from the asset API', () => {
+  expect(formatSwapFiatEstimate('0.999734', '0.146146')).toBe('$0.15');
 });

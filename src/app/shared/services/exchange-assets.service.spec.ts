@@ -25,6 +25,25 @@ describe('ExchangeAssetsService', () => {
     httpMock.verify();
   });
 
+  it('preserves backend native balance identity and decimal price strings', () => {
+    let tokens: ExchangeToken[] = [];
+    service.loadAssets().subscribe(result => (tokens = result));
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/assets`).flush({
+      data: [
+        {
+          assetId: 'nep141:eth.omft.near',
+          balanceAssetId: 'eip155:1/native',
+          symbol: 'ETH',
+          blockchain: 'eth',
+          decimals: 18,
+          price: '2568.88',
+        },
+      ],
+    });
+    expect(tokens[0].balanceAssetId).toBe('eip155:1/native');
+    expect(tokens[0].priceUsd).toBe('2568.88');
+  });
+
   it('should map assets from the API into exchange tokens', () => {
     let tokens: ExchangeToken[] = [];
 
