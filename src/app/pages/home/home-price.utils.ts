@@ -1,30 +1,3 @@
-import { formatNumberForAmountDisplay } from '@shared/utils/amount-format.utils';
-
-const FIAT_COMPACT_TIERS = [
-  { threshold: 1e12, suffix: 'T' },
-  { threshold: 1e9, suffix: 'B' },
-  { threshold: 1e6, suffix: 'M' },
-  { threshold: 1e3, suffix: 'K' },
-] as const;
-
-function formatCompactAmountDisplay(value: number): string {
-  const absValue = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-
-  for (const tier of FIAT_COMPACT_TIERS) {
-    if (absValue >= tier.threshold) {
-      const scaled = absValue / tier.threshold;
-      const formatted = formatNumberForAmountDisplay(scaled, 2).replace(
-        /,00$/,
-        ''
-      );
-      return `${sign}$${formatted}${tier.suffix}`;
-    }
-  }
-
-  return '';
-}
-
 export function formatPrice(value: number | undefined): string {
   if (value === undefined) {
     return 'Unavailable';
@@ -59,38 +32,34 @@ export function formatPrice(value: number | undefined): string {
   return `$${value.toFixed(4)}`;
 }
 
-export function formatSwapFiatEstimate(value: number | undefined): string {
-  if (value === undefined || Number.isNaN(value)) {
-    return '$0';
-  }
-
-  if (!Number.isFinite(value)) {
-    return '$—';
-  }
-
-  const absValue = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-
-  if (absValue >= 1e15) {
-    return `${sign}$${value.toExponential(2).replace('.', ',')}`;
-  }
-
-  if (absValue >= 1e9) {
-    const compact = formatCompactAmountDisplay(value);
-    if (compact) {
-      return compact;
-    }
-  }
-
-  if (absValue >= 1000) {
-    return `${sign}$${formatNumberForAmountDisplay(absValue, 0)}`;
-  }
-
-  if (absValue >= 1) {
-    return `${sign}$${formatNumberForAmountDisplay(absValue, 2)}`;
-  }
-
-  return `${sign}$${formatNumberForAmountDisplay(absValue, 4)}`;
+/** Decimal multiplication and cent rounding; token quantities never pass through Number. */
+export function formatSwapFiatEstimate(
+  price: string | number | undefined,
+  amount = '1'
+): string {
+  if (
+    price === undefined ||
+    !/^(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(String(price)) ||
+    !Number.isFinite(Number(price)) ||
+    Number(price) < 0 ||
+    !/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(amount)
+  )
+    return '—';
+  const [mantissa, exponent = '0'] = price.toString().toLowerCase().split('e');
+  if (Math.abs(Number(exponent)) > 324) return '—';
+  const [priceWhole, priceFraction = ''] = mantissa.split('.');
+  const [whole, fraction = ''] = amount.split('.');
+  const coefficient =
+    BigInt(priceWhole + priceFraction) * BigInt(whole + fraction);
+  const scale = priceFraction.length + fraction.length - Number(exponent);
+  const divisor = 10n ** BigInt(Math.max(0, scale));
+  const value = coefficient * 10n ** BigInt(Math.max(0, -scale));
+  if (value > 0n && value * 100n < divisor) return '<$0.01';
+  const cents = (value * 100n + divisor / 2n) / divisor;
+  const dollars = (cents / 100n)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return `$${dollars}.${(cents % 100n).toString().padStart(2, '0')}`;
 }
 
 export function formatPercent(value: number | undefined): string {
@@ -119,4 +88,15 @@ export function formatDifferenceLabel(value: number): string {
     maximumFractionDigits: absValue >= 100 ? 0 : 1,
     minimumFractionDigits: absValue >= 100 ? 0 : 1,
   })}%`;
+}
+
+/** An unavailable or expired asset price must not look like a current USD valuation. */
+export function isFreshAssetPrice(
+  updatedAt: string | undefined,
+  now = Date.now()
+): boolean {
+  const timestamp = updatedAt ? Date.parse(updatedAt) : Number.NaN;
+  return (
+    Number.isFinite(timestamp) && timestamp <= now && now - timestamp <= 300_000
+  );
 }

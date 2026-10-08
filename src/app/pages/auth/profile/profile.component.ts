@@ -1,3 +1,4 @@
+import type { WalletBalance } from '@shared/services/wallet-balances.service';
 import {
   AfterViewInit,
   Component,
@@ -7,13 +8,8 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CountUp } from 'countup.js';
-import { combineLatest, Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
-import type {
-  AuthSession,
-  BackendBalance,
-  BackendWallet,
-} from '@core/auth/auth-session.types';
+import { Subscription } from 'rxjs';
+import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import type { PortfolioSnapshot } from '../../portfolio/portfolio.models';
 import {
@@ -22,7 +18,11 @@ import {
   type ActivityHeatmapWeek,
 } from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
-import { isNearWalletAddress } from '@shared/utils/network.utils';
+import { atomicToDecimal } from '@shared/utils/amount-format.utils';
+import {
+  isNearWalletAddress,
+  caipNetworkLabel,
+} from '@shared/utils/network.utils';
 import {
   MockProfileActivitySource,
   ProfileActivitySource,
@@ -65,7 +65,6 @@ function formatUsdCurrency(value: number): string {
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],
   providers: [
-    ProfileFacade,
     { provide: ProfileActivitySource, useClass: MockProfileActivitySource },
   ],
 })
@@ -75,15 +74,19 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public session: AuthSession | null = null;
   public walletMessage = '';
-  public balanceMessage = '';
   public passkeyMessage = '';
   public error = '';
   public busyWalletId = '';
   public passkeyLoading = false;
-  public balances: BackendBalance[] = [];
+  public balances: WalletBalance[] = [];
   public balancesLoading = false;
+  public balanceStateMessage = 'Connect the active wallet to load balances.';
   public portfolio: PortfolioSnapshot | null = null;
   public portfolioStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+  public activeWalletId?: string;
+  public activeAccount: string | null = null;
+  public activeNetwork?: string;
+  public walletRestoring = false;
   public connectedAccount: string | null = null;
   public connectedChainId: number | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
@@ -111,30 +114,32 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public ngOnInit(): void {
+    this.profile.revalidateBalances();
     this.subscription = new Subscription();
     this.subscription.add(
-      combineLatest([this.profile.session$, this.profile.account$]).subscribe(
-        ([session, account]) => {
-          const previousAccount = this.connectedAccount;
-          const previousChainId = this.connectedChainId;
-          this.connectedAccount = account?.account ?? null;
-          this.connectedChainId = account?.chainId ?? null;
-          this.session = session;
-          if (session) {
-            this.seedLastConnectedFromBackend(session.wallets);
-            const accountChanged =
-              this.connectedAccount !== previousAccount ||
-              this.connectedChainId !== previousChainId;
-            // Automatic session ticks reuse cache / in-flight; force only via
-            // refreshBalances(), swaps, or a real account change.
-            void this.ensurePortfolioLoaded(accountChanged);
-          } else {
-            this.balances = [];
-            this.resetPortfolioDisplay();
-          }
-          this.refreshOnboarding();
+      this.profile.activeWallet$.subscribe(state => {
+        const identityChanged =
+          this.activeWalletId !== state.wallet?.id ||
+          this.activeNetwork !== state.network ||
+          this.session?.user.id !== state.session?.user.id;
+        if (identityChanged) this.resetPortfolioDisplay();
+        this.activeWalletId = state.wallet?.id;
+        this.activeAccount = state.wallet?.address ?? null;
+        this.activeNetwork = state.network;
+        this.walletRestoring = state.restoring === true;
+        const session = state.session ?? null;
+        const account = state.connected ? state.snapshot : undefined;
+        this.connectedAccount = account?.account ?? null;
+        this.connectedChainId = account?.chainId ?? null;
+        this.session = session;
+        if (session && this.activeAccount && this.activeNetwork) {
+          void this.ensurePortfolioLoaded();
+        } else {
+          this.balances = [];
+          this.resetPortfolioDisplay();
         }
-      )
+        this.refreshOnboarding();
+      })
     );
     this.subscription.add(
       this.profile.lastConnected$.subscribe(wallet => {
@@ -143,15 +148,26 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
       })
     );
     this.subscription.add(
-      this.profile.swapSubmitted$
-        .pipe(
-          filter((result): result is { traceId: string; intentHash: string } =>
-            Boolean(result)
-          )
-        )
-        .subscribe(() => {
+      this.profile.balances$.subscribe(state => {
+        if (state.status === 'ready' || state.status === 'partial')
           void this.ensurePortfolioLoaded(true);
-        })
+        this.balances = state.rows;
+        this.balancesLoading = state.status === 'loading';
+        this.balanceStateMessage =
+          state.errorMessage ??
+          (state.status === 'idle'
+            ? this.activeAccount
+              ? 'Select a wallet network to load balances.'
+              : 'Select an active wallet to load balances.'
+            : state.status === 'ready' && state.rows.length === 0
+              ? 'No balances found for this wallet.'
+              : '');
+      })
+    );
+    this.subscription.add(
+      this.profile.swapSettled$.subscribe(() => {
+        void this.ensurePortfolioLoaded(true);
+      })
     );
   }
 
@@ -159,6 +175,8 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.pendingBalanceAnimation != null) {
       this.animateBalanceTo(this.pendingBalanceAnimation);
       this.pendingBalanceAnimation = null;
+    } else if (this.usdBalanceValue) {
+      this.usdBalanceValue.nativeElement.textContent = this.usdBalanceLabel();
     }
   }
 
@@ -192,20 +210,29 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.walletChainIcon(this.lastConnectedChainType(wallet));
   }
 
-  public balanceAmount(balance: BackendBalance): string {
+  public balanceAmount(balance: WalletBalance): string {
     const amount =
       balance.balanceDecimal ||
       this.rawToDecimal(balance.balanceRaw, balance.decimals);
     return `${amount} ${balance.symbol}`;
   }
 
-  public balanceMeta(balance: BackendBalance): string {
+  public balanceMeta(balance: WalletBalance): string {
     const expiry = new Date(balance.expiresAt);
     const expiresAt = Number.isNaN(expiry.getTime())
       ? 'cache'
       : `cache until ${expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    const freshness = balance.stale ? 'stale / ' : '';
+    const freshness = balance.stale ? 'Last known balance / ' : '';
     return `${this.shortAddress(balance.walletAddress)} / ${balance.network} / ${freshness}${expiresAt}`;
+  }
+
+  public balanceNetworkLabel(balance: WalletBalance): string {
+    return caipNetworkLabel(balance.network);
+  }
+
+  public balanceNetworkMeta(balance: WalletBalance): string {
+    const network = this.balanceNetworkLabel(balance);
+    return network;
   }
 
   public canEnablePasskey(): boolean {
@@ -348,7 +375,11 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
       const total = Number(this.portfolio?.totalValue ?? 0);
       return formatUsdCurrency(total);
     }
-    return ZERO_USD_LABEL;
+    return !this.activeAccount
+      ? 'Select a wallet'
+      : !this.activeNetwork
+        ? 'Select a network'
+        : 'Loading…';
   }
 
   public tokenBalanceLabel(): string {
@@ -442,13 +473,6 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
         : this.shortAddress(last.account);
     }
 
-    const primary = this.primaryLinkedWallet();
-    if (primary) {
-      return this.isEmbeddedWallet(primary)
-        ? 'CraftScript wallet'
-        : this.shortAddress(primary.address);
-    }
-
     return 'No wallet';
   }
 
@@ -471,16 +495,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public resolveLastConnectedWallet(): LastConnectedWallet | null {
-    if (this.lastConnectedWallet) {
-      return this.lastConnectedWallet;
-    }
-
-    const linked = this.primaryLinkedWallet();
-    if (!linked) {
-      return null;
-    }
-
-    return this.toLastConnected(linked);
+    return this.lastConnectedWallet;
   }
 
   public isEmbeddedWallet(
@@ -510,7 +525,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     this.walletMessage = '';
     this.walletLoading = true;
     try {
-      this.balances = await this.profile.generateWallet();
+      await this.profile.generateWallet();
       this.walletMessage = 'Wallet generated';
       await this.ensurePortfolioLoaded(true);
     } catch (error) {
@@ -576,24 +591,12 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public async refreshBalances(): Promise<void> {
-    this.error = '';
-    this.balanceMessage = '';
-    this.balancesLoading = true;
-    try {
-      this.balances = await this.profile.loadBalances();
-      this.balanceMessage =
-        this.balances.length > 0 ? 'Balances refreshed' : '';
-      await this.ensurePortfolioLoaded(true);
-    } catch (error) {
-      this.error =
-        error instanceof Error ? error.message : 'Balance refresh failed';
-    } finally {
-      this.balancesLoading = false;
-    }
+    this.profile.refreshBalances();
+    await this.ensurePortfolioLoaded(true);
   }
 
   public async ensurePortfolioLoaded(force = false): Promise<void> {
-    if (!this.session) {
+    if (!this.session || !this.activeAccount || !this.activeNetwork) {
       this.resetPortfolioDisplay();
       return;
     }
@@ -610,17 +613,20 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public async refreshPortfolio(): Promise<void> {
     const requestId = ++this.portfolioRequestId;
-    if (!this.session) {
+    if (!this.session || !this.activeAccount || !this.activeNetwork) {
       this.resetPortfolioDisplay();
       return;
     }
     const cacheKey = this.portfolioCacheKey();
     this.portfolioInFlightKey = cacheKey;
     this.portfolioStatus = 'loading';
+    this.cancelBalanceAnimation();
+    if (!this.portfolio && this.usdBalanceValue)
+      this.usdBalanceValue.nativeElement.textContent = 'Loading…';
     try {
       const portfolio = await this.profile.loadPortfolio(
-        this.connectedAccount,
-        this.connectedChainId
+        this.activeAccount,
+        this.activeNetwork
       );
       if (requestId !== this.portfolioRequestId) {
         return;
@@ -635,21 +641,21 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
       if (requestId !== this.portfolioRequestId) {
         return;
       }
-      this.portfolio = null;
       this.portfolioStatus = 'error';
       this.portfolioCacheKeyLoaded = null;
       this.portfolioInFlightKey = null;
-      this.displayedBalanceValue = 0;
       this.cancelBalanceAnimation();
       const el = this.usdBalanceValue?.nativeElement;
       if (el) {
-        el.textContent = 'Unavailable';
+        el.textContent = this.portfolio
+          ? formatUsdCurrency(Number(this.portfolio.totalValue))
+          : 'Unavailable';
       }
     }
   }
 
   public async setPrimaryWallet(wallet: BackendWallet): Promise<void> {
-    if (wallet.isPrimary) {
+    if (wallet.isPrimary || this.busyWalletId) {
       return;
     }
 
@@ -668,6 +674,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public async deleteWallet(wallet: BackendWallet): Promise<void> {
+    if (this.busyWalletId) return;
     if (!this.canRemoveLinkedWallet(wallet)) {
       this.error =
         'Embedded wallets stay linked to your account and cannot be removed.';
@@ -691,8 +698,10 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   private portfolioCacheKey(): string {
     return [
       this.session?.user.id ?? '',
-      this.connectedAccount ?? '',
-      this.connectedChainId ?? '',
+      this.session?.user.sessionId ?? '',
+      this.activeWalletId ?? '',
+      this.activeAccount ?? '',
+      this.activeNetwork ?? '',
     ].join(':');
   }
 
@@ -703,7 +712,12 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     this.portfolioInFlightKey = null;
     this.portfolioRequestId += 1;
     this.cancelBalanceAnimation();
-    this.setBalanceLabelImmediate(0);
+    if (this.usdBalanceValue)
+      this.usdBalanceValue.nativeElement.textContent = this.activeAccount
+        ? this.activeNetwork
+          ? 'Loading…'
+          : 'Select a network'
+        : 'Select a wallet';
   }
 
   private settleBalanceDisplay(value: number): void {
@@ -786,23 +800,6 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     this.onboarding = this.buildOnboardingViewModel();
   }
 
-  private seedLastConnectedFromBackend(wallets: BackendWallet[]): void {
-    if (this.lastConnectedWallet || wallets.length === 0) {
-      return;
-    }
-
-    const linked = this.primaryLinkedWallet(wallets);
-    if (linked) {
-      this.profile.rememberConnectedWallet(this.toLastConnected(linked));
-    }
-  }
-
-  private primaryLinkedWallet(
-    wallets: BackendWallet[] = this.session?.wallets ?? []
-  ): BackendWallet | undefined {
-    return wallets.find(wallet => wallet.isPrimary) ?? wallets[0];
-  }
-
   private findLinkedWallet(address: string): BackendWallet | undefined {
     const normalized = address.toLowerCase();
     return this.session?.wallets.find(
@@ -823,14 +820,11 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private rawToDecimal(rawBalance: string, decimals: number): string {
-    if (!/^\d+$/.test(rawBalance) || decimals <= 0) {
+    try {
+      return atomicToDecimal(rawBalance, decimals);
+    } catch {
       return rawBalance;
     }
-
-    const padded = rawBalance.padStart(decimals + 1, '0');
-    const whole = padded.slice(0, -decimals);
-    const fraction = padded.slice(-decimals).replace(/0+$/, '');
-    return fraction ? `${whole}.${fraction}` : whole;
   }
 
   private capitalizeLabel(value: string | null | undefined): string {

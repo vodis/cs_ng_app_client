@@ -68,6 +68,30 @@ export function networkLabel(blockchain: string | undefined): string {
   );
 }
 
+/** Maps a CAIP-2 network id (e.g. `near:mainnet`, `eip155:1`) to a short UI label. */
+export function caipNetworkLabel(network: string | undefined): string {
+  if (!network) {
+    return '';
+  }
+  const [namespace, reference = ''] = network.split(':');
+  const ns = namespace.toLowerCase();
+  if (ns === 'near') {
+    return networkLabel('near');
+  }
+  if (ns === 'eip155') {
+    const chainId = Number(reference);
+    const blockchain = CHAIN_ID_TO_BLOCKCHAIN[chainId];
+    return blockchain ? networkLabel(blockchain) : `Chain ${reference}`;
+  }
+  if (ns === 'solana') {
+    return networkLabel('sol');
+  }
+  if (ns === 'bip122') {
+    return networkLabel('btc');
+  }
+  return networkLabel(ns);
+}
+
 export function walletBlockchain(
   account: string,
   chainId: number | null

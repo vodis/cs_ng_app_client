@@ -18,18 +18,19 @@
   @if (hostModal) {
     <app-side-modal
       [isOpen]="isOpenWalletConnectMenu"
+      [showCloseButton]="showHostCloseButton"
       (closeRequested)="handleCloseWalletMenu()">
       @if (
-        isGatewayConnected && !needsNearWalletLink && drawerMode === 'wallet'
+        isOpenWalletConnectMenu && hasActiveWallet && drawerMode === 'wallet'
       ) {
         <app-connected-wallet-board />
       }
       <div
         class="wallet-bar__mfe-host"
         [class.wallet-bar__mfe-host--hidden]="
-          isGatewayConnected && !needsNearWalletLink && drawerMode === 'wallet'
+          hasActiveWallet && drawerMode === 'wallet'
         ">
-        <app-wallets />
+        <app-wallets (dialogCloseReady)="mfeProvidesClose = $event" />
       </div>
     </app-side-modal>
   }

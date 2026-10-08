@@ -1,3 +1,4 @@
+import { ActiveWalletFacade } from '@domains/wallet/application/active-wallet.facade';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import {
   ComponentFixture,
@@ -5,7 +6,7 @@ import {
   flushMicrotasks,
   TestBed,
 } from '@angular/core/testing';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
@@ -72,6 +73,7 @@ describe('WalletBarComponent', () => {
     TestBed.configureTestingModule({
       declarations: [WalletBarComponent],
       providers: [
+        { provide: ActiveWalletFacade, useValue: { state$: of({}) } },
         { provide: WalletGatewayBridgeService, useValue: gateway },
         { provide: WalletsService, useValue: wallets },
       ],
@@ -101,6 +103,59 @@ describe('WalletBarComponent', () => {
     expect(gateway.closeSwapReview).toHaveBeenCalledTimes(1);
     expect(wallets.drawerMode.value).toBe('wallet');
     expect(component.isOpenWalletConnectMenu).toBeFalse();
+  });
+
+  it('hides the host close button while an MFE dialog owns the drawer', () => {
+    component.hostModal = true;
+    component.hasActiveWallet = true;
+    component.mfeProvidesClose = true;
+    wallets.drawerMode.next('swap-review');
+    expect(component.showHostCloseButton).toBeFalse();
+
+    wallets.drawerMode.next('connect');
+    expect(component.showHostCloseButton).toBeFalse();
+
+    wallets.drawerMode.next('wallet');
+    expect(component.showHostCloseButton).toBeTrue();
+  });
+
+  it('closes the host shell when the MFE propagates onCloseRequested', () => {
+    component.hostModal = true;
+    component.isOpenWalletConnectMenu = true;
+    wallets.drawerMode.next('swap-review');
+
+    wallets.closeRequested.next(true);
+
+    expect(component.isOpenWalletConnectMenu).toBeFalse();
+    expect(wallets.drawerMode.value).toBe('wallet');
+    expect(wallets.clearCloseRequest).toHaveBeenCalled();
+  });
+
+  it('keeps fallback close available until the remote provides it and after failure', () => {
+    component.hasActiveWallet = false;
+    wallets.drawerMode.next('connect');
+    expect(component.showHostCloseButton).toBeTrue();
+    component.mfeProvidesClose = true;
+    expect(component.showHostCloseButton).toBeFalse();
+    component.mfeProvidesClose = false;
+    expect(component.showHostCloseButton).toBeTrue();
+  });
+
+  it('preserves the connected gateway when closing through the remote callback', () => {
+    component.hostModal = true;
+    component.isGatewayConnected = true;
+    wallets.drawerMode.next('connect');
+    wallets.closeRequested.next(true);
+    expect(component.isOpenWalletConnectMenu).toBeFalse();
+    expect(gateway.resetConnection).not.toHaveBeenCalled();
+  });
+
+  it('keeps busy swaps open even for a remote close request', () => {
+    component.hostModal = true;
+    gateway.isExecutionInProgress.and.returnValue(true);
+    wallets.closeRequested.next(true);
+    expect(component.isOpenWalletConnectMenu).toBeTrue();
+    expect(wallets.drawerMode.value).toBe('swap-review');
   });
 
   [true, false].forEach(accountFirst => {
@@ -139,6 +194,11 @@ describe('WalletBarComponent', () => {
 
     expect(component.needsNearWalletLink).toBeFalse();
     expect(component.isOpenWalletConnectMenu).toBeFalse();
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('app-connected-wallet-board')
+    ).toBeNull();
+    component.hasActiveWallet = true;
     component.handleOpenWalletMenu();
     fixture.detectChanges();
     expect(

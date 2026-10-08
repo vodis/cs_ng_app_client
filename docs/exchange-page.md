@@ -27,7 +27,7 @@ The page contains:
 2. A swap panel with token selectors, amount fields, rate details, and the
    wallet-aware primary action.
 3. A market panel with pair summary, timeframe controls, relative-performance
-   chart, and supporting links.
+   chart, Market/Product mock labels, and supporting note text.
 4. A full-width recent-activity table below the two-column top section.
 
 On desktop, the top grid uses a `42% / 58%` split for the swap and market
@@ -35,17 +35,21 @@ panels. At `1100px` and below, it changes to a single-column layout.
 
 ### Swap panel
 
-| Block          | Markup            | Behavior                                                 |
-| -------------- | ----------------- | -------------------------------------------------------- |
-| From row       | `.swapRow.first`  | Token selector, balance, amount input, and USD estimate  |
-| Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison  |
-| To row         | `.swapRow`        | Token selector, balance, quoted amount, and USD estimate |
-| Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee   |
-| Primary action | `.connectMain`    | Confirms a fresh balance, then opens MFE review          |
+| Block          | Markup            | Behavior                                                           |
+| -------------- | ----------------- | ------------------------------------------------------------------ |
+| From row       | `.swapRow.first`  | Token selector, clickable max balance, amount input, USD estimate  |
+| Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison            |
+| To row         | `.swapRow`        | Token selector, clickable max balance, quoted amount, USD estimate |
+| Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee             |
+| Primary action | `.connectMain`    | Confirms a fresh balance, then opens MFE review                    |
 
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
-Slippage opens `app-slippage-settings-panel` with presets
+Clicking a usable From balance prefills only the From amount. Clicking a usable
+To balance stores a destination target for display only; Review stays disabled
+until the quoted output matches that target, and review payloads always use the
+quoted `amountOut` (never the balance override). Slippage opens
+`app-slippage-settings-panel` with presets
 (`0.1%`, `0.25%`, `0.5%`, `1%`, `3%`) plus custom input. The host stores the
 choice as basis points (default `50` = `0.5%`) and includes it in dry quote and
 review intent payloads.
@@ -60,6 +64,24 @@ The relative-performance chart renders the quote-token move minus the base-token
 move. Keep the summary column compact so the chart retains most of the available
 width. The Advanced Chart entry control is hidden for now; advanced market view
 state and `app-live-chart` wiring remain in `HomeComponent` for a later return.
+
+Under the chart, the right-hand info area shows temporary **Market** and
+**Product** mock labels (`Spot` / `Token Exchange`) until the BFF exposes real
+metadata.
+
+Directly under the pair summary inside the same market panel, a compact
+**Token marketing** block shows From (left) and To (right) in a CoinMarketCap-
+style row layout: muted labels on the left, compact pills/icons on the right.
+Market Cap is shown only when
+`GET /api/v1/markets/snapshots` returns a positive `marketCapUsd` — host mocks
+are not used for that figure, so a failed/empty snapshot does not invent values
+like `$32B`. Website, Whitepaper, Socials, and Explorers still use host-owned
+mocks in `token-project.mock.ts` until those snapshot fields exist. Explorers
+prefer the selected token’s network and contract via `explorerUrlForToken`, so
+bridged assets (e.g. USDC on Base) do not open the Ethereum mock link. Price and
+24h Volume are omitted from this block (pair price stays in the market summary).
+Technical fields (Network, Contract, Decimals) are omitted. On viewports
+`<= 1100px` the two columns stack.
 
 ### Recent activity
 
@@ -87,7 +109,7 @@ CAIP-2 network, splitting the catalog into API requests of at most 20 asset ids.
 Balance responses are matched by exact `network` and `assetId`, never display
 symbol, and a response containing a different wallet or network is rejected. A
 response with `meta.partial: true` is shown as incomplete even when it contains
-usable rows. Expired or `stale: true` values may be shown as stale context but
+usable rows. Expired or `stale: true` values may be retained as last known context but
 must not authorize a swap. The UI must not substitute demo or zero balances when
 the backend has no fresh result, and failed requests remain retryable after
 provider initialization or a transient backend failure.
@@ -121,8 +143,36 @@ id. Portfolio used the shared connected-wallet balance feed, whose native row is
 `near:native`, so Trade could not match the known native row and displayed an
 unavailable/zero-like balance. Trade now consumes the same
 `ConnectedWalletBalancesFacade`, preserves exact asset ids during filtering and
-deduplication, and invalidates its balance subscription on account or network
+deduplication, and invalidates shared balance requests on account or network
 changes.
+
+### Active wallet and automatic balances
+
+The authenticated backend wallet list owns the active selection through
+`isPrimary` and `PATCH /api/v1/wallets/:walletId/primary`. Profile and Trade
+consume `ActiveWalletFacade`; browser connection history does not select an
+account wallet. An available primary wallet is restored after session loading,
+and a matching live MFE connection is required to sign. A linked wallet without
+that connection remains readable; signing actions offer the standard connection flow.
+
+The facade shares balance loading across Profile and Trade once session,
+selected wallet, and network are resolved. Requests are scoped to account,
+session, wallet, and network; switching context cancels old subscriptions and
+clears their rows. Manual Refresh retries failures, and confirmed settlement
+refreshes balances. A closed wallet drawer does not mount another balance view.
+Late wallet-list responses cannot overwrite an active primary-wallet mutation.
+
+Review accepts a valid dry-run preview for the authenticated backend-selected
+wallet. The host checks product inputs, source balance freshness, network and
+quote expiry. Quotes do not require a connected or verified browser signer.
+There is no separate host **Verify wallet** action or safety-provider gate.
+
+When the user opens review, the MFE reconnects the selected provider if needed,
+checks the live account/network and confirms backend ownership before final
+preparation. Existing verified NEAR links are reused without another message
+signature; a missing ownership marker requires the initial link proof. The
+transaction or intent approval remains an explicit action after review. Wallet
+or user changes cancel pending readiness and prevent stale execution.
 
 ### Quote and review lifecycle
 
@@ -150,16 +200,28 @@ preparation fails. The MFE owns final amount disclosure, expiry/retry state,
 reconfirmation within slippage policy, wallet signing, single-flight
 submission, and the success callback. Authenticated BFF calls remain host
 transport services so the MFE does not duplicate session or API-client logic.
+The dialog receives the v2 product input and current preview. Dry quote
+configuration stays with the MFE; Review starts the executable preparation in
+parallel with the balance check and cancels it when the balance cannot fund
+the swap.
 
 Final preparation sends the user's bearer token; the BFF checks that the signer
 is an active wallet link before the MFE asks the wallet to sign. Deploy this host
 change before enforcing the authenticated preparation endpoint in the BFF.
 
-Public Intents custody is the default. The Confidential swap checkbox requests
-`CONFIDENTIAL_INTENTS` for the deposit and refund balances. The final quote and
-unsigned message come from 1Click through the BFF. The MFE signs that exact
-message and submits it once; it then polls 1Click status through the host.
-The MFE selects `one-click` in its final preparation request so the BFF does
+Exchange balances represent assets in the connected wallet. Both dry quotes
+and final preparation use `depositType: ORIGIN_CHAIN`, `refundType: ORIGIN_CHAIN`,
+and `recipientType: DESTINATION_CHAIN`. A NEP-141 execution asset identifier
+identifies the token; it does not mean the wallet has an Intents balance.
+Confidential mode is unavailable for this wallet-funded flow until its separate
+1Click confidentiality contract is supported. Never substitute
+`CONFIDENTIAL_INTENTS` funding for a wallet balance.
+Native NEAR deposits are supported. The MFE rejects other origin-chain deposits
+before confirmation until their chain/token transfer adapters are implemented.
+The MFE discloses the source wallet and recipient, requests a wallet transfer,
+and tracks settlement through the BFF. Existing Intents-balance callers may
+still sign the provider-generated message and submit it through the backend.
+The MFE selects `one-click` in both preview and final preparation requests so the BFF does
 not substitute a solver-relay quote for this flow.
 An intent hash confirms submission. Only `SUCCESS` confirms settlement;
 `REFUNDED` and `FAILED` are shown separately.
@@ -194,3 +256,58 @@ Important page targets:
 Shell regression coverage lives in `e2e/shell-layout.spec.ts`. It protects the
 64px header, content alignment, persistent divider, one-seventh desktop sidebar,
 and shared grid row for the sidebar, divider, and routed content.
+
+### Wallet swap request ownership
+
+Home sends asset metadata, amount, recipient, expected account/network, slippage,
+and privacy choice to the MFE through `SwapQuoteGateway`. It does not construct
+provider funding/authentication fields or deadlines. The host keeps debounce,
+refresh, cancellation, HTTP/session transport, and display; the MFE returns
+quote action guidance and resolves the live wallet context. See the
+[v2 wallet swap contract](../src/app/mfe-contracts/README.md#wallet-swap-contract-200)
+for compatibility and deployment order.
+
+The MFE shows exchange progress and a receipt after confirmation. Its additive
+`onSwapSettled` callback refreshes wallet balances after confirmed completion or
+another terminal provider result; submission alone is too early to show the
+updated destination balance. Closing the receipt remains a user action.
+
+Balance loading is independent of connector restoration. The shared root store
+survives route subscriptions, retains same-wallet rows while revalidating, and
+rejects responses from previous user/wallet/network contexts. Empty, loading,
+partial and failed reads have distinct UI states. Asset matching uses canonical
+IDs plus network, including equivalent NEP-141 prefixes and EVM native-address
+sentinels; native NEAR and wrapped NEAR remain separate holdings.
+Partial refreshes replace successfully read assets and retain missing holdings
+as stale within the same user/wallet/network context. A complete response
+replaces the retained holdings, including confirmed zero or empty balances.
+
+### Balance refresh, USD estimates and wallet funding
+
+Ordinary refreshes retain the current balance label without a freshness suffix.
+Concurrent refresh requests coalesce into one pending refresh; a wallet/network
+change cancels old work and clears the queued refresh. Internal freshness still
+controls eligibility; partial/error responses never become authoritative balances.
+The UI never renders the word “stale”.
+
+Swap USD estimates multiply canonical decimal amounts by the exact asset's
+backend price using integer arithmetic and round to cents (`0.146146` USDC at
+`0.999734` USD becomes `$0.15`). Missing asset prices display `—`; symbol-based
+market comparison prices are not a fallback. Positive sub-cent values show
+`<$0.01`. Display grouping is never reparsed as a canonical amount.
+
+Origin-chain transfers now use the additive wallet funding contract documented
+in `src/app/mfe-contracts/README.md`; the backend, MFE, and host must be rolled
+out together in that order. A valid dry quote alone does not prove wallet
+ownership, available gas, or an executable transfer adapter.
+
+The assets API provides optional `balanceAssetId` for native provider routes.
+The host matches it to native RPC holdings while preserving `assetId` for quotes
+and execution. Native classification is backend-owned and never inferred from
+a missing contract or display symbol.
+
+USD swap estimates consume asset-ID-bound prices from the BFF asset list. Prices
+refresh every minute without changing selected assets, amounts or active quotes.
+Overlapping refreshes are coalesced. Missing, invalid, future or older-than-five-minute
+`priceUpdatedAt` values render an unavailable estimate (`—`), including when refresh
+requests fail. Symbol-based market snapshots never substitute for an asset price.

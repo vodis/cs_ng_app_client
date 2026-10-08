@@ -1,0 +1,116 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.portfolio-security {
+  margin: 0 0 1rem;
+}
+
+.portfolio-security__grid {
+  display: grid;
+  width: 100%;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (width <= 720px) {
+  .portfolio-security__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.portfolio-panel {
+  overflow: hidden;
+  width: 100%;
+  border: 1px solid var(--gray-80);
+  border-radius: 18px;
+  background: var(--card-background, #111);
+}
+
+.portfolio-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--gray-80);
+  gap: 0.75rem;
+}
+
+.portfolio-panel__header > div:first-child {
+  min-width: 0;
+}
+
+.portfolio-panel__header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.portfolio-panel__eyebrow {
+  margin: 0 0 0.35rem;
+  color: #43e6a0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.portfolio-security__badge {
+  max-width: 100%;
+  flex-shrink: 0;
+  padding: 0.28rem 0.65rem;
+  border: 1px solid rgb(254 108 0 / 28%);
+  border-radius: 999px;
+  background: rgb(254 108 0 / 12%);
+  color: var(--primary-text-color);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.portfolio-security__badge--on {
+  border-color: rgb(126 231 135 / 28%);
+  background: rgb(126 231 135 / 12%);
+  color: var(--success, #7ee787);
+}
+
+.portfolio-security__body {
+  display: grid;
+  padding: 1.1rem 1.25rem 1.25rem;
+  gap: 0.85rem;
+}
+
+.portfolio-security__copy,
+.portfolio-security__note,
+.portfolio-security__message {
+  margin: 0;
+  color: var(--gray-30);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.portfolio-security__note {
+  font-size: 0.78rem;
+}
+
+.portfolio-security__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.portfolio-security__error {
+  margin: 0.75rem 0 0;
+  color: #ffb085;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.portfolio-security__message {
+  margin-top: 0.75rem;
+}

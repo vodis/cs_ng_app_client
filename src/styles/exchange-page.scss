@@ -128,12 +128,6 @@
       flex-shrink: 0;
       margin-top: auto;
     }
-
-    .swap-confidential-option,
-    .connectMain,
-    .exchange-error {
-      flex-shrink: 0;
-    }
   }
 
   .swapRow {
@@ -407,13 +401,27 @@
 
   .balance {
     overflow: hidden;
+    padding: 0;
+    border: 0;
     margin-bottom: 6px;
+    background: transparent;
     color: #c4c6c7;
+    cursor: pointer;
+    font: inherit;
     font-size: 12px;
     text-align: right;
     text-overflow: ellipsis;
     text-transform: uppercase;
     white-space: nowrap;
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+
+    &:hover:not(:disabled) {
+      color: var(--primary-text-color);
+    }
   }
 
   .usd {
@@ -578,14 +586,16 @@
 
   .swap-confidential-option {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
-    gap: 8px;
     margin-top: 16px;
-    font-size: 14px;
     cursor: pointer;
+    font-size: 14px;
+    gap: 8px;
   }
 
   .exchange-error {
+    flex-shrink: 0;
     margin: 12px 0 0;
     color: var(--exchange-orange);
     font-size: 14px;
@@ -867,6 +877,42 @@
     text-align: right;
   }
 
+  .marketMeta {
+    display: grid;
+    min-width: 10.5rem;
+    margin: 0;
+    gap: 10px;
+
+    &__row {
+      display: grid;
+      align-items: baseline;
+      justify-content: end;
+      gap: 0.75rem;
+      grid-template-columns: auto auto;
+    }
+
+    dt {
+      margin: 0;
+      color: #8b9294;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      line-height: 1.2;
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    dd {
+      margin: 0;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.2;
+      text-align: right;
+      white-space: nowrap;
+    }
+  }
+
   .advanced {
     display: block;
     padding: 0;
@@ -884,13 +930,23 @@
     white-space: nowrap;
   }
 
+  .tokenDetails {
+    display: grid;
+    min-width: 0;
+    padding-top: 6px;
+    border-top: 1px solid var(--exchange-line-soft);
+    margin-top: 4px;
+    gap: 6px 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .marketBelow {
     display: grid;
     align-items: center;
     gap: 0 24px;
     grid-row: 2;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto auto auto;
 
     .marketSummary,
     .marketFooter {
@@ -925,11 +981,183 @@
       grid-row: 3;
     }
 
+    .marketMeta {
+      grid-column: 2;
+      grid-row: 2 / span 2;
+      place-self: center end;
+    }
+
     .advanced {
       grid-column: 2;
       grid-row: 2;
       place-self: center end;
     }
+
+    .tokenDetails {
+      align-self: stretch;
+      grid-column: 1 / -1;
+      grid-row: 4;
+    }
+  }
+
+  .tokenDetails__col {
+    min-width: 0;
+  }
+
+  .tokenDetails__head {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2px;
+    gap: 6px;
+  }
+
+  .tokenDetails__iconWrap {
+    display: grid;
+    overflow: hidden;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    place-items: center;
+  }
+
+  .tokenDetails__icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .tokenDetails__fallback {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 8%);
+    color: #fff;
+    font-size: 7px;
+    font-weight: 700;
+    place-items: center;
+  }
+
+  .tokenDetails__titles {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .tokenDetails__symbol {
+    overflow: hidden;
+    margin: 0;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tokenDetails__name {
+    overflow: hidden;
+    margin: 0;
+    color: #8b9294;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tokenDetails__facts {
+    display: grid;
+    align-content: start;
+    gap: 1px;
+  }
+
+  .tokenDetails__row {
+    display: flex;
+    min-height: 0;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px 0 0;
+    margin: 0;
+    gap: 8px;
+  }
+
+  .tokenDetails__label {
+    flex-shrink: 0;
+    color: #9aa0a6;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .tokenDetails__value,
+  .tokenDetails__chip {
+    display: inline-flex;
+    overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 6%);
+    color: #e8eaeb;
+    font-size: 10px;
+    font-weight: 600;
+    gap: 5px;
+    line-height: 1.2;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tokenDetails__links {
+    display: flex;
+    min-width: 0;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0 6px;
+  }
+
+  .tokenDetails__chipIcon {
+    display: block;
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+  }
+
+  .tokenDetails__social {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 50%;
+    background: rgb(255 255 255 / 6%);
+    color: #c9cdd1;
+    place-items: center;
+    text-decoration: none;
+
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background: rgb(255 255 255 / 11%);
+      color: #fff;
+    }
+  }
+
+  .tokenDetails__chip:is(a):hover {
+    background: rgb(255 255 255 / 11%);
+    color: #fff;
   }
 
   .marketPanel--advanced {
@@ -1336,6 +1564,8 @@
       .price,
       .change,
       .advanced,
+      .marketMeta,
+      .tokenDetails,
       .marketSummary .market-skeleton {
         grid-column: auto;
         grid-row: auto;
@@ -1344,6 +1574,28 @@
 
       .note {
         white-space: normal;
+      }
+
+      .tokenDetails {
+        padding-top: 6px;
+        margin-top: 2px;
+        gap: 8px;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .marketMeta {
+        width: 100%;
+        min-width: 0;
+
+        &__row {
+          justify-content: start;
+          grid-template-columns: 5.5rem 1fr;
+        }
+
+        dt,
+        dd {
+          text-align: left;
+        }
       }
     }
 

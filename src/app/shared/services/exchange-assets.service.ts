@@ -1,6 +1,7 @@
+import { canonicalBalanceAssetId } from '@shared/utils/balance-asset.utils';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { EMPTY, Observable, catchError, exhaustMap, map, timer } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AssetDto, AssetsApiResponse } from '@shared/models/asset.model';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
@@ -49,12 +50,20 @@ export class ExchangeAssetsService {
       );
   }
 
+  /** Refresh prices without replacing the user's token selection or active quote. */
+  public watchPrices(): Observable<ExchangeToken[]> {
+    return timer(60_000, 60_000).pipe(
+      exhaustMap(() => this.loadAssets().pipe(catchError(() => EMPTY)))
+    );
+  }
+
   private mapAssetToExchangeTokens(
     asset: AssetDto,
     hasCanonicalNativeNear: boolean
   ): ExchangeToken[] {
     const token: ExchangeToken = {
       assetId: asset.assetId,
+      ...(asset.balanceAssetId ? { balanceAssetId: asset.balanceAssetId } : {}),
       executionAssetId: asset.defuseAssetId ?? asset.assetId,
       symbol: asset.symbol,
       displaySymbol: this.displaySymbolFor(asset.symbol),
@@ -65,10 +74,21 @@ export class ExchangeAssetsService {
       ...(asset.contractAddress?.trim()
         ? { contractAddress: asset.contractAddress.trim() }
         : {}),
+      ...(asset.price !== undefined &&
+      /^(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(String(asset.price)) &&
+      Number.isFinite(Number(asset.price)) &&
+      Number(asset.price) >= 0
+        ? { priceUsd: asset.price }
+        : {}),
+      ...(asset.priceUpdatedAt ? { priceUpdatedAt: asset.priceUpdatedAt } : {}),
       color: this.colorForSymbol(asset.symbol),
     };
 
-    if (asset.assetId !== WRAPPED_NEAR_ASSET_ID) {
+    if (
+      token.blockchain !== 'near' ||
+      canonicalBalanceAssetId(asset.assetId, 'near:mainnet') !==
+        WRAPPED_NEAR_ASSET_ID
+    ) {
       return [token];
     }
 

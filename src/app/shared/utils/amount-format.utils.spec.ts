@@ -1,9 +1,12 @@
 import {
   AMOUNT_DECIMAL_SEPARATOR,
+  atomicToDecimal,
+  decimalToAtomic,
   displayHasDecimalSeparator,
   formatNumberForAmountDisplay,
   formatSwapAmountDisplay,
   formatWholeWithDots,
+  isCanonicalDecimalAmount,
   normalizeAmountInputChars,
   normalizeAmountStorage,
   parseDisplayedAmount,
@@ -16,6 +19,76 @@ describe('amount-format.utils', () => {
     key: string,
     init: Omit<KeyboardEventInit, 'key'> = {}
   ): KeyboardEvent => new KeyboardEvent('keydown', { key, ...init });
+
+  it('normalizes comma input and unambiguous decimal-point paste exactly once', () => {
+    for (const input of ['0,146146', '0.146146']) {
+      const canonical = normalizeAmountStorage(input, 6);
+      expect(canonical).toBe('0.146146');
+      expect(decimalToAtomic(canonical, 6)).toBe('146146');
+    }
+    expect(normalizeAmountStorage('0.123', 6)).toBe('0.123');
+    expect(normalizeAmountStorage('1.234', 6)).toBe('1234');
+    expect(normalizeAmountStorage('1.234,56', 6)).toBe('1234.56');
+  });
+
+  describe('atomicToDecimal / decimalToAtomic', () => {
+    it('round-trips 6-decimal tokens', () => {
+      expect(atomicToDecimal('1000000', 6)).toBe('1');
+      expect(atomicToDecimal('1234567', 6)).toBe('1.234567');
+      expect(atomicToDecimal('1', 6)).toBe('0.000001');
+      expect(decimalToAtomic('1', 6)).toBe('1000000');
+      expect(decimalToAtomic('1.234567', 6)).toBe('1234567');
+      expect(decimalToAtomic('0.000001', 6)).toBe('1');
+    });
+
+    it('round-trips 18-decimal tokens', () => {
+      expect(atomicToDecimal('1000000000000000000', 18)).toBe('1');
+      expect(atomicToDecimal('1234000000000000000', 18)).toBe('1.234');
+      expect(atomicToDecimal('1', 18)).toBe('0.000000000000000001');
+      expect(decimalToAtomic('1.234', 18)).toBe('1234000000000000000');
+      expect(decimalToAtomic('0.000000000000000001', 18)).toBe('1');
+    });
+
+    it('round-trips 24-decimal NEAR amounts including tiny and large values', () => {
+      expect(atomicToDecimal('1000000000000000000000000', 24)).toBe('1');
+      expect(atomicToDecimal('1234000000000000000000000', 24)).toBe('1.234');
+      expect(atomicToDecimal('1000000000000000000000', 24)).toBe('0.001');
+      expect(atomicToDecimal('1', 24)).toBe('0.000000000000000000000001');
+      expect(atomicToDecimal('1123456789012345678901234', 24)).toBe(
+        '1.123456789012345678901234'
+      );
+      expect(decimalToAtomic('1.234', 24)).toBe('1234000000000000000000000');
+      expect(decimalToAtomic('0.001', 24)).toBe('1000000000000000000000');
+      expect(decimalToAtomic('1.123456789012345678901234', 24)).toBe(
+        '1123456789012345678901234'
+      );
+    });
+
+    it('rejects invalid atomic inputs and decimals', () => {
+      expect(() => atomicToDecimal('', 6)).toThrow();
+      expect(() => atomicToDecimal('12.3', 6)).toThrow();
+      expect(() => atomicToDecimal('-1', 6)).toThrow();
+      expect(() => atomicToDecimal('1', -1)).toThrow();
+      expect(() => atomicToDecimal('1', 1.5)).toThrow();
+    });
+
+    it('rejects invalid decimals and excess fractional precision', () => {
+      expect(() => decimalToAtomic('1,234', 6)).toThrow();
+      expect(() => decimalToAtomic('1.234', 2)).toThrow();
+      expect(() => decimalToAtomic('abc', 6)).toThrow();
+      expect(() => decimalToAtomic('1.', 6)).toThrow();
+      expect(() => decimalToAtomic('.1', 6)).toThrow();
+      expect(() => decimalToAtomic('1', -1)).toThrow();
+    });
+
+    it('detects canonical decimal amounts', () => {
+      expect(isCanonicalDecimalAmount('1.234')).toBe(true);
+      expect(isCanonicalDecimalAmount('0.001')).toBe(true);
+      expect(isCanonicalDecimalAmount('1.250')).toBe(true);
+      expect(isCanonicalDecimalAmount('1,234')).toBe(false);
+      expect(isCanonicalDecimalAmount('1.234.567')).toBe(false);
+    });
+  });
 
   describe('resolveAmountKeydownAction', () => {
     it('allows navigation and digit keys', () => {

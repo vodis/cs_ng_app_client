@@ -24,7 +24,10 @@ import {
 import { AppLoggerService } from '@core/logging/app-logger.service';
 import type {
   SwapReviewDepositRequest,
-  SwapReviewIntent,
+  WalletSwapInput,
+  WalletSwapQuote,
+  WalletSwapQuoteOptions,
+  WalletSwapReview,
 } from '@mfe-contracts/swap-review.types';
 
 const SIGNATURE_WAIT_MS = 120_000;
@@ -80,6 +83,7 @@ export class WalletGatewayBridgeService {
 
   clearMountApi(): void {
     this.mountApi = undefined;
+    this.snapshotSubject.next(undefined);
     this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
     this.rejectPendingSignature({
       code: 'GATEWAY_UNAVAILABLE',
@@ -189,10 +193,9 @@ export class WalletGatewayBridgeService {
     }
 
     if (!snapshot.isVerified) {
-      this.sendGatewayEvent({ type: 'VERIFY_REQUESTED' });
       throw this.executionFailure(
         'NOT_VERIFIED',
-        'Complete wallet verification before signing',
+        'Wallet readiness changed. Reopen the swap review.',
         true
       );
     }
@@ -227,34 +230,45 @@ export class WalletGatewayBridgeService {
       traceId: input.traceId,
     });
 
+    const signature = this.waitForIntentSignature(input.traceId);
     this.sendGatewayEvent({ type: 'SIGN_REQUESTED' });
-
-    return this.waitForIntentSignature(input.traceId);
+    return signature;
   }
 
-  async runNearDepositFlow(
+  async runWalletDepositFlow(
     input: SwapReviewDepositRequest
   ): Promise<{ transactionHash: string }> {
     const snapshot = this.requireSnapshot();
     if (!snapshot.account || snapshot.account !== input.senderAccount) {
       throw this.executionFailure(
         'NOT_CONNECTED',
-        'Connected NEAR wallet does not match the swap sender',
+        'Connected wallet does not match the swap sender',
         false
       );
     }
     if (!snapshot.isVerified) {
-      this.sendGatewayEvent({ type: 'VERIFY_REQUESTED' });
       throw this.executionFailure(
         'NOT_VERIFIED',
-        'Complete wallet verification before depositing',
+        'Wallet readiness changed. Reopen the swap review.',
         true
       );
     }
 
+    if (
+      input.transaction &&
+      (input.transaction.from !== input.senderAccount ||
+        (input.transaction.chainId &&
+          BigInt(input.transaction.chainId) !== BigInt(snapshot.chainId ?? -1)))
+    ) {
+      throw this.executionFailure(
+        'NOT_CONNECTED',
+        'Wallet account or network changed. Review again.',
+        false
+      );
+    }
     this.sendGatewayEvent({
       type: 'PREPARE_REQUESTED',
-      payload: {
+      payload: input.transaction ?? {
         from: input.senderAccount,
         to: input.depositAddress,
         value: input.amount,
@@ -276,6 +290,10 @@ export class WalletGatewayBridgeService {
     });
   }
 
+  requestVerification(): void {
+    this.sendGatewayEvent({ type: 'VERIFY_REQUESTED' });
+  }
+
   resetConnection(): void {
     if (!this.canSendGatewayEvent()) {
       return;
@@ -295,16 +313,39 @@ export class WalletGatewayBridgeService {
     this.balancesSubject.next(IDLE_WALLET_BALANCES_SNAPSHOT);
   }
 
-  openSwapReview(intent: SwapReviewIntent): void {
-    const open = this.mountApi?.openSwapReview;
-    if (!open) {
+  async requestSwapQuote(
+    input: WalletSwapInput,
+    options: WalletSwapQuoteOptions
+  ): Promise<WalletSwapQuote> {
+    const api = this.mountApi;
+    if (
+      api?.swapContractVersion !== '2.0.0' ||
+      api.executionReadinessVersion !== '1.0.0' ||
+      !api.requestSwapQuote
+    ) {
       throw this.executionFailure(
         'GATEWAY_UNAVAILABLE',
-        'Swap review is not available in the loaded wallet remote',
+        'Update the wallet remote to request swap quotes.',
         true
       );
     }
-    open(intent);
+    return api.requestSwapQuote(input, options);
+  }
+
+  openSwapReview(review: WalletSwapReview): void {
+    const api = this.mountApi;
+    if (
+      api?.swapContractVersion !== '2.0.0' ||
+      api.executionReadinessVersion !== '1.0.0' ||
+      !api.openWalletSwapReview
+    ) {
+      throw this.executionFailure(
+        'GATEWAY_UNAVAILABLE',
+        'Update the wallet remote to review this swap.',
+        true
+      );
+    }
+    api.openWalletSwapReview(review);
   }
 
   closeSwapReview(): void {
@@ -326,12 +367,9 @@ export class WalletGatewayBridgeService {
 
   async syncConnectedWallet(): Promise<WalletConnectionSnapshot> {
     const snapshot = this.snapshotSubject.value ?? this.mountApi?.getSnapshot();
-    if (snapshot?.account) {
-      return snapshot;
-    }
-
     const syncConnectedWallet = this.mountApi?.syncConnectedWallet;
     if (!syncConnectedWallet) {
+      if (snapshot?.account) return snapshot;
       throw this.executionFailure(
         'GATEWAY_UNAVAILABLE',
         'Wallet connection sync is not available',

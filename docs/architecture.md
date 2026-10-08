@@ -101,19 +101,24 @@ Flow direction:
 - First-time accounts with no linked or generated wallet go to `/profile`.
 - `/profile` shows a BFF-valued USD balance hero beside an Onboarding
   portfolio card (wallet, passkey, five swaps). The hero reads
-  `GET /api/v1/portfolio`, passing the connected wallet address and CAIP-2
+  `GET /api/v1/portfolio`, passing the backend-selected wallet address and CAIP-2
   network when available. It renders both USD value and token quantities.
-  While valuation is in flight the hero shows `$0.00` (not `Loading…`), then
-  animates to the fetched total. Portfolio is fetched once per
+  While the first valuation is in flight the hero shows `Loading…`; zero is
+  displayed only after a successful read. Same-wallet refreshes retain the
+  previous value and show failures explicitly. Portfolio is fetched once per
   session/account and refreshed after swaps, wallet generation, or an
   explicit balances refresh — not on every session tick. The wallet address
   pill above the balance is omitted — wallet identity and token balances live
   in Manage wallets. Wallet setup is not a blocking interstitial.
+- Connected wallets on `/profile` render as a table (Wallet, Network, Status,
+  Action), not a stacked list.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
-  `/portfolio` (holdings, sessions, and sign-out). The header also shows a
-  notifications control next to the account icon (UI placeholder until a
-  notifications feed is wired).
+  `/portfolio` (agent preferences, 2FA/passkey security, sessions, and
+  sign-out — balance/holdings UI removed). The header also shows a
+  notifications control and a wallets control beside the account icon. Wallets
+  opens the existing wallet MFE drawer; notifications remains a UI placeholder
+  until a feed is wired.
 
 Profile boundary rules:
 
@@ -352,11 +357,11 @@ prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 
 ### Protected routes
 
-| Route              | Guard       | Purpose                                               |
-| ------------------ | ----------- | ----------------------------------------------------- |
-| `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, wallets |
-| `/portfolio`       | `AuthGuard` | Holdings, agent authorization, sessions, sign-out     |
-| `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                         |
+| Route              | Guard       | Purpose                                                |
+| ------------------ | ----------- | ------------------------------------------------------ |
+| `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, wallets  |
+| `/portfolio`       | `AuthGuard` | Agent preferences, 2FA/passkey, sessions (no holdings) |
+| `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                          |
 
 ### Login methods on `/login`
 
@@ -411,3 +416,17 @@ First-time setup on `/profile`:
 
 Legacy `/generate-wallet` links redirect to `/profile`. Returning users with
 linked wallets continue to the safe `returnUrl`.
+
+### Active-wallet reads and signing
+
+The backend primary wallet is the selected identity. `ActiveWalletFacade` owns
+root-lifetime balance state, scoped to authenticated user/session, wallet and
+network. Profile, Trade, wallet details and token selection share that state.
+A live connector is required only for signing; missing connectivity does not
+block authenticated BFF balance or portfolio reads. Profile's root facade caches
+valuation for the same identity/network and always sends both to the BFF.
+
+Requests cancel on identity changes; logout clears account data. Route changes
+retain rows and revalidate expired data. Refresh, focus and settled swaps retry
+reads without fabricating zero balances. Remembered network preferences are
+user/wallet-scoped display context and never proof of signing capability.

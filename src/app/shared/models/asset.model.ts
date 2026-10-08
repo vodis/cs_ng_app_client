@@ -1,5 +1,6 @@
 export interface AssetDto {
   assetId: string;
+  balanceAssetId?: string;
   defuseAssetId?: string;
   symbol: string;
   name?: string;
@@ -7,7 +8,7 @@ export interface AssetDto {
   decimals?: number;
   blockchain?: string;
   contractAddress?: string;
-  price?: number;
+  price?: string | number;
   priceUpdatedAt?: string;
 }
 

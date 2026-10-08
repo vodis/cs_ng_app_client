@@ -4,6 +4,7 @@ import {
 } from '@angular/common/http/testing';
 import { fakeAsync, flushMicrotasks, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import type { BackendWallet } from './auth-session.types';
 import { AuthSessionService } from './auth-session.service';
 import { environment } from '../../../environments/environment';
 import { AuthProviderService } from './auth-provider.service';
@@ -383,6 +384,128 @@ describe('AuthSessionService', () => {
     expect(service.session?.wallets[0].isPrimary).toBeTrue();
   }));
 
+  it('keeps the confirmed primary selection when an earlier reload arrives late', fakeAsync(() => {
+    const first: BackendWallet = {
+      id: 'first',
+      providerWalletId: 'first',
+      address: 'first.near',
+      chainType: 'near',
+      walletType: 'external',
+      isPrimary: true,
+    };
+    const second: BackendWallet = {
+      ...first,
+      id: 'second',
+      address: 'second.near',
+      isPrimary: false,
+    };
+    service.login('email');
+    flushMicrotasks();
+    service.reloadWallets();
+    flushMicrotasks();
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/wallets`)
+      .flush({ wallets: [first, second] });
+    flushMicrotasks();
+
+    service.reloadWallets();
+    flushMicrotasks();
+    const stale = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`);
+    service.setPrimaryWallet('second');
+    flushMicrotasks();
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/wallets/second/primary`)
+      .flush({ wallet: { ...second, isPrimary: true } });
+    flushMicrotasks();
+    expect(service.session?.wallets.find(wallet => wallet.isPrimary)?.id).toBe(
+      'second'
+    );
+    stale.flush({ wallets: [first, second] });
+    flushMicrotasks();
+    expect(service.session?.wallets.find(wallet => wallet.isPrimary)?.id).toBe(
+      'second'
+    );
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`).flush({
+      wallets: [
+        { ...first, isPrimary: false },
+        { ...second, isPrimary: true },
+      ],
+    });
+    flushMicrotasks();
+    expect(service.session?.wallets.find(wallet => wallet.isPrimary)?.id).toBe(
+      'second'
+    );
+  }));
+
+  it('ignores refresh results and failures during a primary change', fakeAsync(() => {
+    service.login('email');
+    flushMicrotasks();
+    service.refresh();
+    flushMicrotasks();
+    const oldMe = httpMock.expectOne(`${environment.apiUrl}/api/v1/me`);
+    const oldWallets = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/wallets`
+    );
+    service.setPrimaryWallet('new');
+    flushMicrotasks();
+    oldMe.flush({}, { status: 503, statusText: 'Unavailable' });
+    oldWallets.flush({ wallets: [] });
+    flushMicrotasks();
+    expect(service.session?.user.id).toBe('account-1');
+    service.refresh();
+    flushMicrotasks();
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/me`)
+      .flush({ user: service.session?.user });
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/wallets`)
+      .flush({ wallets: [{ id: 'stale', isPrimary: true }] });
+    flushMicrotasks();
+    expect(service.session?.wallets).toEqual([]);
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/wallets/new/primary`)
+      .flush({ wallet: { id: 'new', isPrimary: true } });
+    flushMicrotasks();
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/wallets`)
+      .flush({ wallets: [{ id: 'new', isPrimary: true }] });
+    flushMicrotasks();
+    expect(service.session?.wallets[0].id).toBe('new');
+  }));
+
+  it('ignores a wallet response after logout and a different login', fakeAsync(() => {
+    service.login('email');
+    flushMicrotasks();
+    service.reloadWallets();
+    flushMicrotasks();
+    const stale = httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`);
+    service.clear();
+    authProvider.login.and.resolveTo({
+      user: { id: 'other', providerUserId: 'other', sessionId: 'other' },
+      wallets: [],
+    });
+    service.login('email');
+    flushMicrotasks();
+    stale.flush({ wallets: [{ id: 'old-wallet', isPrimary: true }] });
+    flushMicrotasks();
+    expect(service.session?.user.id).toBe('other');
+    expect(service.session?.wallets).toEqual([]);
+  }));
+
+  it('does not reuse a cached token after the provider session expires', fakeAsync(() => {
+    service.login('email');
+    flushMicrotasks();
+    authProvider.getAccessToken.and.resolveTo(null);
+    let failure: unknown;
+    service.reloadWallets().catch(error => {
+      failure = error;
+    });
+    flushMicrotasks();
+    expect(failure).toEqual(jasmine.any(Error));
+    expect(service.session).toBeNull();
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/wallets`);
+  }));
+
   it('deletes a wallet and reloads wallet state', fakeAsync(() => {
     service.refresh();
     flushMicrotasks();
@@ -614,6 +737,49 @@ describe('AuthSessionService provider restore', () => {
     flushMicrotasks();
 
     expect(service.session?.user.id).toBe('account-1');
+  }));
+
+  it('ignores an older session refresh that completes after a newer wallet list', fakeAsync(() => {
+    configure(Promise.resolve(readySnapshot));
+    flushMicrotasks();
+    const oldMe = httpMock.expectOne(`${environment.apiUrl}/api/v1/me`);
+    const oldWallets = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/wallets`
+    );
+    void service.refresh();
+    flushMicrotasks();
+    const user = {
+      id: 'account-1',
+      providerUserId: 'provider-user-1',
+      sessionId: 'session-1',
+    };
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/me`).flush({ user });
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/wallets`).flush({
+      wallets: [
+        {
+          id: 'new',
+          address: 'new.near',
+          chainType: 'near',
+          walletType: 'external',
+          isPrimary: true,
+        },
+      ],
+    });
+    flushMicrotasks();
+    oldMe.flush({ user });
+    oldWallets.flush({
+      wallets: [
+        {
+          id: 'old',
+          address: 'old.near',
+          chainType: 'near',
+          walletType: 'external',
+          isPrimary: true,
+        },
+      ],
+    });
+    flushMicrotasks();
+    expect(service.session?.wallets[0].id).toBe('new');
   }));
 
   it('skips restore when the provider settles without a ready status', fakeAsync(() => {

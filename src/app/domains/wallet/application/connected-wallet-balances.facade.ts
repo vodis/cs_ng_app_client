@@ -1,3 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import {
+  canonicalBalanceAssetId,
+  isNativeEvmToken,
+} from '@shared/utils/balance-asset.utils';
 import { Injectable } from '@angular/core';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import {
@@ -33,26 +38,13 @@ const BLOCKCHAIN_BY_NETWORK: Readonly<Record<string, string>> = {
   'ton:testnet': 'ton',
 };
 
-const NATIVE_SYMBOL_BY_BLOCKCHAIN: Readonly<Record<string, string>> = {
-  arb: 'ETH',
-  avax: 'AVAX',
-  base: 'ETH',
-  bsc: 'BNB',
-  eth: 'ETH',
-  gnosis: 'XDAI',
-  op: 'ETH',
-  pol: 'POL',
-  scroll: 'ETH',
-  ton: 'TON',
-  near: 'NEAR',
-};
-
 export type ConnectedWalletBalancesState = {
   status: 'loading' | 'ready' | 'partial' | 'error';
   account: string;
   network: string;
   rows: WalletBalance[];
   errorMessage?: string;
+  sessionExpired?: boolean;
 };
 
 export type ConnectedWalletBalancesRequest = {
@@ -89,11 +81,12 @@ export class ConnectedWalletBalancesFacade {
           .filter(
             token =>
               token.blockchain === blockchain &&
-              token.symbol.toUpperCase() !==
-                NATIVE_SYMBOL_BY_BLOCKCHAIN[blockchain] &&
               (blockchain === 'near'
-                ? token.assetId.startsWith('nep141:')
-                : Boolean(token.contractAddress))
+                ? canonicalBalanceAssetId(
+                    token.assetId,
+                    request.network
+                  ).startsWith('nep141:')
+                : Boolean(token.contractAddress) && !isNativeEvmToken(token))
           )
           .map(token => token.assetId)
           .filter(assetId => assetId.trim().length > 0)
@@ -133,7 +126,10 @@ export class ConnectedWalletBalancesFacade {
             if (!this.matchesRequest(balance, account, request.network)) {
               throw new Error('Balance response provenance does not match');
             }
-            byAsset.set(balance.assetId, balance);
+            byAsset.set(
+              canonicalBalanceAssetId(balance.assetId, request.network),
+              balance
+            );
           }
         }
         const partial = resultSets.some(result => result.partial);
@@ -147,12 +143,15 @@ export class ConnectedWalletBalancesFacade {
             : undefined,
         };
       }),
-      catchError(() =>
+      catchError((error: unknown) =>
         of({
           status: 'error' as const,
           account,
           network: request.network,
           rows: [],
+          sessionExpired:
+            (error instanceof HttpErrorResponse && error.status === 401) ||
+            (error instanceof Error && error.message === 'No active session'),
           errorMessage: 'Failed to load balances.',
         })
       ),

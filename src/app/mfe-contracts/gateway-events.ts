@@ -1,11 +1,7 @@
 import type { ApprovedIntentPrepareRequest } from './intent-prepare.contract';
 
-export type WalletTransactionRequest = {
-  from: string;
-  to: string;
-  value?: string;
-  data?: string;
-};
+export type WalletTransactionRequest =
+  import('./wallet-funding.contract').WalletDepositTransaction;
 
 /** Mirrors `mfe-wallets` wallet gateway events used for Path B intent signing. */
 export type WalletGatewayEvent =

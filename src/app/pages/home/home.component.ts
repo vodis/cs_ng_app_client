@@ -1,14 +1,37 @@
-import { Component, DestroyRef, inject } from '@angular/core';
+import {
+  tokenBalance,
+  hasPositiveBalance,
+} from '@shared/utils/balance-asset.utils';
+import {
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  ViewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
+import { MarketSnapshotsService } from '@shared/services/market-snapshots.service';
 import {
   WalletBalance,
   WalletBalancesService,
 } from '@shared/services/wallet-balances.service';
-import { catchError, map, of, Subscription } from 'rxjs';
 import { SwapExecutableQuoteCoordinator } from '@domains/exchange/application/swap-executable-quote.coordinator';
+import {
+  formatCompactUsd,
+  hostnameLabel,
+  type WalletMarketSnapshot,
+  type WalletMarketSocialLink,
+} from '@shared/utils/market-display.util';
+import { explorerUrlForToken } from '@shared/utils/token-explorer.utils';
+import {
+  TOKEN_PROJECT_MOCKS,
+  type TokenProjectMock,
+} from './token-project.mock';
+import { catchError, map, of, Subscription, timer } from 'rxjs';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import {
   SwapFlowFacade,
@@ -16,21 +39,23 @@ import {
 } from '@domains/exchange/application/swap-flow.facade';
 import type {
   SwapFlowState,
-  SwapPrepareRequest,
   SwapQuotePreview,
 } from '@domains/exchange/models/swap.models';
 import { environment } from '../../../environments/environment';
-import type { WalletAccount } from '@domains/wallet/models/wallet.models';
 import {
   changeClass as changePriceClass,
   formatPercent as formatPricePercent,
   formatPrice as formatCurrencyPrice,
   formatSwapFiatEstimate,
+  isFreshAssetPrice,
 } from './home-price.utils';
 import {
   AMOUNT_DECIMAL_SEPARATOR,
+  atomicToDecimal,
+  decimalToAtomic,
   displayHasDecimalSeparator,
   formatSwapAmountDisplay,
+  isCanonicalDecimalAmount,
   normalizeAmountInputChars,
   normalizeAmountStorage as normalizeSwapAmountStorage,
   resolveAmountKeydownAction,
@@ -51,22 +76,22 @@ import {
   minimumReceivedAtomic,
 } from '@shared/components/slippage-settings-panel/slippage-settings.utils';
 import {
-  isNearWalletAddress,
-  nearNetworkForAddress,
   networkLabel,
   recipientAddressError,
   walletBlockchain,
 } from '@shared/utils/network.utils';
-import { ConnectedWalletBalancesFacade } from '@domains/wallet/application/connected-wallet-balances.facade';
+import {
+  ActiveWalletFacade,
+  type ActiveWalletState,
+} from '@domains/wallet/application/active-wallet.facade';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
-import type { SwapReviewIntent } from '@mfe-contracts/swap-review.types';
+import type { WalletSwapReview } from '@mfe-contracts/swap-review.types';
 import { createTraceId } from '@core/trace/create-trace-id';
 
 type TokenSelectorSide = 'from' | 'to';
 
 type ComparisonTimeframe = '1H' | '1D' | '1W';
 type MarketChartMode = 'price' | 'relative';
-type SupportedSwapAuthMethod = SwapPrepareRequest['authMethod'];
 
 interface MarketComparisonToken {
   symbol: string;
@@ -124,6 +149,7 @@ interface RecentActivityItem {
 })
 export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly maxAmountFractionDigits = 18;
 
   public readonly recentActivity: RecentActivityItem[] = [
@@ -210,6 +236,8 @@ export class HomeComponent {
   ];
 
   public amount = '';
+  /** When set by clicking To balance, shown in the To field instead of the quote. */
+  public toAmountManual = '';
   public walletAddress = '';
   public walletChainId: number | null = null;
   public walletChainType: 'ethereum' | 'near' | 'ton' | undefined;
@@ -241,6 +269,11 @@ export class HomeComponent {
     '1D',
     '1W',
   ];
+  /** Temporary display labels until market/product metadata comes from the BFF. */
+  public readonly marketMetaMock = {
+    market: 'Spot',
+    product: 'Token Exchange',
+  } as const;
   public showAdvancedMarketView = false;
   public exchangeAssetsLoading = false;
   public exchangeAssetsError = '';
@@ -249,12 +282,21 @@ export class HomeComponent {
   public reviewBusy = false;
   public reviewActionError = '';
 
+  @ViewChild('fromAmountInput')
+  private fromAmountInput?: ElementRef<HTMLInputElement>;
+
   private walletBalances: WalletBalance[] = [];
-  private balanceRequestId = 0;
-  private balanceSubscription?: Subscription;
   private reviewBalanceSub?: Subscription;
   private reviewQuote?: { cancel: () => void };
   private reviewGeneration = 0;
+  private tokenMarkets = new Map<string, WalletMarketSnapshot>();
+  private comparisonRequestKey = '';
+  public activeWallet: ActiveWalletState = {
+    connected: false,
+    canRequestSwap: false,
+    reason: 'Sign in to use your wallet.',
+  };
+  private walletContextKey = '';
   private activeReviewTraceId = '';
 
   constructor(
@@ -262,31 +304,84 @@ export class HomeComponent {
     private readonly walletsService: WalletsService,
     private readonly swapFlowFacade: SwapFlowFacade,
     private readonly exchangeAssetsService: ExchangeAssetsService,
-    private readonly connectedBalances: ConnectedWalletBalancesFacade,
+    private readonly marketSnapshots: MarketSnapshotsService,
+    private readonly activeWalletFacade: ActiveWalletFacade,
     private readonly walletBalancesService: WalletBalancesService,
     private readonly executableQuotes: SwapExecutableQuoteCoordinator,
     private readonly walletGatewayBridge: WalletGatewayBridgeService
   ) {
-    this.walletsService.account
+    this.activeWalletFacade.revalidateBalances();
+    this.activeWalletFacade.state$
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(account => {
-        const nextWalletAddress = account?.account ?? '';
-        const nextWalletChainId = account?.chainId ?? null;
-        const nextWalletChainType = account?.identity?.chainType;
+      .subscribe(state => {
+        const previous = this.activeWallet;
         if (
-          this.walletAddress !== nextWalletAddress ||
-          this.walletChainId !== nextWalletChainId ||
-          this.walletChainType !== nextWalletChainType
+          previous.userId !== state.userId ||
+          previous.sessionId !== state.sessionId ||
+          previous.wallet?.id !== state.wallet?.id ||
+          previous.network !== state.network
         ) {
-          this.walletAddress = nextWalletAddress;
-          this.walletChainId = nextWalletChainId;
-          this.walletChainType = nextWalletChainType;
-          this.recipientAddress = '';
-          this.alignSelectionsToWallet();
-          this.loadWalletBalances();
-          this.refreshSwapQuotePreview();
+          this.walletBalances = [];
+          this.balancesError = '';
         }
+        this.activeWallet = state;
+        const key = [
+          state.userId,
+          state.sessionId,
+          state.wallet?.id,
+          state.network,
+          state.canRequestSwap,
+        ].join('|');
+        if (key === this.walletContextKey) return;
+        this.walletContextKey = key;
+        this.walletAddress = state.wallet?.address ?? '';
+        this.walletChainId = state.network?.startsWith('eip155:')
+          ? Number(state.network.split(':')[1])
+          : null;
+        const chainType = state.wallet?.chainType;
+        this.walletChainType =
+          chainType === 'near' ||
+          chainType === 'ethereum' ||
+          chainType === 'ton'
+            ? chainType
+            : undefined;
+        this.recipientAddress = '';
+        this.swapFlowFacade.reset();
+        this.alignSelectionsToWallet();
+        this.refreshSwapQuotePreview();
       });
+    this.activeWalletFacade.balances$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        this.walletBalances = state.rows;
+        this.balancesLoading = state.status === 'loading';
+        this.balancesError =
+          state.errorMessage ??
+          (state.status === 'idle'
+            ? this.activeWallet.wallet
+              ? 'Select a wallet network to load balances.'
+              : 'Select an active wallet to view holdings.'
+            : '');
+      });
+    this.exchangeAssetsService
+      .watchPrices()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(tokens => {
+        const prices = new Map(tokens.map(token => [token.assetId, token]));
+        const refresh = (token: ExchangeToken): ExchangeToken => ({
+          ...token,
+          priceUsd: prices.get(token.assetId)?.priceUsd,
+          priceUpdatedAt: prices.get(token.assetId)?.priceUpdatedAt,
+        });
+        this.exchangeTokens = this.exchangeTokens.map(refresh);
+        this.fromToken = refresh(this.fromToken);
+        this.toToken = refresh(this.toToken);
+        this.changeDetector.markForCheck();
+      });
+    // Re-evaluate time-based quote/balance eligibility even without wallet events.
+    timer(1_000, 1_000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.changeDetector.markForCheck());
 
     this.walletsService.swapSubmitted
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -295,7 +390,6 @@ export class HomeComponent {
         this.activeReviewTraceId = '';
         this.swapFlowFacade.reset();
         this.intentHash = result.intentHash;
-        this.loadWalletBalances();
       });
 
     this.walletsService.swapPreviewRefreshRequested
@@ -340,20 +434,9 @@ export class HomeComponent {
   }
 
   public submitQuote(): void {
-    if (!this.walletAddress) {
+    if (!this.activeWallet.wallet) {
       this.quoteError = '';
-      this.walletsService.requestOpen();
-      return;
-    }
-
-    const authMethod = this.resolveSwapAuthMethod({
-      account: this.walletAddress,
-      chainId: this.walletChainId,
-    });
-
-    if (!authMethod) {
-      this.quoteError =
-        'This wallet is not supported for swaps yet. Connect an EVM or NEAR wallet.';
+      this.activeWalletFacade.requestConnection();
       return;
     }
 
@@ -376,13 +459,11 @@ export class HomeComponent {
     }
 
     if (this.canReviewSwap()) {
-      this.beginSwapReview(amount, authMethod);
+      this.beginSwapReview(amount);
       return;
     }
 
-    this.swapFlowFacade.refreshQuotePreview(
-      this.buildSwapInput(amount, authMethod)
-    );
+    this.swapFlowFacade.refreshQuotePreview(this.buildSwapInput(amount));
   }
 
   public isQuoteLoading(): boolean {
@@ -398,20 +479,27 @@ export class HomeComponent {
     const preview = this.quotePreview;
     const input = this.buildQuotePreviewInput();
     return Boolean(
+      this.activeWallet.canRequestSwap &&
       preview &&
       input &&
       /^\d+$/.test(preview.amountOutAtomic) &&
       !/^0+$/.test(preview.amountOutAtomic) &&
       Date.parse(preview.expiresAt) > Date.now() &&
-      !this.fundingSourceError()
+      !this.fundingSourceError() &&
+      this.destinationTargetMatchesQuote()
     );
   }
 
   public canRetryQuote(): boolean {
     const input = this.buildQuotePreviewInput();
     return (
+      this.activeWallet.canRequestSwap &&
       this.swapFlowState === 'idle' &&
-      Boolean(this.quoteError) &&
+      Boolean(
+        this.quoteError ||
+        (this.quotePreview &&
+          !(Date.parse(this.quotePreview.expiresAt) > Date.now()))
+      ) &&
       !this.canReviewSwap() &&
       Boolean(input) &&
       !this.fundingSourceError()
@@ -421,70 +509,57 @@ export class HomeComponent {
   public isPrimaryActionDisabled(): boolean {
     return (
       this.reviewBusy ||
-      (Boolean(this.walletAddress) &&
+      Boolean(
+        this.activeWallet.wallet &&
         !this.canReviewSwap() &&
-        !this.canRetryQuote())
+        !this.canRetryQuote()
+      )
     );
   }
 
-  private buildSwapInput(
-    amount: string,
-    authMethod: SupportedSwapAuthMethod
-  ): SwapFormInput {
-    const nativeNear =
-      authMethod === 'near' && this.fromToken.assetId === 'near:native';
-    const fundingType = nativeNear
-      ? 'ORIGIN_CHAIN'
-      : this.confidentialSwap
-        ? 'CONFIDENTIAL_INTENTS'
-        : 'INTENTS';
+  private buildSwapInput(amount: string): SwapFormInput {
     return {
-      originAsset: this.executionAssetId(this.fromToken),
-      destinationAsset: this.executionAssetId(this.toToken),
+      source: this.reviewToken(this.fromToken),
+      destination: this.reviewToken(this.toToken),
       amount,
-      signerId: this.walletAddress.toLowerCase(),
+      account: this.walletAddress,
       recipient: this.effectiveRecipient(),
-      recipientType: 'DESTINATION_CHAIN',
-      depositType: fundingType,
-      refundType: fundingType,
-      slippageTolerance: this.slippageToleranceBps,
-      deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      authMethod,
-      network: this.balanceNetwork() ?? '',
+      network: {
+        id: this.balanceNetwork() ?? '',
+        label: this.tokenNetworkLabel(this.fromToken),
+      },
+      slippageToleranceBps: this.slippageToleranceBps,
+      confidential: this.confidentialSwap,
     };
   }
 
-  private openSwapReview(
-    amount: string,
-    authMethod: SupportedSwapAuthMethod
-  ): void {
+  private openSwapReview(amount: string): void {
     const preview = this.quotePreview;
     const network = this.balanceNetwork();
-    const chainType =
-      this.walletChainType ?? (authMethod === 'near' ? 'near' : 'ethereum');
     if (!preview || !network || !this.canReviewSwap()) return;
 
-    const input = this.buildSwapInput(amount, authMethod);
+    const input = this.buildSwapInput(amount);
     const traceId = preview.traceId ?? createTraceId();
     const minimumAtomic =
       minimumReceivedAtomic(
         preview.amountOutAtomic,
         this.slippageToleranceBps
       ) ?? '0';
-    const intent: SwapReviewIntent = {
-      contractVersion: '1.0.0',
+    const intent: WalletSwapReview = {
+      contractVersion: '2.0.0',
       traceId,
-      source: {
-        ...this.reviewToken(this.fromToken),
-        amountAtomic: amount,
+      input,
+      sourceDisplay: {
         amountDisplay: this.amount,
         fiatValue: this.fromFiatEstimate(),
       },
-      destination: this.reviewToken(this.toToken),
       preview: {
         amountOutAtomic: preview.amountOutAtomic,
-        amountOutDisplay: this.toAmountDisplay(),
-        fiatValue: this.toFiatEstimate(),
+        amountOutDisplay: this.quotedToAmountDisplay(),
+        fiatValue: this.fiatEstimate(
+          this.toToken,
+          this.quotedToAmountDisplay()
+        ),
         expiresAt: preview.expiresAt,
         rate: this.swapRateLabel(),
         minimumReceived: `${this.formatSwapAmount(
@@ -498,20 +573,6 @@ export class HomeComponent {
           ? { quoteReference: preview.quoteReference }
           : {}),
       },
-      signer: {
-        account: this.walletAddress,
-        chainType,
-      },
-      network: {
-        id: network,
-        label: this.tokenNetworkLabel(this.fromToken),
-      },
-      recipient: input.recipient,
-      recipientType: input.recipientType,
-      depositType: input.depositType,
-      refundType: input.refundType,
-      authMethod,
-      slippageToleranceBps: this.slippageToleranceBps,
     };
 
     try {
@@ -542,26 +603,6 @@ export class HomeComponent {
 
   private executionAssetId(token: ExchangeToken): string {
     return token.executionAssetId ?? token.assetId;
-  }
-
-  private resolveSwapAuthMethod(
-    wallet: WalletAccount
-  ): SupportedSwapAuthMethod | undefined {
-    if (
-      wallet.identity?.chainType === 'ethereum' ||
-      /^0x[a-fA-F0-9]{40}$/.test(wallet.account)
-    ) {
-      return 'evm';
-    }
-
-    if (
-      wallet.identity?.chainType === 'near' ||
-      isNearWalletAddress(wallet.account)
-    ) {
-      return 'near';
-    }
-
-    return undefined;
   }
 
   public changeComparisonTimeframe(timeframe: ComparisonTimeframe): void {
@@ -600,6 +641,7 @@ export class HomeComponent {
     const previousFrom = this.fromToken;
     this.fromToken = this.toToken;
     this.toToken = previousFrom;
+    this.toAmountManual = '';
     this.refreshSwapQuotePreview();
     this.loadMarketComparison();
   }
@@ -664,11 +706,11 @@ export class HomeComponent {
   }
 
   public fromFiatEstimate(): string {
-    return this.fiatEstimate(this.fromToken.symbol, this.amount);
+    return this.fiatEstimate(this.fromToken, this.amount);
   }
 
   public toFiatEstimate(): string {
-    return this.fiatEstimate(this.toToken.symbol, this.toAmountUi());
+    return this.fiatEstimate(this.toToken, this.quotedToAmountDisplay());
   }
 
   public toAmountUi(): string {
@@ -689,15 +731,12 @@ export class HomeComponent {
 
   public toAmountFormatted(): string {
     const raw = this.toAmountUi();
-    if (
-      !raw.trim() ||
-      this.isZeroAmountValue(this.normalizeAmountStorage(raw))
-    ) {
+    if (!raw.trim() || this.isZeroAmountValue(raw)) {
       return '0,00';
     }
 
     return this.formatSwapAmount(
-      raw,
+      this.canonicalAmountStorage(raw),
       this.swapAmountFractionDigits(this.toToken.symbol)
     );
   }
@@ -802,6 +841,15 @@ export class HomeComponent {
   }
 
   public toAmountDisplay(): string {
+    if (this.toAmountManual.trim()) {
+      return this.toAmountManual;
+    }
+
+    return this.quotedToAmountDisplay();
+  }
+
+  /** Quote output only — never the To-balance override. */
+  public quotedToAmountDisplay(): string {
     const amount = this.rawQuoteAmount();
     if (!amount) {
       return '';
@@ -815,15 +863,12 @@ export class HomeComponent {
   }
 
   public primaryActionLabel(): string {
-    if (!this.walletAddress) {
-      return 'Connect wallet';
-    }
+    if (!this.activeWallet.wallet) return 'Connect wallet';
+    if (this.reviewActionError) return this.reviewActionError;
 
-    if (this.reviewActionError) {
-      return this.reviewActionError;
-    }
-
-    return this.canRetryQuote() ? 'Retry quote' : 'Review';
+    return this.canRetryQuote()
+      ? 'Retry quote'
+      : (this.quotePreview?.action?.label ?? 'Review');
   }
 
   public tokenDisplay(symbol: string): string {
@@ -833,12 +878,34 @@ export class HomeComponent {
   public balanceLabel(token: ExchangeToken): string {
     const balance = this.balanceForToken(token);
     if (balance) {
-      const suffix =
-        balance.stale || this.isBalanceExpired(balance) ? ' (stale)' : '';
-      return `Balance: ${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}${suffix}`;
+      return `Balance: ${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}`;
     }
 
     return `Balance: — ${this.tokenSymbolLabel(token)}`;
+  }
+
+  public canApplyMaxBalance(token: ExchangeToken): boolean {
+    return this.canUseBalanceAsMax(this.balanceForToken(token));
+  }
+
+  public applyMaxBalance(side: 'from' | 'to'): void {
+    if (side === 'from') {
+      this.toAmountManual = '';
+      this.fillAmountFromTokenBalance(this.fromToken);
+      return;
+    }
+
+    const toBalance = this.balanceForToken(this.toToken);
+    if (!this.canUseBalanceAsMax(toBalance)) {
+      return;
+    }
+
+    const canonical = this.balanceCanonicalDecimal(toBalance);
+    if (!canonical) {
+      return;
+    }
+
+    this.toAmountManual = canonical;
   }
 
   public swapRateLabel(): string {
@@ -1042,33 +1109,32 @@ export class HomeComponent {
     const previousAmount = this.amount;
     this.amount = sanitized;
 
-    if (!input) {
-      return;
-    }
+    if (input) {
+      const display = this.formatSwapAmount(
+        sanitized,
+        this.maxAmountFractionDigits,
+        true
+      );
 
-    const display = this.formatSwapAmount(
-      sanitized,
-      this.maxAmountFractionDigits,
-      true
-    );
+      input.value = display;
 
-    input.value = display;
-
-    if (sanitized.endsWith('.')) {
-      const commaIndex = display.lastIndexOf(AMOUNT_DECIMAL_SEPARATOR);
-      if (commaIndex !== -1) {
-        input.setSelectionRange(commaIndex + 1, commaIndex + 1);
+      if (sanitized.endsWith('.')) {
+        const commaIndex = display.lastIndexOf(AMOUNT_DECIMAL_SEPARATOR);
+        if (commaIndex !== -1) {
+          input.setSelectionRange(commaIndex + 1, commaIndex + 1);
+        }
+      } else if (previousValue !== display) {
+        this.restoreCaretAfterDigits(input, previousValue, caret, display);
       }
-    } else if (previousValue !== display) {
-      this.restoreCaretAfterDigits(input, previousValue, caret, display);
+
+      if (display.length > previousValue.length) {
+        this.scrollAmountToEnd(input);
+      }
     }
 
     if (sanitized !== previousAmount) {
+      this.toAmountManual = '';
       this.refreshSwapQuotePreview();
-    }
-
-    if (display.length > previousValue.length) {
-      this.scrollAmountToEnd(input);
     }
   }
 
@@ -1089,16 +1155,7 @@ export class HomeComponent {
   }
 
   private buildQuotePreviewInput(): SwapFormInput | undefined {
-    if (!this.walletAddress) {
-      return undefined;
-    }
-
-    const authMethod = this.resolveSwapAuthMethod({
-      account: this.walletAddress,
-      chainId: this.walletChainId,
-    });
-
-    if (!authMethod) {
+    if (!this.activeWallet.canRequestSwap || !this.walletAddress) {
       return undefined;
     }
 
@@ -1112,7 +1169,7 @@ export class HomeComponent {
       return undefined;
     }
 
-    return this.buildSwapInput(amount, authMethod);
+    return this.buildSwapInput(amount);
   }
 
   private readPastedText(event: ClipboardEvent): string {
@@ -1140,8 +1197,8 @@ export class HomeComponent {
   }
 
   private parseAmount(value: string): number {
-    const normalized = this.normalizeAmountStorage(value);
-    if (!normalized) {
+    const normalized = this.canonicalAmountStorage(value);
+    if (!isCanonicalDecimalAmount(normalized)) {
       return Number.NaN;
     }
 
@@ -1218,13 +1275,37 @@ export class HomeComponent {
   }
 
   private isZeroAmountValue(value: string): boolean {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '.') {
+      return true;
+    }
+
+    if (isCanonicalDecimalAmount(trimmed)) {
+      const [whole, fraction = ''] = trimmed.split('.');
+      return /^0*$/.test(whole) && /^0*$/.test(fraction);
+    }
+
     const normalized = this.normalizeAmountStorage(value);
     if (!normalized || normalized === '.') {
       return true;
     }
 
+    if (isCanonicalDecimalAmount(normalized)) {
+      const [whole, fraction = ''] = normalized.split('.');
+      return /^0*$/.test(whole) && /^0*$/.test(fraction);
+    }
+
     const parsed = Number.parseFloat(normalized);
     return !Number.isNaN(parsed) && parsed === 0;
+  }
+
+  private canonicalAmountStorage(value: string): string {
+    const trimmed = value.trim();
+    if (isCanonicalDecimalAmount(trimmed)) {
+      return trimmed;
+    }
+
+    return this.normalizeAmountStorage(trimmed);
   }
 
   public openTokenSelector(side: TokenSelectorSide): void {
@@ -1244,6 +1325,7 @@ export class HomeComponent {
       this.fromToken = selected;
     } else if (this.tokenSelectorSide === 'to') {
       this.toToken = selected;
+      this.toAmountManual = '';
       this.recipientAddress = '';
     }
 
@@ -1303,7 +1385,7 @@ export class HomeComponent {
 
     return this.tokenSelectorTokens().flatMap(token => {
       const balance = this.balanceForToken(token);
-      if (!balance || /^0+$/.test(balance.balanceRaw)) return [];
+      if (!balance || !hasPositiveBalance(balance)) return [];
 
       return [
         {
@@ -1326,6 +1408,93 @@ export class HomeComponent {
 
   public tokenNetworkLabel(token: ExchangeToken): string {
     return networkLabel(token.blockchain);
+  }
+
+  public tokenOverviewHasPrice(token: ExchangeToken): boolean {
+    return this.tokenOverviewPrice(token) !== undefined;
+  }
+
+  public tokenOverviewPriceLabel(token: ExchangeToken): string {
+    const price = this.tokenOverviewPrice(token);
+    if (price === undefined) {
+      return '';
+    }
+    return formatCurrencyPrice(price);
+  }
+
+  public tokenOverviewHasMarketCap(token: ExchangeToken): boolean {
+    // Only show snapshot-backed caps. Mock figures must not look like live data.
+    return (this.marketSnapshotFor(token)?.marketCapUsd ?? 0) > 0;
+  }
+
+  public tokenOverviewMarketCapLabel(token: ExchangeToken): string {
+    const marketCapUsd = this.marketSnapshotFor(token)?.marketCapUsd ?? 0;
+    return marketCapUsd > 0 ? formatCompactUsd(marketCapUsd) : '';
+  }
+
+  public tokenOverviewHasVolume(token: ExchangeToken): boolean {
+    return this.tokenOverviewVolumeValue(token) > 0;
+  }
+
+  public tokenOverviewVolumeLabel(token: ExchangeToken): string {
+    return formatCompactUsd(this.tokenOverviewVolumeValue(token));
+  }
+
+  public tokenOverviewWebsiteUrl(token: ExchangeToken): string | null {
+    return (
+      this.marketSnapshotFor(token)?.websiteUrl?.trim() ||
+      this.tokenProjectMock(token)?.websiteUrl ||
+      null
+    );
+  }
+
+  public tokenOverviewWhitepaperUrl(token: ExchangeToken): string | null {
+    return (
+      this.marketSnapshotFor(token)?.whitepaperUrl?.trim() ||
+      this.tokenProjectMock(token)?.whitepaperUrl ||
+      null
+    );
+  }
+
+  public tokenOverviewExplorerUrl(token: ExchangeToken): string | null {
+    // Prefer network + contract from the selected token. Symbol mocks (and
+    // symbol-keyed snapshots) can point at the wrong chain for bridged assets.
+    return (
+      explorerUrlForToken(token) ||
+      this.marketSnapshotFor(token)?.explorerUrl?.trim() ||
+      this.tokenProjectMock(token)?.explorerUrl ||
+      null
+    );
+  }
+
+  public tokenOverviewExplorerLabel(token: ExchangeToken): string {
+    const explorer = this.tokenOverviewExplorerUrl(token);
+    return explorer ? hostnameLabel(explorer, 'Explorer') : 'Explorer';
+  }
+
+  public tokenOverviewSocialLinks(
+    token: ExchangeToken
+  ): WalletMarketSocialLink[] {
+    const fromSnapshot = this.marketSnapshotFor(token)?.socialLinks;
+    if (fromSnapshot && fromSnapshot.length > 0) {
+      return fromSnapshot;
+    }
+    return this.tokenProjectMock(token)?.socialLinks ?? [];
+  }
+
+  private tokenOverviewVolumeValue(token: ExchangeToken): number {
+    const snapshotValue = this.marketSnapshotFor(token)?.volume24hUsd ?? 0;
+    if (snapshotValue > 0) {
+      return snapshotValue;
+    }
+    return this.tokenProjectMock(token)?.volume24hUsd ?? 0;
+  }
+
+  private tokenProjectMock(token: ExchangeToken): TokenProjectMock | undefined {
+    return (
+      TOKEN_PROJECT_MOCKS[this.marketSymbolFor(token)] ??
+      TOKEN_PROJECT_MOCKS[this.normalizeMarketSymbol(token.symbol)]
+    );
   }
 
   public isForeignDestination(): boolean {
@@ -1455,21 +1624,29 @@ export class HomeComponent {
             this.pickDefaultFromToken()
           ) ?? tokens[0]
         );
-        this.toToken = this.enrichToken(
+        const nextToToken = this.enrichToken(
           this.resolveSelectedToken(previousTo, this.pickDefaultToToken()) ??
             tokens[Math.min(1, tokens.length - 1)]
         );
+        if (nextToToken.assetId !== this.toToken.assetId) {
+          this.toAmountManual = '';
+        }
+        this.toToken = nextToToken;
 
         this.alignSelectionsToWallet();
 
         if (this.fromToken.assetId === this.toToken.assetId) {
-          this.toToken =
+          const fallbackTo =
             tokens.find(token => token.assetId !== this.fromToken.assetId) ??
             this.toToken;
+          if (fallbackTo.assetId !== this.toToken.assetId) {
+            this.toAmountManual = '';
+          }
+          this.toToken = fallbackTo;
         }
 
         this.loadMarketComparison();
-        this.loadWalletBalances();
+        this.refreshSwapQuotePreview();
       },
       error: () => {
         this.exchangeTokens = [];
@@ -1480,80 +1657,42 @@ export class HomeComponent {
   }
 
   private loadWalletBalances(): void {
-    const requestId = ++this.balanceRequestId;
-    this.balanceSubscription?.unsubscribe();
-    this.balanceSubscription = undefined;
-    this.walletBalances = [];
-    this.balancesError = '';
+    this.activeWalletFacade.refreshBalances();
+  }
 
-    const network = this.balanceNetwork();
-    if (!this.walletAddress || !network) {
-      this.balancesLoading = false;
-      return;
-    }
-
-    const walletAddress = this.walletAddress;
-    this.balancesLoading = true;
-
-    this.balanceSubscription = this.connectedBalances
-      .load({
-        account: this.walletAddress,
-        network,
-      })
-      .subscribe({
-        next: state => {
-          if (
-            requestId !== this.balanceRequestId ||
-            this.walletAddress !== walletAddress ||
-            this.balanceNetwork() !== network
-          ) {
-            return;
-          }
-
-          if (state.status === 'loading') {
-            this.balancesLoading = true;
-            return;
-          }
-          if (state.status === 'error') {
-            this.walletBalances = [];
-            this.balancesLoading = false;
-            this.balancesError =
-              state.errorMessage ?? 'Failed to load wallet balance.';
-            return;
-          }
-
-          this.walletBalances = state.rows;
-          this.balancesLoading = false;
-          this.balancesError = state.errorMessage ?? '';
-        },
-        error: () => {
-          if (
-            requestId !== this.balanceRequestId ||
-            this.walletAddress !== walletAddress ||
-            this.balanceNetwork() !== network
-          ) {
-            return;
-          }
-
-          this.walletBalances = [];
-          this.balancesLoading = false;
-          this.balancesError = 'Failed to load wallet balance.';
-        },
-      });
+  public reviewBlockingReason(): string {
+    if (this.activeWallet.reason)
+      return this.quoteError || this.activeWallet.reason;
+    if (this.recipientValidationError()) return this.recipientValidationError();
+    const amount = this.toBaseUnits(this.amount, this.fromToken.decimals);
+    if (!amount || /^0+$/.test(amount)) return 'Enter a valid amount.';
+    if (!this.canFetchBalance(this.fromToken))
+      return 'Select a token on the active wallet network.';
+    if (this.fundingSourceError()) return this.fundingSourceError();
+    if (this.isQuoteLoading()) return 'Getting a quote…';
+    if (this.quoteError) return this.quoteError;
+    if (!this.quotePreview) return 'Waiting for a quote.';
+    if (!(Date.parse(this.quotePreview.expiresAt) > Date.now()))
+      return 'Quote expired. Request a new quote.';
+    if (
+      !/^\d+$/.test(this.quotePreview.amountOutAtomic) ||
+      /^0+$/.test(this.quotePreview.amountOutAtomic)
+    )
+      return 'Quote output is invalid. Request a new quote.';
+    if (!this.destinationTargetMatchesQuote())
+      return 'The receive amount does not match this quote.';
+    return '';
   }
 
   public fundingSourceError(): string {
-    return this.fromToken.assetId === 'near:native' && this.confidentialSwap
-      ? 'Native NEAR requires a public wallet deposit. Turn off confidential mode to continue.'
-      : '';
+    const action = this.quotePreview?.action;
+    return action && !action.supported ? action.description : '';
   }
 
-  private beginSwapReview(
-    amount: string,
-    authMethod: SupportedSwapAuthMethod
-  ): void {
+  private beginSwapReview(amount: string): void {
     const preview = this.quotePreview;
-    if (!preview || this.fundingSourceError()) {
+    const network = this.balanceNetwork();
+    if (!preview || !network || this.fundingSourceError()) {
       return;
     }
 
@@ -1562,11 +1701,24 @@ export class HomeComponent {
     const generation = ++this.reviewGeneration;
     this.reviewActionError = '';
     this.reviewBusy = true;
-    const input = this.buildSwapInput(amount, authMethod);
+    const chainType = this.walletChainType;
     this.reviewQuote = this.executableQuotes.start({
-      ...input,
       traceId: preview.traceId ?? createTraceId(),
       providerId: 'one-click',
+      sourceAssetId: this.fromToken.assetId,
+      network,
+      originAsset: this.executionAssetId(this.fromToken),
+      destinationAsset: this.executionAssetId(this.toToken),
+      amount,
+      signerId: this.walletAddress,
+      recipient: this.effectiveRecipient(),
+      recipientType: 'DESTINATION_CHAIN',
+      depositType: 'ORIGIN_CHAIN',
+      refundType: 'ORIGIN_CHAIN',
+      authMethod:
+        chainType === 'ethereum' ? 'evm' : chainType === 'ton' ? 'ton' : 'near',
+      slippageTolerance: this.slippageToleranceBps,
+      deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     });
 
     this.reviewBalanceSub = this.confirmSourceBalance(amount)
@@ -1584,7 +1736,7 @@ export class HomeComponent {
           return;
         }
         this.reviewQuote = undefined;
-        this.openSwapReview(amount, authMethod);
+        this.openSwapReview(amount);
       });
   }
 
@@ -1668,20 +1820,111 @@ export class HomeComponent {
   }
 
   private balanceForToken(token: ExchangeToken): WalletBalance | undefined {
-    const network = this.balanceNetwork();
-    return this.walletBalances.find(
-      balance =>
-        balance.network === network && balance.assetId === token.assetId
+    return tokenBalance(this.walletBalances, token, this.balanceNetwork());
+  }
+
+  private canUseBalanceAsMax(
+    balance: WalletBalance | undefined
+  ): balance is WalletBalance {
+    if (!balance || !this.isBalanceUsable(balance)) {
+      return false;
+    }
+
+    try {
+      return BigInt(balance.balanceRaw) > 0n;
+    } catch {
+      return false;
+    }
+  }
+
+  private destinationTargetMatchesQuote(): boolean {
+    const target = this.toAmountManual.trim();
+    if (!target) {
+      return true;
+    }
+
+    const quoted = this.quotedToAmountDisplay().trim();
+    if (!quoted) {
+      return false;
+    }
+
+    const targetAtomic = this.toBaseUnits(target, this.toToken.decimals);
+    const quotedAtomic = this.toBaseUnits(quoted, this.toToken.decimals);
+
+    return Boolean(
+      targetAtomic &&
+      quotedAtomic &&
+      !/^0+$/.test(targetAtomic) &&
+      targetAtomic === quotedAtomic
     );
+  }
+
+  private balanceCanonicalDecimal(
+    balance: WalletBalance | undefined
+  ): string | undefined {
+    if (!balance) {
+      return undefined;
+    }
+
+    const decimals = this.tokenDecimals(balance.decimals);
+    const raw = balance.balanceRaw?.trim();
+    if (raw && /^\d+$/.test(raw)) {
+      try {
+        return atomicToDecimal(raw, decimals);
+      } catch {
+        return undefined;
+      }
+    }
+
+    const decimal = balance.balanceDecimal?.trim();
+    if (!decimal) {
+      return undefined;
+    }
+
+    try {
+      return atomicToDecimal(decimalToAtomic(decimal, decimals), decimals);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private fillAmountFromTokenBalance(token: ExchangeToken): void {
+    const balance = this.balanceForToken(token);
+    if (!this.canUseBalanceAsMax(balance)) {
+      return;
+    }
+
+    const canonical = this.balanceCanonicalDecimal(balance);
+    if (!canonical) {
+      return;
+    }
+
+    this.fillAmountValue(canonical);
+  }
+
+  private fillAmountValue(value: string): void {
+    const previousAmount = this.amount;
+    this.amount = value;
+
+    const input = this.fromAmountInput?.nativeElement;
+    if (input) {
+      input.value = this.formatSwapAmount(
+        value,
+        this.maxAmountFractionDigits,
+        true
+      );
+      this.scrollAmountToEnd(input);
+    }
+
+    if (value !== previousAmount) {
+      this.toAmountManual = '';
+      this.refreshSwapQuotePreview();
+    }
   }
 
   private formatBalance(balance: WalletBalance): string {
     const decimal =
-      balance.balanceDecimal ??
-      this.fromBaseUnits(
-        balance.balanceRaw,
-        this.tokenDecimals(balance.decimals)
-      );
+      this.balanceCanonicalDecimal(balance) ?? balance.balanceDecimal ?? '0';
 
     return this.formatSwapAmount(
       decimal,
@@ -1699,18 +1942,7 @@ export class HomeComponent {
   }
 
   private balanceNetwork(): string | undefined {
-    if (
-      this.walletChainType === 'near' ||
-      isNearWalletAddress(this.walletAddress)
-    ) {
-      return nearNetworkForAddress(this.walletAddress);
-    }
-    if (/^0x[a-f0-9]{40}$/i.test(this.walletAddress)) {
-      return this.walletChainId == null
-        ? undefined
-        : `eip155:${this.walletChainId}`;
-    }
-    return undefined;
+    return this.activeWallet.network;
   }
 
   private canFetchBalance(token: ExchangeToken): boolean {
@@ -1777,7 +2009,7 @@ export class HomeComponent {
       this.toToken.blockchain !== blockchain ||
       this.toToken.assetId === this.fromToken.assetId
     ) {
-      this.toToken =
+      const nextToToken =
         this.exchangeTokens.find(
           token =>
             token.blockchain === blockchain &&
@@ -1791,6 +2023,10 @@ export class HomeComponent {
             token.assetId !== this.fromToken.assetId
         ) ??
         this.toToken;
+      if (nextToToken.assetId !== this.toToken.assetId) {
+        this.toAmountManual = '';
+      }
+      this.toToken = nextToToken;
     }
   }
 
@@ -1870,24 +2106,29 @@ export class HomeComponent {
   }
 
   private loadMarketComparison(): void {
+    const base = this.marketSymbolFor(this.fromToken);
+    const quote = this.marketSymbolFor(this.toToken);
     const timeframe = this.selectedComparisonTimeframe;
+    const requestKey = `${this.fromToken.assetId}|${this.toToken.assetId}|${base}|${quote}|${timeframe}`;
+    this.comparisonRequestKey = requestKey;
     this.comparisonLoading = true;
     this.comparisonError = '';
+    this.loadTokenMarketingSnapshots();
 
     this.httpClient
       .get<MarketComparisonResponse>(
         `${environment.apiUrl}/api/v1/markets/comparison`,
         {
           params: {
-            base: this.marketSymbolFor(this.fromToken),
-            quote: this.marketSymbolFor(this.toToken),
+            base,
+            quote,
             timeframe,
           },
         }
       )
       .subscribe({
         next: response => {
-          if (this.selectedComparisonTimeframe !== timeframe) {
+          if (this.comparisonRequestKey !== requestKey) {
             return;
           }
 
@@ -1899,9 +2140,10 @@ export class HomeComponent {
               ? 'Comparison data unavailable'
               : '';
           this.comparisonLoading = false;
+          this.changeDetector.markForCheck();
         },
         error: () => {
-          if (this.selectedComparisonTimeframe !== timeframe) {
+          if (this.comparisonRequestKey !== requestKey) {
             return;
           }
 
@@ -1909,8 +2151,82 @@ export class HomeComponent {
           this.clearComparisonChart();
           this.comparisonError = 'Comparison data unavailable';
           this.comparisonLoading = false;
+          this.changeDetector.markForCheck();
         },
       });
+  }
+
+  private loadTokenMarketingSnapshots(): void {
+    const symbols = [
+      this.marketSymbolFor(this.fromToken),
+      this.marketSymbolFor(this.toToken),
+    ];
+    const requestKey = symbols.join('|');
+
+    this.marketSnapshots.load(symbols).subscribe({
+      next: snapshots => {
+        if (
+          [
+            this.marketSymbolFor(this.fromToken),
+            this.marketSymbolFor(this.toToken),
+          ].join('|') !== requestKey
+        ) {
+          return;
+        }
+
+        this.tokenMarkets = new Map(
+          snapshots.map(snapshot => [snapshot.symbol, snapshot])
+        );
+        this.changeDetector.markForCheck();
+      },
+      error: () => {
+        if (
+          [
+            this.marketSymbolFor(this.fromToken),
+            this.marketSymbolFor(this.toToken),
+          ].join('|') !== requestKey
+        ) {
+          return;
+        }
+
+        this.tokenMarkets = new Map();
+        this.changeDetector.markForCheck();
+      },
+    });
+  }
+
+  private marketSnapshotFor(
+    token: ExchangeToken
+  ): WalletMarketSnapshot | undefined {
+    return (
+      this.tokenMarkets.get(this.marketSymbolFor(token)) ??
+      this.tokenMarkets.get(this.normalizeMarketSymbol(token.symbol))
+    );
+  }
+
+  private tokenOverviewPrice(token: ExchangeToken): number | undefined {
+    const snapshotPrice = this.marketSnapshotFor(token)?.priceUsd ?? 0;
+    if (snapshotPrice > 0) {
+      return snapshotPrice;
+    }
+
+    const comparison = this.comparison;
+    if (!comparison) {
+      return undefined;
+    }
+
+    // Comparison is always requested as from=base / to=quote.
+    if (token.assetId === this.fromToken.assetId) {
+      return comparison.baseToken.currentPrice;
+    }
+    if (token.assetId === this.toToken.assetId) {
+      return comparison.quoteToken.currentPrice;
+    }
+
+    return (
+      this.tokenPrice(this.marketSymbolFor(token)) ??
+      this.tokenPrice(token.symbol)
+    );
   }
 
   private buildComparisonChart(response: MarketComparisonResponse): void {
@@ -2168,15 +2484,11 @@ export class HomeComponent {
     return undefined;
   }
 
-  private fiatEstimate(symbol: string, amountValue: string): string {
-    const price = this.tokenPrice(symbol);
-    const amount = this.parseAmount(amountValue);
-
-    if (price === undefined || Number.isNaN(amount)) {
-      return '$0';
-    }
-
-    return formatSwapFiatEstimate(price * amount);
+  private fiatEstimate(token: ExchangeToken, amountValue: string): string {
+    return formatSwapFiatEstimate(
+      isFreshAssetPrice(token.priceUpdatedAt) ? token.priceUsd : undefined,
+      this.canonicalAmountStorage(amountValue)
+    );
   }
 
   private tokenPrice(symbol: string): number | undefined {
@@ -2185,11 +2497,24 @@ export class HomeComponent {
       return undefined;
     }
 
-    if (comparison.baseToken.symbol === symbol) {
+    const normalized = this.normalizeMarketSymbol(symbol);
+    const matches = (tokenSymbol: string): boolean => {
+      const candidate = this.normalizeMarketSymbol(tokenSymbol);
+      if (!candidate || !normalized) {
+        return false;
+      }
+      if (candidate === normalized) {
+        return true;
+      }
+      const unwrap = (value: string): string => value.replace(/^W/, '');
+      return unwrap(candidate) === unwrap(normalized);
+    };
+
+    if (matches(comparison.baseToken.symbol)) {
       return comparison.baseToken.currentPrice;
     }
 
-    if (comparison.quoteToken.symbol === symbol) {
+    if (matches(comparison.quoteToken.symbol)) {
       return comparison.quoteToken.currentPrice;
     }
 
@@ -2240,7 +2565,25 @@ export class HomeComponent {
   }
 
   private normalizeQuoteAmount(rawAmount: string, decimals?: number): string {
-    const normalized = this.normalizeAmountStorage(rawAmount);
+    const trimmed = rawAmount.trim();
+    if (!trimmed) {
+      return '';
+    }
+
+    // Quote payloads often send atomic integers without a decimal point.
+    if (/^\d+$/.test(trimmed)) {
+      try {
+        return atomicToDecimal(trimmed, this.tokenDecimals(decimals));
+      } catch {
+        return '';
+      }
+    }
+
+    if (isCanonicalDecimalAmount(trimmed)) {
+      return trimmed;
+    }
+
+    const normalized = this.normalizeAmountStorage(trimmed);
     if (!normalized) {
       return '';
     }
@@ -2249,44 +2592,33 @@ export class HomeComponent {
       return normalized;
     }
 
-    return this.fromBaseUnits(normalized, this.tokenDecimals(decimals));
+    try {
+      return atomicToDecimal(normalized, this.tokenDecimals(decimals));
+    } catch {
+      return '';
+    }
   }
 
   private toBaseUnits(value: string, decimals?: number): string {
-    const normalized = this.normalizeAmountStorage(value);
     const precision = this.tokenDecimals(decimals);
-    const decimalPattern = new RegExp(`^\\d+(\\.\\d{0,${precision}})?$`);
-
-    if (!decimalPattern.test(normalized)) {
+    const canonical = this.canonicalAmountStorage(value);
+    if (!canonical || canonical === '.') {
       return '';
     }
 
-    const [whole, fraction = ''] = normalized.split('.');
-    const digits = `${whole}${fraction.padEnd(precision, '0')}`.replace(
-      /^0+(?=\d)/,
-      ''
-    );
-    return digits || '0';
+    try {
+      return decimalToAtomic(canonical, precision);
+    } catch {
+      return '';
+    }
   }
 
   private fromBaseUnits(value: string, decimals: number): string {
-    const digits = value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
-    if (!digits) {
+    try {
+      return atomicToDecimal(value, decimals);
+    } catch {
       return '0';
     }
-
-    if (decimals <= 0) {
-      return digits;
-    }
-
-    if (digits.length <= decimals) {
-      const padded = digits.padStart(decimals, '0');
-      return `0.${padded}`.replace(/\.?0+$/, '') || '0';
-    }
-
-    const whole = digits.slice(0, digits.length - decimals);
-    const fraction = digits.slice(digits.length - decimals).replace(/0+$/, '');
-    return fraction ? `${whole}.${fraction}` : whole;
   }
 
   private tokenDecimals(value?: number): number {

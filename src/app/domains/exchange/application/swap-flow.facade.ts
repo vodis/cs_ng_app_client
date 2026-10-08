@@ -1,3 +1,4 @@
+import type { WalletSwapInput } from '@mfe-contracts/swap-review.types';
 import { Inject, Injectable } from '@angular/core';
 import {
   BehaviorSubject,
@@ -16,26 +17,13 @@ import type {
   SwapQuotePreview,
 } from '@domains/exchange/models/swap.models';
 import { toSwapFlowError } from '@domains/exchange/models/swap-flow-error';
-import { SwapExecutionWorkflow } from './swap-execution.workflow';
+import { SwapQuoteGateway } from './swap-quote.gateway';
 
-export type SwapFormInput = {
-  originAsset: string;
-  destinationAsset: string;
-  amount: string;
-  signerId: string;
-  recipient: string;
-  recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
-  depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
-  refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
-  slippageTolerance: number;
-  deadline: string;
-  authMethod: 'evm' | 'near';
-  network: string;
-};
+export type SwapFormInput = WalletSwapInput;
 
-type SwapExecutionWorkflowPort = Pick<
-  SwapExecutionWorkflow,
-  'requestQuotePreview' | 'requestQuotePreviewStream' | 'executeSwap'
+type SwapQuoteGatewayPort = Pick<
+  SwapQuoteGateway,
+  'requestQuotePreview' | 'requestQuotePreviewStream'
 >;
 
 @Injectable({
@@ -64,8 +52,8 @@ export class SwapFlowFacade {
   readonly intentHash$ = this.intentHashSubject.asObservable();
 
   constructor(
-    @Inject(SwapExecutionWorkflow)
-    private readonly workflow: SwapExecutionWorkflowPort
+    @Inject(SwapQuoteGateway)
+    private readonly workflow: SwapQuoteGatewayPort
   ) {
     this.quoteInputSubject
       .pipe(
@@ -123,25 +111,6 @@ export class SwapFlowFacade {
   refreshQuotePreview(input: SwapFormInput): void {
     this.quoteInputSubject.next(undefined);
     this.quoteInputSubject.next(input);
-  }
-
-  async executeSwap(input: SwapFormInput): Promise<void> {
-    this.activeTraceId = createTraceId();
-    const currentQuotePreview = this.quotePreview;
-    this.quoteInputSubject.next(undefined);
-    this.quotePreviewSubject.next(currentQuotePreview);
-    this.errorSubject.next(undefined);
-    this.intentHashSubject.next(undefined);
-    this.setState('validating');
-
-    try {
-      const result = await this.workflow.executeSwap(input, this.activeTraceId);
-      this.quotePreviewSubject.next(currentQuotePreview);
-      this.intentHashSubject.next(result.intentHash);
-      this.setState('completed');
-    } catch (error) {
-      this.handleFailure(this.stateSubject.value, error);
-    }
   }
 
   reset(): void {
@@ -202,27 +171,21 @@ export class SwapFlowFacade {
     }
 
     return [
-      input.originAsset,
-      input.destinationAsset,
+      input.source.assetId,
+      input.source.executionAssetId,
+      input.destination.assetId,
+      input.destination.executionAssetId,
       input.amount,
-      input.signerId.toLowerCase(),
+      input.account,
       input.recipient,
-      input.recipientType,
-      input.depositType,
-      input.refundType,
-      input.slippageTolerance,
-      input.authMethod,
-      input.network,
+      input.slippageToleranceBps,
+      input.confidential,
+      input.network.id,
     ].join('|');
   }
 
   private setState(state: SwapFlowState): void {
     this.stateSubject.next(state);
-  }
-
-  private handleFailure(step: SwapFlowState, error: unknown): void {
-    this.errorSubject.next(this.toFlowError(step, error));
-    this.setState('failed');
   }
 
   private toFlowError(step: SwapFlowState, error: unknown): SwapFlowError {

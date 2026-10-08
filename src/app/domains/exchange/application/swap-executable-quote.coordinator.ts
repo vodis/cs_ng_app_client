@@ -22,7 +22,7 @@ type QuoteIdentity = {
   recipientType: SwapPrepareRequest['recipientType'];
   depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
-  authMethod: 'evm' | 'near';
+  authMethod: 'evm' | 'near' | 'ton';
   slippageTolerance: number;
   traceId: string;
 };

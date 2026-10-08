@@ -1,10 +1,18 @@
 <section class="connected-wallet-board" aria-live="polite">
   <div class="connected-wallet-board__card">
-    <div class="connected-wallet-board__title">Connected wallet</div>
+    <div class="connected-wallet-board__title">Active wallet</div>
     <div class="connected-wallet-board__value" [title]="account">
       {{ shortAddress(account) }}
     </div>
     <div class="connected-wallet-board__meta">{{ networkMeta }}</div>
+    @if (!state?.connected) {
+      <button
+        type="button"
+        class="connected-wallet-board__chip"
+        (click)="connectForSigning()">
+        Connect to sign
+      </button>
+    }
   </div>
 
   <div class="connected-wallet-board__card">

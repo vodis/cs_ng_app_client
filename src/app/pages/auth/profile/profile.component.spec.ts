@@ -1,9 +1,15 @@
+import type { SwapSettlementResult } from '@mfe-contracts/swap-review.types';
+import {
+  ActiveWalletFacade,
+  type ActiveWalletState,
+} from '@domains/wallet/application/active-wallet.facade';
 /// <reference types="jasmine" />
 
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, Subject, combineLatest, map, of } from 'rxjs';
+import { ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
-import type { AuthSession } from '@core/auth/auth-session.types';
+import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
@@ -17,7 +23,9 @@ import { ProfileFacade } from './profile.facade';
 import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
 
 describe('ProfileComponent', () => {
+  let activeWallet: jasmine.SpyObj<ActiveWalletFacade>;
   let component: ProfileComponent;
+  let settlementSubject: Subject<SwapSettlementResult>;
   let authSession: jasmine.SpyObj<AuthSessionService>;
   let walletsService: jasmine.SpyObj<WalletsService>;
   let walletGatewayBridge: jasmine.SpyObj<WalletGatewayBridgeService>;
@@ -32,6 +40,19 @@ describe('ProfileComponent', () => {
   let swapSubmittedSubject: BehaviorSubject<
     { traceId: string; intentHash: string } | undefined
   >;
+
+  it('initializes the rendered portfolio label when no wallet or network is selected', () => {
+    const total = document.createElement('span');
+    total.textContent = 'Loading…';
+    Object.assign(component, { usdBalanceValue: new ElementRef(total) });
+    component.activeAccount = null;
+    component.ngAfterViewInit();
+    expect(total.textContent).toBe('Select a wallet');
+    component.activeAccount = '0xabc';
+    component.activeNetwork = undefined;
+    component.ngAfterViewInit();
+    expect(total.textContent).toBe('Select a network');
+  });
 
   const enabledSession: AuthSession = {
     user: {
@@ -84,6 +105,7 @@ describe('ProfileComponent', () => {
   };
 
   beforeEach(() => {
+    settlementSubject = new Subject<SwapSettlementResult>();
     sessionSubject = new BehaviorSubject<AuthSession | null>(disabledSession);
     accountSubject = new BehaviorSubject<
       { account: string; chainId: number | null } | undefined
@@ -122,6 +144,7 @@ describe('ProfileComponent', () => {
         account: accountSubject,
         lastConnected: lastConnectedSubject,
         swapSubmitted: swapSubmittedSubject,
+        swapSettled: settlementSubject,
       }
     );
     walletGatewayBridge = jasmine.createSpyObj<WalletGatewayBridgeService>(
@@ -158,13 +181,59 @@ describe('ProfileComponent', () => {
       positions: [],
     });
 
+    activeWallet = jasmine.createSpyObj<ActiveWalletFacade>(
+      'ActiveWalletFacade',
+      ['refreshBalances', 'revalidateBalances', 'requestConnection'],
+      {
+        state: {
+          wallet: linkedWalletSession.wallets[0],
+          connected: false,
+          canRequestSwap: false,
+          reason: 'Reconnect',
+        },
+        state$: combineLatest([sessionSubject, accountSubject]).pipe(
+          map(
+            ([session, account]): ActiveWalletState => ({
+              session: session ?? undefined,
+              wallet:
+                session?.wallets.find(wallet => wallet.isPrimary) ??
+                session?.wallets[0],
+              network:
+                session?.wallets[0]?.chainType === 'near'
+                  ? 'near:mainnet'
+                  : account?.chainId
+                    ? `eip155:${account.chainId}`
+                    : undefined,
+              connected: Boolean(account),
+              canRequestSwap: Boolean(account),
+              reason: '',
+              snapshot: account
+                ? {
+                    ...account,
+                    status: 'connected',
+                    isVerified: true,
+                    safetyStatus: 'safe',
+                    isBypassed: false,
+                    executionState: 'operating.idle',
+                  }
+                : undefined,
+            })
+          )
+        ),
+        balances$: of({ status: 'idle', rows: [], account: '', network: '' }),
+      }
+    );
+    activeWallet.requestConnection.and.callFake(() =>
+      walletsService.requestOpen()
+    );
     const profile = new ProfileFacade(
       authSession,
       walletsService,
       walletGatewayBridge,
       router,
       localizedRouting,
-      portfolioApi
+      portfolioApi,
+      activeWallet
     );
     component = new ProfileComponent(profile, new MockProfileActivitySource());
     component.ngOnInit();
@@ -255,8 +324,8 @@ describe('ProfileComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalled();
   });
 
-  it('shows $0.00 while portfolio is loading instead of Loading…', () => {
-    expect(component.usdBalanceLabel()).toBe('$0.00');
+  it('does not claim a zero portfolio before a wallet is selected', () => {
+    expect(component.usdBalanceLabel()).toBe('Select a wallet');
     expect(component.usdChangeLabel()).toBe('+$0.00');
     expect(component.usdChangePercentLabel()).toBe('0.00%');
     expect(component.walletPillLabel()).toBe('No wallet');
@@ -264,6 +333,8 @@ describe('ProfileComponent', () => {
   });
 
   it('renders the BFF portfolio total in the balance hero', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     portfolioApi.loadPortfolio.and.resolveTo({
       asOf: '2026-08-19T12:00:00Z',
       valuationCurrency: 'USD',
@@ -293,12 +364,37 @@ describe('ProfileComponent', () => {
   });
 
   it('shows an unavailable state when portfolio valuation fails', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     portfolioApi.loadPortfolio.and.rejectWith(new Error('RPC unavailable'));
 
     await component.refreshPortfolio();
 
     expect(component.portfolio).toBeNull();
     expect(component.usdBalanceLabel()).toBe('Unavailable');
+  });
+
+  it('keeps freshness metadata out of the mobile network label', () => {
+    const fresh = {
+      walletId: 'wallet-1',
+      walletAddress: 'alice.near',
+      chainType: 'near',
+      network: 'near:mainnet',
+      assetId: 'near:native',
+      symbol: 'NEAR',
+      balanceRaw: '1',
+      balanceDecimal: '1',
+      decimals: 24,
+      source: 'bff',
+      fetchedAt: '2026-08-19T12:00:00Z',
+      expiresAt: '2026-08-19T12:30:00Z',
+      stale: false,
+    };
+    const stale = { ...fresh, symbol: 'USDC', assetId: 'usdc', stale: true };
+
+    expect(component.balanceNetworkMeta(fresh)).toBe('NEAR');
+    expect(component.balanceNetworkMeta(stale)).toBe('NEAR');
+    expect(component.balanceMeta(stale)).not.toContain('stale');
   });
 
   it('cancels the previous CountUp before starting a new balance animation', () => {
@@ -331,6 +427,8 @@ describe('ProfileComponent', () => {
   });
 
   it('keeps Unavailable when portfolio fails during a balance animation', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     const el = document.createElement('span');
     (
       component as unknown as {
@@ -380,6 +478,8 @@ describe('ProfileComponent', () => {
   });
 
   it('ignores a stale portfolio response after a newer request completes', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await Promise.resolve();
     let resolveFirst!: (
       value: Awaited<ReturnType<PortfolioApiService['loadPortfolio']>>
@@ -400,6 +500,7 @@ describe('ProfileComponent', () => {
     portfolioApi.loadPortfolio.and.returnValues(first, second);
 
     const olderRequest = component.refreshPortfolio();
+    component.activeAccount = 'bob.near';
     const newerRequest = component.refreshPortfolio();
     resolveSecond({
       asOf: null,
@@ -422,7 +523,18 @@ describe('ProfileComponent', () => {
   });
 
   it('requests live mainnet valuation for a connected .tg account', async () => {
-    accountSubject.next({ account: 'alice.tg', chainId: null });
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
+    sessionSubject.next({
+      ...disabledSession,
+      wallets: [
+        {
+          ...externalWalletSession.wallets[0],
+          address: 'alice.tg',
+          chainType: 'near',
+        },
+      ],
+    });
     await Promise.resolve();
 
     expect(portfolioApi.loadPortfolio).toHaveBeenCalledWith({
@@ -432,6 +544,8 @@ describe('ProfileComponent', () => {
   });
 
   it('does not refetch portfolio for the same session and account', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await component.ensurePortfolioLoaded();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
 
@@ -443,9 +557,11 @@ describe('ProfileComponent', () => {
   });
 
   it('reuses portfolio cache when a new session object arrives for the same user/account', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await Promise.resolve();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
-    expect(callsAfterInit).toBe(1);
+    expect(callsAfterInit).toBe(0);
 
     sessionSubject.next({
       user: { ...disabledSession.user },
@@ -458,6 +574,8 @@ describe('ProfileComponent', () => {
   });
 
   it('forces a portfolio reload only from an explicit balances refresh', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await Promise.resolve();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
 
@@ -467,12 +585,14 @@ describe('ProfileComponent', () => {
   });
 
   it('refetches portfolio after a completed swap', async () => {
+    component.activeAccount = 'alice.near';
+    component.activeNetwork = 'near:mainnet';
     await Promise.resolve();
     const callsAfterInit = portfolioApi.loadPortfolio.calls.count();
 
-    swapSubmittedSubject.next({
+    settlementSubject.next({
       traceId: 'trace-1',
-      intentHash: 'intent-1',
+      status: 'SUCCESS',
     });
     await Promise.resolve();
 
@@ -594,7 +714,7 @@ describe('ProfileComponent', () => {
     expect(component.walletMessage).toBe('Wallet disconnected');
   });
 
-  it('shows a last-connected section after disconnect when wallet is not linked', () => {
+  it('ignores browser history for wallets absent from the authenticated account', () => {
     lastConnectedSubject.next({
       account: linkedWalletSession.wallets[0].address,
       chainId: null,
@@ -603,10 +723,8 @@ describe('ProfileComponent', () => {
       connectorId: 'privy',
     });
 
-    expect(component.showLastConnectedSection()).toBeTrue();
-    expect(
-      component.isEmbeddedWallet(component.resolveLastConnectedWallet())
-    ).toBeTrue();
+    expect(component.showLastConnectedSection()).toBeFalse();
+
     expect(
       component.canRemoveLinkedWallet(linkedWalletSession.wallets[0])
     ).toBeFalse();
@@ -695,6 +813,7 @@ describe('ProfileComponent', () => {
   });
 
   it('reconnects by syncing without opening the wallets MFE', async () => {
+    activeWallet.state.connected = true;
     await component.reconnectWallet();
 
     expect(walletGatewayBridge.syncConnectedWallet).toHaveBeenCalledTimes(1);
@@ -739,6 +858,24 @@ describe('ProfileComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalledTimes(1);
   });
 
+  it('blocks competing wallet mutations until activation finishes', async () => {
+    let finish: ((wallet: BackendWallet) => void) | undefined;
+    authSession.setPrimaryWallet.and.returnValue(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const wallet = { ...externalWalletSession.wallets[0], isPrimary: false };
+    const pending = component.setPrimaryWallet(wallet);
+    await component.setPrimaryWallet({ ...wallet, id: 'other' });
+    await component.deleteWallet(wallet);
+    expect(authSession.setPrimaryWallet).toHaveBeenCalledTimes(1);
+    expect(authSession.deleteWallet).not.toHaveBeenCalled();
+    finish?.(wallet);
+    await pending;
+    expect(component.busyWalletId).toBe('');
+  });
+
   it('blocks removing embedded wallets', async () => {
     sessionSubject.next(linkedWalletSession);
 
@@ -748,19 +885,16 @@ describe('ProfileComponent', () => {
     expect(component.error).toContain('cannot be removed');
   });
 
-  it('seeds last connected from primary linked wallet', () => {
+  it('resolves the backend primary wallet without rewriting browser history', () => {
     sessionSubject.next(linkedWalletSession);
-
-    expect(walletsService.rememberConnectedWallet).toHaveBeenCalledWith(
-      jasmine.objectContaining({
-        account: linkedWalletSession.wallets[0].address,
-        walletType: 'embedded',
-      })
+    expect(walletsService.rememberConnectedWallet).not.toHaveBeenCalled();
+    expect(component.resolveLastConnectedWallet()?.account).toBe(
+      linkedWalletSession.wallets[0].address
     );
     expect(component.showLastConnectedSection()).toBeTrue();
   });
 
-  it('shows empty connect section only when there is no wallet history', () => {
+  it('shows connect when browser history does not belong to the account', () => {
     expect(component.showEmptyConnectSection()).toBeTrue();
 
     lastConnectedSubject.next({
@@ -769,7 +903,7 @@ describe('ProfileComponent', () => {
       walletType: 'embedded',
     });
 
-    expect(component.showEmptyConnectSection()).toBeFalse();
+    expect(component.showEmptyConnectSection()).toBeTrue();
   });
 
   it('treats a live account as connected', () => {

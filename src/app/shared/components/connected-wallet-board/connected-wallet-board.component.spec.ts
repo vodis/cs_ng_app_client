@@ -1,436 +1,141 @@
-/// <reference types="jasmine" />
-
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { BehaviorSubject, of } from 'rxjs';
 import {
-  ComponentFixture,
-  TestBed,
-  fakeAsync,
-  tick,
-} from '@angular/core/testing';
-import { BehaviorSubject, Subject } from 'rxjs';
-import {
-  ConnectedWalletBalancesFacade,
-  type ConnectedWalletBalancesState,
-} from '@domains/wallet/application/connected-wallet-balances.facade';
-import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
-import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
+  ActiveWalletFacade,
+  type ActiveWalletState,
+  type ActiveWalletBalances,
+} from '@domains/wallet/application/active-wallet.facade';
 import { MarketSnapshotsService } from '@shared/services/market-snapshots.service';
-import type { WalletMarketSnapshot } from '@shared/utils/market-display.util';
 import { SparklineComponent } from '@shared/components/sparkline/sparkline.component';
 import { ConnectedWalletBoardComponent } from './connected-wallet-board.component';
 
-describe('ConnectedWalletBoardComponent', () => {
-  const account = '0x1111111111111111111111111111111111111111';
-  const evmSnapshot: WalletConnectionSnapshot = {
-    status: 'connected',
-    account,
-    chainId: 1,
-    identity: {
-      connectorId: 'metamask',
-      address: account,
-      chainType: 'ethereum',
-      walletType: 'external',
-    },
-    isVerified: true,
-    safetyStatus: 'safe',
-    isBypassed: false,
-    executionState: 'operating.idle',
-  };
-  const nearSnapshot: WalletConnectionSnapshot = {
-    ...evmSnapshot,
-    account: 'alice.near',
-    chainId: null,
-    identity: {
-      connectorId: 'near',
-      address: 'alice.near',
-      chainType: 'near',
-      walletType: 'external',
-    },
-  };
-  const tonSnapshot: WalletConnectionSnapshot = {
-    ...evmSnapshot,
-    account: `EQ${'a'.repeat(46)}`,
-    chainId: -3,
-    identity: {
-      connectorId: 'tonkeeper',
-      address: `EQ${'a'.repeat(46)}`,
-      chainType: 'ton',
-      walletType: 'external',
-    },
-  };
-  const readyBalances: ConnectedWalletBalancesState = {
-    status: 'ready',
-    account,
-    network: 'eip155:1',
-    rows: [
-      {
-        walletId: null,
-        walletAddress: account,
-        chainType: 'ethereum',
-        network: 'eip155:1',
-        assetId: 'eth',
-        symbol: 'ETH',
-        decimals: 18,
-        balanceRaw: '1000000000000000000',
-        balanceDecimal: '1.25',
-        source: 'rpc_batch',
-        fetchedAt: '2026-01-01T00:00:00Z',
-        expiresAt: '2026-01-01T00:01:00Z',
-        stale: false,
-      },
-    ],
-  };
+const wallet = {
+  id: 'alice',
+  providerWalletId: 'alice',
+  address: 'alice.near',
+  chainType: 'near',
+  walletType: 'external',
+  isPrimary: true,
+};
+const row = {
+  walletId: 'alice',
+  walletAddress: 'alice.near',
+  chainType: 'near',
+  network: 'near:mainnet',
+  assetId: 'near:native',
+  symbol: 'NEAR',
+  decimals: 24,
+  balanceRaw: '1250000000000000000000000',
+  balanceDecimal: '1.25',
+  source: 'near_rpc',
+  fetchedAt: '2026-10-05T00:00:00Z',
+  expiresAt: '2099-01-01T00:00:00Z',
+  stale: false,
+};
 
-  const nearMarket: WalletMarketSnapshot = {
-    symbol: 'ETH',
-    priceUsd: 3285.4,
-    change24hPercent: 1.24,
-    marketCapUsd: 395_200_000_000,
-    volume24hUsd: 18_400_000_000,
-    sparkline7d: [3200, 3285],
-  };
-
+describe('shared active wallet details', () => {
   let fixture: ComponentFixture<ConnectedWalletBoardComponent>;
-  let snapshot$: BehaviorSubject<WalletConnectionSnapshot | undefined>;
-  let balances$: BehaviorSubject<ConnectedWalletBalancesState>;
-  let snapshots$: Subject<WalletMarketSnapshot[]>;
-  let loadBalances: jasmine.Spy;
-  let loadSnapshots: jasmine.Spy;
-
+  let state: BehaviorSubject<ActiveWalletState>;
+  let balances: BehaviorSubject<ActiveWalletBalances>;
+  let refresh: jasmine.Spy;
+  let revalidate: jasmine.Spy;
+  let markets: jasmine.Spy;
   beforeEach(async () => {
-    snapshot$ = new BehaviorSubject<WalletConnectionSnapshot | undefined>(
-      evmSnapshot
-    );
-    balances$ = new BehaviorSubject<ConnectedWalletBalancesState>({
-      status: 'loading',
-      account,
-      network: 'eip155:1',
-      rows: [],
+    state = new BehaviorSubject<ActiveWalletState>({
+      wallet,
+      network: 'near:mainnet',
+      connected: false,
+      canRequestSwap: false,
+      reason: 'Connect to sign',
     });
-    loadBalances = jasmine
-      .createSpy('load')
-      .and.returnValue(balances$.asObservable());
-    snapshots$ = new Subject<WalletMarketSnapshot[]>();
-    loadSnapshots = jasmine
-      .createSpy('loadSnapshots')
-      .and.returnValue(snapshots$.asObservable());
-
+    balances = new BehaviorSubject<ActiveWalletBalances>({
+      status: 'ready',
+      account: wallet.address,
+      network: 'near:mainnet',
+      rows: [row],
+    });
+    refresh = jasmine.createSpy('refresh');
+    revalidate = jasmine.createSpy('revalidate');
+    markets = jasmine.createSpy('markets').and.returnValue(of([]));
     await TestBed.configureTestingModule({
       declarations: [ConnectedWalletBoardComponent, SparklineComponent],
       providers: [
         {
-          provide: WalletGatewayBridgeService,
+          provide: ActiveWalletFacade,
           useValue: {
-            snapshot$,
-            disconnectWallet: jasmine.createSpy('disconnectWallet'),
+            state$: state,
+            balances$: balances,
+            refreshBalances: refresh,
+            revalidateBalances: revalidate,
+            requestConnection: jasmine.createSpy('connect'),
           },
         },
-        {
-          provide: ConnectedWalletBalancesFacade,
-          useValue: { load: loadBalances },
-        },
-        {
-          provide: MarketSnapshotsService,
-          useValue: { load: loadSnapshots },
-        },
+        { provide: MarketSnapshotsService, useValue: { load: markets } },
       ],
     }).compileComponents();
-
     fixture = TestBed.createComponent(ConnectedWalletBoardComponent);
     fixture.detectChanges();
   });
-
-  it('asks the host facade for EVM balances and paints BFF rows', () => {
-    expect(loadBalances).toHaveBeenCalledWith({
-      account,
-      network: 'eip155:1',
-    });
-
-    balances$.next(readyBalances);
-    fixture.detectChanges();
-
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('0x1111...1111');
-    expect(text).toContain('ETH');
-    expect(text).toContain('1.25');
-    expect(text).toContain('Price');
-    expect(text).toContain('Market Cap');
-    expect(text).toContain('Volume(24h)');
-    expect(text).toContain('7d');
-    expect(text).toContain('$0.00');
-    expect(text).toContain('0.00%');
-    expect(text).not.toContain('Mock markets');
-    expect(fixture.nativeElement.querySelectorAll('app-sparkline').length).toBe(
-      1
-    );
-    expect(loadSnapshots).toHaveBeenCalledWith(['ETH']);
-
-    snapshots$.next([nearMarket]);
-    fixture.detectChanges();
-
-    const priced = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(priced).toContain('$3,285.40');
-    expect(priced).toContain('+1.24%');
-    expect(priced).toContain('$395.2B');
-    expect(priced).toContain('$18.4B');
+  const text = () => document.body.textContent ?? '';
+  it('renders shared holdings without a signer and does not fetch its own balances', () => {
+    expect(text()).toContain('alice.near');
+    expect(text()).toContain('1.25');
+    expect(text()).toContain('Connect to sign');
+    expect(revalidate).toHaveBeenCalledTimes(1);
+    expect(markets).toHaveBeenCalledWith(['NEAR']);
+    fixture.componentInstance.retryBalances();
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
-
-  it('retries market snapshots while the wallet remains connected', fakeAsync(() => {
-    balances$.next(readyBalances);
-    expect(loadSnapshots).toHaveBeenCalledTimes(1);
-    snapshots$.next([]);
-
-    tick(60_000);
-    expect(loadSnapshots).toHaveBeenCalledTimes(2);
-    snapshots$.next([nearMarket]);
+  it('retains available rows during refresh and shows failures without empty copy', () => {
+    balances.next({ ...balances.value, status: 'loading' });
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      '$3,285.40'
-    );
-
-    snapshot$.next({ ...evmSnapshot, status: 'disconnected', account: null });
-    tick(60_000);
-    expect(loadSnapshots).toHaveBeenCalledTimes(2);
-    fixture.destroy();
-  }));
-
-  it('hides zero-balance tokens and shows empty copy when none remain', () => {
-    balances$.next({
-      status: 'ready',
-      account,
-      network: 'eip155:1',
-      rows: [
-        {
-          walletId: null,
-          walletAddress: account,
-          chainType: 'ethereum',
-          network: 'eip155:1',
-          assetId: 'usdc',
-          symbol: 'USDC',
-          decimals: 6,
-          balanceRaw: '0',
-          balanceDecimal: '0',
-          source: 'rpc_batch',
-          fetchedAt: '2026-01-01T00:00:00Z',
-          expiresAt: '2026-01-01T00:01:00Z',
-          stale: false,
-        },
-        {
-          walletId: null,
-          walletAddress: account,
-          chainType: 'ethereum',
-          network: 'eip155:1',
-          assetId: 'eth',
-          symbol: 'ETH',
-          decimals: 18,
-          balanceRaw: '1000000000000000000',
-          balanceDecimal: '1.25',
-          source: 'rpc_batch',
-          fetchedAt: '2026-01-01T00:00:00Z',
-          expiresAt: '2026-01-01T00:01:00Z',
-          stale: false,
-        },
-      ],
-    });
-    fixture.detectChanges();
-
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('ETH');
-    expect(text).toContain('1.25');
-    expect(text).not.toContain('USDC');
-
-    balances$.next({
-      status: 'ready',
-      account,
-      network: 'eip155:1',
-      rows: [
-        {
-          walletId: null,
-          walletAddress: account,
-          chainType: 'ethereum',
-          network: 'eip155:1',
-          assetId: 'usdc',
-          symbol: 'USDC',
-          decimals: 6,
-          balanceRaw: '0',
-          balanceDecimal: '0',
-          source: 'rpc_batch',
-          fetchedAt: '2026-01-01T00:00:00Z',
-          expiresAt: '2026-01-01T00:01:00Z',
-          stale: false,
-        },
-      ],
-    });
-    fixture.detectChanges();
-
-    const emptyText = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(emptyText).toContain('No balance on this wallet detected');
-    expect(emptyText).not.toContain('USDC');
-  });
-
-  it('keeps balance-load failures as errors instead of no-balance copy', () => {
-    balances$.next({
+    expect(text()).toContain('Loading balances');
+    expect(text()).toContain('1.25');
+    balances.next({
+      ...balances.value,
       status: 'error',
-      account,
-      network: 'eip155:1',
-      rows: [],
-      errorMessage: 'Failed to load balances.',
+      errorMessage: 'RPC unavailable',
     });
     fixture.detectChanges();
-
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Failed to load balances.');
-    expect(text).not.toContain('No balance on this wallet detected');
+    expect(text()).toContain('RPC unavailable');
+    expect(text()).not.toContain('No balance on this wallet');
   });
-
-  it('shows connected EVM network and read-only compatible badges', () => {
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Ethereum');
-    expect(text).toContain('Ethereum · chain 1');
-    expect(text).toContain('Compatible networks');
-    expect(
-      fixture.nativeElement.querySelectorAll('.connected-wallet-board__badge')
-        .length
-    ).toBe(9);
-    expect(
-      fixture.nativeElement
-        .querySelector('.connected-wallet-board__badge--active')
-        ?.textContent?.trim()
-    ).toBe('ETH');
-    expect(
-      fixture.nativeElement.querySelector('.connected-wallet-board__disconnect')
-    ).toBeNull();
-  });
-
-  it('preserves unsupported EVM chain IDs instead of remapping to mainnet', () => {
-    const sepoliaChainId = 11155111;
-    snapshot$.next({
-      ...evmSnapshot,
-      chainId: sepoliaChainId,
+  it('switches identity and rows together when the shared source changes', () => {
+    state.next({
+      ...state.value,
+      wallet: { ...wallet, id: 'bob', address: 'bob.near' },
     });
-    fixture.detectChanges();
-
-    expect(loadBalances).toHaveBeenCalledWith({
-      account,
-      network: `eip155:${sepoliaChainId}`,
-    });
-
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('EVM');
-    expect(text).toContain(`Unsupported · chain ${sepoliaChainId}`);
-    expect(text).not.toContain('Ethereum · chain 1');
-    expect(
-      fixture.nativeElement.querySelector(
-        '.connected-wallet-board__badge--active'
-      )
-    ).toBeNull();
-  });
-
-  it('loads balances for a connected NEAR account', () => {
-    snapshot$.next(nearSnapshot);
-    fixture.detectChanges();
-
-    expect(loadBalances).toHaveBeenCalledWith({
-      account: 'alice.near',
-      network: 'near:mainnet',
-    });
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('alice.near');
-    expect(text).toContain('NEAR');
-    expect(text).toContain('NEAR · mainnet');
-    expect(text).not.toContain('Compatible networks');
-    expect(text).not.toContain('Ethereum · chain 1');
-    expect(text).toContain('Loading balances...');
-    expect(
-      fixture.nativeElement.querySelectorAll('.connected-wallet-board__badge')
-        .length
-    ).toBe(0);
-  });
-
-  it('treats a HOT .tg account as NEAR mainnet even without identity', () => {
-    snapshot$.next({
-      ...nearSnapshot,
-      account: 'vodis_craftscript.tg',
-      identity: null,
-    });
-    fixture.detectChanges();
-
-    expect(loadBalances).toHaveBeenCalledWith({
-      account: 'vodis_craftscript.tg',
-      network: 'near:mainnet',
-    });
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('NEAR');
-    expect(text).toContain('NEAR · mainnet');
-    expect(text).not.toContain('ETH');
-    expect(text).not.toContain('Ethereum · chain 1');
-  });
-
-  it('does not reuse a response after the account changes', () => {
-    const firstRequest = balances$;
-    const secondRequest = new BehaviorSubject<ConnectedWalletBalancesState>({
+    balances.next({
       status: 'loading',
-      account: '0x2222222222222222222222222222222222222222',
-      network: 'eip155:1',
+      account: 'bob.near',
+      network: 'near:mainnet',
       rows: [],
     });
-    loadBalances.and.returnValue(secondRequest.asObservable());
-
-    snapshot$.next({
-      ...evmSnapshot,
-      account: '0x2222222222222222222222222222222222222222',
-    });
-    firstRequest.next(readyBalances);
     fixture.detectChanges();
-
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).not.toContain('1.25');
-    expect(text).toContain('Loading balances...');
+    expect(text()).toContain('bob.near');
+    expect(text()).not.toContain('1.25');
+    expect(text()).not.toContain('alice.near');
   });
-
-  it('uses the Tonkeeper network identity for TON testnet', () => {
-    snapshot$.next(tonSnapshot);
-    fixture.detectChanges();
-
-    expect(loadBalances).toHaveBeenCalledWith({
-      account: tonSnapshot.account,
-      network: 'ton:testnet',
+  it('hides zero holdings only after a successful read', () => {
+    balances.next({
+      ...balances.value,
+      rows: [{ ...row, balanceRaw: '0', balanceDecimal: '0' }],
     });
+    fixture.detectChanges();
+    expect(text()).toContain('No balance on this wallet detected');
   });
-
-  it('allows the same balance request to retry after an error', () => {
-    balances$.next({
-      status: 'error',
-      account,
-      network: 'eip155:1',
-      rows: [],
-      errorMessage: 'Failed to load balances.',
+  it('preserves the actual EVM network instead of substituting mainnet', () => {
+    state.next({
+      ...state.value,
+      network: 'eip155:11155111',
+      wallet: {
+        ...wallet,
+        address: '0x' + 'a'.repeat(40),
+        chainType: 'ethereum',
+      },
     });
     fixture.detectChanges();
-
-    const retry = fixture.nativeElement.querySelector(
-      '[aria-label="Retry balances"]'
-    ) as HTMLButtonElement;
-    retry.click();
-
-    expect(loadBalances).toHaveBeenCalledTimes(2);
-    expect(loadBalances).toHaveBeenCalledWith({
-      account,
-      network: 'eip155:1',
-    });
-  });
-
-  it('shows partial balance failures instead of an empty-state message', () => {
-    balances$.next({
-      status: 'partial',
-      account,
-      network: 'eip155:1',
-      rows: [],
-      errorMessage: 'Some balances could not be loaded.',
-    });
-    fixture.detectChanges();
-
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Some balances could not be loaded.');
-    expect(text).not.toContain('No balance on this wallet detected');
+    expect(text()).toContain('Unsupported · chain 11155111');
+    expect(text()).not.toContain('Ethereum · chain 1');
   });
 });

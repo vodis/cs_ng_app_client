@@ -2,8 +2,13 @@
   <div class="profile-shell__top">
     <section class="profile-shell__hero" aria-label="Portfolio balance">
       <p class="profile-shell__balance" aria-live="polite">
-        <span #usdBalanceValue>$0.00</span>
-        <small *ngIf="tokenBalanceLabel() as tokenBalance">
+        <span #usdBalanceValue>Loading…</span>
+        <small *ngIf="portfolioStatus === 'error'"
+          >Portfolio refresh failed. Use Refresh to retry.</small
+        >
+        <small
+          class="profile-shell__token-balances"
+          *ngIf="tokenBalanceLabel() as tokenBalance">
           · {{ tokenBalance }}
         </small>
       </p>
@@ -284,7 +289,7 @@
       <div
         class="profile-shell__wallet-connect"
         *ngIf="showLastConnectedSection()">
-        <h3 class="profile-shell__section-title">Last connected</h3>
+        <h3 class="profile-shell__section-title">Active wallet</h3>
         <div
           class="profile-shell__last-wallet"
           *ngIf="resolveLastConnectedWallet() as lastWallet">
@@ -345,66 +350,91 @@
 
       <div *ngIf="activeSession.wallets.length > 0">
         <h3 class="profile-shell__section-title">Connected wallets</h3>
-        <ul class="profile-shell__wallets">
-          <li *ngFor="let wallet of activeSession.wallets">
-            <div class="profile-shell__wallet-identity">
-              <img
-                *ngIf="walletChainIcon(wallet.chainType) as chainIcon"
-                class="profile-shell__chain-logo"
-                [src]="chainIcon"
-                alt="" />
-              <div class="profile-shell__wallet-main">
-                <div class="profile-shell__wallet-heading">
-                  <span class="profile-shell__wallet-address">{{
-                    shortAddress(wallet.address)
+        <div class="profile-shell__wallets-wrap">
+          <table class="profile-shell__wallets-table">
+            <thead>
+              <tr>
+                <th scope="col">Wallet</th>
+                <th scope="col">Network</th>
+                <th scope="col">Status</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let wallet of activeSession.wallets">
+                <td data-label="Wallet">
+                  <div class="profile-shell__wallet-identity">
+                    <img
+                      *ngIf="walletChainIcon(wallet.chainType) as chainIcon"
+                      class="profile-shell__chain-logo"
+                      [src]="chainIcon"
+                      alt="" />
+                    <span class="profile-shell__wallet-address">{{
+                      shortAddress(wallet.address)
+                    }}</span>
+                  </div>
+                </td>
+                <td data-label="Network">
+                  <span class="profile-shell__wallet-network">{{
+                    walletMeta(wallet)
                   }}</span>
+                </td>
+                <td data-label="Status">
                   <div class="profile-shell__wallet-status">
                     <span
                       class="profile-shell__wallet-badge"
                       *ngIf="wallet.isPrimary"
-                      >Active</span
+                      >Active{{
+                        activeWalletId === wallet.id && isLiveConnected()
+                          ? ' · Connected'
+                          : walletRestoring
+                            ? ' · Restoring connection'
+                            : ' · Signing disconnected'
+                      }}</span
                     >
                     <span
                       class="profile-shell__wallet-locked"
-                      *ngIf="isEmbeddedWallet(wallet)"
+                      *ngIf="isEmbeddedWallet(wallet) && !wallet.isPrimary"
                       >Linked</span
                     >
                   </div>
-                </div>
-                <small>{{ walletMeta(wallet) }}</small>
-              </div>
-            </div>
-            <div
-              class="profile-shell__wallet-actions"
-              *ngIf="!wallet.isPrimary || canRemoveLinkedWallet(wallet)">
-              <button
-                type="button"
-                mat-button
-                *ngIf="!wallet.isPrimary"
-                [disabled]="busyWalletId === wallet.id"
-                (click)="setPrimaryWallet(wallet)">
-                Make active
-              </button>
-              <button
-                type="button"
-                mat-button
-                *ngIf="canRemoveLinkedWallet(wallet)"
-                [disabled]="busyWalletId === wallet.id"
-                (click)="deleteWallet(wallet)">
-                Remove
-              </button>
-            </div>
-          </li>
-        </ul>
+                </td>
+                <td data-label="Action">
+                  <div
+                    class="profile-shell__wallet-actions"
+                    *ngIf="!wallet.isPrimary || canRemoveLinkedWallet(wallet)">
+                    <button
+                      type="button"
+                      mat-button
+                      *ngIf="!wallet.isPrimary"
+                      [disabled]="!!busyWalletId"
+                      (click)="setPrimaryWallet(wallet)">
+                      Make active
+                    </button>
+                    <button
+                      type="button"
+                      mat-button
+                      *ngIf="canRemoveLinkedWallet(wallet)"
+                      [disabled]="!!busyWalletId"
+                      (click)="deleteWallet(wallet)">
+                      Remove
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
-    <section class="profile-shell__panel">
+    <section class="profile-shell__panel profile-shell__panel--balances">
       <div class="profile-shell__panel-header">
         <h2>Balances</h2>
         <button
           type="button"
           mat-button
+          class="profile-shell__refresh"
           [disabled]="balancesLoading"
           (click)="refreshBalances()">
           Refresh
@@ -416,19 +446,42 @@
       <div
         class="profile-shell__empty"
         *ngIf="!balancesLoading && balances.length === 0">
-        No cached balances yet.
+        {{ balanceStateMessage }}
       </div>
-      <ul
-        class="profile-shell__balances"
-        *ngIf="!balancesLoading && balances.length > 0">
+      <p
+        class="profile-shell__error profile-shell__balances-warning"
+        *ngIf="!balancesLoading && balances.length > 0 && balanceStateMessage">
+        {{ balanceStateMessage }}
+      </p>
+      <ul class="profile-shell__balances" *ngIf="balances.length > 0">
         <li *ngFor="let balance of balances">
           <div class="profile-shell__balance-asset">
-            <span>{{ balance.symbol }}</span>
-            <small>{{ balance.assetId }}</small>
+            <span class="profile-shell__balance-symbol">{{
+              balance.symbol
+            }}</span>
+            <small
+              class="profile-shell__balance-id"
+              [attr.title]="balance.assetId"
+              >{{ balance.assetId }}</small
+            >
           </div>
           <div class="profile-shell__balance-value">
-            <span>{{ balanceAmount(balance) }}</span>
-            <small>{{ balanceMeta(balance) }}</small>
+            <span
+              class="profile-shell__balance-amount"
+              [attr.title]="balanceAmount(balance)"
+              >{{ balanceAmount(balance) }}</span
+            >
+            <small
+              class="profile-shell__balance-meta"
+              [attr.title]="balanceMeta(balance)"
+              >{{ balanceMeta(balance) }}</small
+            >
+            <small
+              class="profile-shell__balance-network"
+              [class.profile-shell__balance-network--stale]="balance.stale"
+              [attr.title]="balanceMeta(balance)"
+              >{{ balanceNetworkMeta(balance) }}</small
+            >
           </div>
         </li>
       </ul>
@@ -438,9 +491,7 @@
   <p class="profile-shell__message" *ngIf="walletMessage">
     {{ walletMessage }}
   </p>
-  <p class="profile-shell__message" *ngIf="balanceMessage">
-    {{ balanceMessage }}
-  </p>
+
   <p class="profile-shell__message" *ngIf="passkeyMessage">
     {{ passkeyMessage }}
   </p>

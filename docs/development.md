@@ -61,8 +61,11 @@ Production wallet remote policy:
 - Keep wallet, passkey, and swap onboarding on `/profile` so first-time
   users can enter the app shell immediately.
 - Sidebar **Profile** links to `/profile`; the header account icon links to
-  `/portfolio`. A notifications icon sits beside the account control in the
-  header (no feed wired yet).
+  `/portfolio`. Header chrome also includes a notifications icon (no feed yet)
+  and a wallets icon that opens the wallet MFE drawer.
+- `/portfolio` includes Enable 2FA and Manage passkey cards. Passkey enable
+  uses the existing provider-neutral `linkPasskey()` contract; disable/recover
+  and 2FA enrollment remain host UI until the auth-provider contract grows.
 - Keep profile integrations behind `ProfileFacade`; do not inject auth, wallet
   gateway, or router services directly into `ProfileComponent`.
 - Supply activity through `ProfileActivitySource` so the activity panel and
@@ -236,7 +239,7 @@ Host auth routes live under `src/app/pages/auth/`.
 | `/login`           | Public      | Passkey, Google, Apple, Telegram always shown; email code fallback |
 | `/register`        | Public      | Account creation only; wallet setup is separate                    |
 | `/profile`         | `AuthGuard` | Balance hero, onboarding, activity, wallets                        |
-| `/portfolio`       | `AuthGuard` | Holdings, agent authorization, sessions, sign-out                  |
+| `/portfolio`       | `AuthGuard` | Agent preferences, 2FA/passkey, sessions (no holdings)             |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                                      |
 
 ### Login expectations
@@ -289,3 +292,35 @@ Host auth routes live under `src/app/pages/auth/`.
    balance that animates up once portfolio returns (no `Loading…` flicker).
 5. Verify the Onboarding portfolio Set up wallet CTA opens the wallets MFE
    modal, and Generate wallet creates an embedded wallet.
+
+### Swap funding validation
+
+Follow [Exchange swap funding](exchange-page.md) and the
+[final review contract](../src/app/mfe-contracts/README.md) for source-balance
+routing and confirmation. Funding validation tightens the existing contract
+without changing payload versions.
+
+### Active-wallet persistence regression
+
+Run the sibling wallet MFE dev server on port 5002, then run
+`WALLET_MFE_TEST_URL=http://127.0.0.1:5002 pnpm exec playwright test e2e/wallet-persistence.spec.ts --workers=1`.
+This uses the real remote and gateway actors with mocked provider I/O. Set
+`PLAYWRIGHT_CHANNEL=chrome` to use installed Chrome instead of bundled Chromium.
+The normal browser suite skips this integration when the MFE URL is absent.
+
+## Wallet regression smoke
+
+`pnpm run e2e:smoke` covers email login, primary-wallet restoration, Profile
+valuation/holdings, reload, client-side navigation to Trade and its token picker,
+and direct reload on Trade. NEAR cases cover both available and absent signers;
+an EVM case uses a MetaMask connection snapshot. The browser UI, API clients and
+host stores are real; auth, wallet gateway and BFF responses are mocked. No
+private keys, extension installation or funded wallets are needed.
+
+The develop/PR Playwright job runs this smoke automatically with the existing
+suite and uploads `test-results/` on failure. MFE mounted tests separately use
+the real gateway/NEAR adapter with wallet SDK and HTTP boundaries mocked, covering
+silent restoration, missing provider sessions and the standard connection UI.
+For local installed Chrome, set `PLAYWRIGHT_CHANNEL=chrome`; CI installs Playwright
+Chromium. Tests against a separately running real MFE remain available through
+`WALLET_MFE_TEST_URL`.

@@ -4,84 +4,6 @@
   gap: 1rem;
 }
 
-.portfolio-summary,
-.portfolio-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.portfolio-summary {
-  padding: clamp(1.25rem, 3vw, 2rem);
-  border: 1px solid var(--gray-80);
-  border-radius: 20px;
-  background:
-    linear-gradient(130deg, rgb(67 230 160 / 9%), transparent 42%),
-    var(--card-background, #111);
-}
-
-.portfolio-summary__value {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.portfolio-summary__label,
-.portfolio-summary__updated,
-.portfolio-summary__allocation-copy {
-  margin: 0;
-  color: var(--gray-30);
-}
-
-.portfolio-summary__value strong {
-  font-size: clamp(2.3rem, 6vw, 4.6rem);
-  font-weight: 400;
-  letter-spacing: -0.04em;
-}
-
-.portfolio-summary__allocation {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.portfolio-summary__allocation h2 {
-  margin: 0 0 0.35rem;
-  font-size: 1rem;
-}
-
-.allocation-ring {
-  position: relative;
-  display: grid;
-  width: 92px;
-  height: 92px;
-  border-radius: 50%;
-  place-content: center;
-  text-align: center;
-}
-
-.allocation-ring::after {
-  position: absolute;
-  border-radius: 50%;
-  background: var(--card-background, #111);
-  content: '';
-  inset: 12px;
-}
-
-.allocation-ring__value,
-.allocation-ring__label {
-  position: relative;
-  z-index: 1;
-}
-
-.allocation-ring__value {
-  font-size: 1.3rem;
-}
-
-.allocation-ring__label {
-  color: var(--gray-30);
-}
-
 .portfolio-panel {
   overflow: hidden;
   border: 1px solid var(--gray-80);
@@ -90,8 +12,12 @@
 }
 
 .portfolio-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 1.1rem 1.25rem;
   border-bottom: 1px solid var(--gray-80);
+  gap: 1rem;
 }
 
 .portfolio-panel__header h2 {
@@ -178,22 +104,7 @@
   color: #ffb84d;
 }
 
-@media (width <= 900px) {
-  .portfolio-summary {
-    align-items: flex-start;
-  }
-}
-
 @media (width <= 640px) {
-  .portfolio-summary {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .portfolio-summary__allocation {
-    justify-content: space-between;
-  }
-
   .position-table__head {
     display: none;
   }

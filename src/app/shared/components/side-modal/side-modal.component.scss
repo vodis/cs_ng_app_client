@@ -54,7 +54,7 @@
       visibility 0s linear 0.3s;
     visibility: hidden;
 
-    > * {
+    > :not(.side-modal__close) {
       min-height: 0;
       flex: 1 1 auto;
     }
@@ -83,5 +83,37 @@
     @include media-breakpoint-up(xl) {
       width: 33.3%;
     }
+  }
+
+  .side-modal__close {
+    position: absolute;
+    z-index: 2;
+    top: 0.85rem;
+    right: 0.85rem;
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: rgb(255 255 255 / 78%);
+    cursor: pointer;
+
+    mat-icon {
+      width: 1.35rem;
+      height: 1.35rem;
+      font-size: 1.35rem;
+    }
+  }
+
+  .side-modal--left .side-modal__close {
+    right: auto;
+    left: 0.85rem;
+  }
+
+  .side-modal--with-close.open {
+    padding-top: 3rem;
   }
 }

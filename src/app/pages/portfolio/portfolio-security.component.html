@@ -1,0 +1,102 @@
+<section class="portfolio-security" aria-label="Account security">
+  <div class="portfolio-security__grid">
+    <section class="portfolio-panel">
+      <div class="portfolio-panel__header">
+        <div>
+          <p class="portfolio-panel__eyebrow">Account security</p>
+          <h2>Enable 2FA</h2>
+        </div>
+        <span
+          class="portfolio-security__badge"
+          [class.portfolio-security__badge--on]="twoFactorEnabled">
+          {{ twoFactorStatusLabel }}
+        </span>
+      </div>
+
+      <div class="portfolio-security__body">
+        <p class="portfolio-security__copy">
+          Add a second factor so a stolen password or session alone is not
+          enough to access your account.
+        </p>
+        <p class="portfolio-security__note">
+          Provider MFA is not on the host contract yet. This control is a
+          portfolio UI preview until enrollment is wired.
+        </p>
+        <div class="portfolio-security__actions">
+          <button
+            type="button"
+            mat-flat-button
+            color="primary"
+            *ngIf="!twoFactorEnabled"
+            [disabled]="twoFactorLoading"
+            (click)="enableTwoFactor()">
+            Enable 2FA
+          </button>
+          <button
+            type="button"
+            mat-stroked-button
+            *ngIf="twoFactorEnabled"
+            [disabled]="twoFactorLoading"
+            (click)="disableTwoFactor()">
+            Disable 2FA
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="portfolio-panel">
+      <div class="portfolio-panel__header">
+        <div>
+          <p class="portfolio-panel__eyebrow">Sign-in</p>
+          <h2>Manage passkey</h2>
+        </div>
+        <span
+          class="portfolio-security__badge"
+          [class.portfolio-security__badge--on]="passkeyEnabled">
+          {{ passkeyStatusLabel }}
+        </span>
+      </div>
+
+      <div class="portfolio-security__body">
+        <p class="portfolio-security__copy">
+          Use a device passkey for faster, phishing-resistant sign-in on the
+          next visit.
+        </p>
+        <div class="portfolio-security__actions">
+          <button
+            type="button"
+            mat-flat-button
+            color="primary"
+            *ngIf="!passkeyEnabled"
+            [disabled]="!canEnablePasskey || passkeyLoading"
+            (click)="enablePasskey()">
+            Enable passkey
+          </button>
+          <button
+            type="button"
+            mat-stroked-button
+            *ngIf="passkeyEnabled"
+            [disabled]="passkeyLoading"
+            (click)="disablePasskey()">
+            Disable
+          </button>
+          <button
+            type="button"
+            mat-button
+            color="primary"
+            [disabled]="passkeyLoading"
+            (click)="recoverPasskey()">
+            Recover
+          </button>
+        </div>
+        <p class="portfolio-security__note" *ngIf="!canEnablePasskey">
+          Passkey linking is unavailable from the current account provider
+          configuration.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <p class="portfolio-security__message" *ngIf="message">{{ message }}</p>
+  <p class="portfolio-security__error" *ngIf="error">{{ error }}</p>
+</section>

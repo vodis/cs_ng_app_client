@@ -1,3 +1,4 @@
+import type { WalletConnectionSnapshot } from '../../src/app/mfe-contracts/wallet-mfe.types';
 import type { Page, Route } from '@playwright/test';
 
 import { resolveWalletRemoteEntryUrl } from '../../src/app/mfe-contracts/wallet-remote-entrypoints';
@@ -39,6 +40,8 @@ export type E2eAuthenticatedSession = {
   user: E2eAuthUser;
   wallets: E2eAuthWallet[];
   accessToken: string;
+  connection?: WalletConnectionSnapshot;
+  requireLogin?: boolean;
 };
 
 const DEFAULT_AUTHENTICATED_SESSION: E2eAuthenticatedSession = {
@@ -72,9 +75,10 @@ export async function useGuestSession(page: Page): Promise<void> {
 
 export async function useAuthenticatedSession(
   page: Page,
-  session: E2eAuthenticatedSession = DEFAULT_AUTHENTICATED_SESSION
+  session: E2eAuthenticatedSession = DEFAULT_AUTHENTICATED_SESSION,
+  realGatewayUrl?: string
 ): Promise<void> {
-  await mockAuthProviderRemote(page, session);
+  await mockAuthProviderRemote(page, session, realGatewayUrl);
   await mockAuthSessionApi(page, session);
 }
 
@@ -91,7 +95,8 @@ export async function mockJsonApi(
 
 async function mockAuthProviderRemote(
   page: Page,
-  session: E2eAuthenticatedSession | null
+  session: E2eAuthenticatedSession | null,
+  realGatewayUrl?: string
 ): Promise<void> {
   await page.route(
     url => matchesOriginPath(url, AUTH_PROVIDER_REMOTE_ENTRY_URL),
@@ -108,7 +113,7 @@ async function mockAuthProviderRemote(
         status: 200,
         contentType: 'application/javascript',
         headers: CROSS_ORIGIN_HEADERS,
-        body: createAuthProviderRemoteEntry(session),
+        body: createAuthProviderRemoteEntry(session, realGatewayUrl),
       });
     }
   );
@@ -149,7 +154,8 @@ function matchesOriginPath(url: URL, expected: string): boolean {
 }
 
 function createAuthProviderRemoteEntry(
-  session: E2eAuthenticatedSession | null
+  session: E2eAuthenticatedSession | null,
+  realGatewayUrl?: string
 ): string {
   const serializedSession = JSON.stringify(
     session
@@ -171,15 +177,19 @@ const snapshot = {
   embeddedWalletEnabled: true
 };
 const session = ${serializedSession};
-const walletSnapshot = {
-  status: 'disconnected',
-  account: null,
-  chainId: null,
-  isVerified: false,
-  safetyStatus: null,
-  isBypassed: false,
-  executionState: 'operating.idle'
-};
+const requireLogin = ${JSON.stringify(session?.requireLogin ?? false)};
+function completeLogin() { sessionStorage.setItem('e2e:logged-in', 'true'); return session ? Promise.resolve(session) : Promise.reject(new Error('No e2e session')); }
+let walletSnapshot = ${JSON.stringify(
+    session?.connection ?? {
+      status: 'disconnected',
+      account: null,
+      chainId: null,
+      isVerified: false,
+      safetyStatus: null,
+      isBypassed: false,
+      executionState: 'operating.idle',
+    }
+  )};
 const modules = {
   'auth-provider': {
     mountAuthProvider: function () {
@@ -191,17 +201,9 @@ const modules = {
           return function () {};
         },
         getSnapshot: function () { return snapshot; },
-        login: function () {
-          return session
-            ? Promise.resolve(session)
-            : Promise.reject(new Error('No e2e session'));
-        },
+        login: completeLogin,
         sendEmailCode: function () { return Promise.resolve(); },
-        verifyEmailCode: function () {
-          return session
-            ? Promise.resolve(session)
-            : Promise.reject(new Error('No e2e session'));
-        },
+        verifyEmailCode: completeLogin,
         linkPasskey: function () {
           return session
             ? Promise.resolve(session)
@@ -214,13 +216,18 @@ const modules = {
         },
         logout: function () { return Promise.resolve(); },
         getAccessToken: function () {
-          return Promise.resolve(${serializedAccessToken});
+          return Promise.resolve(!requireLogin || sessionStorage.getItem('e2e:logged-in') ? ${serializedAccessToken} : null);
         }
       };
     }
   },
   'mount': {
     mount: function (container) {
+      const listeners = new Set();
+      function publishWallet(next) {
+        walletSnapshot = next;
+        listeners.forEach(listener => listener({ type: 'connection.snapshot.updated', payload: next }));
+      }
       if (container) {
         container.innerHTML = ${JSON.stringify(`<div class="wallets-mfe">
   <div class="connect-wallet">
@@ -243,10 +250,19 @@ const modules = {
             container.innerHTML = '';
           }
         },
-        subscribe: function () { return function () {}; },
+        subscribe: function (listener) { listeners.add(listener); return function () { listeners.delete(listener); }; },
         getSnapshot: function () { return walletSnapshot; },
         disconnectWallet: function () {},
-        sendGatewayEvent: function () {},
+        sendGatewayEvent: function (event) {
+          if (event.type === 'VERIFY_REQUESTED' && walletSnapshot.executionState === 'operating.verificationPending') {
+            publishWallet({ ...walletSnapshot, executionState: 'operating.verifyingSignature' });
+            setTimeout(function () {
+              publishWallet({ ...walletSnapshot, isVerified: true, executionState: 'operating.verified' });
+            }, 100);
+          }
+        },
+        selectionContractVersion: '1.0.0',
+        updateSelection: function () {},
         syncConnectedWallet: function () { return Promise.resolve(walletSnapshot); }
       };
     }
@@ -258,6 +274,9 @@ export function init() {
 }
 
 export function get(exposedModule) {
+  if (exposedModule === './mount' && ${JSON.stringify(realGatewayUrl ?? '')}) {
+    return import(${JSON.stringify(realGatewayUrl ?? '')}).then(module => () => module);
+  }
   const key = exposedModule.replace(/^\\.\\//, '');
   const module = modules[key];
   if (!module) {
