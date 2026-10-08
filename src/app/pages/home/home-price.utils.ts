@@ -89,3 +89,14 @@ export function formatDifferenceLabel(value: number): string {
     minimumFractionDigits: absValue >= 100 ? 0 : 1,
   })}%`;
 }
+
+/** An unavailable or expired asset price must not look like a current USD valuation. */
+export function isFreshAssetPrice(
+  updatedAt: string | undefined,
+  now = Date.now()
+): boolean {
+  const timestamp = updatedAt ? Date.parse(updatedAt) : Number.NaN;
+  return (
+    Number.isFinite(timestamp) && timestamp <= now && now - timestamp <= 300_000
+  );
+}

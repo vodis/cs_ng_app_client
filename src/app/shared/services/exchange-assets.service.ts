@@ -1,7 +1,7 @@
 import { canonicalBalanceAssetId } from '@shared/utils/balance-asset.utils';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { EMPTY, Observable, catchError, exhaustMap, map, timer } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AssetDto, AssetsApiResponse } from '@shared/models/asset.model';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
@@ -50,6 +50,13 @@ export class ExchangeAssetsService {
       );
   }
 
+  /** Refresh prices without replacing the user's token selection or active quote. */
+  public watchPrices(): Observable<ExchangeToken[]> {
+    return timer(60_000, 60_000).pipe(
+      exhaustMap(() => this.loadAssets().pipe(catchError(() => EMPTY)))
+    );
+  }
+
   private mapAssetToExchangeTokens(
     asset: AssetDto,
     hasCanonicalNativeNear: boolean
@@ -73,6 +80,7 @@ export class ExchangeAssetsService {
       Number(asset.price) >= 0
         ? { priceUsd: asset.price }
         : {}),
+      ...(asset.priceUpdatedAt ? { priceUpdatedAt: asset.priceUpdatedAt } : {}),
       color: this.colorForSymbol(asset.symbol),
     };
 

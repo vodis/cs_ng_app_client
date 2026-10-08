@@ -2,7 +2,7 @@ import {
   HttpClientTestingModule,
   HttpTestingController,
 } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
 import { ExchangeToken } from '@shared/models/exchange-token.model';
 import { ExchangeAssetsService } from './exchange-assets.service';
@@ -24,6 +24,60 @@ describe('ExchangeAssetsService', () => {
   afterEach(() => {
     httpMock.verify();
   });
+
+  it('refreshes asset prices, coalesces slow requests, and recovers after errors', fakeAsync(() => {
+    const updates: ExchangeToken[][] = [];
+    const subscription = service
+      .watchPrices()
+      .subscribe(tokens => updates.push(tokens));
+    tick(60_000);
+    const first = httpMock.expectOne(`${environment.apiUrl}/api/v1/assets`);
+    tick(60_000);
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/assets`);
+    first.flush({
+      data: [
+        {
+          assetId: 'token-a',
+          symbol: 'USDC',
+          blockchain: 'near',
+          price: '1',
+          priceUpdatedAt: '2026-10-08T00:00:00Z',
+        },
+        {
+          assetId: 'token-b',
+          symbol: 'USDC',
+          blockchain: 'eth',
+          price: '2',
+          priceUpdatedAt: '2026-10-08T00:00:00Z',
+        },
+      ],
+    });
+    expect(
+      updates[0].find(token => token.assetId === 'token-b')?.priceUsd
+    ).toBe('2');
+    expect(updates[0][0].priceUpdatedAt).toBe('2026-10-08T00:00:00Z');
+    tick(60_000);
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/assets`)
+      .flush({}, { status: 503, statusText: 'Unavailable' });
+    expect(updates.length).toBe(1);
+    tick(60_000);
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/assets`).flush({
+      data: [
+        {
+          assetId: 'token-b',
+          symbol: 'USDC',
+          blockchain: 'eth',
+          price: '3',
+          priceUpdatedAt: '2026-10-08T00:04:00Z',
+        },
+      ],
+    });
+    expect(updates[1][0].priceUsd).toBe('3');
+    subscription.unsubscribe();
+    tick(60_000);
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/assets`);
+  }));
 
   it('preserves backend native balance identity and decimal price strings', () => {
     let tokens: ExchangeToken[] = [];

@@ -1,3 +1,4 @@
+import { isFreshAssetPrice } from './home-price.utils';
 import {
   changeClass,
   formatDifferenceLabel,
@@ -85,4 +86,17 @@ describe('home-price.utils', () => {
 
 it('preserves decimal string prices from the asset API', () => {
   expect(formatSwapFiatEstimate('0.999734', '0.146146')).toBe('$0.15');
+});
+
+it('expires asset-bound prices and rejects missing, invalid and future timestamps', () => {
+  const now = Date.parse('2026-10-08T00:00:00Z');
+  expect(
+    isFreshAssetPrice(new Date(now - 299_000).toISOString(), now)
+  ).toBeTrue();
+  expect(
+    isFreshAssetPrice(new Date(now - 301_000).toISOString(), now)
+  ).toBeFalse();
+  expect(isFreshAssetPrice(new Date(now + 1).toISOString(), now)).toBeFalse();
+  expect(isFreshAssetPrice(undefined, now)).toBeFalse();
+  expect(isFreshAssetPrice('invalid', now)).toBeFalse();
 });

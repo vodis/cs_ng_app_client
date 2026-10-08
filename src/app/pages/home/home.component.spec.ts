@@ -96,7 +96,12 @@ class SwapFlowFacadeStub {
   }
 }
 
+const assetPriceUpdates = new Subject<ExchangeToken[]>();
+
 class ExchangeAssetsServiceStub {
+  public watchPrices() {
+    return assetPriceUpdates.asObservable();
+  }
   public tokens: ExchangeToken[] = [];
 
   public loadAssets() {
@@ -256,11 +261,51 @@ describe('HomeComponent market overview', () => {
       quote: 'NEAR',
       timeframe: '1H',
     }).flush(response);
-    component.fromToken = { ...component.fromToken, priceUsd: 0.999734 };
+    component.fromToken = {
+      ...component.fromToken,
+      priceUsd: 0.999734,
+      priceUpdatedAt: new Date().toISOString(),
+    };
     component.amount = '0.146146';
     expect(component.fromFiatEstimate()).toBe('$0.15');
     expect(component.fromAmountDisplay()).toBe('0,146146');
     component.fromToken = { ...component.fromToken, priceUsd: undefined };
+    expect(component.fromFiatEstimate()).toBe('—');
+  });
+
+  it('updates fiat by asset identity without replacing the active selection or quote', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    const source = component.fromToken;
+    const destination = component.toToken;
+    component.amount = '2';
+    const quote = component.quotePreview;
+    assetPriceUpdates.next([
+      { ...source, priceUsd: '3', priceUpdatedAt: new Date().toISOString() },
+      {
+        ...source,
+        assetId: 'same-symbol-other-asset',
+        priceUsd: '999',
+        priceUpdatedAt: new Date().toISOString(),
+      },
+    ]);
+    expect(component.fromFiatEstimate()).toBe('$6.00');
+    expect(component.fromToken.assetId).toBe(source.assetId);
+    expect(component.toToken.assetId).toBe(destination.assetId);
+    expect(component.amount).toBe('2');
+    expect(component.quotePreview).toBe(quote);
+    assetPriceUpdates.next([
+      {
+        ...source,
+        priceUsd: '4',
+        priceUpdatedAt: new Date(Date.now() - 301_000).toISOString(),
+      },
+    ]);
+    expect(component.fromFiatEstimate()).toBe('—');
+    assetPriceUpdates.next([]);
     expect(component.fromFiatEstimate()).toBe('—');
   });
 

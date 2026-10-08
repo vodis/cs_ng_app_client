@@ -43,6 +43,7 @@ import {
   formatPercent as formatPricePercent,
   formatPrice as formatCurrencyPrice,
   formatSwapFiatEstimate,
+  isFreshAssetPrice,
 } from './home-price.utils';
 import {
   AMOUNT_DECIMAL_SEPARATOR,
@@ -352,6 +353,21 @@ export class HomeComponent {
             : '');
         if (state.status === 'ready' || state.status === 'partial')
           this.refreshSwapQuotePreview();
+      });
+    this.exchangeAssetsService
+      .watchPrices()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(tokens => {
+        const prices = new Map(tokens.map(token => [token.assetId, token]));
+        const refresh = (token: ExchangeToken): ExchangeToken => ({
+          ...token,
+          priceUsd: prices.get(token.assetId)?.priceUsd,
+          priceUpdatedAt: prices.get(token.assetId)?.priceUpdatedAt,
+        });
+        this.exchangeTokens = this.exchangeTokens.map(refresh);
+        this.fromToken = refresh(this.fromToken);
+        this.toToken = refresh(this.toToken);
+        this.changeDetector.markForCheck();
       });
     // Re-evaluate time-based quote/balance eligibility even without wallet events.
     timer(1_000, 1_000)
@@ -2365,7 +2381,7 @@ export class HomeComponent {
 
   private fiatEstimate(token: ExchangeToken, amountValue: string): string {
     return formatSwapFiatEstimate(
-      token.priceUsd,
+      isFreshAssetPrice(token.priceUpdatedAt) ? token.priceUsd : undefined,
       this.canonicalAmountStorage(amountValue)
     );
   }

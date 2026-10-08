@@ -12,4 +12,5 @@ export interface ExchangeToken {
   blockchain: string;
   contractAddress?: string;
   priceUsd?: string | number;
+  priceUpdatedAt?: string;
 }

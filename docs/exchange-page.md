@@ -292,3 +292,9 @@ The assets API provides optional `balanceAssetId` for native provider routes.
 The host matches it to native RPC holdings while preserving `assetId` for quotes
 and execution. Native classification is backend-owned and never inferred from
 a missing contract or display symbol.
+
+USD swap estimates consume asset-ID-bound prices from the BFF asset list. Prices
+refresh every minute without changing selected assets, amounts or active quotes.
+Overlapping refreshes are coalesced. Missing, invalid, future or older-than-five-minute
+`priceUpdatedAt` values render an unavailable estimate (`—`), including when refresh
+requests fail. Symbol-based market snapshots never substitute for an asset price.
