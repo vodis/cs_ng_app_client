@@ -380,3 +380,11 @@ non-native routes, while existing preparations remain available for settlement.
 TON submission reports `ton-message:<hash>` as an external-message reference;
 only backend settlement status confirms completion. Ambiguous submission errors
 must reconcile that preparation before another transfer.
+
+### Exact-output
+
+Additive `exactOutputVersion: '1.0.0'` advertises mode-aware review. `swapType`
+defaults to `EXACT_INPUT`; for `EXACT_OUTPUT`, product `amount` is destination
+atomics, while preview `amountInAtomic` binds the quoted source cost. Final
+preparation preserves mode; quote comparison reverses cost direction for exact
+output. Host rejects exact-output calls on an older remote.

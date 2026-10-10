@@ -329,6 +329,8 @@ export class WalletGatewayBridgeService {
         true
       );
     }
+    if (input.swapType === 'EXACT_OUTPUT' && api.exactOutputVersion !== '1.0.0')
+      throw new Error('Update the wallet app to use exact receive amounts.');
     return api.requestSwapQuote(input, options);
   }
 
@@ -345,6 +347,11 @@ export class WalletGatewayBridgeService {
         true
       );
     }
+    if (
+      review.input.swapType === 'EXACT_OUTPUT' &&
+      api.exactOutputVersion !== '1.0.0'
+    )
+      throw new Error('Update the wallet app to use exact receive amounts.');
     api.openWalletSwapReview(review);
   }
 

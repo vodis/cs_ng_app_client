@@ -10,6 +10,7 @@ export type SwapReviewToken = {
 };
 
 export type SwapReviewIntent = {
+  swapType?: 'EXACT_INPUT' | 'EXACT_OUTPUT';
   contractVersion: '1.0.0';
   traceId: string;
   source: SwapReviewToken & {
@@ -19,6 +20,7 @@ export type SwapReviewIntent = {
   };
   destination: SwapReviewToken;
   preview: {
+    amountInAtomic?: string;
     amountOutAtomic: string;
     amountOutDisplay: string;
     fiatValue?: string;
@@ -44,6 +46,7 @@ export type SwapReviewIntent = {
 };
 
 export type SwapReviewPrepareRequest = {
+  swapType?: 'EXACT_INPUT' | 'EXACT_OUTPUT';
   providerId: 'one-click';
   dry: false;
   traceId: string;
@@ -128,6 +131,7 @@ export type SwapReviewServices = {
 
 /** Product choices only. Provider routing and signing parameters belong to the MFE. */
 export type WalletSwapInput = {
+  swapType?: 'EXACT_INPUT' | 'EXACT_OUTPUT';
   source: SwapReviewToken;
   destination: SwapReviewToken;
   amount: string;
@@ -139,6 +143,7 @@ export type WalletSwapInput = {
 };
 
 export type WalletSwapQuote = {
+  amountInAtomic?: string;
   amountOut: string;
   amountOutAtomic: string;
   expiresAt: string;

@@ -1,8 +1,9 @@
 # Exchange page reference
 
 The default route (`/`) renders the Token Exchange screen inside the host shell.
-The page is public: guests can browse quotes and markets without a login
-session. Connecting a wallet is required only to submit a swap.
+The page is public: guests can browse indicative prices and markets without a login
+session. Guest estimates exclude destination delivery fees; connecting a wallet requests
+a destination-specific quote. Connecting a wallet is required only to submit a swap.
 Treat this document as the product baseline when changing the page structure,
 behavior, or styles.
 
@@ -45,10 +46,12 @@ panels. At `1100px` and below, it changes to a single-column layout.
 
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
-Clicking a usable From balance prefills only the From amount. Clicking a usable
-To balance stores a destination target for display only; Review stays disabled
-until the quoted output matches that target, and review payloads always use the
-quoted `amountOut` (never the balance override). Slippage opens
+Clicking a usable From balance prefills the From amount. Native assets use the
+backend spendable estimate, reserving storage and gas; final preparation validates
+actual funding again. Destination balances are read-only. The exact-receive control
+switches to `EXACT_OUTPUT`, keeps the receive amount fixed, and requests its input
+cost. The quote mode participates in cancellation and preparation identity.
+Slippage opens
 `app-slippage-settings-panel` with presets
 (`0.1%`, `0.25%`, `0.5%`, `1%`, `3%`) plus custom input. The host stores the
 choice as basis points (default `50` = `0.5%`) and includes it in dry quote and
@@ -205,6 +208,11 @@ configuration stays with the MFE; Review starts the executable preparation in
 parallel with the balance check and cancels it when the balance cannot fund
 the swap.
 
+Executable preparation and requotes preserve `sourceAssetId` and `network`;
+both fields are part of the in-flight quote identity. Balance confirmation
+uses the same backend-provided `balanceAssetId` and canonical asset matching
+as displayed holdings, restricted to the requested account and network.
+
 Final preparation sends the user's bearer token; the BFF checks that the signer
 is an active wallet link before the MFE asks the wallet to sign. Deploy this host
 change before enforcing the authenticated preparation endpoint in the BFF.
@@ -238,7 +246,7 @@ Important page targets:
 - market panel padding: `24px 28px`
 - swap row height: `112px`
 - stats row height: `70px`
-- swap / market desktop height: `560px` (fits Review CTA without clipping)
+- swap panel minimum desktop height: `560px`, growing with disclosure and recovery text; market panel height: `560px`
 - market summary/chart grid: `104px / 1fr`
 - numeric amount font: `Aeonik Fono` through `.amount`
 
@@ -311,3 +319,24 @@ refresh every minute without changing selected assets, amounts or active quotes.
 Overlapping refreshes are coalesced. Missing, invalid, future or older-than-five-minute
 `priceUpdatedAt` values render an unavailable estimate (`—`), including when refresh
 requests fail. Symbol-based market snapshots never substitute for an asset price.
+
+### Swap UX and recovery contract
+
+- Guest `POST /api/v1/quotes/preview` is always indicative and dry. The BFF owns
+  its anonymous Intents pricing configuration and returns only amounts and a
+  30-second display lifetime, never a deposit or signing package. Connecting a
+  wallet replaces this estimate with the requested destination delivery quote.
+- Quote refresh follows the preview expiry with a five-second safety margin,
+  bounded between five and sixty seconds. A successful refresh clears errors;
+  pending refreshes and failed refreshes cannot authorize Review.
+- `GET /api/v1/swaps/policy` supplies the current slippage maximum. Settings
+  warn at 3% and above. The server remains authoritative if policy loading fails.
+- The v2 wallet contract adds optional `swapType` and `amountInAtomic`; omitted
+  mode remains exact-input. Host exact-output requires the remote capability
+  `exactOutputVersion: '1.0.0'`, including again when opening review.
+- Exact-output `amountIn` includes the provider slippage buffer. Display it as
+  Maximum paid without adding slippage again. Requotes disclose changed input,
+  require acceptance within the review tolerance and block changes beyond it.
+- Native Max calls authenticated `POST /api/v1/swaps/spendable`. This is an
+  estimate with gas reserve, not a promise that the final transfer is executable.
+  Late estimates are discarded when the form, selected wallet or network changes.

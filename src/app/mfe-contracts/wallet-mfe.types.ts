@@ -139,6 +139,7 @@ export type WalletsMfeMountApi = {
   createEmbeddedWallet?: () => Promise<WalletOnboardingResult>;
   syncConnectedWallet?: () => Promise<WalletConnectionSnapshot>;
   disconnectWallet?: () => void;
+  exactOutputVersion?: '1.0.0';
   swapContractVersion?: '2.0.0';
   walletFundingVersion?: '1.0.0';
   /** Selected-wallet previews and MFE-owned execution readiness. */

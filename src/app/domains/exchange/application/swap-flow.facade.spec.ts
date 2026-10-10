@@ -187,6 +187,33 @@ describe('SwapFlowFacade quote preview refresh', () => {
     expect(workflow.quoteCalls.length).toBe(4);
   }));
 
+  it('clears the failure after automatic recovery and refreshes before expiry', fakeAsync(() => {
+    facade.watchQuotePreview(input());
+    tick(350);
+    workflow.quoteCalls[0].response.error(new Error('Offline'));
+    expect(facade.error?.message).toBe('Offline');
+    tick(60_000);
+    workflow.quoteCalls[1].response.next({
+      traceId: 'recovered',
+      preview: {
+        ...preview('100'),
+        expiresAt: new Date(Date.now() + 20_000).toISOString(),
+      },
+    });
+    expect(facade.error).toBeUndefined();
+    tick(15_000);
+    expect(workflow.quoteCalls.length).toBe(3);
+  }));
+
+  it('invalidates the quote when the amount mode changes', fakeAsync(() => {
+    facade.watchQuotePreview(input());
+    tick(350);
+    facade.watchQuotePreview(input({ swapType: 'EXACT_OUTPUT' }));
+    tick(350);
+    expect(workflow.quoteCalls.length).toBe(2);
+    expect(workflow.quoteCalls[1].input.swapType).toBe('EXACT_OUTPUT');
+  }));
+
   function input(overrides: Partial<SwapFormInput> = {}): SwapFormInput {
     return {
       source: {

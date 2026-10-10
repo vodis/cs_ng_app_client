@@ -83,6 +83,56 @@ describe('SwapExecutableQuoteCoordinator', () => {
     expect(pending.cancel).toEqual(jasmine.any(Function));
   }));
 
+  it('preserves wallet funding metadata on initial preparation and requote', fakeAsync(() => {
+    const funding = { sourceAssetId: 'near:native', network: 'near:mainnet' };
+    coordinator.start({ ...request, ...funding });
+    flushMicrotasks();
+    const initial = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/swaps/prepare`
+    );
+    expect(initial.request.body).toEqual(jasmine.objectContaining(funding));
+    initial.flush(prepareEnvelope('intent_sign'));
+    coordinator.prepare(reviewRequest(funding), new AbortController().signal);
+    flushMicrotasks();
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/swaps/prepare`);
+
+    coordinator.prepare(reviewRequest(funding), new AbortController().signal);
+    flushMicrotasks();
+    const retry = httpMock.expectOne(
+      `${environment.apiUrl}/api/v1/swaps/prepare`
+    );
+    expect(retry.request.body).toEqual(jasmine.objectContaining(funding));
+    retry.flush(prepareEnvelope('intent_sign'));
+    flushMicrotasks();
+  }));
+
+  for (const changed of [
+    { sourceAssetId: 'nep141:wrap.near' },
+    { network: 'near:testnet' },
+  ]) {
+    it(`does not adopt a preparation with different ${Object.keys(changed)[0]}`, fakeAsync(() => {
+      const funding = { sourceAssetId: 'near:native', network: 'near:mainnet' };
+      coordinator.start({ ...request, ...funding });
+      flushMicrotasks();
+      httpMock
+        .expectOne(`${environment.apiUrl}/api/v1/swaps/prepare`)
+        .flush(prepareEnvelope('intent_sign'));
+      coordinator.prepare(
+        reviewRequest({ ...funding, ...changed }),
+        new AbortController().signal
+      );
+      flushMicrotasks();
+      const next = httpMock.expectOne(
+        `${environment.apiUrl}/api/v1/swaps/prepare`
+      );
+      expect(next.request.body).toEqual(
+        jasmine.objectContaining({ ...funding, ...changed })
+      );
+      next.flush(prepareEnvelope('intent_sign'));
+      flushMicrotasks();
+    }));
+  }
+
   it('cancels the executable quote before it is prepared', fakeAsync(() => {
     const pending = coordinator.start(request);
     pending.cancel();

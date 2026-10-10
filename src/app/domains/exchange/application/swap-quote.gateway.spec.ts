@@ -1,3 +1,4 @@
+import { SwapApiClient } from '../data-access/swap-api.client';
 import { SwapQuoteGateway } from './swap-quote.gateway';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import type { WalletSwapInput } from '@mfe-contracts/swap-review.types';
@@ -8,7 +9,10 @@ describe('SwapQuoteGateway', () => {
       'requestSwapQuote',
     ]);
     bridge.requestSwapQuote.and.returnValue(new Promise(() => {}));
-    const gateway = new SwapQuoteGateway(bridge);
+    const gateway = new SwapQuoteGateway(
+      bridge,
+      jasmine.createSpyObj<SwapApiClient>('api', ['requestIndicativePreview'])
+    );
     const input: WalletSwapInput = {
       source: {
         assetId: 'near:native',
