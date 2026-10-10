@@ -129,19 +129,6 @@ interface ComparisonChartSeries {
   points: MarketComparisonPoint[];
 }
 
-interface RecentActivityItem {
-  time: string;
-  fromSymbol: string;
-  toSymbol: string;
-  fromDisplay: string;
-  toDisplay: string;
-  fromCoinClass?: string;
-  toCoinClass?: string;
-  amount: string;
-  receive: string;
-  status: string;
-}
-
 @Component({
   selector: 'app-home',
   standalone: false,
@@ -152,66 +139,6 @@ export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly maxAmountFractionDigits = 18;
-
-  public readonly recentActivity: RecentActivityItem[] = [
-    {
-      time: '14:25',
-      fromSymbol: 'USDC',
-      toSymbol: 'NEAR',
-      fromDisplay: '$',
-      toDisplay: 'N',
-      toCoinClass: 'greenMini',
-      amount: '100.00 USDC',
-      receive: '45.61 NEAR',
-      status: 'Completed',
-    },
-    {
-      time: '13:58',
-      fromSymbol: 'ETH',
-      toSymbol: 'USDT',
-      fromDisplay: '♦',
-      toDisplay: 'T',
-      fromCoinClass: 'purple',
-      toCoinClass: 'teal',
-      amount: '0.50 ETH',
-      receive: '780.25 USDT',
-      status: 'Completed',
-    },
-    {
-      time: '12:42',
-      fromSymbol: 'SOL',
-      toSymbol: 'USDC',
-      fromDisplay: '≡',
-      toDisplay: '$',
-      fromCoinClass: 'black',
-      amount: '10.00 SOL',
-      receive: '186.72 USDC',
-      status: 'Completed',
-    },
-    {
-      time: '11:21',
-      fromSymbol: 'BTC',
-      toSymbol: 'NEAR',
-      fromDisplay: '₿',
-      toDisplay: 'N',
-      fromCoinClass: 'orangeMini',
-      toCoinClass: 'greenMini',
-      amount: '0.002 BTC',
-      receive: '0.91 NEAR',
-      status: 'Completed',
-    },
-    {
-      time: '10:05',
-      fromSymbol: 'USDC',
-      toSymbol: 'ETH',
-      fromDisplay: '$',
-      toDisplay: '♦',
-      toCoinClass: 'purple',
-      amount: '250.00 USDC',
-      receive: '0.12 ETH',
-      status: 'Completed',
-    },
-  ];
 
   public exchangeTokens: ExchangeToken[] = [
     {

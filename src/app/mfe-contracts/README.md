@@ -381,6 +381,14 @@ TON submission reports `ton-message:<hash>` as an external-message reference;
 only backend settlement status confirms completion. Ambiguous submission errors
 must reconcile that preparation before another transfer.
 
+### Durable swap recovery
+
+`startSwapAttempt(preparationId)` persists recovery before signing/sending.
+`recordSwapOutcome(preparationId, state)` reports submission or explicit wallet
+cancellation without claiming settlement. Only the status endpoint can confirm
+success/refund/failure. The host owns authenticated History and never needs to
+persist a signed payload in the browser. Deploy backend, MFE, then host.
+
 ### Exact-output
 
 Additive `exactOutputVersion: '1.0.0'` advertises mode-aware review. `swapType`

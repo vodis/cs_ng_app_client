@@ -3,7 +3,12 @@ import {
   HttpTestingController,
 } from '@angular/common/http/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { fakeAsync, flushMicrotasks, TestBed } from '@angular/core/testing';
+import {
+  fakeAsync,
+  flushMicrotasks,
+  tick,
+  TestBed,
+} from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
 import { AuthProviderService } from '@core/auth/auth-provider.service';
 import { SwapApiClient } from './swap-api.client';
@@ -260,5 +265,20 @@ describe('SwapApiClient', () => {
       'Swap execution package is missing a valid preparationId'
     );
     httpMock.expectNone(`${environment.apiUrl}/api/v1/swaps/execute`);
+  }));
+  it('times out a stalled history write before wallet approval can continue', fakeAsync(() => {
+    let errorName = '';
+    client.startSwapAttempt('attempt-1').subscribe({
+      error: (error: Error) => {
+        errorName = error.name;
+      },
+    });
+    flushMicrotasks();
+    const pending = httpMock.expectOne(req =>
+      req.url.endsWith('/attempt-1/attempt')
+    );
+    tick(10_000);
+    expect(errorName).toBe('TimeoutError');
+    expect(pending.cancelled).toBeTrue();
   }));
 });

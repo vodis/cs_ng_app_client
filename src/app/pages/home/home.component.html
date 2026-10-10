@@ -628,67 +628,7 @@
   </ng-template>
 
   <section class="panel activity">
-    <div class="activityHead">
-      <div class="activityTitle">Recent Activity</div>
-      <div class="view">View All &rarr;</div>
-    </div>
-    <div class="activityTableWrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Pair</th>
-            <th>Amount</th>
-            <th>You Get</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of recentActivity; track item.time + item.amount) {
-            <tr>
-              <td>{{ item.time }}</td>
-              <td>
-                <div class="pairCell">
-                  @if (tokenIcon(item.fromSymbol); as fromIcon) {
-                    <img
-                      class="pairCell__icon"
-                      [src]="fromIcon"
-                      [alt]="item.fromSymbol"
-                      loading="lazy"
-                      width="21"
-                      height="21" />
-                  } @else {
-                    <span class="mini" [class]="item.fromCoinClass">{{
-                      item.fromDisplay
-                    }}</span>
-                  }
-                  <span class="pairCell__arrow" aria-hidden="true">&rarr;</span>
-                  @if (tokenIcon(item.toSymbol); as toIcon) {
-                    <img
-                      class="pairCell__icon"
-                      [src]="toIcon"
-                      [alt]="item.toSymbol"
-                      loading="lazy"
-                      width="21"
-                      height="21" />
-                  } @else {
-                    <span class="mini" [class]="item.toCoinClass">{{
-                      item.toDisplay
-                    }}</span>
-                  }
-                </div>
-              </td>
-              <td>{{ item.amount }}</td>
-              <td>{{ item.receive }}</td>
-              <td class="table__status">
-                <span class="status">{{ item.status }}</span>
-                <span class="external">&#8599;</span>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    <app-swap-history [compact]="true" />
   </section>
 
   <app-side-modal

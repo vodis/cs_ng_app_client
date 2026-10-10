@@ -1,3 +1,4 @@
+import { SwapHistoryComponent } from '../../domains/exchange/ui/swap-history.component';
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { SharedModule } from '@shared/shared.module';
@@ -11,7 +12,7 @@ const routes: Routes = [
   },
   {
     path: 'history',
-    component: PlaceholderPageComponent,
+    component: SwapHistoryComponent,
     data: { title: 'History' },
   },
 ];
