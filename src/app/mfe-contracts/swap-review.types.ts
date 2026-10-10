@@ -104,6 +104,11 @@ export type SwapStatus =
   | 'FAILED';
 
 export type SwapReviewServices = {
+  recordSwapOutcome?: (
+    preparationId: string,
+    state: 'SUBMITTED' | 'CANCELLED'
+  ) => Promise<void>;
+  startSwapAttempt?: (preparationId: string) => Promise<void>;
   walletFundingVersion?: '1.0.0';
   quoteSwap?: (
     request: SwapReviewQuoteRequest,

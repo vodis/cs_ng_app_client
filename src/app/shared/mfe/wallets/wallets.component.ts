@@ -178,6 +178,14 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
           },
           services: {
             walletFundingVersion: '1.0.0',
+            recordSwapOutcome: (id, state) =>
+              firstValueFrom(this.swapApi.startSwapAttempt(id, state)).then(
+                () => undefined
+              ),
+            startSwapAttempt: id =>
+              firstValueFrom(this.swapApi.startSwapAttempt(id)).then(
+                () => undefined
+              ),
             quoteSwap: (request, options) => {
               options.signal.throwIfAborted();
               return firstValueFrom(

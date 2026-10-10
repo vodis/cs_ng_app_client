@@ -1,6 +1,7 @@
+import { parseSwapHistory } from './swap-history.parser';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, from, map, switchMap } from 'rxjs';
+import { Observable, from, map, switchMap, timeout } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { AuthProviderService } from '@core/auth/auth-provider.service';
 import type { ApiResponseEnvelope } from '@mfe-contracts/api-envelope';
@@ -40,6 +41,22 @@ export class SwapApiClient {
     private readonly httpClient: HttpClient,
     private readonly authProvider: AuthProviderService
   ) {}
+
+  getHistory(cursor: string) {
+    return from(this.authProvider.getAccessToken()).pipe(
+      switchMap(token => {
+        if (!token) throw new Error('No active session');
+        return this.httpClient.get<unknown>(
+          `${environment.apiUrl}/api/v1/swaps/history`,
+          {
+            headers: new HttpHeaders({ Authorization: `Bearer ${token}` }),
+            params: cursor ? { before: cursor } : {},
+          }
+        );
+      }),
+      map(parseSwapHistory)
+    );
+  }
 
   requestQuotePreview(request: SwapQuoteRequest): Observable<SwapQuotePreview> {
     return this.httpClient
@@ -171,6 +188,23 @@ export class SwapApiClient {
         }
         return response.data.status;
       })
+    );
+  }
+
+  startSwapAttempt(
+    preparationId: string,
+    state: 'AWAITING_APPROVAL' | 'SUBMITTED' | 'CANCELLED' = 'AWAITING_APPROVAL'
+  ): Observable<unknown> {
+    return from(this.authProvider.getAccessToken()).pipe(
+      switchMap(token => {
+        if (!token) throw new Error('No active session');
+        return this.httpClient.post(
+          `${environment.apiUrl}/api/v1/swaps/${encodeURIComponent(preparationId)}/attempt`,
+          { state },
+          { headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) }
+        );
+      }),
+      timeout(10_000)
     );
   }
 

@@ -86,8 +86,14 @@ Technical fields (Network, Contract, Decimals) are omitted. On viewports
 ### Recent activity
 
 The activity table shows time, pair, sold amount, received amount, and status.
-Its rows are currently host-owned demo data in `HomeComponent.recentActivity`
-until backend history is integrated.
+Its rows and `/history` consume authenticated `GET /api/v1/swaps/history`.
+History records are scoped to the preparing user, persisted before wallet approval,
+and recoverable after reload. Polling and Check status only reconcile preparations;
+they never submit another transfer. Historical rows before the history migration
+are not backfilled because the preparing user was not recorded reliably.
+History distinguishes approval, submission, provider processing, success, refund,
+attention and unknown status. Settled amounts are labeled separately from quote
+estimates. Explorer links come from validated settlement receipts.
 
 ## API and asset ownership
 
@@ -311,3 +317,12 @@ refresh every minute without changing selected assets, amounts or active quotes.
 Overlapping refreshes are coalesced. Missing, invalid, future or older-than-five-minute
 `priceUpdatedAt` values render an unavailable estimate (`—`), including when refresh
 requests fail. Symbol-based market snapshots never substitute for an asset price.
+
+### Durable swap recovery
+
+- The host supplies `startSwapAttempt` and `recordSwapOutcome` transports. A
+  failed initial history write prevents a wallet send. Later notification failure
+  never causes another transfer; the persisted preparation is reconciled instead.
+- Rollout: backend history migration and APIs, then wallet MFE, then host.
+  Existing history columns may remain during an application rollback. Do not
+  remove them while any version uses them, and do not delete recovery records.
