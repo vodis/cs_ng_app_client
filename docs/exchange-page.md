@@ -94,6 +94,9 @@ are not backfilled because the preparing user was not recorded reliably.
 History distinguishes approval, submission, provider processing, success, refund,
 attention and unknown status. Settled amounts are labeled separately from quote
 estimates. Explorer links come from validated settlement receipts.
+Failed refreshes retain the last loaded exchanges and pagination cursor with a
+stale-status warning. A successful refresh replaces them; changing account or
+session, or signing out, clears retained history immediately.
 
 ## API and asset ownership
 

@@ -4,7 +4,7 @@ import {
   provideHttpClientTesting,
   HttpTestingController,
 } from '@angular/common/http/testing';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, NEVER, of, throwError } from 'rxjs';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import { AuthProviderService } from '@core/auth/auth-provider.service';
 import type { AuthSession } from '@core/auth/auth-session.types';
@@ -97,6 +97,93 @@ describe('SwapHistoryFacade session isolation', () => {
     tick(0);
     facade.check('settled');
     expect(states.at(-1)?.items[0].status).toBe('SUCCESS');
+    subscription.unsubscribe();
+  }));
+
+  for (const failure of ['error', 'timeout'] as const) {
+    it(`retains recovery rows and the cursor after a refresh ${failure}, then replaces them on success`, fakeAsync(() => {
+      const item = {
+        preparationId: 'pending-reference',
+        status: 'SUBMITTED' as const,
+      };
+      const getHistory = jasmine
+        .createSpy('getHistory')
+        .and.returnValues(
+          of({ data: { items: [item], nextCursor: 'older-page' } }),
+          failure === 'timeout'
+            ? NEVER
+            : throwError(() => new Error('offline')),
+          of({ data: { items: [], nextCursor: null } })
+        );
+      TestBed.configureTestingModule({
+        providers: [
+          SwapHistoryFacade,
+          {
+            provide: AuthSessionService,
+            useValue: { session$: of(sessionFor('alice')) },
+          },
+          {
+            provide: SwapApiClient,
+            useValue: { getHistory, getSwapStatus: () => of('PROCESSING') },
+          },
+        ],
+      });
+      const facade = TestBed.inject(SwapHistoryFacade);
+      const states: SwapHistoryState[] = [];
+      const subscription = facade.state$.subscribe(state => states.push(state));
+      tick(0);
+      const loaded = states.at(-1);
+      expect(loaded?.items[0].status).toBe('PROCESSING');
+      tick(15_000 + (failure === 'timeout' ? 10_000 : 0));
+      expect(states.at(-1)?.items).toEqual(loaded?.items);
+      expect(states.at(-1)?.nextCursor).toBe('older-page');
+      expect(states.at(-1)?.error).toContain('Could not load');
+      expect(states.at(-1)?.loading).toBeFalse();
+      facade.retry();
+      expect(states.at(-1)?.items).toEqual([]);
+      expect(states.at(-1)?.nextCursor).toBeNull();
+      expect(states.at(-1)?.error).toBe('');
+      subscription.unsubscribe();
+    }));
+  }
+
+  it('never retains another session’s rows after a failed refresh', fakeAsync(() => {
+    const session$ = new BehaviorSubject<AuthSession | null>(
+      sessionFor('alice')
+    );
+    const getHistory = jasmine.createSpy('getHistory').and.returnValues(
+      of({
+        data: {
+          items: [{ preparationId: 'alice-swap', status: 'SUCCESS' }],
+          nextCursor: null,
+        },
+      }),
+      throwError(() => new Error('offline')),
+      throwError(() => new Error('offline'))
+    );
+    TestBed.configureTestingModule({
+      providers: [
+        SwapHistoryFacade,
+        { provide: AuthSessionService, useValue: { session$ } },
+        { provide: SwapApiClient, useValue: { getHistory } },
+      ],
+    });
+    const states: SwapHistoryState[] = [];
+    const subscription = TestBed.inject(SwapHistoryFacade).state$.subscribe(
+      state => states.push(state)
+    );
+    tick(0);
+    tick(15_000);
+    expect(states.at(-1)?.items[0].preparationId).toBe('alice-swap');
+    session$.next(sessionFor('bob'));
+    expect(states.at(-1)?.items).toEqual([]);
+    tick(0);
+    expect(states.at(-1)?.error).toContain('Could not load');
+    expect(states.at(-1)?.items).toEqual([]);
+    session$.next(null);
+    expect(states.at(-1)?.items).toEqual([]);
+    expect(states.at(-1)?.error).toBe('');
+    expect(states.at(-1)?.signedIn).toBeFalse();
     subscription.unsubscribe();
   }));
 

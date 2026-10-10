@@ -19,17 +19,26 @@ import { atomicToDecimal } from '@shared/utils/amount-format.utils';
         <button type="button" (click)="history.retry()">Refresh</button>
       </header>
       @if (history.state$ | async; as state) {
+        @if (state.error) {
+          <p role="alert">
+            {{ state.error }}
+            @if (state.items.length) {
+              Showing previously loaded exchanges; their status may be out of
+              date.
+            }
+          </p>
+          <button type="button" (click)="history.retry()">Retry</button>
+        }
         @if (!state.signedIn) {
           <p>Sign in to see your swaps.</p>
         } @else if (state.loading) {
           <p role="status">Loading swap history…</p>
-        } @else if (state.error) {
-          <p role="alert">{{ state.error }}</p>
-          <button type="button" (click)="history.retry()">Retry</button>
         } @else if (!state.items.length) {
-          <p>
-            No swaps yet. Your exchanges will appear here after you confirm.
-          </p>
+          @if (!state.error) {
+            <p>
+              No swaps yet. Your exchanges will appear here after you confirm.
+            </p>
+          }
         } @else {
           <div class="history-scroll">
             <table>

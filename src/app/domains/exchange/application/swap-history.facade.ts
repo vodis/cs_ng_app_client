@@ -7,6 +7,7 @@ import {
   forkJoin,
   map,
   of,
+  scan,
   shareReplay,
   startWith,
   timeout,
@@ -128,6 +129,12 @@ export class SwapHistoryFacade {
               })
             )
           )
+        ),
+        // Retain recovery references on refresh failure, scoped to this session.
+        scan((previous: SwapHistoryState, current: SwapHistoryState) =>
+          current.error
+            ? { ...previous, error: current.error, loading: false }
+            : current
         ),
         startWith<SwapHistoryState>({
           items: [],
