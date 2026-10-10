@@ -230,3 +230,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isSwapFlowState(value: unknown): value is SwapFlowState {
   return swapFlowStates.some(state => state === value);
 }
+
+/** Recovery copy is keyed by the backend code, never inferred from provider prose. */
+export function swapRecoveryMessage(error: SwapFlowError): string {
+  switch (error.code) {
+    case 'INSUFFICIENT_LIQUIDITY':
+    case 'NO_QUOTE_AVAILABLE':
+      return 'No liquidity for this amount. Reduce the amount or choose another token or network.';
+    case 'AMOUNT_TOO_LOW':
+      return 'This amount is below the route minimum. Increase the amount or choose another token.';
+    case 'UNSUPPORTED_ASSET':
+    case 'UNSUPPORTED_PAIR':
+      return 'This route is unavailable. Choose another token or network.';
+    case 'ONE_CLICK_UPSTREAM_ERROR':
+    case 'HTTP_503':
+      return 'Quotes are temporarily unavailable. Retry in a moment.';
+    case 'SLIPPAGE_EXCEEDED':
+      return 'The quote exceeds your price limit. Refresh the quote or review your slippage setting.';
+    default:
+      return error.message;
+  }
+}

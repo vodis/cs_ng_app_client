@@ -30,6 +30,8 @@ export class SlippageSettingsPanelComponent implements OnChanges {
   @Input() isOpen = false;
   @Input() slippageToleranceBps = 50;
   @Input() receiveAtLeastLabel = '';
+  @Input() limitLabel = 'Receive at least';
+  @Input() maxSlippageBps = 1000;
 
   @Output() saveRequested = new EventEmitter<number>();
   @Output() closeRequested = new EventEmitter<void>();
@@ -80,10 +82,10 @@ export class SlippageSettingsPanelComponent implements OnChanges {
     }
     this.customPercent = sanitized;
     this.selectedPresetBps = null;
-    const parsed = parseSlippagePercentInput(sanitized);
+    const parsed = this.parseCustom();
     if (parsed == null) {
       this.validationError = sanitized.trim()
-        ? 'Enter a slippage between 0.01% and 50%.'
+        ? `Enter a slippage between 0.01% and ${this.maxSlippageBps / 100}%.`
         : '';
       return;
     }
@@ -111,9 +113,9 @@ export class SlippageSettingsPanelComponent implements OnChanges {
       this.validationError = '';
       return;
     }
-    const parsed = parseSlippagePercentInput(this.customPercent);
+    const parsed = this.parseCustom();
     if (parsed == null) {
-      this.validationError = 'Enter a slippage between 0.01% and 50%.';
+      this.validationError = `Enter a slippage between 0.01% and ${this.maxSlippageBps / 100}%.`;
       return;
     }
     this.validationError = '';
@@ -127,7 +129,7 @@ export class SlippageSettingsPanelComponent implements OnChanges {
   public save(): void {
     const bps = this.draftBps();
     if (bps == null) {
-      this.validationError = 'Enter a slippage between 0.01% and 50%.';
+      this.validationError = `Enter a slippage between 0.01% and ${this.maxSlippageBps / 100}%.`;
       return;
     }
     this.saveRequested.emit(bps);
@@ -160,11 +162,22 @@ export class SlippageSettingsPanelComponent implements OnChanges {
     this.dialog?.nativeElement.focus();
   }
 
+  public highSlippage(): boolean {
+    return (this.draftBps() ?? 0) >= 300;
+  }
+
+  private parseCustom(): number | null {
+    const value = parseSlippagePercentInput(this.customPercent);
+    return value !== null && value <= this.maxSlippageBps ? value : null;
+  }
+
   private draftBps(): number | null {
     if (this.selectedPresetBps != null) {
-      return this.selectedPresetBps;
+      return this.selectedPresetBps <= this.maxSlippageBps
+        ? this.selectedPresetBps
+        : null;
     }
-    return parseSlippagePercentInput(this.customPercent);
+    return this.parseCustom();
   }
 
   private syncFromSaved(bps: number): void {

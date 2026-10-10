@@ -58,6 +58,66 @@ export class SwapApiClient {
     );
   }
 
+  getSpendable(input: {
+    sourceAssetId: string;
+    originAsset: string;
+    signerId: string;
+    network: string;
+    authMethod: 'near' | 'evm' | 'ton';
+  }): Observable<string> {
+    return from(this.authProvider.getAccessToken()).pipe(
+      switchMap(token => {
+        if (!token) throw new Error('No active session');
+        return this.httpClient.post<{
+          data: { amount: string; sourceAssetId: string; network: string };
+        }>(`${environment.apiUrl}/api/v1/swaps/spendable`, input, {
+          headers: new HttpHeaders({ Authorization: `Bearer ${token}` }),
+        });
+      }),
+      map(response => {
+        if (
+          response.data.sourceAssetId !== input.sourceAssetId ||
+          response.data.network !== input.network ||
+          !/^\d+$/.test(response.data.amount)
+        )
+          throw new Error('Invalid spendable balance');
+        return response.data.amount;
+      })
+    );
+  }
+
+  getPolicy(): Observable<number> {
+    return this.httpClient
+      .get<{
+        data: { maxSlippageBps: number };
+      }>(`${environment.apiUrl}/api/v1/swaps/policy`)
+      .pipe(
+        map(response => {
+          const value = response.data.maxSlippageBps;
+          if (!Number.isInteger(value) || value < 1 || value > 10_000)
+            throw new Error('Invalid swap policy');
+          return value;
+        })
+      );
+  }
+
+  requestIndicativePreview(
+    input: import('@mfe-contracts/swap-review.types').WalletSwapInput
+  ): Observable<SwapQuotePreview> {
+    return this.httpClient
+      .post<ApiResponseEnvelope<unknown>>(
+        `${environment.apiUrl}/api/v1/quotes/preview`,
+        {
+          originAsset: input.source.executionAssetId,
+          destinationAsset: input.destination.executionAssetId,
+          amount: input.amount,
+          swapType: input.swapType ?? 'EXACT_INPUT',
+          slippageTolerance: input.slippageToleranceBps,
+        }
+      )
+      .pipe(map(mapQuotePreviewResponse));
+  }
+
   requestQuotePreview(request: SwapQuoteRequest): Observable<SwapQuotePreview> {
     return this.httpClient
       .post<
@@ -225,7 +285,7 @@ export class SwapApiClient {
       depositType: request.depositType,
       refundType: request.refundType,
       authMethod: request.authMethod,
-      swapType: 'EXACT_INPUT',
+      swapType: request.swapType ?? 'EXACT_INPUT',
       isConfidential: request.depositType === 'CONFIDENTIAL_INTENTS',
       isAuthenticated: true,
     };
@@ -250,7 +310,7 @@ export class SwapApiClient {
       refundType: request.refundType,
       authMethod: request.authMethod,
       slippageTolerance: request.slippageTolerance,
-      swapType: 'EXACT_INPUT',
+      swapType: request.swapType ?? 'EXACT_INPUT',
     };
   }
 

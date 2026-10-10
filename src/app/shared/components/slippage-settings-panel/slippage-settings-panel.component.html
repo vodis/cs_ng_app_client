@@ -28,12 +28,19 @@
       <p class="slippage-settings__copy">
         The slippage setting is a safety mechanism to protect you from getting a
         final price that is very different than the quoted price. If the
-        specified slippage would be exceeded, your trade will be cancelled.
-        Below is the minimum amount you are guaranteed to receive.
+        specified slippage would be exceeded, your exchange may be refunded.
+        Network fees may still apply. The final review shows the limit for your
+        selected swap mode.
       </p>
 
+      @if (highSlippage()) {
+        <p role="alert">
+          High slippage allows a substantially worse exchange price. Review the
+          limit carefully before confirming.
+        </p>
+      }
       <div class="slippage-settings__receive" aria-live="polite">
-        <span>Receive at least</span>
+        <span>{{ limitLabel }}</span>
         <strong>{{ receiveAtLeastLabel || '—' }}</strong>
       </div>
 

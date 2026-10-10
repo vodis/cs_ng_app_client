@@ -1,5 +1,6 @@
+import { SwapApiClient } from '../data-access/swap-api.client';
 import { Injectable } from '@angular/core';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, map } from 'rxjs';
 import { createTraceId } from '@core/trace/create-trace-id';
 import type {
   WalletSwapInput,
@@ -10,7 +11,10 @@ import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.b
 /** Host owns refresh/cancellation; the MFE owns quote preparation and execution. */
 @Injectable({ providedIn: 'root' })
 export class SwapQuoteGateway {
-  constructor(private readonly walletGateway: WalletGatewayBridgeService) {}
+  constructor(
+    private readonly walletGateway: WalletGatewayBridgeService,
+    private readonly swapApi: SwapApiClient
+  ) {}
 
   requestQuotePreview(input: WalletSwapInput, traceId = createTraceId()) {
     return firstValueFrom(this.requestQuotePreviewStream(input, traceId));
@@ -20,6 +24,10 @@ export class SwapQuoteGateway {
     input: WalletSwapInput,
     traceId = createTraceId()
   ): Observable<{ traceId: string; preview: WalletSwapQuote }> {
+    if (!input.account)
+      return this.swapApi
+        .requestIndicativePreview(input)
+        .pipe(map(preview => ({ traceId, preview })));
     return new Observable(subscriber => {
       const controller = new AbortController();
       this.walletGateway

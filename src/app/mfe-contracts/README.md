@@ -388,3 +388,11 @@ must reconcile that preparation before another transfer.
 cancellation without claiming settlement. Only the status endpoint can confirm
 success/refund/failure. The host owns authenticated History and never needs to
 persist a signed payload in the browser. Deploy backend, MFE, then host.
+
+### Exact-output
+
+Additive `exactOutputVersion: '1.0.0'` advertises mode-aware review. `swapType`
+defaults to `EXACT_INPUT`; for `EXACT_OUTPUT`, product `amount` is destination
+atomics, while preview `amountInAtomic` binds the quoted source cost. Final
+preparation preserves mode; quote comparison reverses cost direction for exact
+output. Host rejects exact-output calls on an older remote.
