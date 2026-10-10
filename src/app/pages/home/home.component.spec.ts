@@ -111,6 +111,10 @@ class ExchangeAssetsServiceStub {
 }
 
 class SwapExecutableQuoteCoordinatorStub {
+  public getPolicy = jasmine.createSpy('getPolicy').and.returnValue(of(1000));
+  public getSpendable = jasmine
+    .createSpy('getSpendable')
+    .and.returnValue(of('1200000000000000000000000'));
   public lastCancel = jasmine.createSpy('cancelExecutableQuote');
   public start = jasmine.createSpy('start').and.callFake(() => {
     this.lastCancel = jasmine.createSpy('cancelExecutableQuote');
@@ -243,6 +247,12 @@ describe('HomeComponent market overview', () => {
         { provide: ActiveWalletFacade, useClass: ActiveWalletStub },
         { provide: WalletsService, useClass: WalletsServiceStub },
         { provide: SwapFlowFacade, useClass: SwapFlowFacadeStub },
+        { provide: WalletsServiceStub, useExisting: WalletsService },
+        {
+          provide: SwapExecutableQuoteCoordinatorStub,
+          useExisting: SwapExecutableQuoteCoordinator,
+        },
+        { provide: SwapFlowFacadeStub, useExisting: SwapFlowFacade },
         { provide: ExchangeAssetsService, useClass: ExchangeAssetsServiceStub },
         {
           provide: MarketSnapshotsService,
@@ -645,7 +655,7 @@ describe('HomeComponent market overview', () => {
     );
   });
 
-  it('uses base/quote direction for fallback swap rate', () => {
+  it('does not substitute market chart prices for an executable swap rate', () => {
     expectComparisonRequest({
       base: 'USDC',
       quote: 'NEAR',
@@ -671,8 +681,7 @@ describe('HomeComponent market overview', () => {
       timeframe: '1D',
     }).flush(comparisonResponse('NEAR', 'ETH', '1D'));
 
-    const rate = component['previewSwapRate']();
-    expect(rate).toBeCloseTo(1 / 4, 8);
+    expect(component.swapRateLabel()).toBe('1 NEAR ≈ — ETH');
   });
 
   it('normalizes integer quote amount using destination decimals', () => {
@@ -1015,7 +1024,7 @@ describe('HomeComponent market overview', () => {
     expect(component.canApplyMaxBalance(component.fromToken)).toBeTrue();
     component.applyMaxBalance('from');
 
-    expect(component.amount).toBe('1.25');
+    expect(component.amount).toBe('1.2');
     expect(component.toAmountManual).toBe('');
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalled();
   });
@@ -1147,6 +1156,9 @@ describe('HomeComponent market overview', () => {
       ).walletBalances = [balance];
       swapFlowFacade.watchQuotePreview.calls.reset();
 
+      TestBed.inject(
+        SwapExecutableQuoteCoordinatorStub
+      ).getSpendable.and.returnValue(of(testCase.balanceRaw));
       component.applyMaxBalance('from');
 
       expect(component.amount)
@@ -1786,6 +1798,146 @@ describe('HomeComponent market overview', () => {
           call.assetIds?.[0] === 'near:native'
       )
     ).toBeTrue();
+  });
+
+  for (const route of [
+    {
+      symbol: 'ETH',
+      blockchain: 'eth',
+      chainType: 'ethereum',
+      account: '0xAbC',
+      network: 'eip155:1',
+      assetId: 'nep141:eth.omft.near',
+      balanceAssetId: 'eip155:1/native',
+    },
+    {
+      symbol: 'GRAM',
+      blockchain: 'ton',
+      chainType: 'ton',
+      account: 'EQtonAccount',
+      network: 'ton:mainnet',
+      assetId: 'nep245:v2_1.omni.hot.tg:1117_',
+      balanceAssetId: 'ton:native',
+    },
+    {
+      symbol: 'USDC',
+      blockchain: 'near',
+      chainType: 'near',
+      account: 'alice.near',
+      network: 'near:mainnet',
+      assetId: '1cs_v1:near:nep141:usdc.near',
+      balanceAssetId: undefined,
+    },
+  ] satisfies Array<{
+    symbol: string;
+    blockchain: string;
+    chainType: 'ethereum' | 'ton' | 'near';
+    account: string;
+    network: string;
+    assetId: string;
+    balanceAssetId: string | undefined;
+  }>) {
+    it(`confirms ${route.symbol} aliases while rejecting foreign accounts, networks and assets`, () => {
+      expectComparisonRequest({
+        base: 'USDC',
+        quote: 'NEAR',
+        timeframe: '1H',
+      }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+      TestBed.inject(WalletsServiceStub).account.next({
+        account: route.account,
+        chainId: route.chainType === 'ethereum' ? 1 : null,
+        identity: {
+          address: route.account,
+          chainType: route.chainType,
+          connectorId: 'test',
+          walletType: 'external',
+        },
+      });
+      component.fromToken = {
+        ...component.fromToken,
+        ...route,
+        name: route.symbol,
+        decimals: 6,
+      };
+      component.toToken = {
+        ...component.toToken,
+        assetId: 'destination',
+        blockchain: route.blockchain,
+      };
+      component.amount = '1';
+      TestBed.inject(SwapFlowFacadeStub).emitQuote({
+        amountOut: '1000000',
+        amountOutAtomic: '1000000',
+        expiresAt: '2099-01-01T00:00:00.000Z',
+        raw: {},
+      });
+      const balance: WalletBalance = {
+        ...nearBalance(),
+        network: route.network,
+        walletAddress:
+          route.chainType === 'ethereum'
+            ? route.account.toLowerCase()
+            : route.account,
+        assetId: route.balanceAssetId ?? 'nep141:usdc.near',
+        balanceRaw: '2000000',
+        decimals: 6,
+      };
+      const load = spyOn(
+        TestBed.inject(WalletBalancesService),
+        'loadBalancesWithMeta'
+      );
+      const open = spyOn(
+        TestBed.inject(WalletGatewayBridgeService),
+        'openSwapReview'
+      );
+      for (const invalid of [
+        { ...balance, walletAddress: 'other-account' },
+        { ...balance, network: 'other-network' },
+        { ...balance, assetId: 'other-asset' },
+      ]) {
+        load.and.returnValue(of({ balances: [invalid], partial: false }));
+        component.submitQuote();
+        expect(open).not.toHaveBeenCalled();
+        expect(component.reviewActionError).toBe(
+          `Could not confirm ${route.symbol} balance`
+        );
+      }
+      load.and.returnValue(of({ balances: [balance], partial: false }));
+      component.submitQuote();
+      expect(component.reviewActionError).toBe('');
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(load).toHaveBeenCalledWith({
+        walletAddress: route.account,
+        network: route.network,
+        assetIds: [route.assetId],
+      });
+    });
+  }
+
+  it('keeps exact-output source amounts immutable through custom input handlers', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    component.swapType = 'EXACT_OUTPUT';
+    component.amount = '2';
+    const input = document.createElement('input');
+    input.value = '2';
+    input.addEventListener('keydown', event =>
+      component.onAmountKeydown(event)
+    );
+    input.addEventListener('input', event => component.onAmountInput(event));
+    input.addEventListener('paste', event => component.onAmountPaste(event));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: ',' }));
+    input.value = '99';
+    input.dispatchEvent(new Event('input'));
+    const clipboard = new DataTransfer();
+    clipboard.setData('text/plain', '99');
+    input.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: clipboard })
+    );
+    expect(component.amount).toBe('2');
   });
 
   it('requests a one-click preview when an amount is pasted into From', () => {

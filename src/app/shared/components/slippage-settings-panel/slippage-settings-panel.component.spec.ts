@@ -107,4 +107,15 @@ describe('SlippageSettingsPanelComponent', () => {
 
     expect(closeSpy).toHaveBeenCalledTimes(1);
   });
+  it('explains an above-policy custom limit without emitting an invalid draft', () => {
+    component.maxSlippageBps = 1000;
+    const emit = spyOn(component.draftBpsChanged, 'emit');
+    const input = document.createElement('input');
+    input.value = '11';
+    input.addEventListener('input', event => component.onCustomInput(event));
+    input.dispatchEvent(new Event('input'));
+    expect(component.validationError).toContain('10%');
+    expect(component.canSave()).toBeFalse();
+    expect(emit).not.toHaveBeenCalled();
+  });
 });

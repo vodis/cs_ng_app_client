@@ -12,6 +12,24 @@
   padding: 0 1.5rem 1.625rem;
   background: var(--main-bg-color);
 
+  .swap-mode,
+  .swap-limit,
+  .exchange-notice {
+    margin: 8px 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .swap-mode {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .swapRow__amount input[readonly] {
+    opacity: 0.75;
+  }
+
   .intro {
     width: 100%;
     height: 112px;
@@ -92,8 +110,9 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    // Tall enough for stats + confidential + Review without clipping the CTA.
-    height: 560px;
+    height: auto;
+    // Amount mode, quote limits and recovery copy must not clip the action.
+    min-height: 560px;
     box-sizing: border-box;
     flex-direction: column;
     padding: 24px;
@@ -1613,5 +1632,25 @@
         }
       }
     }
+  }
+}
+
+@media (width <= 600px) {
+  .exchange-page .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exchange-page .stat {
+    min-height: 64px;
+    border-bottom: 1px solid var(--exchange-line-soft);
+
+    b {
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+  }
+
+  .exchange-page .connectMain {
+    scroll-margin-bottom: 88px;
   }
 }

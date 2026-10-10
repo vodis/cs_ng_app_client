@@ -14,6 +14,9 @@ export type ExecutableQuoteHandle = {
 };
 
 type QuoteIdentity = {
+  swapType?: 'EXACT_INPUT' | 'EXACT_OUTPUT';
+  sourceAssetId?: string;
+  network?: string;
   originAsset: string;
   destinationAsset: string;
   amount: string;
@@ -46,6 +49,14 @@ export class SwapExecutableQuoteCoordinator {
   private active?: ActiveExecutableQuote;
 
   constructor(private readonly swapApi: SwapApiClient) {}
+
+  getSpendable(input: Parameters<SwapApiClient['getSpendable']>[0]) {
+    return this.swapApi.getSpendable(input);
+  }
+
+  getPolicy() {
+    return this.swapApi.getPolicy();
+  }
 
   start(request: SwapPrepareRequest): ExecutableQuoteHandle {
     this.cancel();
@@ -169,8 +180,11 @@ function cancelledPreparation(): DOMException {
 
 function toPrepareRequest(request: QuoteIdentity): SwapPrepareRequest {
   return {
+    swapType: request.swapType,
     providerId: 'one-click',
     traceId: request.traceId,
+    sourceAssetId: request.sourceAssetId,
+    network: request.network,
     originAsset: request.originAsset,
     destinationAsset: request.destinationAsset,
     amount: request.amount,
@@ -209,6 +223,9 @@ function toReviewResult(
 
 function executableQuoteKey(request: QuoteIdentity): string {
   return JSON.stringify([
+    request.swapType,
+    request.sourceAssetId,
+    request.network,
     request.originAsset,
     request.destinationAsset,
     request.amount,

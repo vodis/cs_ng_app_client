@@ -50,6 +50,9 @@ export function mapQuotePreviewResponse(
     (quote ? readString(quote, 'quote_id') : undefined);
 
   return {
+    amountInAtomic:
+      readString(payload, 'amountIn') ??
+      (quote ? readString(quote, 'amountIn') : undefined),
     amountOut,
     amountOutAtomic,
     expiresAt,

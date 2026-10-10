@@ -6,6 +6,7 @@ import {
   Subject,
   catchError,
   distinctUntilChanged,
+  filter,
   switchMap,
   tap,
   timer,
@@ -134,8 +135,11 @@ export class SwapFlowFacade {
       return EMPTY;
     }
 
-    return timer(this.quoteDebounceMs, this.quoteRefreshMs).pipe(
+    let nextRefreshAt = 0;
+    return timer(this.quoteDebounceMs, 1_000).pipe(
+      filter(() => Date.now() >= nextRefreshAt),
       switchMap(() => {
+        nextRefreshAt = Date.now() + this.quoteRefreshMs;
         const requestVersion = ++this.quoteRequestVersion;
         const traceId = createTraceId();
         this.activeTraceId = traceId;
@@ -147,6 +151,14 @@ export class SwapFlowFacade {
               return;
             }
 
+            const remaining =
+              Date.parse(preview.expiresAt) - Date.now() - 5_000;
+            nextRefreshAt =
+              Date.now() +
+              (Number.isFinite(remaining)
+                ? Math.max(5_000, Math.min(this.quoteRefreshMs, remaining))
+                : this.quoteRefreshMs);
+            this.errorSubject.next(undefined);
             this.quotePreviewSubject.next(preview);
             this.setState('idle');
           }),
@@ -176,6 +188,7 @@ export class SwapFlowFacade {
       input.destination.assetId,
       input.destination.executionAssetId,
       input.amount,
+      input.swapType,
       input.account,
       input.recipient,
       input.slippageToleranceBps,

@@ -15,6 +15,7 @@ export type SwapFlowState =
 export type SwapQuotePreview = WalletSwapQuote;
 
 export type SwapQuoteRequest = {
+  swapType?: 'EXACT_INPUT' | 'EXACT_OUTPUT';
   traceId: string;
   sourceAssetId?: string;
   originAsset: string;

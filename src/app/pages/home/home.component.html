@@ -11,6 +11,14 @@
       <div class="panelTitle">Swap Tokens</div>
 
       <form autocomplete="off" (ngSubmit)="submitQuote()">
+        <label class="swap-mode"
+          ><input
+            #receiveMode
+            type="checkbox"
+            [checked]="swapType === 'EXACT_OUTPUT'"
+            (change)="setSwapType(receiveMode.checked)" />
+          Specify exact receive amount</label
+        >
         <div class="swap-stack">
           <div class="swapRow first">
             <div class="swapRow__main">
@@ -68,6 +76,7 @@
                 <div class="swapRow__amount">
                   <input
                     #fromAmountInput
+                    [readOnly]="swapType === 'EXACT_OUTPUT'"
                     class="amount"
                     [class.amount--muted]="isAmountMuted()"
                     type="text"
@@ -150,26 +159,24 @@
                 </button>
               </div>
               <div class="swapRow__right">
-                <button
-                  type="button"
-                  class="balance"
-                  [disabled]="!canApplyMaxBalance(toToken)"
-                  [attr.title]="
-                    canApplyMaxBalance(toToken) ? 'Use max balance' : null
-                  "
-                  [attr.aria-label]="
-                    'Use max ' + tokenSymbolLabel(toToken) + ' balance'
-                  "
-                  (click)="applyMaxBalance('to')">
-                  {{ balanceLabel(toToken) }}
-                </button>
+                <span class="balance">{{ balanceLabel(toToken) }}</span>
                 <div class="swapRow__amount">
                   <div class="amountTrack">
-                    <output
-                      class="amount"
-                      [class.amount--muted]="isToAmountMuted()"
-                      >{{ toAmountFormatted() }}</output
-                    >
+                    @if (swapType === 'EXACT_OUTPUT') {
+                      <input
+                        class="amount"
+                        type="text"
+                        inputmode="decimal"
+                        aria-label="Exact amount to receive"
+                        [value]="receiveAmount"
+                        (input)="setReceiveAmount($event)" />
+                    } @else {
+                      <output
+                        class="amount"
+                        [class.amount--muted]="isToAmountMuted()"
+                        >{{ toAmountFormatted() }}</output
+                      >
+                    }
                   </div>
                   <div class="usd">{{ toFiatEstimate() }}</div>
                 </div>
@@ -202,7 +209,7 @@
           </div>
           <div class="stat">
             <span>Price Impact</span>
-            <b class="green">{{ swapPriceImpactLabel() }}</b>
+            <b>{{ swapPriceImpactLabel() }}</b>
           </div>
           <button
             type="button"
@@ -218,16 +225,27 @@
           </div>
         </div>
 
-        <label class="swap-confidential-option">
-          <input
-            #confidentialToggle
-            type="checkbox"
-            [checked]="confidentialSwap"
-            (change)="setConfidentialSwap(confidentialToggle.checked)" />
-          <span>Confidential swap</span>
-        </label>
+        @if (!activeWallet.wallet) {
+          <p class="exchange-notice">
+            Indicative estimate before destination network fees. Connect a
+            wallet for a final quote.
+          </p>
+        }
+        <p class="swap-limit" aria-live="polite">
+          {{
+            swapType === 'EXACT_OUTPUT'
+              ? 'Maximum paid: ' + amount + ' ' + fromToken.symbol
+              : 'Minimum received: ' + minimumReceivedLabel()
+          }}
+        </p>
+
         @if (reviewBlockingReason(); as fundingError) {
-          <p class="exchange-error" role="alert">{{ fundingError }}</p>
+          <p
+            class="exchange-notice"
+            [class.exchange-error]="!!quoteError"
+            role="status">
+            {{ fundingError }}
+          </p>
         }
 
         <button
@@ -236,10 +254,6 @@
           [disabled]="isPrimaryActionDisabled()">
           {{ primaryActionLabel().toUpperCase() }}
         </button>
-
-        @if (quoteError) {
-          <p class="exchange-error">{{ quoteError }}</p>
-        }
       </form>
     </div>
 
@@ -714,7 +728,15 @@
   <app-slippage-settings-panel
     [isOpen]="isSlippageSettingsOpen"
     [slippageToleranceBps]="slippageToleranceBps"
-    [receiveAtLeastLabel]="slippageReceiveAtLeastLabel()"
+    [maxSlippageBps]="maxSlippageBps"
+    [limitLabel]="
+      swapType === 'EXACT_OUTPUT' ? 'Maximum paid' : 'Receive at least'
+    "
+    [receiveAtLeastLabel]="
+      swapType === 'EXACT_OUTPUT'
+        ? 'Requoted after saving'
+        : slippageReceiveAtLeastLabel()
+    "
     (draftBpsChanged)="onSlippageDraftChanged($event)"
     (saveRequested)="saveSlippageSettings($event)"
     (closeRequested)="closeSlippageSettings()" />
