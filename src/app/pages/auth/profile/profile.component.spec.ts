@@ -374,27 +374,89 @@ describe('ProfileComponent', () => {
     expect(component.usdBalanceLabel()).toBe('Unavailable');
   });
 
-  it('keeps freshness metadata out of the mobile network label', () => {
-    const fresh = {
+  it('formats priced balances compactly and sorts them ahead of zeros', () => {
+    const near = {
       walletId: 'wallet-1',
       walletAddress: 'alice.near',
       chainType: 'near',
       network: 'near:mainnet',
       assetId: 'near:native',
       symbol: 'NEAR',
-      balanceRaw: '1',
-      balanceDecimal: '1',
+      balanceRaw: '2092885010462500000000000',
+      balanceDecimal: '2.0928850104625',
       decimals: 24,
       source: 'bff',
       fetchedAt: '2026-08-19T12:00:00Z',
       expiresAt: '2026-08-19T12:30:00Z',
       stale: false,
     };
-    const stale = { ...fresh, symbol: 'USDC', assetId: 'usdc', stale: true };
+    const zero = {
+      ...near,
+      assetId: 'btc',
+      symbol: 'BTC',
+      balanceRaw: '0',
+      balanceDecimal: '0',
+    };
+    const unpriced = {
+      ...near,
+      assetId: 'nep141:abg.near',
+      symbol: 'ABG',
+      balanceRaw: '1000000000000000000',
+      balanceDecimal: '1',
+      decimals: 18,
+    };
+    component.balances = [zero, unpriced, near];
+    component.showZeroBalances = false;
+    component.portfolioStatus = 'ready';
+    component.portfolio = {
+      asOf: '2026-08-19T12:00:00Z',
+      valuationCurrency: 'USD',
+      totalValue: '11.78',
+      unpricedPositionCount: 1,
+      positions: [
+        {
+          walletRef: 'alice.near',
+          chain: 'near',
+          assetId: 'near:native',
+          symbol: 'NEAR',
+          quantity: '2.0928850104625',
+          priceUsd: '5.63',
+          valueUsd: '11.784',
+          allocationPercent: '100',
+          priceUpdatedAt: '2026-08-19T12:00:00Z',
+          balanceUpdatedAt: '2026-08-19T12:00:00Z',
+        },
+        {
+          walletRef: 'alice.near',
+          chain: 'near',
+          assetId: 'nep141:abg.near',
+          symbol: 'ABG',
+          quantity: '1',
+          priceUsd: null,
+          valueUsd: null,
+          allocationPercent: null,
+          priceUpdatedAt: null,
+          balanceUpdatedAt: '2026-08-19T12:00:00Z',
+        },
+      ],
+    };
 
-    expect(component.balanceNetworkMeta(fresh)).toBe('NEAR');
-    expect(component.balanceNetworkMeta(stale)).toBe('NEAR');
-    expect(component.balanceMeta(stale)).not.toContain('stale');
+    expect(component.visibleBalances().map(row => row.symbol)).toEqual([
+      'NEAR',
+      'ABG',
+    ]);
+    expect(component.balanceAmount(near)).toBe('2.092885 NEAR');
+    expect(component.balanceAmountTitle(near)).toBe('2.0928850104625 NEAR');
+    expect(component.balanceUsdLabel(near)).toBe('$11.78');
+    expect(component.balanceUsdLabel(unpriced)).toBe('Price unavailable');
+    expect(component.balanceUsdLabel(zero)).toBe('$0.00');
+
+    component.toggleShowZeroBalances();
+    expect(component.visibleBalances().map(row => row.symbol)).toEqual([
+      'NEAR',
+      'ABG',
+      'BTC',
+    ]);
   });
 
   it('cancels the previous CountUp before starting a new balance animation', () => {

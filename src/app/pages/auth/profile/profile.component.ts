@@ -11,23 +11,32 @@ import { CountUp } from 'countup.js';
 import { Subscription } from 'rxjs';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
-import type { PortfolioSnapshot } from '../../portfolio/portfolio.models';
+import type {
+  PortfolioPosition,
+  PortfolioSnapshot,
+} from '../../portfolio/portfolio.models';
 import {
   formatActivityDayTooltip,
   type ActivityHeatmapDay,
   type ActivityHeatmapWeek,
 } from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
-import { atomicToDecimal } from '@shared/utils/amount-format.utils';
-import {
-  isNearWalletAddress,
-  caipNetworkLabel,
-} from '@shared/utils/network.utils';
+import { isNearWalletAddress } from '@shared/utils/network.utils';
 import {
   MockProfileActivitySource,
   ProfileActivitySource,
   type ProfileActivitySnapshot,
 } from './profile-activity.source';
+import {
+  balanceQuantityFullLabel,
+  balanceTokenAvatarFallback,
+  balanceTokenIconUrl,
+  balanceUsdTone,
+  compareWalletBalancesByUsd,
+  formatBalanceUsdDisplay,
+  formatTokenBalanceDisplay,
+  isZeroWalletBalance,
+} from './profile-balance-display.utils';
 import {
   ProfileFacade,
   type ProfileOnboardingStep,
@@ -81,6 +90,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public balances: WalletBalance[] = [];
   public balancesLoading = false;
   public balanceStateMessage = 'Connect the active wallet to load balances.';
+  public showZeroBalances = false;
   public portfolio: PortfolioSnapshot | null = null;
   public portfolioStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
   public activeWalletId?: string;
@@ -210,29 +220,74 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.walletChainIcon(this.lastConnectedChainType(wallet));
   }
 
+  public visibleBalances(): WalletBalance[] {
+    const rows = this.showZeroBalances
+      ? [...this.balances]
+      : this.balances.filter(balance => !isZeroWalletBalance(balance));
+    return rows.sort((left, right) =>
+      compareWalletBalancesByUsd(left, right, balance =>
+        this.balanceUsdValue(balance)
+      )
+    );
+  }
+
+  public hasHiddenZeroBalances(): boolean {
+    return (
+      !this.showZeroBalances &&
+      this.balances.some(balance => isZeroWalletBalance(balance))
+    );
+  }
+
+  public toggleShowZeroBalances(): void {
+    this.showZeroBalances = !this.showZeroBalances;
+  }
+
   public balanceAmount(balance: WalletBalance): string {
-    const amount =
-      balance.balanceDecimal ||
-      this.rawToDecimal(balance.balanceRaw, balance.decimals);
-    return `${amount} ${balance.symbol}`;
+    return formatTokenBalanceDisplay(balance);
   }
 
-  public balanceMeta(balance: WalletBalance): string {
-    const expiry = new Date(balance.expiresAt);
-    const expiresAt = Number.isNaN(expiry.getTime())
-      ? 'cache'
-      : `cache until ${expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    const freshness = balance.stale ? 'Last known balance / ' : '';
-    return `${this.shortAddress(balance.walletAddress)} / ${balance.network} / ${freshness}${expiresAt}`;
+  public balanceAmountTitle(balance: WalletBalance): string {
+    return balanceQuantityFullLabel(balance);
   }
 
-  public balanceNetworkLabel(balance: WalletBalance): string {
-    return caipNetworkLabel(balance.network);
+  public balanceUsdLabel(balance: WalletBalance): string {
+    return formatBalanceUsdDisplay(this.balanceUsdValue(balance), {
+      isZeroBalance: isZeroWalletBalance(balance),
+      portfolioLoading: this.portfolioStatus === 'loading',
+    });
   }
 
-  public balanceNetworkMeta(balance: WalletBalance): string {
-    const network = this.balanceNetworkLabel(balance);
-    return network;
+  public balanceUsdTone(
+    balance: WalletBalance
+  ): 'priced' | 'unavailable' | 'zero' {
+    return balanceUsdTone(
+      this.balanceUsdValue(balance),
+      isZeroWalletBalance(balance)
+    );
+  }
+
+  public balanceIconUrl(balance: WalletBalance): string {
+    return balanceTokenIconUrl(balance.symbol);
+  }
+
+  public balanceIconFallback(balance: WalletBalance): string {
+    return balanceTokenAvatarFallback(balance.symbol);
+  }
+
+  public balancesEmptyCopy(): string {
+    if (this.balancesLoading) {
+      return 'Loading balances...';
+    }
+    if (this.balanceStateMessage) {
+      return this.balanceStateMessage;
+    }
+    if (this.balances.length === 0) {
+      return 'No balances found for this wallet.';
+    }
+    if (this.visibleBalances().length === 0 && this.hasHiddenZeroBalances()) {
+      return 'No non-zero balances. Turn on Show zero balances to see the rest.';
+    }
+    return '';
   }
 
   public canEnablePasskey(): boolean {
@@ -819,12 +874,27 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     };
   }
 
-  private rawToDecimal(rawBalance: string, decimals: number): string {
-    try {
-      return atomicToDecimal(rawBalance, decimals);
-    } catch {
-      return rawBalance;
+  private balanceUsdValue(balance: WalletBalance): number | null {
+    const position = this.portfolioPositionFor(balance);
+    if (!position || position.valueUsd === null) {
+      return null;
     }
+    const parsed = Number(position.valueUsd);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private portfolioPositionFor(
+    balance: WalletBalance
+  ): PortfolioPosition | undefined {
+    const positions = this.portfolio?.positions ?? [];
+    return (
+      positions.find(position => position.assetId === balance.assetId) ??
+      positions.find(
+        position =>
+          position.symbol === balance.symbol &&
+          position.walletRef === balance.walletAddress
+      )
+    );
   }
 
   private capitalizeLabel(value: string | null | undefined): string {

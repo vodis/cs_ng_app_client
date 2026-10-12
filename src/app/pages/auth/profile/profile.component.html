@@ -431,56 +431,79 @@
     <section class="profile-shell__panel profile-shell__panel--balances">
       <div class="profile-shell__panel-header">
         <h2>Balances</h2>
-        <button
-          type="button"
-          mat-button
-          class="profile-shell__refresh"
-          [disabled]="balancesLoading"
-          (click)="refreshBalances()">
-          Refresh
-        </button>
-      </div>
-      <div class="profile-shell__empty" *ngIf="balancesLoading">
-        Loading balances...
+        <div class="profile-shell__balances-actions">
+          <button
+            type="button"
+            class="profile-shell__zero-toggle"
+            [attr.aria-pressed]="showZeroBalances"
+            [disabled]="balancesLoading || balances.length === 0"
+            (click)="toggleShowZeroBalances()">
+            {{ showZeroBalances ? 'Hide zero balances' : 'Show zero balances' }}
+          </button>
+          <button
+            type="button"
+            mat-button
+            class="profile-shell__refresh"
+            [disabled]="balancesLoading"
+            (click)="refreshBalances()">
+            Refresh
+          </button>
+        </div>
       </div>
       <div
         class="profile-shell__empty"
-        *ngIf="!balancesLoading && balances.length === 0">
-        {{ balanceStateMessage }}
+        *ngIf="
+          balancesLoading ||
+          (!balancesLoading && visibleBalances().length === 0)
+        ">
+        {{ balancesEmptyCopy() }}
       </div>
       <p
         class="profile-shell__error profile-shell__balances-warning"
-        *ngIf="!balancesLoading && balances.length > 0 && balanceStateMessage">
+        *ngIf="
+          !balancesLoading &&
+          visibleBalances().length > 0 &&
+          balanceStateMessage
+        ">
         {{ balanceStateMessage }}
       </p>
-      <ul class="profile-shell__balances" *ngIf="balances.length > 0">
-        <li *ngFor="let balance of balances">
+      <ul
+        class="profile-shell__balances"
+        *ngIf="!balancesLoading && visibleBalances().length > 0">
+        <li *ngFor="let balance of visibleBalances()">
           <div class="profile-shell__balance-asset">
+            <span
+              class="profile-shell__balance-icon"
+              aria-hidden="true"
+              [style.background-image]="
+                balanceIconUrl(balance)
+                  ? 'url(' + balanceIconUrl(balance) + ')'
+                  : null
+              ">
+              <ng-container *ngIf="!balanceIconUrl(balance)">{{
+                balanceIconFallback(balance)
+              }}</ng-container>
+            </span>
             <span class="profile-shell__balance-symbol">{{
               balance.symbol
             }}</span>
-            <small
-              class="profile-shell__balance-id"
-              [attr.title]="balance.assetId"
-              >{{ balance.assetId }}</small
-            >
           </div>
           <div class="profile-shell__balance-value">
             <span
+              class="profile-shell__balance-usd"
+              [class.profile-shell__balance-usd--unavailable]="
+                balanceUsdTone(balance) === 'unavailable'
+              "
+              [class.profile-shell__balance-usd--zero]="
+                balanceUsdTone(balance) === 'zero'
+              "
+              [attr.title]="balanceUsdLabel(balance)"
+              >{{ balanceUsdLabel(balance) }}</span
+            >
+            <span
               class="profile-shell__balance-amount"
-              [attr.title]="balanceAmount(balance)"
+              [attr.title]="balanceAmountTitle(balance)"
               >{{ balanceAmount(balance) }}</span
-            >
-            <small
-              class="profile-shell__balance-meta"
-              [attr.title]="balanceMeta(balance)"
-              >{{ balanceMeta(balance) }}</small
-            >
-            <small
-              class="profile-shell__balance-network"
-              [class.profile-shell__balance-network--stale]="balance.stale"
-              [attr.title]="balanceMeta(balance)"
-              >{{ balanceNetworkMeta(balance) }}</small
             >
           </div>
         </li>
