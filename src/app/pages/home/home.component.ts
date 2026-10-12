@@ -164,6 +164,8 @@ export class HomeComponent {
   ];
 
   public amount = '';
+  /** After the From amount field is edited, empty/zero can show in the CTA. */
+  private amountFieldTouched = false;
   /** When set by clicking To balance, shown in the To field instead of the quote. */
   public toAmountManual = '';
   public walletAddress = '';
@@ -847,9 +849,43 @@ export class HomeComponent {
     if (this.isQuoteLoading()) return 'Updating quote…';
     if (this.reviewActionError) return this.reviewActionError;
 
-    return this.canRetryQuote()
-      ? 'Retry quote'
-      : (this.quotePreview?.action?.label ?? 'Review');
+    const action = this.quotePreview?.action;
+    if (action && !action.supported && action.label) {
+      return action.label;
+    }
+
+    const blocking = this.primaryActionBlockingMessage();
+    if (blocking) return blocking;
+
+    return this.canRetryQuote() ? 'Retry quote' : (action?.label ?? 'Review');
+  }
+
+  /** True when the primary action label is a blocking/error message, not a CTA. */
+  public primaryActionShowsError(): boolean {
+    if (!this.activeWallet.wallet || this.reviewBusy || this.isQuoteLoading()) {
+      return false;
+    }
+    if (this.reviewActionError) return true;
+    return Boolean(this.primaryActionBlockingMessage());
+  }
+
+  /**
+   * Blocking copy shown inside the primary action. Empty amount keeps Review
+   * until the From field has been edited; then invalid/empty shows the error.
+   */
+  private primaryActionBlockingMessage(): string {
+    const blocking = this.reviewBlockingReason();
+    if (
+      !blocking ||
+      blocking === 'Waiting for a quote.' ||
+      blocking === 'Getting a quote…'
+    ) {
+      return '';
+    }
+    if (blocking === 'Enter a valid amount.' && !this.amountFieldTouched) {
+      return '';
+    }
+    return blocking;
   }
 
   public tokenDisplay(symbol: string): string {
@@ -1164,6 +1200,7 @@ export class HomeComponent {
     const previousValue = input?.value ?? value;
     const sanitized = this.sanitizeAmountInput(value);
     const previousAmount = this.amount;
+    this.amountFieldTouched = true;
     this.amount = sanitized;
 
     if (input) {

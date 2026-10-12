@@ -198,8 +198,13 @@ block the dry quote on a missing, stale, or insufficient balance, and it does
 not show a balance-loading error.
 
 The connected-wallet action is `Review` and is enabled for a current, unexpired
-preview with no newer request pending. If a dry quote request fails, the action
-changes to `Retry quote` and stays available while the form is still valid.
+preview with no newer request pending. A pristine empty amount keeps the
+`Review` label (disabled). After the From amount field is edited, an empty or
+zero amount shows `Enter a valid amount.` inside the button. Other blocking and
+recovery messages (quote failures, unsupported funding, balance checks, and
+similar) also replace the button label instead of rendering above it. If a dry
+quote request fails, the button shows the error copy and stays clickable to
+retry while the form is still valid.
 
 `Review` confirms the source balance with a fresh backend read for the linked
 address and starts the executable (`dry: false`) preparation at the same time.
