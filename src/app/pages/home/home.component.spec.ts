@@ -1663,6 +1663,72 @@ describe('HomeComponent market overview', () => {
     ]);
   });
 
+  it('exposes non-zero connected-network balances to the destination selector', () => {
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const sourceToken: ExchangeToken = {
+      assetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    const heldToken: ExchangeToken = {
+      assetId: 'nep141:usdt.near',
+      symbol: 'USDT',
+      name: 'Tether USD',
+      color: '#26a17b',
+      decimals: 6,
+      blockchain: 'near',
+    };
+    component.exchangeTokens = [sourceToken, heldToken];
+    component.fromToken = sourceToken;
+    component.toToken = heldToken;
+    const assetsService = TestBed.inject(
+      ExchangeAssetsService
+    ) as unknown as ExchangeAssetsServiceStub;
+    assetsService.tokens = component.exchangeTokens;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: heldToken.assetId,
+        symbol: 'USDT',
+        decimals: 6,
+        balanceRaw: '2500000',
+        balanceDecimal: '2.5',
+        source: 'near_rpc',
+        fetchedAt: '2026-09-17T12:00:00.000Z',
+        expiresAt: '2099-09-17T12:00:15.000Z',
+        stale: false,
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.openTokenSelector('to');
+
+    expect(component.tokenSelectorWalletTokens()).toEqual([
+      {
+        token: heldToken,
+        balanceLabel: '2,5 USDT',
+        stale: false,
+      },
+    ]);
+  });
+
   it('still requests a dry quote when the entered amount exceeds the displayed balance', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
