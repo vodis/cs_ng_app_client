@@ -816,6 +816,19 @@ describe('HomeComponent market overview', () => {
     );
   });
 
+  it('opens slippage settings from the swap settings control and slippage row', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    expect(component.isSlippageSettingsOpen).toBeFalse();
+    component.openSlippageSettings();
+    expect(component.isSlippageSettingsOpen).toBeTrue();
+    expect(component.slippageDraftBps).toBe(component.slippageToleranceBps);
+  });
+
   it('routes native NEAR from the wallet and preserves 24/6 decimal amounts (Sep 30 swap)', () => {
     expectComparisonRequest({
       base: 'USDC',

@@ -10,6 +10,7 @@
   place-items: center;
   padding: 1.25rem;
   background: rgb(0 0 0 / 55%);
+  animation: slippage-settings-fade-in 200ms ease-out;
 }
 
 .slippage-settings {
@@ -25,6 +26,7 @@
   background: color-mix(in srgb, var(--main-bg-color, #171c1f) 94%, white);
   box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
   color: var(--main-text-color, #fff);
+  animation: slippage-settings-rise-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
 
   &:focus {
     outline: none;
@@ -33,6 +35,40 @@
   &:focus-visible {
     outline: 2px solid var(--primary-text-color, #fe6c00);
     outline-offset: 2px;
+  }
+}
+
+@keyframes slippage-settings-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slippage-settings-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slippage-settings-backdrop,
+  .slippage-settings {
+    animation: none;
+  }
+
+  .slippage-settings__preset,
+  .slippage-settings__custom {
+    transition: none;
   }
 }
 
@@ -122,10 +158,19 @@
   color: inherit;
   font-size: 0.875rem;
   font-weight: 600;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
 }
 
 .slippage-settings__preset {
   cursor: pointer;
+
+  &:hover {
+    border-color: rgb(255 255 255 / 28%);
+    background: rgb(255 255 255 / 9%);
+  }
 
   &--active {
     border-color: transparent;
@@ -146,6 +191,10 @@
   gap: 0.35rem;
   padding: 0.55rem 0.75rem;
   cursor: text;
+
+  &:hover {
+    border-color: rgb(255 255 255 / 28%);
+  }
 
   &--active {
     border-color: #fff;
