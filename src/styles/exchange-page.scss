@@ -155,7 +155,7 @@
       color 180ms ease;
   }
 
-  .slippage-settings__preset:hover {
+  .slippage-settings__preset:hover:not(.slippage-settings__preset--active) {
     border-color: rgb(255 255 255 / 28%);
     background: rgb(255 255 255 / 9%);
   }
