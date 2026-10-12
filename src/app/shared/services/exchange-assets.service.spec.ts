@@ -178,13 +178,42 @@ describe('ExchangeAssetsService', () => {
         executionAssetId: 'nep141:wrap.near',
         symbol: 'wNEAR',
         displaySymbol: 'wNEAR',
-        name: 'NEAR Protocol',
+        name: 'Wrapped NEAR',
         icon: 'https://example.com/near.png',
         decimals: 24,
         color: '#2fd17c',
         blockchain: 'near',
       },
     ]);
+  });
+
+  it('retains the full catalog and exact symbols across networks and contracts', () => {
+    const assets = Array.from({ length: 250 }, (_, index) => ({
+      assetId: `asset-${index}`,
+      symbol: ['NEAR', 'wNEAR', 'BTC', 'wBTC', 'ETH', 'WETH'][index % 6],
+      blockchain: index % 2 ? 'sol' : 'eth',
+      decimals: 18,
+      contractAddress: `contract-${index}`,
+    }));
+    let tokens: ExchangeToken[] = [];
+    service.loadAssets().subscribe(result => (tokens = result));
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/assets`)
+      .flush({ data: assets });
+
+    expect(tokens.length).toBe(assets.length);
+    for (const asset of assets) {
+      expect(tokens.find(token => token.assetId === asset.assetId)).toEqual(
+        jasmine.objectContaining({
+          assetId: asset.assetId,
+          executionAssetId: asset.assetId,
+          symbol: asset.symbol,
+          displaySymbol: asset.symbol,
+          blockchain: asset.blockchain,
+          contractAddress: asset.contractAddress,
+        })
+      );
+    }
   });
 
   it('keeps PUBLIC_NEAR distinct from native and wrapped NEAR', () => {

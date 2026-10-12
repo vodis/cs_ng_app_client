@@ -72,6 +72,18 @@ describe('explorerUrlForToken', () => {
         color: '#2fd17c',
         blockchain: 'near',
       })
+    ).toBe('https://nearblocks.io');
+  });
+
+  it('links wrapped NEAR to its token contract', () => {
+    expect(
+      explorerUrlForToken({
+        symbol: 'wNEAR',
+        name: 'Wrapped NEAR',
+        assetId: 'nep141:wrap.near',
+        color: '#2fd17c',
+        blockchain: 'near',
+      })
     ).toBe('https://nearblocks.io/token/wrap.near');
   });
 });
