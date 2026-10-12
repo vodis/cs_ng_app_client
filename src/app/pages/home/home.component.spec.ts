@@ -255,10 +255,18 @@ describe('HomeComponent market overview', () => {
         { provide: SwapFlowFacadeStub, useExisting: SwapFlowFacade },
         { provide: ExchangeAssetsService, useClass: ExchangeAssetsServiceStub },
         {
+          provide: ExchangeAssetsServiceStub,
+          useExisting: ExchangeAssetsService,
+        },
+        {
           provide: MarketSnapshotsService,
           useClass: MarketSnapshotsServiceStub,
         },
         { provide: WalletBalancesService, useClass: WalletBalancesServiceStub },
+        {
+          provide: WalletBalancesServiceStub,
+          useExisting: WalletBalancesService,
+        },
         {
           provide: SwapExecutableQuoteCoordinator,
           useClass: SwapExecutableQuoteCoordinatorStub,
@@ -1664,12 +1672,9 @@ describe('HomeComponent market overview', () => {
   });
 
   it('exposes non-zero connected-network balances to the destination selector', () => {
-    const balancesService = TestBed.inject(
-      WalletBalancesService
-    ) as unknown as WalletBalancesServiceStub;
-    const walletsService = TestBed.inject(
-      WalletsService
-    ) as unknown as WalletsServiceStub;
+    const balancesService = TestBed.inject(WalletBalancesServiceStub);
+    const walletsService = TestBed.inject(WalletsServiceStub);
+    const assetsService = TestBed.inject(ExchangeAssetsServiceStub);
     const sourceToken: ExchangeToken = {
       assetId: 'nep141:wrap.near',
       symbol: 'NEAR',
@@ -1689,9 +1694,6 @@ describe('HomeComponent market overview', () => {
     component.exchangeTokens = [sourceToken, heldToken];
     component.fromToken = sourceToken;
     component.toToken = heldToken;
-    const assetsService = TestBed.inject(
-      ExchangeAssetsService
-    ) as unknown as ExchangeAssetsServiceStub;
     assetsService.tokens = component.exchangeTokens;
     balancesService.balances = [
       {
