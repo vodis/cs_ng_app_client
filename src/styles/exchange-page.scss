@@ -1356,166 +1356,17 @@
     overflow: hidden;
     width: 100%;
     min-width: 0;
-    height: 310px;
+    height: auto;
     box-sizing: border-box;
     flex-direction: column;
-    padding: 24px 26px;
-  }
+    padding: 20px 26px;
 
-  .activityHead {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-
-  .activityTableWrap {
-    overflow: auto;
-    min-height: 0;
-    flex: 1;
-  }
-
-  .activityTitle {
-    font-size: 18px;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-
-  .view {
-    color: var(--exchange-orange);
-    font-size: 14px;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-
-  .table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-
-    th {
-      overflow: hidden;
-      padding: 0 8px 12px 0;
-      color: #b6bbbc;
-      font-size: 12px;
-      font-weight: 700;
-      text-align: left;
-      text-overflow: ellipsis;
-      text-transform: uppercase;
-      white-space: nowrap;
-
-      &:last-child {
-        padding-right: 0;
-        text-align: right;
-      }
+    > app-swap-history {
+      flex: 0 1 auto;
+      width: 100%;
+      min-width: 0;
+      height: auto;
     }
-
-    td {
-      overflow: hidden;
-      padding: 10px 8px 10px 0;
-      border-top: 1px solid #1e282b;
-      font-size: 15px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-
-      &:last-child {
-        padding-right: 0;
-      }
-    }
-
-    th:nth-child(1),
-    td:nth-child(1) {
-      width: 11%;
-    }
-
-    th:nth-child(2),
-    td:nth-child(2) {
-      width: 18%;
-    }
-
-    th:nth-child(3),
-    td:nth-child(3) {
-      width: 24%;
-    }
-
-    th:nth-child(4),
-    td:nth-child(4) {
-      width: 24%;
-    }
-
-    th:nth-child(5),
-    td:nth-child(5) {
-      width: 23%;
-    }
-
-    &__status {
-      text-align: right;
-    }
-  }
-
-  .pairCell {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    &__icon {
-      display: block;
-      width: 21px;
-      height: 21px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    &__arrow {
-      color: rgb(255 255 255 / 45%);
-      font-size: 12px;
-      line-height: 1;
-    }
-  }
-
-  .mini {
-    display: inline-grid;
-    width: 21px;
-    height: 21px;
-    border-radius: 50%;
-    background: #167cff;
-    color: #fff;
-    font-size: 12px;
-    place-items: center;
-
-    &.greenMini {
-      background: #00d084;
-      color: #071817;
-    }
-
-    &.purple {
-      background: #6d83ff;
-    }
-
-    &.teal {
-      background: #18b899;
-    }
-
-    &.black {
-      background: #0b0b0b;
-    }
-
-    &.orangeMini {
-      background: #ff8400;
-    }
-  }
-
-  .status {
-    color: var(--exchange-green);
-    font-weight: 700;
-  }
-
-  .external {
-    margin-left: 7px;
-    color: var(--exchange-green);
-    opacity: 0.8;
   }
 }
 
@@ -1659,9 +1510,7 @@
     }
 
     .activity {
-      height: auto;
-      min-height: 0;
-      padding: 20px 16px;
+      padding: 16px 16px 12px;
     }
 
     .marketFooter {
