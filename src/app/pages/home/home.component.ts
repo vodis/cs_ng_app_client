@@ -1440,7 +1440,7 @@ export class HomeComponent {
   }
 
   public tokenSelectorWalletTokens(): WalletTokenOption[] {
-    if (this.tokenSelectorSide !== 'from') return [];
+    if (!this.tokenSelectorSide) return [];
 
     return this.tokenSelectorTokens().flatMap(token => {
       const balance = this.balanceForToken(token);
