@@ -20,6 +20,12 @@
     line-height: 1.5;
   }
 
+  .swap-limit {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
   .swap-mode {
     display: flex;
     align-items: center;
@@ -94,6 +100,13 @@
     }
   }
 
+  .panelHeader__actions {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   .panelTitle {
     margin: 0 0 20px;
     font-size: 20px;
@@ -101,8 +114,17 @@
     text-transform: uppercase;
   }
 
-  .swap-settings {
-    display: inline-flex;
+  .swapMarketFlip,
+  .swapMarketFlip__card {
+    display: contents;
+  }
+
+  .swap-market-toggle {
+    display: none;
+  }
+
+  .swap-settings,
+  .swap-market-toggle {
     width: 2.25rem;
     height: 2.25rem;
     flex-shrink: 0;
@@ -120,9 +142,14 @@
       background-color 180ms ease;
 
     mat-icon {
+      display: flex;
       width: 1.15rem;
       height: 1.15rem;
+      margin: 0;
       font-size: 1.15rem;
+      line-height: 1;
+      align-items: center;
+      justify-content: center;
       transition: color 180ms ease;
     }
 
@@ -135,6 +162,68 @@
     &:focus-visible {
       outline: 2px solid var(--exchange-orange);
       outline-offset: 2px;
+    }
+  }
+
+  .swap-market-toggle[aria-pressed='true'] {
+    border-color: var(--exchange-orange);
+    background: color-mix(in srgb, var(--exchange-orange) 14%, transparent);
+    color: var(--exchange-orange);
+
+    mat-icon {
+      color: var(--exchange-orange);
+    }
+  }
+
+  .swap-settings {
+    display: inline-flex;
+  }
+
+  .marketHead__leading {
+    display: grid;
+    min-width: 0;
+    gap: 0.65rem;
+  }
+
+  .marketHead__trailing {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+  }
+
+  // Visual ~34px (~23% under 44px); ::after keeps ~44px tap target.
+  .marketHead .swap-market-toggle,
+  .marketHead .range button {
+    position: relative;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+
+    &::after {
+      position: absolute;
+      inset: -5px;
+      content: '';
+    }
+  }
+
+  .marketHead .swap-market-toggle {
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    // Extra space after the timeframe group so the chart control reads as separate.
+    margin: 0 0 0 8px;
+    line-height: 0;
+
+    mat-icon {
+      display: flex;
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      font-size: 16px;
+      line-height: 16px;
+      align-items: center;
+      justify-content: center;
     }
   }
 
@@ -189,6 +278,19 @@
     border-left: 0;
     margin: 0;
     grid-template-columns: repeat(4, minmax(0, 1fr));
+
+    &--empty {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .swap-details-hint {
+    flex-shrink: 0;
+    margin: 0 0 10px;
+    color: #9aa0a6;
+    font-size: 13px;
+    line-height: 1.35;
+    text-align: center;
   }
 
   .swapPanel {
@@ -233,6 +335,14 @@
     .stats {
       flex-shrink: 0;
       margin-top: auto;
+    }
+
+    .swap-details-hint {
+      margin-top: auto;
+    }
+
+    .swap-details-hint + .stats {
+      margin-top: 0;
     }
   }
 
@@ -694,7 +804,16 @@
 
     &:disabled {
       cursor: not-allowed;
-      opacity: 0.65;
+      border: 1px solid rgb(255 255 255 / 8%);
+      background: #2a3033;
+      color: rgb(255 255 255 / 38%);
+      opacity: 1;
+    }
+
+    &:disabled.connectMain--error {
+      border: 0;
+      background: color-mix(in srgb, var(--primary-text-color) 42%, #1c2124);
+      color: rgb(255 255 255 / 72%);
     }
 
     &--error {
@@ -769,16 +888,25 @@
 
   .range {
     display: flex;
+    align-items: center;
     gap: 8px;
 
     button {
-      width: 43px;
-      height: 36px;
+      display: inline-flex;
+      width: 34px;
+      min-width: 34px;
+      height: 34px;
+      box-sizing: border-box;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
       border: 1px solid var(--exchange-line);
       border-radius: 4px;
+      margin: 0;
       background: #0e1416;
       color: #fff;
-      font-size: 13px;
+      font-size: 12px;
+      line-height: 1;
     }
 
     .active {
@@ -1137,6 +1265,14 @@
     gap: 6px;
   }
 
+  .tokenDetails__projectLinks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0 0 6px;
+    gap: 6px;
+  }
+
   .tokenDetails__iconWrap {
     display: grid;
     overflow: hidden;
@@ -1210,6 +1346,17 @@
     padding: 0 28px 0 0;
     margin: 0;
     gap: 8px;
+
+    &--inline {
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      gap: 10px;
+
+      .tokenDetails__links {
+        flex: 0 1 auto;
+        justify-content: flex-start;
+      }
+    }
   }
 
   .tokenDetails__label {
@@ -1242,12 +1389,18 @@
     white-space: nowrap;
   }
 
+  .tokenDetails__chip {
+    min-height: 28px;
+    box-sizing: border-box;
+    padding: 4px 10px;
+  }
+
   .tokenDetails__links {
     display: flex;
     min-width: 0;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 0 6px;
+    gap: 6px;
   }
 
   .tokenDetails__chipIcon {
@@ -1259,8 +1412,8 @@
 
   .tokenDetails__social {
     display: grid;
-    width: 22px;
-    height: 22px;
+    width: 32px;
+    height: 32px;
     flex-shrink: 0;
     border: 1px solid rgb(255 255 255 / 10%);
     border-radius: 50%;
@@ -1271,8 +1424,8 @@
 
     svg {
       display: block;
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
     }
 
     &:hover {
@@ -1533,13 +1686,158 @@
       grid-template-columns: 1fr;
     }
 
+    .swapMarketFlip {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      perspective: 1800px;
+      perspective-origin: 50% 42%;
+    }
+
+    .swapMarketFlip__card {
+      position: relative;
+      display: block;
+      // Keep overflow visible so backface-visibility / 3D flip stay reliable.
+      overflow: visible;
+      width: 100%;
+      min-width: 0;
+      transform-style: preserve-3d;
+      transform: rotateY(0deg) translateZ(0);
+      transition:
+        transform 0.85s cubic-bezier(0.4, 0.05, 0.2, 1),
+        height 0.45s cubic-bezier(0.4, 0.05, 0.2, 1);
+      will-change: transform, height;
+    }
+
+    .swapMarketFlip--flipped .swapMarketFlip__card {
+      transform: rotateY(180deg) translateZ(0);
+    }
+
+    .swapMarketFlip__face {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transform-style: preserve-3d;
+    }
+
+    .swapMarketFlip__face--front {
+      z-index: 1;
+      transform: rotateY(0deg) translateZ(1px);
+    }
+
+    .swapMarketFlip__face--back {
+      z-index: 0;
+      pointer-events: none;
+      transform: rotateY(180deg) translateZ(1px);
+    }
+
+    .swapMarketFlip--flipped {
+      .swapMarketFlip__face--front {
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .swapMarketFlip__face--back {
+        z-index: 1;
+        pointer-events: auto;
+      }
+    }
+
+    .swapCircle {
+      z-index: 5;
+      pointer-events: auto;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .swapMarketFlip__card {
+        transition-duration: 0.01ms;
+      }
+    }
+
+    .swap-market-toggle {
+      display: inline-flex;
+    }
+
+    .marketHead {
+      display: grid;
+      align-items: start;
+      gap: 0.65rem 0.5rem;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .marketHead__leading {
+      display: contents;
+    }
+
+    .marketHead .panelTitle {
+      grid-column: 1;
+      grid-row: 1;
+      align-self: center;
+      margin: 0;
+      font-size: 1.05rem;
+      line-height: 1.15;
+      white-space: normal;
+    }
+
+    .marketHead .tabs {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
+    .marketHead__trailing {
+      display: inline-flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: flex-end;
+      grid-column: 2;
+      grid-row: 1;
+      max-width: 100%;
+      gap: 8px;
+    }
+
+    .marketHead .swap-market-toggle,
+    .marketHead .range button {
+      width: 34px;
+      min-width: 34px;
+      height: 34px;
+    }
+
+    .marketHead .range {
+      align-items: center;
+      gap: 8px;
+    }
+
+    .marketHead .range button {
+      font-size: 12px;
+    }
+
     .marketPanel,
     .swapPanel {
       height: auto;
+      min-height: 0;
+      overflow: visible;
     }
 
     .swapPanel {
       height: auto;
+      min-height: 0;
+      padding: 20px 16px;
+
+      form {
+        overflow: visible;
+      }
+
+      .stats {
+        margin-top: 1rem;
+      }
+    }
+
+    .marketPanel {
       padding: 20px 16px;
     }
 
@@ -1636,10 +1934,6 @@
       }
     }
 
-    .marketPanel {
-      padding: 20px 16px;
-    }
-
     .marketBody {
       margin-top: 16px;
       gap: 12px;
@@ -1703,10 +1997,91 @@
       }
 
       .tokenDetails {
-        padding-top: 6px;
-        margin-top: 2px;
-        gap: 8px;
+        padding-top: 8px;
+        margin-top: 4px;
+        gap: 1.75rem;
         grid-template-columns: minmax(0, 1fr);
+      }
+
+      .tokenDetails__projectLinks {
+        margin: 0 0 0.5rem;
+        gap: 0.85rem 1.1rem;
+      }
+
+      .tokenDetails__facts {
+        gap: 0.4rem;
+      }
+
+      .tokenDetails__row,
+      .tokenDetails__row--inline {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: flex-start;
+        padding-right: 0;
+        margin: 0;
+        gap: 0.65rem;
+      }
+
+      .tokenDetails__label {
+        min-width: 4.25rem;
+      }
+
+      .tokenDetails__links {
+        display: flex;
+        flex: 0 1 auto;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        margin: 0;
+        gap: 0.35rem 0.55rem;
+      }
+
+      // Plain text links — no capsules on mobile.
+      .tokenDetails__chip {
+        min-height: 1.75rem;
+        align-items: center;
+        padding: 0.2rem 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent !important;
+        color: #d7dbde;
+        font-size: 11px;
+        font-weight: 500;
+        gap: 0;
+        text-decoration: underline;
+        text-decoration-color: rgb(255 255 255 / 28%);
+        text-underline-offset: 2px;
+
+        &:hover,
+        &:is(a):hover {
+          background: transparent !important;
+          color: #fff;
+          text-decoration-color: rgb(255 255 255 / 55%);
+        }
+      }
+
+      .tokenDetails__chipIcon {
+        display: none;
+      }
+
+      // Bare social icons with invisible hit area.
+      .tokenDetails__social {
+        width: 2rem;
+        height: 2rem;
+        border: 0 !important;
+        border-radius: 0;
+        background: transparent !important;
+        color: #b6bcbf;
+
+        svg {
+          width: 14px;
+          height: 14px;
+        }
+
+        &:hover {
+          background: transparent !important;
+          color: #fff;
+        }
       }
 
       .marketMeta {
@@ -1769,6 +2144,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .exchange-page .stats--empty {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .exchange-page .stat {
     min-height: 64px;
     border-bottom: 1px solid var(--exchange-line-soft);
@@ -1779,7 +2158,40 @@
     }
   }
 
-  .exchange-page .connectMain {
-    scroll-margin-bottom: 88px;
+  .exchange-page .activity {
+    /* Extra clearance beyond shell FAB padding for last activity rows. */
+    margin-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .exchange-page .connectMain,
+  .exchange-page .tokenDetails__chip,
+  .exchange-page .tokenDetails__social,
+  .exchange-page .activity {
+    scroll-margin-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .exchange-page .marketHead .panelTitle {
+    font-size: 0.95rem;
+  }
+
+  .exchange-page .marketHead__trailing {
+    gap: 8px;
+  }
+
+  .exchange-page .marketHead .range {
+    gap: 8px;
+  }
+
+  .exchange-page .marketHead .swap-market-toggle,
+  .exchange-page .marketHead .range button {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+  }
+}
+
+@media (width <= 360px) {
+  .exchange-page .marketHead .tabs {
+    grid-row: 2;
   }
 }

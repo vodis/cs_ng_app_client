@@ -32,18 +32,26 @@ The page contains:
 4. A full-width recent-activity table below the two-column top section.
 
 On desktop, the top grid uses a `42% / 58%` split for the swap and market
-panels. At `1100px` and below, it changes to a single-column layout.
+panels. At `1100px` and below, the panels share one flip card: Market Overview
+sits on the back face, and a chart (`show_chart`) control in the swap header
+rotates the card 180° to reveal it. The same control on the market face rotates
+back. Card height is measured from the active face so content does not overflow.
+While the market face is open, the chart control keeps an orange icon and
+border; closed uses the default border. Desktop keeps both panels visible side
+by side (no flip chrome). On narrow screens, token Website / Whitepaper /
+Explorer links render as plain text and socials as bare icons with larger tap
+targets.
 
 ### Swap panel
 
 | Block          | Markup            | Behavior                                                           |
 | -------------- | ----------------- | ------------------------------------------------------------------ |
-| Header         | `.panelHeader`    | Title plus settings control that opens slippage settings           |
+| Header         | `.panelHeader`    | Title, mobile chart flip control, and settings (slippage)          |
 | From row       | `.swapRow.first`  | Token selector, clickable max balance, amount input, USD estimate  |
 | Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison            |
 | To row         | `.swapRow`        | Token selector, clickable max balance, quoted amount, USD estimate |
-| Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee             |
-| Primary action | `.connectMain`    | Confirms a fresh balance, then opens MFE review                    |
+| Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee. Empty amount hides rate / impact / min received and shows a short hint; slippage stays available |
+| Primary action | `.connectMain`    | Confirms a fresh balance, then opens MFE review. Disabled state is muted charcoal; enabled restores the orange CTA |
 
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
@@ -85,7 +93,9 @@ prefer the selected token’s network and contract via `explorerUrlForToken`, so
 bridged assets (e.g. USDC on Base) do not open the Ethereum mock link. Price and
 24h Volume are omitted from this block (pair price stays in the market summary).
 Technical fields (Network, Contract, Decimals) are omitted. On viewports
-`<= 1100px` the two columns stack.
+`<= 1100px` the two columns stack. Website / Whitepaper chips sit on their own
+row under each token name; social and explorer targets wrap with larger tap
+areas on narrow screens.
 
 ### Recent activity
 

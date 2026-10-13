@@ -3,11 +3,13 @@ import {
   hasPositiveBalance,
 } from '@shared/utils/balance-asset.utils';
 import {
+  afterNextRender,
   ChangeDetectorRef,
   Component,
   DestroyRef,
   ElementRef,
   inject,
+  NgZone,
   ViewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -127,6 +129,7 @@ interface MarketComparisonResponse {
 interface ComparisonChartSeries {
   symbol: string;
   points: MarketComparisonPoint[];
+  color?: string;
 }
 
 @Component({
@@ -138,6 +141,7 @@ interface ComparisonChartSeries {
 export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly ngZone = inject(NgZone);
   private readonly maxAmountFractionDigits = 18;
 
   public exchangeTokens: ExchangeToken[] = [
@@ -236,6 +240,33 @@ export class HomeComponent {
     product: 'Token Exchange',
   } as const;
   public showAdvancedMarketView = false;
+  /** Mobile-only: flip the swap/market card to the Market Overview face. */
+  public showMobileMarketFace = false;
+  /** Matches the exchange layout breakpoint where the flip card is active. */
+  public isMobileSwapMarketLayout = false;
+  /** Explicit card height so both absolute faces can animate without layout jumps. */
+  public mobileSwapMarketCardHeight = '';
+  private mobileSwapMarketMq: MediaQueryList | null = null;
+  private mobileSwapMarketHeightFrame = 0;
+  private mobileSwapMarketResizeObserver: ResizeObserver | null = null;
+  public handleMobileSwapMarketLayoutChange(
+    event: Pick<MediaQueryListEvent, 'matches'>
+  ): void {
+    this.isMobileSwapMarketLayout = event.matches;
+    if (!event.matches) {
+      this.showMobileMarketFace = false;
+      this.mobileSwapMarketCardHeight = '';
+    } else {
+      this.queueMobileSwapMarketHeightSync();
+    }
+    this.changeDetector.markForCheck();
+  }
+
+  private readonly onMobileSwapMarketMqChange = (
+    event: MediaQueryListEvent
+  ): void => {
+    this.handleMobileSwapMarketLayoutChange(event);
+  };
   public exchangeAssetsLoading = false;
   public exchangeAssetsError = '';
   public balancesLoading = false;
@@ -245,6 +276,12 @@ export class HomeComponent {
 
   @ViewChild('fromAmountInput')
   private fromAmountInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('swapMarketFlipCard')
+  private swapMarketFlipCard?: ElementRef<HTMLElement>;
+  @ViewChild('swapMarketFlipFront')
+  private swapMarketFlipFront?: ElementRef<HTMLElement>;
+  @ViewChild('swapMarketFlipBack')
+  private swapMarketFlipBack?: ElementRef<HTMLElement>;
 
   private walletBalances: WalletBalance[] = [];
   private reviewBalanceSub?: Subscription;
@@ -384,6 +421,7 @@ export class HomeComponent {
           this.fromAmountInput?.nativeElement &&
             (this.fromAmountInput.nativeElement.value = this.amount);
         }
+        this.queueMobileSwapMarketHeightSync();
       });
 
     this.swapFlowFacade.error$
@@ -401,9 +439,41 @@ export class HomeComponent {
     this.destroyRef.onDestroy(() => {
       this.reviewQuote?.cancel();
       this.reviewBalanceSub?.unsubscribe();
+      this.mobileSwapMarketMq?.removeEventListener(
+        'change',
+        this.onMobileSwapMarketMqChange
+      );
+      this.mobileSwapMarketResizeObserver?.disconnect();
+      this.mobileSwapMarketResizeObserver = null;
+      if (typeof window !== 'undefined' && this.mobileSwapMarketHeightFrame) {
+        window.cancelAnimationFrame(this.mobileSwapMarketHeightFrame);
+      }
+    });
+    this.bindMobileSwapMarketLayout();
+    afterNextRender(() => {
+      this.bindMobileSwapMarketResizeObserver();
+      this.queueMobileSwapMarketHeightSync();
     });
     this.loadExchangeAssets();
     this.loadMarketComparison();
+  }
+
+  private bindMobileSwapMarketLayout(): void {
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
+      return;
+    }
+    this.mobileSwapMarketMq = window.matchMedia('(max-width: 1100px)');
+    this.isMobileSwapMarketLayout = this.mobileSwapMarketMq.matches;
+    this.mobileSwapMarketMq.addEventListener(
+      'change',
+      this.onMobileSwapMarketMqChange
+    );
+    if (this.isMobileSwapMarketLayout) {
+      this.queueMobileSwapMarketHeightSync();
+    }
   }
 
   public submitQuote(): void {
@@ -625,6 +695,7 @@ export class HomeComponent {
     this.toAmountManual = '';
     this.refreshSwapQuotePreview();
     this.loadMarketComparison();
+    this.queueMobileSwapMarketHeightSync();
   }
 
   public tokenSymbolLabel(token: ExchangeToken): string {
@@ -1013,14 +1084,28 @@ export class HomeComponent {
     return formatSlippagePercentLabel(this.slippageToleranceBps);
   }
 
+  /** True when the active amount field has a positive numeric value. */
+  public hasSwapAmountEntered(): boolean {
+    const raw =
+      this.swapType === 'EXACT_OUTPUT' ? this.receiveAmount : this.amount;
+    const parsed = this.parseAmount(raw);
+    return Number.isFinite(parsed) && parsed > 0;
+  }
+
   public minimumReceivedLabel(): string {
     const atomic = this.quotePreview?.amountOutAtomic;
     const minimum = atomic
       ? minimumReceivedAtomic(atomic, this.slippageToleranceBps)
       : null;
-    return minimum
-      ? `${atomicToDecimal(minimum, this.tokenDecimals(this.toToken.decimals))} ${this.toToken.symbol}`
-      : '—';
+    if (!minimum) {
+      return '—';
+    }
+
+    const formatted = this.formatSwapAmount(
+      this.fromBaseUnits(minimum, this.tokenDecimals(this.toToken.decimals)),
+      this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken))
+    );
+    return `${formatted} ${this.tokenSymbolLabel(this.toToken)}`;
   }
 
   public slippageReceiveAtLeastLabel(): string {
@@ -1045,6 +1130,103 @@ export class HomeComponent {
       this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken))
     );
     return `${formatted} ${this.tokenSymbolLabel(this.toToken)}`;
+  }
+
+  public toggleMobileMarketFace(): void {
+    this.showMobileMarketFace = !this.showMobileMarketFace;
+    // Size to the destination face immediately so the height transition
+    // tracks the 3D flip instead of jumping after it.
+    this.syncMobileSwapMarketCardHeight();
+    this.queueMobileSwapMarketHeightSync();
+  }
+
+  private bindMobileSwapMarketResizeObserver(): void {
+    if (
+      typeof ResizeObserver === 'undefined' ||
+      this.mobileSwapMarketResizeObserver
+    ) {
+      return;
+    }
+
+    this.mobileSwapMarketResizeObserver = new ResizeObserver(() => {
+      this.ngZone.run(() => this.queueMobileSwapMarketHeightSync());
+    });
+    const front = this.swapMarketFlipFront?.nativeElement;
+    const back = this.swapMarketFlipBack?.nativeElement;
+    if (front) {
+      this.mobileSwapMarketResizeObserver.observe(front);
+    }
+    if (back) {
+      this.mobileSwapMarketResizeObserver.observe(back);
+    }
+  }
+
+  private queueMobileSwapMarketHeightSync(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (this.mobileSwapMarketHeightFrame) {
+      window.cancelAnimationFrame(this.mobileSwapMarketHeightFrame);
+    }
+    // Two frames: wait for Angular to paint the target face before measuring.
+    this.mobileSwapMarketHeightFrame = window.requestAnimationFrame(() => {
+      this.mobileSwapMarketHeightFrame = window.requestAnimationFrame(() => {
+        this.mobileSwapMarketHeightFrame = 0;
+        this.ngZone.run(() => this.syncMobileSwapMarketCardHeight());
+      });
+    });
+  }
+
+  private syncMobileSwapMarketCardHeight(): void {
+    const card = this.swapMarketFlipCard?.nativeElement;
+    const mobileLayout = this.isMobileSwapMarketLayoutActive();
+    if (!mobileLayout) {
+      if (this.mobileSwapMarketCardHeight || card?.style.height) {
+        this.mobileSwapMarketCardHeight = '';
+        if (card) {
+          card.style.height = '';
+        }
+        this.changeDetector.markForCheck();
+      }
+      return;
+    }
+    if (!this.isMobileSwapMarketLayout) {
+      this.isMobileSwapMarketLayout = true;
+    }
+    const activeFace = this.showMobileMarketFace
+      ? this.swapMarketFlipBack?.nativeElement
+      : this.swapMarketFlipFront?.nativeElement;
+    if (!activeFace) {
+      return;
+    }
+    // Prefer scrollHeight — transform on the face must not shrink the measure.
+    const measured = Math.ceil(
+      Math.max(activeFace.scrollHeight, activeFace.offsetHeight)
+    );
+    if (!Number.isFinite(measured) || measured <= 0) {
+      return;
+    }
+    const nextHeight = `${measured}px`;
+    if (this.mobileSwapMarketCardHeight !== nextHeight) {
+      this.mobileSwapMarketCardHeight = nextHeight;
+      this.changeDetector.detectChanges();
+    }
+    if (card && card.style.height !== nextHeight) {
+      card.style.height = nextHeight;
+    }
+  }
+
+  private isMobileSwapMarketLayoutActive(): boolean {
+    if (this.isMobileSwapMarketLayout) {
+      return true;
+    }
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
+      return false;
+    }
+    return window.matchMedia('(max-width: 1100px)').matches;
   }
 
   public openSlippageSettings(): void {
@@ -1229,6 +1411,7 @@ export class HomeComponent {
     if (sanitized !== previousAmount) {
       this.toAmountManual = '';
       this.refreshSwapQuotePreview();
+      this.queueMobileSwapMarketHeightSync();
     }
   }
 
@@ -2339,31 +2522,24 @@ export class HomeComponent {
   }
 
   private buildComparisonChart(response: MarketComparisonResponse): void {
-    const baseSymbol = this.normalizeMarketSymbol(response.base);
-    const quoteSymbol = this.normalizeMarketSymbol(response.quote);
+    // Prefer the tokens currently selected in the UI — request is always
+    // from=base / to=quote — so legend labels stay correct even when the API
+    // echoes ambiguous series symbols.
+    const fromSymbol = this.marketSymbolFor(this.fromToken);
+    const toSymbol = this.marketSymbolFor(this.toToken);
+    const baseSymbol = this.normalizeMarketSymbol(response.base) || fromSymbol;
+    const quoteSymbol = this.normalizeMarketSymbol(response.quote) || toSymbol;
     const series = Array.isArray(response.series) ? response.series : [];
-    const baseSeries =
-      series.find(
-        item =>
-          this.normalizeMarketSymbol(item.symbol) === baseSymbol &&
-          Array.isArray(item.points) &&
-          item.points.length > 0
-      ) ??
-      series.find(item => Array.isArray(item.points) && item.points.length > 0);
-    const quoteSeries =
-      series.find(
-        item =>
-          this.normalizeMarketSymbol(item.symbol) === quoteSymbol &&
-          Array.isArray(item.points) &&
-          item.points.length > 0
-      ) ??
-      series.find(
-        item =>
-          this.normalizeMarketSymbol(item.symbol) !==
-            this.normalizeMarketSymbol(baseSeries?.symbol ?? '') &&
-          Array.isArray(item.points) &&
-          item.points.length > 0
-      );
+    const baseSeries = this.findComparisonSeries(
+      series,
+      [baseSymbol, fromSymbol],
+      undefined
+    );
+    const quoteSeries = this.findComparisonSeries(
+      series,
+      [quoteSymbol, toSymbol],
+      baseSeries
+    );
 
     if (!baseSeries || !quoteSeries) {
       this.clearComparisonChart();
@@ -2374,23 +2550,24 @@ export class HomeComponent {
       this.selectedMarketChartMode === 'relative'
         ? [
             {
-              symbol: `${this.normalizeMarketSymbol(
-                quoteSeries.symbol
-              )}-${this.normalizeMarketSymbol(baseSeries.symbol)}`,
+              symbol: `${toSymbol}-${fromSymbol}`,
               points: this.buildComparisonDifferencePoints(
                 baseSeries.points,
                 quoteSeries.points
               ),
+              color: this.tokenColor(toSymbol),
             },
           ]
         : [
             {
-              symbol: this.normalizeMarketSymbol(baseSeries.symbol),
+              symbol: fromSymbol,
               points: this.buildIndexedPriceChangePoints(baseSeries.points),
+              color: this.tokenColor(fromSymbol),
             },
             {
-              symbol: this.normalizeMarketSymbol(quoteSeries.symbol),
+              symbol: toSymbol,
               points: this.buildIndexedPriceChangePoints(quoteSeries.points),
+              color: this.tokenColor(toSymbol),
             },
           ]
     ).filter(seriesItem => seriesItem.points.length >= 2);
@@ -2400,9 +2577,47 @@ export class HomeComponent {
       return;
     }
 
-    this.comparisonChartSeries = chartSeries.map((seriesItem, index) =>
-      this.toMarketOverviewChartSeries(seriesItem, index)
+    this.comparisonChartSeries = chartSeries.map(seriesItem =>
+      this.toMarketOverviewChartSeries(seriesItem)
     );
+  }
+
+  private findComparisonSeries(
+    series: MarketComparisonSeries[],
+    symbols: string[],
+    exclude: MarketComparisonSeries | undefined
+  ): MarketComparisonSeries | undefined {
+    const normalizedTargets = symbols
+      .map(symbol => this.normalizeMarketSymbol(symbol))
+      .filter(Boolean);
+    const excludeSymbol = exclude
+      ? this.normalizeMarketSymbol(exclude.symbol)
+      : '';
+
+    const matched = series.find(item => {
+      if (!Array.isArray(item.points) || item.points.length === 0) {
+        return false;
+      }
+      const itemSymbol = this.normalizeMarketSymbol(item.symbol);
+      if (exclude && (item === exclude || itemSymbol === excludeSymbol)) {
+        return false;
+      }
+      return normalizedTargets.includes(itemSymbol);
+    });
+    if (matched) {
+      return matched;
+    }
+
+    return series.find(item => {
+      if (!Array.isArray(item.points) || item.points.length === 0) {
+        return false;
+      }
+      if (!exclude) {
+        return true;
+      }
+      const itemSymbol = this.normalizeMarketSymbol(item.symbol);
+      return item !== exclude && itemSymbol !== excludeSymbol;
+    });
   }
 
   private clearComparisonChart(): void {
@@ -2453,17 +2668,13 @@ export class HomeComponent {
   }
 
   private toMarketOverviewChartSeries(
-    seriesItem: ComparisonChartSeries,
-    index: number
+    seriesItem: ComparisonChartSeries
   ): MarketOverviewChartSeries {
     return {
       id: seriesItem.symbol,
       label: seriesItem.symbol,
       points: seriesItem.points,
-      color:
-        index === 0 && this.selectedMarketChartMode !== 'relative'
-          ? this.tokenColor(this.fromToken.symbol)
-          : this.tokenColor(seriesItem.symbol),
+      color: seriesItem.color || this.tokenColor(seriesItem.symbol),
     };
   }
 

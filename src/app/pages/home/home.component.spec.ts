@@ -382,6 +382,10 @@ describe('HomeComponent market overview', () => {
       'USDC',
       'NEAR',
     ]);
+    expect(component.comparisonChartSeries.map(line => line.label)).toEqual([
+      'USDC',
+      'NEAR',
+    ]);
     expect(component.selectedMarketChartMode).toBe('price');
     expect(component.comparisonChartSeries[0].points[0].value).toBe(0);
 
@@ -389,6 +393,44 @@ describe('HomeComponent market overview', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.chart__empty')).toBeNull();
     expect(compiled.querySelector('app-market-overview-chart')).toBeTruthy();
+  });
+
+  it('labels chart series from the selected tokens even when API symbols are ambiguous', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush({
+      ...comparisonResponse('USDC', 'NEAR', '1H'),
+      series: [
+        {
+          symbol: 'NEAR',
+          points: [
+            { time: 1_700_000_000, value: 100 },
+            { time: 1_700_003_600, value: 101 },
+          ],
+        },
+        {
+          symbol: 'USDC',
+          points: [
+            { time: 1_700_000_000, value: 1 },
+            { time: 1_700_003_600, value: 1 },
+          ],
+        },
+      ],
+    });
+
+    expect(component.comparisonChartSeries.map(line => line.label)).toEqual([
+      'USDC',
+      'NEAR',
+    ]);
+    expect(component.comparisonChartSeries.map(line => line.id)).toEqual([
+      'USDC',
+      'NEAR',
+    ]);
+    expect(
+      new Set(component.comparisonChartSeries.map(line => line.id)).size
+    ).toBe(2);
   });
 
   it('uses display symbols for wrapped assets when the timeframe changes', () => {
@@ -850,6 +892,58 @@ describe('HomeComponent market overview', () => {
     component.openSlippageSettings();
     expect(component.isSlippageSettingsOpen).toBeTrue();
     expect(component.slippageDraftBps).toBe(component.slippageToleranceBps);
+  });
+
+  it('toggles the mobile swap/market flip face', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    expect(component.showMobileMarketFace).toBeFalse();
+    component.toggleMobileMarketFace();
+    expect(component.showMobileMarketFace).toBeTrue();
+    component.toggleMobileMarketFace();
+    expect(component.showMobileMarketFace).toBeFalse();
+  });
+
+  it('treats empty swap amounts as no swap details yet', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.amount = '';
+    component.receiveAmount = '';
+    expect(component.hasSwapAmountEntered()).toBeFalse();
+
+    component.amount = '0';
+    expect(component.hasSwapAmountEntered()).toBeFalse();
+
+    component.amount = '1.5';
+    expect(component.hasSwapAmountEntered()).toBeTrue();
+
+    component.swapType = 'EXACT_OUTPUT';
+    component.amount = '';
+    component.receiveAmount = '2';
+    expect(component.hasSwapAmountEntered()).toBeTrue();
+  });
+
+  it('resets the mobile market face when leaving the flip breakpoint', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.showMobileMarketFace = true;
+    component.isMobileSwapMarketLayout = true;
+    component.handleMobileSwapMarketLayoutChange({ matches: false });
+
+    expect(component.isMobileSwapMarketLayout).toBeFalse();
+    expect(component.showMobileMarketFace).toBeFalse();
   });
 
   it('routes native NEAR from the wallet and preserves 24/6 decimal amounts (Sep 30 swap)', () => {
