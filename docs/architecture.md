@@ -112,6 +112,12 @@ Flow direction:
   in Manage wallets. Wallet setup is not a blocking interstitial.
 - Connected wallets on `/profile` render as a table (Wallet, Network, Status,
   Action), not a stacked list.
+- Profile **Balances** hide zero balances by default (with a Show zero balances
+  toggle), show token icon + symbol on the left, and USD (primary) with a
+  compact token amount (secondary) on the right. USD uses two decimals,
+  `<$0.01` for dust, `$0.00` for zeros, and `Price unavailable` when pricing is
+  missing. Rows sort by USD descending with unpriced non-zero balances after
+  priced holdings. Asset ids and cache metadata stay out of the UI.
 - Legacy `/generate-wallet` links redirect to `/profile`.
 - Sidebar **Profile** opens `/profile`. The header account icon opens
   `/portfolio` (agent preferences, 2FA/passkey security, sessions, and

@@ -8,7 +8,16 @@
     <div
       class="panel swapPanel"
       [class.swapPanel--foreign]="isForeignDestination()">
-      <div class="panelTitle">Swap Tokens</div>
+      <div class="panelHeader">
+        <h2 class="panelTitle">Swap Tokens</h2>
+        <button
+          type="button"
+          class="swap-settings"
+          aria-label="Open swap settings"
+          (click)="openSlippageSettings()">
+          <mat-icon aria-hidden="true">settings</mat-icon>
+        </button>
+      </div>
 
       <form autocomplete="off" (ngSubmit)="submitQuote()">
         <label class="swap-mode"
@@ -239,19 +248,12 @@
           }}
         </p>
 
-        @if (reviewBlockingReason(); as fundingError) {
-          <p
-            class="exchange-notice"
-            [class.exchange-error]="!!quoteError"
-            role="status">
-            {{ fundingError }}
-          </p>
-        }
-
         <button
           class="connectMain"
           type="submit"
-          [disabled]="isPrimaryActionDisabled()">
+          [class.connectMain--error]="primaryActionShowsError()"
+          [disabled]="isPrimaryActionDisabled()"
+          [attr.aria-live]="primaryActionShowsError() ? 'polite' : null">
           {{ primaryActionLabel().toUpperCase() }}
         </button>
       </form>
@@ -642,7 +644,7 @@
       [loadError]="exchangeAssetsError"
       [selectedAssetId]="tokenSelectorSelectedAssetId()"
       [excludedAssetId]="tokenSelectorExcludedAssetId()"
-      [showWalletTokens]="tokenSelectorSide === 'from' && !!walletAddress"
+      [showWalletTokens]="!!walletAddress"
       [walletTokens]="tokenSelectorWalletTokens()"
       [walletTokensLoading]="balancesLoading"
       [walletTokensError]="balancesError"

@@ -255,10 +255,18 @@ describe('HomeComponent market overview', () => {
         { provide: SwapFlowFacadeStub, useExisting: SwapFlowFacade },
         { provide: ExchangeAssetsService, useClass: ExchangeAssetsServiceStub },
         {
+          provide: ExchangeAssetsServiceStub,
+          useExisting: ExchangeAssetsService,
+        },
+        {
           provide: MarketSnapshotsService,
           useClass: MarketSnapshotsServiceStub,
         },
         { provide: WalletBalancesService, useClass: WalletBalancesServiceStub },
+        {
+          provide: WalletBalancesServiceStub,
+          useExisting: WalletBalancesService,
+        },
         {
           provide: SwapExecutableQuoteCoordinator,
           useClass: SwapExecutableQuoteCoordinatorStub,
@@ -736,7 +744,7 @@ describe('HomeComponent market overview', () => {
     expect(component.toAmountFormatted()).toBe('0,4503');
   });
 
-  it('labels the connected-wallet action Review before any signing starts', () => {
+  it('shows Enter a valid amount in the CTA after the amount field is edited', () => {
     const walletsService = TestBed.inject(
       WalletsService
     ) as unknown as WalletsServiceStub;
@@ -760,7 +768,22 @@ describe('HomeComponent market overview', () => {
     });
 
     expect(component.primaryActionLabel()).toBe('Review');
+    expect(component.primaryActionShowsError()).toBeFalse();
     expect(component.canReviewSwap()).toBeFalse();
+
+    component['applySanitizedAmount']('0');
+    expect(component.primaryActionLabel()).toBe('Enter a valid amount.');
+    expect(component.primaryActionShowsError()).toBeTrue();
+
+    fixture.detectChanges();
+    const action = (
+      fixture.nativeElement as HTMLElement
+    ).querySelector<HTMLButtonElement>('.connectMain');
+    expect(action?.textContent?.trim()).toBe('ENTER A VALID AMOUNT.');
+    expect(action?.classList.contains('connectMain--error')).toBeTrue();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.exchange-error')
+    ).toBeNull();
   });
 
   it('uses 0.5% as the default quote slippage', () => {
@@ -814,6 +837,19 @@ describe('HomeComponent market overview', () => {
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
       jasmine.objectContaining({ slippageToleranceBps: 100 })
     );
+  });
+
+  it('opens slippage settings from the swap settings control and slippage row', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    expect(component.isSlippageSettingsOpen).toBeFalse();
+    component.openSlippageSettings();
+    expect(component.isSlippageSettingsOpen).toBeTrue();
+    expect(component.slippageDraftBps).toBe(component.slippageToleranceBps);
   });
 
   it('routes native NEAR from the wallet and preserves 24/6 decimal amounts (Sep 30 swap)', () => {
@@ -916,16 +952,15 @@ describe('HomeComponent market overview', () => {
     expect(component.canReviewSwap()).toBeFalse();
     expect(component.canRetryQuote()).toBeTrue();
     expect(component.isPrimaryActionDisabled()).toBeFalse();
-    expect(component.primaryActionLabel()).toBe('Retry quote');
+    expect(component.primaryActionLabel()).toBe('Quote failed. Try again.');
 
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const action = compiled.querySelector<HTMLButtonElement>('.connectMain');
-    expect(compiled.querySelector('.exchange-error')?.textContent?.trim()).toBe(
-      'Quote failed. Try again.'
-    );
+    expect(compiled.querySelector('.exchange-error')).toBeNull();
     expect(action?.disabled).toBeFalse();
-    expect(action?.textContent?.trim()).toBe('RETRY QUOTE');
+    expect(action?.classList.contains('connectMain--error')).toBeTrue();
+    expect(action?.textContent?.trim()).toBe('QUOTE FAILED. TRY AGAIN.');
 
     component.submitQuote();
 
@@ -1663,6 +1698,66 @@ describe('HomeComponent market overview', () => {
     ]);
   });
 
+  it('exposes non-zero connected-network balances to the destination selector', () => {
+    const balancesService = TestBed.inject(WalletBalancesServiceStub);
+    const walletsService = TestBed.inject(WalletsServiceStub);
+    const assetsService = TestBed.inject(ExchangeAssetsServiceStub);
+    const sourceToken: ExchangeToken = {
+      assetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    const heldToken: ExchangeToken = {
+      assetId: 'nep141:usdt.near',
+      symbol: 'USDT',
+      name: 'Tether USD',
+      color: '#26a17b',
+      decimals: 6,
+      blockchain: 'near',
+    };
+    component.exchangeTokens = [sourceToken, heldToken];
+    component.fromToken = sourceToken;
+    component.toToken = heldToken;
+    assetsService.tokens = component.exchangeTokens;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: 'alice.near',
+        chainType: 'near',
+        network: 'near:mainnet',
+        assetId: heldToken.assetId,
+        symbol: 'USDT',
+        decimals: 6,
+        balanceRaw: '2500000',
+        balanceDecimal: '2.5',
+        source: 'near_rpc',
+        fetchedAt: '2026-09-17T12:00:00.000Z',
+        expiresAt: '2099-09-17T12:00:15.000Z',
+        stale: false,
+      },
+    ];
+
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    walletsService.account.next({ account: 'alice.near', chainId: null });
+    component.openTokenSelector('to');
+
+    expect(component.tokenSelectorWalletTokens()).toEqual([
+      {
+        token: heldToken,
+        balanceLabel: '2,5 USDT',
+        stale: false,
+      },
+    ]);
+  });
+
   it('still requests a dry quote when the entered amount exceeds the displayed balance', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
@@ -2179,7 +2274,9 @@ describe('HomeComponent market overview', () => {
     expect(component.canReviewSwap()).toBeFalse();
     expect(component.canRetryQuote()).toBeTrue();
     expect(component.isPrimaryActionDisabled()).toBeFalse();
-    expect(component.primaryActionLabel()).toBe('Retry quote');
+    expect(component.primaryActionLabel()).toBe(
+      'Quote expired. Request a new quote.'
+    );
   });
 
   it('refreshes wallet balances after confirmed settlement, not just submission', () => {
