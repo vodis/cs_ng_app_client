@@ -75,6 +75,8 @@ export function explorerUrlForToken(token: ExchangeToken): string | null {
 }
 
 function tokenContractHint(token: ExchangeToken): string | undefined {
+  if (token.assetId === 'near:native') return undefined;
+
   const direct = token.contractAddress?.trim();
   if (direct) {
     return direct;

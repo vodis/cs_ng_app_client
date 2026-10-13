@@ -29,24 +29,6 @@
     text-transform: uppercase;
   }
 
-  &__back {
-    display: inline-flex;
-    padding: 0;
-    border: 0;
-    margin-right: 0.75rem;
-    background: transparent;
-    color: rgb(255 255 255 / 72%);
-    cursor: pointer;
-  }
-
-  &__step-label {
-    padding: 1rem 1rem 0.25rem;
-    margin: 0;
-    color: rgb(255 255 255 / 56%);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-  }
-
   &__close {
     display: inline-flex;
     align-items: center;
@@ -200,23 +182,11 @@
     }
   }
 
-  &__network-mark {
-    display: inline-flex;
-    width: 2rem;
-    height: 2rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgb(254 108 0 / 45%);
-    border-radius: 50%;
-    color: #fe6c00;
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
-
   &__meta {
     display: grid;
+    min-width: 0;
     gap: 0.15rem;
+    overflow-wrap: anywhere;
 
     strong {
       font-size: 0.95rem;

@@ -66,8 +66,11 @@ export class ExchangeAssetsService {
       ...(asset.balanceAssetId ? { balanceAssetId: asset.balanceAssetId } : {}),
       executionAssetId: asset.defuseAssetId ?? asset.assetId,
       symbol: asset.symbol,
-      displaySymbol: this.displaySymbolFor(asset.symbol),
-      name: asset.name?.trim() || asset.symbol,
+      displaySymbol: asset.symbol,
+      name:
+        asset.symbol === 'wNEAR'
+          ? 'Wrapped NEAR'
+          : asset.name?.trim() || asset.symbol,
       icon: asset.icon,
       decimals: asset.decimals,
       blockchain: asset.blockchain?.trim().toLowerCase() || 'unknown',
@@ -96,7 +99,7 @@ export class ExchangeAssetsService {
       ...token,
       symbol: 'wNEAR',
       displaySymbol: 'wNEAR',
-      name: asset.name?.trim() || 'Wrapped NEAR',
+      name: 'Wrapped NEAR',
     };
 
     if (hasCanonicalNativeNear) {
@@ -114,12 +117,6 @@ export class ExchangeAssetsService {
       },
       wrappedNear,
     ];
-  }
-
-  private displaySymbolFor(symbol: string): string {
-    if (symbol === 'wNEAR') return 'NEAR';
-    if (symbol === 'wBTC') return 'BTC';
-    return symbol;
   }
 
   private colorForSymbol(symbol: string): string {

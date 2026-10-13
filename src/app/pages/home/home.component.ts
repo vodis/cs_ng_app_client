@@ -1459,18 +1459,10 @@ export class HomeComponent {
       return this.exchangeTokens;
     }
 
-    if (
-      this.tokenSelectorSide === 'from' ||
-      (this.tokenSelectorSide === 'to' &&
-        !this.crossNetworkRecipientIntentSignEnabled)
-    ) {
-      return this.exchangeTokens.filter(token => {
-        if (token.blockchain !== blockchain) return false;
-        if (this.tokenSelectorSide !== 'to') return true;
-        return (
-          this.executionAssetId(token) !== this.executionAssetId(this.fromToken)
-        );
-      });
+    if (this.tokenSelectorSide === 'from') {
+      return this.exchangeTokens.filter(
+        token => token.blockchain === blockchain
+      );
     }
 
     return this.exchangeTokens;
@@ -2037,7 +2029,7 @@ export class HomeComponent {
 
     return this.formatSwapAmount(
       decimal,
-      this.swapAmountFractionDigits(this.displaySymbolFor(balance.symbol))
+      this.swapAmountFractionDigits(balance.symbol)
     );
   }
 
@@ -2161,21 +2153,8 @@ export class HomeComponent {
 
     return {
       ...enriched,
-      displaySymbol:
-        enriched.displaySymbol ?? this.displaySymbolFor(enriched.symbol),
+      displaySymbol: enriched.symbol,
     };
-  }
-
-  private displaySymbolFor(symbol: string): string {
-    if (symbol === 'wNEAR') {
-      return 'NEAR';
-    }
-
-    if (symbol === 'wBTC') {
-      return 'BTC';
-    }
-
-    return symbol;
   }
 
   private resolveSelectedToken(

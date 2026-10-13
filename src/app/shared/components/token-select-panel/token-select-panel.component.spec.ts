@@ -84,21 +84,51 @@ describe('TokenSelectPanelComponent', () => {
     expect(emitSpy).toHaveBeenCalledWith(tokens[1]);
   });
 
-  it('requires a network selection for destination assets', () => {
+  it('renders and selects every same-symbol asset separately', () => {
     const emitSpy = spyOn(component.tokenSelected, 'emit');
-    component.showNetworkStep = true;
     component.tokens = [
       tokens[0],
       { ...tokens[0], assetId: 'usdc-near', blockchain: 'near' },
+      { ...tokens[0], assetId: 'usdc-bridged', contractAddress: '0x1234' },
     ];
-
-    component.handleSelect(tokens[0]);
-    expect(component.pendingSymbol).toBe('USDC');
-    expect(component.networkOptions.length).toBe(2);
-    expect(emitSpy).not.toHaveBeenCalled();
-
-    component.handleNetworkSelect(component.networkOptions[1]);
+    component.selectedAssetId = 'usdc-bridged';
+    fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+    const options =
+      element.querySelectorAll<HTMLButtonElement>('[role="option"]');
+    expect(options.length).toBe(3);
+    expect(options[0].textContent).toContain('Ethereum');
+    expect(options[1].textContent).toContain('NEAR');
+    expect(options[2].textContent).toContain('0x1234');
+    expect(options[0].getAttribute('aria-selected')).toBe('false');
+    expect(options[2].getAttribute('aria-selected')).toBe('true');
+    options[1].click();
     expect(emitSpy).toHaveBeenCalledWith(component.tokens[1]);
+    options[2].click();
+    expect(emitSpy).toHaveBeenCalledWith(component.tokens[2]);
+  });
+
+  it('keeps native and wrapped tokens separately selectable', () => {
+    component.tokens = [
+      { ...tokens[1], assetId: 'near:native' },
+      {
+        ...tokens[1],
+        assetId: 'nep141:wrap.near',
+        symbol: 'wNEAR',
+        name: 'Wrapped NEAR',
+      },
+      { ...tokens[0], assetId: 'btc', symbol: 'BTC' },
+      { ...tokens[0], assetId: 'wbtc', symbol: 'wBTC' },
+    ];
+    fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+    const options =
+      element.querySelectorAll<HTMLButtonElement>('[role="option"]');
+    expect(
+      Array.from(options, option =>
+        option.querySelector('strong')?.textContent?.trim()
+      )
+    ).toEqual(['NEAR', 'wNEAR', 'BTC', 'wBTC']);
   });
 
   it('should emit closeRequested when close is clicked', () => {
@@ -224,6 +254,31 @@ describe('TokenSelectPanelComponent', () => {
     option.click();
 
     expect(emitSpy).toHaveBeenCalledWith(tokens[1]);
+  });
+
+  it('distinguishes and selects same-symbol wallet holdings by contract', () => {
+    const emitSpy = spyOn(component.tokenSelected, 'emit');
+    component.tokens = [
+      { ...tokens[0], assetId: 'usdc-native', contractAddress: '0x1111' },
+      { ...tokens[0], assetId: 'usdc-bridged', contractAddress: '0x2222' },
+    ];
+    component.showWalletTokens = true;
+    component.walletTokens = component.tokens.map(token => ({
+      token,
+      balanceLabel: '1 USDC',
+      stale: false,
+    }));
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+    const options = element.querySelectorAll<HTMLButtonElement>(
+      '.token-select-panel__item--wallet'
+    );
+    expect(options.length).toBe(2);
+    expect(options[0].textContent).toContain('0x1111');
+    expect(options[1].textContent).toContain('0x2222');
+    options[1].click();
+    expect(emitSpy).toHaveBeenCalledWith(component.tokens[1]);
   });
 
   it('filters wallet tokens with the shared search query', () => {

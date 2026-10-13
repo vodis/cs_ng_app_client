@@ -2696,6 +2696,8 @@ describe('HomeComponent market overview', () => {
     );
     expect(swapFlowFacade.watchQuotePreview).not.toHaveBeenCalled();
     component.openTokenSelector('to');
+    expect(component.tokenSelectorTokens()).toEqual(component.exchangeTokens);
+    component.openTokenSelector('from');
     expect(
       component.tokenSelectorTokens().every(token => token.blockchain === 'eth')
     ).toBeTrue();

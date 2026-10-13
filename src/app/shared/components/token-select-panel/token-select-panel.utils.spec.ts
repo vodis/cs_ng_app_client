@@ -39,6 +39,22 @@ describe('filterTokensByQuery', () => {
   it('should filter tokens by name', () => {
     expect(filterTokensByQuery(tokens, 'protocol')).toEqual([tokens[1]]);
   });
+
+  it('finds exact variants by network name, contract or asset id', () => {
+    const variants = [
+      { ...tokens[0], contractAddress: '0xABCD' },
+      {
+        ...tokens[0],
+        assetId: 'usdc-base',
+        blockchain: 'base',
+        contractAddress: '0x1234',
+      },
+    ];
+    expect(filterTokensByQuery(variants, 'Ethereum')).toEqual([variants[0]]);
+    expect(filterTokensByQuery(variants, 'BASE')).toEqual([variants[1]]);
+    expect(filterTokensByQuery(variants, '0xabcd')).toEqual([variants[0]]);
+    expect(filterTokensByQuery(variants, 'usdc-base')).toEqual([variants[1]]);
+  });
 });
 
 describe('resolveTokenSelectPanelViewModel', () => {

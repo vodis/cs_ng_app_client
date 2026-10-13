@@ -131,8 +131,16 @@ The source-token selector shows a **Your tokens** section between search and the
 full token catalog when a wallet is connected. It includes only non-zero,
 network-specific balances for the connected wallet, renders each entry as
 `Token_Network` with its available token amount, and selects the exact 1Click
-asset id. Destination-token selection continues to use the full supported asset
-and network flow.
+asset id. Destination-token selection lists every supported asset/network variant.
+
+The catalog includes every valid asset returned by the backend's 1Click token
+feed; it is not a curated symbol list. Source selection retains each asset id,
+including tokens sharing a symbol on the same network, and is restricted to the
+active funding wallet's network. Neither selector groups assets by symbol or combines wrapped and native tokens.
+Every row shows its network and contract (or asset id); search also matches these
+identifiers. Every destination network remains
+browsable even when cross-network execution is disabled; the existing recipient
+and execution checks still block unavailable routes.
 
 ### Native NEAR identity
 
@@ -140,6 +148,8 @@ Balance/display identity and execution identity are intentionally separate:
 
 - Native NEAR uses canonical balance asset id `near:native` and symbol `NEAR`.
 - Wrapped NEAR uses NEP-141 asset id `nep141:wrap.near` and symbol `wNEAR`.
+- Wrapped NEAR on every network keeps the `wNEAR` label and `Wrapped NEAR`
+  name. It is never grouped under `NEAR` or combined with native NEAR balances.
 - `PUBLIC_NEAR` remains its own NEP-141 token and is never a native-balance
   fallback.
 - Native NEAR quotes use `nep141:wrap.near` as the provider asset identifier,

@@ -1,4 +1,5 @@
 import { ExchangeToken } from '@shared/models/exchange-token.model';
+import { networkLabel } from '@shared/utils/network.utils';
 
 export type TokenSelectPanelViewState = 'loading' | 'error' | 'empty' | 'ready';
 
@@ -19,7 +20,11 @@ export function filterTokensByQuery(
     return (
       symbol.includes(normalizedQuery) ||
       displaySymbol.includes(normalizedQuery) ||
-      name.includes(normalizedQuery)
+      name.includes(normalizedQuery) ||
+      token.blockchain.toLowerCase().includes(normalizedQuery) ||
+      networkLabel(token.blockchain).toLowerCase().includes(normalizedQuery) ||
+      token.assetId.toLowerCase().includes(normalizedQuery) ||
+      Boolean(token.contractAddress?.toLowerCase().includes(normalizedQuery))
     );
   });
 }
