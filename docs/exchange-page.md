@@ -38,6 +38,7 @@ panels. At `1100px` and below, it changes to a single-column layout.
 
 | Block          | Markup            | Behavior                                                           |
 | -------------- | ----------------- | ------------------------------------------------------------------ |
+| Header         | `.panelHeader`    | Title plus settings control that opens slippage settings           |
 | From row       | `.swapRow.first`  | Token selector, clickable max balance, amount input, USD estimate  |
 | Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison            |
 | To row         | `.swapRow`        | Token selector, clickable max balance, quoted amount, USD estimate |
@@ -51,7 +52,7 @@ backend spendable estimate, reserving storage and gas; final preparation validat
 actual funding again. Destination balances are read-only. The exact-receive control
 switches to `EXACT_OUTPUT`, keeps the receive amount fixed, and requests its input
 cost. The quote mode participates in cancellation and preparation identity.
-Slippage opens
+The swap-panel settings button and the Slippage row both open
 `app-slippage-settings-panel` with presets
 (`0.1%`, `0.25%`, `0.5%`, `1%`, `3%`) plus custom input. The host stores the
 choice as basis points (default `50` = `0.5%`) and includes it in dry quote and

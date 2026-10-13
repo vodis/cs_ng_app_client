@@ -8,7 +8,16 @@
     <div
       class="panel swapPanel"
       [class.swapPanel--foreign]="isForeignDestination()">
-      <div class="panelTitle">Swap Tokens</div>
+      <div class="panelHeader">
+        <h2 class="panelTitle">Swap Tokens</h2>
+        <button
+          type="button"
+          class="swap-settings"
+          aria-label="Open swap settings"
+          (click)="openSlippageSettings()">
+          <mat-icon aria-hidden="true">settings</mat-icon>
+        </button>
+      </div>
 
       <form autocomplete="off" (ngSubmit)="submitQuote()">
         <label class="swap-mode"
