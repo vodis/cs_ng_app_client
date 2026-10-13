@@ -135,12 +135,6 @@
                   type="button"
                   class="swapCircle"
                   aria-label="Swap tokens"
-                  [disabled]="isForeignDestination()"
-                  [attr.title]="
-                    isForeignDestination()
-                      ? 'Connect a wallet on the destination network to reverse this swap'
-                      : null
-                  "
                   (click)="swapTokens()">
                   <span class="swapCircle__icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="currentColor">

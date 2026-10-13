@@ -686,9 +686,6 @@ export class HomeComponent {
   }
 
   public swapTokens(): void {
-    if (this.isForeignDestination()) {
-      return;
-    }
     const previousFrom = this.fromToken;
     this.fromToken = this.toToken;
     this.toToken = previousFrom;

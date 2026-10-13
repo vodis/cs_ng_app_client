@@ -319,7 +319,7 @@
 
     form {
       display: flex;
-      overflow: hidden;
+      overflow: visible;
       min-width: 0;
       min-height: 0;
       flex: 1;
@@ -327,7 +327,8 @@
     }
 
     .swap-stack {
-      overflow: hidden;
+      // Keep visible so the swapCircle (larger than the divider) stays clickable.
+      overflow: visible;
       min-width: 0;
       flex-shrink: 0;
     }
@@ -501,6 +502,8 @@
 
   .swap-divider {
     position: relative;
+    z-index: 6;
+    overflow: visible;
     height: 20px;
 
     &::before {
@@ -508,9 +511,11 @@
       top: 50%;
       right: 8px;
       left: 8px;
+      z-index: 0;
       height: 1px;
       background: var(--exchange-line-soft);
       content: '';
+      pointer-events: none;
       transform: translateY(-50%);
     }
   }
@@ -657,7 +662,7 @@
 
   .swapCircle {
     position: absolute;
-    z-index: 2;
+    z-index: 7;
     top: 50%;
     left: 50%;
     display: inline-grid;
@@ -676,6 +681,7 @@
     font-family: inherit;
     line-height: 0;
     place-items: center;
+    pointer-events: auto;
     transform: translate(-50%, -50%);
     transition:
       border-color 0.2s ease,
@@ -1749,8 +1755,13 @@
     }
 
     .swapCircle {
-      z-index: 5;
+      z-index: 7;
       pointer-events: auto;
+    }
+
+    .swap-divider {
+      z-index: 6;
+      overflow: visible;
     }
 
     @media (prefers-reduced-motion: reduce) {
