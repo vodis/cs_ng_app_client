@@ -248,19 +248,12 @@
           }}
         </p>
 
-        @if (reviewBlockingReason(); as fundingError) {
-          <p
-            class="exchange-notice"
-            [class.exchange-error]="!!quoteError"
-            role="status">
-            {{ fundingError }}
-          </p>
-        }
-
         <button
           class="connectMain"
           type="submit"
-          [disabled]="isPrimaryActionDisabled()">
+          [class.connectMain--error]="primaryActionShowsError()"
+          [disabled]="isPrimaryActionDisabled()"
+          [attr.aria-live]="primaryActionShowsError() ? 'polite' : null">
           {{ primaryActionLabel().toUpperCase() }}
         </button>
       </form>

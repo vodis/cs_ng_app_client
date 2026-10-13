@@ -744,7 +744,7 @@ describe('HomeComponent market overview', () => {
     expect(component.toAmountFormatted()).toBe('0,4503');
   });
 
-  it('labels the connected-wallet action Review before any signing starts', () => {
+  it('shows Enter a valid amount in the CTA after the amount field is edited', () => {
     const walletsService = TestBed.inject(
       WalletsService
     ) as unknown as WalletsServiceStub;
@@ -768,7 +768,22 @@ describe('HomeComponent market overview', () => {
     });
 
     expect(component.primaryActionLabel()).toBe('Review');
+    expect(component.primaryActionShowsError()).toBeFalse();
     expect(component.canReviewSwap()).toBeFalse();
+
+    component['applySanitizedAmount']('0');
+    expect(component.primaryActionLabel()).toBe('Enter a valid amount.');
+    expect(component.primaryActionShowsError()).toBeTrue();
+
+    fixture.detectChanges();
+    const action = (
+      fixture.nativeElement as HTMLElement
+    ).querySelector<HTMLButtonElement>('.connectMain');
+    expect(action?.textContent?.trim()).toBe('ENTER A VALID AMOUNT.');
+    expect(action?.classList.contains('connectMain--error')).toBeTrue();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.exchange-error')
+    ).toBeNull();
   });
 
   it('uses 0.5% as the default quote slippage', () => {
@@ -937,16 +952,15 @@ describe('HomeComponent market overview', () => {
     expect(component.canReviewSwap()).toBeFalse();
     expect(component.canRetryQuote()).toBeTrue();
     expect(component.isPrimaryActionDisabled()).toBeFalse();
-    expect(component.primaryActionLabel()).toBe('Retry quote');
+    expect(component.primaryActionLabel()).toBe('Quote failed. Try again.');
 
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const action = compiled.querySelector<HTMLButtonElement>('.connectMain');
-    expect(compiled.querySelector('.exchange-error')?.textContent?.trim()).toBe(
-      'Quote failed. Try again.'
-    );
+    expect(compiled.querySelector('.exchange-error')).toBeNull();
     expect(action?.disabled).toBeFalse();
-    expect(action?.textContent?.trim()).toBe('RETRY QUOTE');
+    expect(action?.classList.contains('connectMain--error')).toBeTrue();
+    expect(action?.textContent?.trim()).toBe('QUOTE FAILED. TRY AGAIN.');
 
     component.submitQuote();
 
@@ -2260,7 +2274,9 @@ describe('HomeComponent market overview', () => {
     expect(component.canReviewSwap()).toBeFalse();
     expect(component.canRetryQuote()).toBeTrue();
     expect(component.isPrimaryActionDisabled()).toBeFalse();
-    expect(component.primaryActionLabel()).toBe('Retry quote');
+    expect(component.primaryActionLabel()).toBe(
+      'Quote expired. Request a new quote.'
+    );
   });
 
   it('refreshes wallet balances after confirmed settlement, not just submission', () => {
