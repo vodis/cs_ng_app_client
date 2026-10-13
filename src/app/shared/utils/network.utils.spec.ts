@@ -1,4 +1,5 @@
 import {
+  destinationMemoError,
   networkLabel,
   caipNetworkLabel,
   nearNetworkForAddress,
@@ -7,6 +8,17 @@ import {
 } from './network.utils';
 
 describe('network utils', () => {
+  it('accepts only canonical uint32 XRP tags and rejects tags on X-addresses', () => {
+    for (const value of ['', '0', '4294967295']) {
+      expect(destinationMemoError('xrp', value)).toBe('');
+    }
+    for (const value of ['-1', '01', '1.5', '4294967296', ' 1', 'memo']) {
+      expect(destinationMemoError('xrp', value)).not.toBe('');
+    }
+    expect(destinationMemoError('sol', '1')).not.toBe('');
+    expect(destinationMemoError('xrp', '1', 'Xaddress')).not.toBe('');
+  });
+
   it('maps connected wallet metadata to asset blockchain ids', () => {
     expect(
       walletBlockchain('0x0000000000000000000000000000000000000001', 42161)

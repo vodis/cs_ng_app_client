@@ -2,6 +2,22 @@ import type { ApiResponseEnvelope } from '@mfe-contracts/api-envelope';
 import { parseApprovedSwapPrepareResponse } from './swap-prepare-response.parser';
 
 describe('parseApprovedSwapPrepareResponse', () => {
+  it('preserves Bitcoin deposit preparations without routing them into intent signing', () => {
+    const data = validPrepareData();
+    data['authMethod'] = 'bitcoin';
+    data['providerId'] = 'one-click';
+    data['executionPackage'] = {
+      providerId: 'one-click',
+      mode: 'deposit_address',
+      protocol: '1click',
+      requiredAction: 'deposit',
+      payload: { depositAddress: 'bc1qdestination' },
+    };
+    const parsed = parseApprovedSwapPrepareResponse({ data, error: null });
+    expect(parsed.authMethod).toBe('bitcoin');
+    expect(parsed.executionPackage.mode).toBe('deposit_address');
+  });
+
   it('decodes an intent-sign response into a new host-owned model', () => {
     const data = validPrepareData();
     const parsed = parseApprovedSwapPrepareResponse({ data, error: null });

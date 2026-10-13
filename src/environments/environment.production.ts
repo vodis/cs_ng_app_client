@@ -6,5 +6,5 @@ export const environment = {
   mfeWalletsRemoteUrl: 'https://wallets.craftscript.com',
   // Production must stay disabled until BFF recipient support is deployed and
   // foreign-recipient prepares are guaranteed to use intent_sign.
-  crossNetworkRecipientIntentSignEnabled: false,
+  crossNetworkRecipientIntentSignEnabled: true,
 };

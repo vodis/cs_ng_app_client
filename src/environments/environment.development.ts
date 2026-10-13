@@ -6,5 +6,5 @@ export const environment = {
   mfeWalletsRemoteUrl: 'https://wallets.craftscript.com',
   // Keep fail-closed until the selected development BFF advertises the
   // recipient contract and supports intent_sign execution for it.
-  crossNetworkRecipientIntentSignEnabled: false,
+  crossNetworkRecipientIntentSignEnabled: true,
 };

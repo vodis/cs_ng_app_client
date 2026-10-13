@@ -191,6 +191,7 @@ export class SwapFlowFacade {
       input.swapType,
       input.account,
       input.recipient,
+      input.destinationMemo,
       input.slippageToleranceBps,
       input.confidential,
       input.network.id,

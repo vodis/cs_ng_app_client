@@ -436,3 +436,28 @@ Requests cancel on identity changes; logout clears account data. Route changes
 retain rows and revalidate expired data. Refresh, focus and settled swaps retry
 reads without fabricating zero balances. Remembered network preferences are
 user/wallet-scoped display context and never proof of signing capability.
+
+### Dynamic exchange catalog and funding families
+
+The backend's complete 1Click catalog is refreshed on the existing minute timer.
+New asset variants appear without a host release. Removed routes invalidate their
+selection's quote/review; changed contract, decimals or execution identity require
+a fresh quote. Price-only refreshes preserve the current selection and quote.
+`sourceNetwork` and `balanceAssetId` are backend metadata; host filters and balance
+matching consume them. The backend still validates every execution against a
+fresh catalog and rejects unsupported/unconfigured funding networks.
+
+Receiving is independent of the connected source wallet. Destination addresses
+are validated for the selected network. XRP optionally accepts a uint32 tag,
+carried as `destinationMemo` through preview, executable quote identity and review.
+An XRP X-address cannot also provide a separate tag. Other memo types remain
+unsupported. Tagged requests require remote `destinationMemoVersion: '1.0.0'`.
+
+Connected-wallet sources include the shared EVM adapter, NEAR, TON, Phantom on
+Solana and UniSat on Bitcoin mainnet. Their CAIP identifiers and balance aliases
+come from the BFF catalog. The host carries provider-neutral Solana/Bitcoin
+transaction envelopes; the MFE owns all wallet/provider I/O. Bitcoin never enters
+the Intents signature path. Unsupported chains have no manual external-deposit
+fallback. Bitcoin forks and Solana Token-2022/non-associated source accounts need
+further adapter support. Deploy BFF, MFE, then host; RPC/Esplora configuration must
+be enabled separately by the operator. No real-value transfer is part of tests.

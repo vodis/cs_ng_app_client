@@ -22,10 +22,11 @@ type QuoteIdentity = {
   amount: string;
   signerId: string;
   recipient: string;
+  destinationMemo?: string;
   recipientType: SwapPrepareRequest['recipientType'];
   depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
-  authMethod: 'evm' | 'near' | 'ton';
+  authMethod: 'evm' | 'near' | 'ton' | 'solana' | 'bitcoin';
   slippageTolerance: number;
   traceId: string;
 };
@@ -190,6 +191,7 @@ function toPrepareRequest(request: QuoteIdentity): SwapPrepareRequest {
     amount: request.amount,
     signerId: request.signerId,
     recipient: request.recipient,
+    destinationMemo: request.destinationMemo,
     recipientType: request.recipientType,
     depositType: request.depositType,
     refundType: request.refundType,
@@ -231,6 +233,7 @@ function executableQuoteKey(request: QuoteIdentity): string {
     request.amount,
     request.signerId.toLowerCase(),
     request.recipient,
+    request.destinationMemo,
     request.recipientType,
     request.depositType,
     request.refundType,

@@ -1,4 +1,7 @@
-import type { ApprovedIntentPrepareRequest } from './intent-prepare.contract';
+import type {
+  ApprovedIntentPrepareRequest,
+  NearIntentsSwapPrepareRequest,
+} from './intent-prepare.contract';
 
 export type SwapReviewToken = {
   assetId: string;
@@ -34,14 +37,15 @@ export type SwapReviewIntent = {
   };
   signer: {
     account: string;
-    chainType: 'ethereum' | 'near' | 'ton';
+    chainType: 'ethereum' | 'near' | 'ton' | 'solana' | 'bitcoin';
   };
   network: { id: string; label: string };
   recipient: string;
+  destinationMemo?: string;
   recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
-  authMethod: 'evm' | 'near' | 'ton';
+  authMethod: 'evm' | 'near' | 'ton' | 'solana' | 'bitcoin';
   slippageToleranceBps: number;
 };
 
@@ -57,16 +61,23 @@ export type SwapReviewPrepareRequest = {
   amount: string;
   signerId: string;
   recipient: string;
+  destinationMemo?: string;
   recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
-  authMethod: 'evm' | 'near' | 'ton';
+  authMethod: 'evm' | 'near' | 'ton' | 'solana' | 'bitcoin';
   slippageTolerance: number;
   deadline: string;
 };
 
+export type WalletPreparedSwap =
+  | ApprovedIntentPrepareRequest
+  | (Omit<NearIntentsSwapPrepareRequest, 'authMethod'> & {
+      authMethod: 'bitcoin';
+    });
+
 export type SwapReviewPrepareResult = {
-  prepareRequest: ApprovedIntentPrepareRequest;
+  prepareRequest: WalletPreparedSwap;
   providerId: string;
   executionMode: string;
   amountIn: string;
@@ -142,6 +153,7 @@ export type WalletSwapInput = {
   amount: string;
   account: string;
   recipient: string;
+  destinationMemo?: string;
   network: { id: string; label: string };
   slippageToleranceBps: number;
   confidential: boolean;

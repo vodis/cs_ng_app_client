@@ -33,6 +33,9 @@ export function parseApprovedSwapPrepareResponse(
     payload['executionPackage'],
     providerId
   );
+  const authMethod = readSwapAuthMethod(payload['authMethod']);
+  if (authMethod === 'bitcoin' && executionPackage.mode !== 'deposit_address')
+    invalidPreparePackage('Bitcoin requires a wallet deposit');
   const quoteHashes = readStringArray(
     payload['quoteHashes'],
     'data.quoteHashes',
@@ -54,7 +57,7 @@ export function parseApprovedSwapPrepareResponse(
     executionPackage,
     quoteHashes,
     signerId: readNonEmptyString(payload['signerId'], 'data.signerId'),
-    authMethod: readSwapAuthMethod(payload['authMethod']),
+    authMethod,
     deadlineTimestamp: readFiniteNumber(
       payload['deadlineTimestamp'],
       'data.deadlineTimestamp'
@@ -230,10 +233,11 @@ function readTokenDeltas(
   });
 }
 
-function readSwapAuthMethod(value: unknown): SwapAuthMethod {
+function readSwapAuthMethod(value: unknown): SwapAuthMethod | 'bitcoin' {
   switch (value) {
     case 'evm':
     case 'near':
+    case 'bitcoin':
     case 'solana':
     case 'stellar':
     case 'ton':

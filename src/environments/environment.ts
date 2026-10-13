@@ -8,5 +8,5 @@ export const environment = {
   mfeWalletsRemoteUrl: 'http://localhost:5002',
   // Enable only after the deployed BFF accepts recipient fields and guarantees
   // intent_sign prepares for foreign-recipient routes.
-  crossNetworkRecipientIntentSignEnabled: false,
+  crossNetworkRecipientIntentSignEnabled: true,
 };

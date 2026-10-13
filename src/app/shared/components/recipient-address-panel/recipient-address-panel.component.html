@@ -27,6 +27,19 @@
         [(ngModel)]="draftAddress"
         [attr.aria-invalid]="validationError ? true : null" />
     </label>
+    @if (blockchain === 'xrp') {
+      <label>
+        <span class="recipient-panel__field-label"
+          >Destination tag (if required by recipient)</span
+        >
+        <input
+          type="text"
+          name="destinationMemo"
+          inputmode="numeric"
+          autocomplete="off"
+          [(ngModel)]="draftMemo" />
+      </label>
+    }
     @if (validationError) {
       <p class="recipient-panel__error">{{ validationError }}</p>
     }

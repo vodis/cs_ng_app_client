@@ -1,4 +1,9 @@
-export type SupportedChainFamily = 'ethereum' | 'near' | 'ton';
+export type SupportedChainFamily =
+  | 'ethereum'
+  | 'near'
+  | 'ton'
+  | 'solana'
+  | 'bitcoin';
 
 export type EvmChainMock = {
   chainId: number;

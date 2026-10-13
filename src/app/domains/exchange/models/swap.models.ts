@@ -23,12 +23,13 @@ export type SwapQuoteRequest = {
   amount: string;
   signerId: string;
   recipient: string;
+  destinationMemo?: string;
   recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   depositType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   refundType: 'ORIGIN_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
   slippageTolerance: number;
   deadline: string;
-  authMethod: 'evm' | 'near' | 'ton';
+  authMethod: 'evm' | 'near' | 'ton' | 'solana' | 'bitcoin';
   network?: string;
   dry: boolean;
 };
@@ -77,8 +78,9 @@ export type ApprovedSwapExecutionPackage =
 
 export type ApprovedSwapPreparePackage = Omit<
   NearIntentsSwapPrepareRequest,
-  'executionPackage'
+  'executionPackage' | 'authMethod'
 > & {
+  authMethod: NearIntentsSwapPrepareRequest['authMethod'] | 'bitcoin';
   executionPackage: ApprovedSwapExecutionPackage;
   amountIn: string;
   amountOut: string;

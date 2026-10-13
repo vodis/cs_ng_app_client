@@ -4,6 +4,7 @@ export interface ExchangeToken {
   name: string;
   assetId: string;
   balanceAssetId?: string;
+  sourceNetwork?: string;
   /** Provider/BFF identifier used for quote and execution requests. */
   executionAssetId?: string;
   color: string;

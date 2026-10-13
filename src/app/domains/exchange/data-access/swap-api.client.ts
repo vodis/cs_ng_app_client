@@ -63,7 +63,7 @@ export class SwapApiClient {
     originAsset: string;
     signerId: string;
     network: string;
-    authMethod: 'near' | 'evm' | 'ton';
+    authMethod: 'near' | 'evm' | 'ton' | 'solana' | 'bitcoin';
   }): Observable<string> {
     return from(this.authProvider.getAccessToken()).pipe(
       switchMap(token => {
@@ -281,6 +281,9 @@ export class SwapApiClient {
           ? request.signerId.toLowerCase()
           : request.signerId,
       recipient: request.recipient,
+      ...(request.destinationMemo !== undefined
+        ? { destinationMemo: request.destinationMemo }
+        : {}),
       recipientType: request.recipientType,
       depositType: request.depositType,
       refundType: request.refundType,
@@ -305,6 +308,9 @@ export class SwapApiClient {
           ? request.signerId.toLowerCase()
           : request.signerId,
       recipient: request.recipient,
+      ...(request.destinationMemo !== undefined
+        ? { destinationMemo: request.destinationMemo }
+        : {}),
       recipientType: request.recipientType,
       depositType: request.depositType,
       refundType: request.refundType,

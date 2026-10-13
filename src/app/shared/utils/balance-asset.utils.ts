@@ -31,7 +31,12 @@ export function tokenBalance(
     : network.startsWith('ton:')
       ? 'ton'
       : walletBlockchain('', Number(network.split(':')[1]));
-  if (token.blockchain !== blockchain) return undefined;
+  if (
+    token.sourceNetwork
+      ? token.sourceNetwork !== network
+      : token.blockchain !== blockchain
+  )
+    return undefined;
   const assetId =
     token.balanceAssetId ??
     (network.startsWith('eip155:') && isNativeEvmToken(token)

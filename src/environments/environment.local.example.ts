@@ -17,5 +17,5 @@ export const environment = {
   // mfeWalletsRemoteUrl: 'http://localhost:5002',
   // mfeWalletsRemoteUrl: 'https://staging-wallets.craftscript.com',
   mfeWalletsRemoteUrl: 'http://localhost:5002',
-  crossNetworkRecipientIntentSignEnabled: false,
+  crossNetworkRecipientIntentSignEnabled: true,
 };
