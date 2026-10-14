@@ -263,3 +263,13 @@ Active-wallet restoration uses the additive selection 1.0.0 wallet mount
 capability documented in `src/app/mfe-contracts/README.md`. Forward backend
 selection before hydration; provider callbacks and browser hints must never
 choose the primary wallet.
+
+## Shared asset SDK and ownership
+
+The host renders backend asset facts and owns authenticated transport and product state. The wallet MFE owns live connection and wallet sign/send; the backend independently accepts ownership proofs. Use published cs-sdk helpers when protocol normalization is required; do not copy provider IDs into UI or treat SDK metadata as trading authorization.
+
+Read the canonical [asset and cryptographic responsibilities](https://github.com/vodis/cs_orchestrator/blob/main/docs/architecture/asset-and-crypto-responsibilities.md)
+before changing these boundaries. `@vodis/cs-assets` owns pure network identities
+and chain-scoped provider normalization; backend policy and proof acceptance
+remain server-side. The package must be released before consumers pin it; do
+not duplicate its mappings or import browser MFE internals into a server.
