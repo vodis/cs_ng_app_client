@@ -44,14 +44,6 @@
           </div>
 
           <form autocomplete="off" (ngSubmit)="submitQuote()">
-            <label class="swap-mode"
-              ><input
-                #receiveMode
-                type="checkbox"
-                [checked]="swapType === 'EXACT_OUTPUT'"
-                (change)="setSwapType(receiveMode.checked)" />
-              Specify exact receive amount</label
-            >
             <div class="swap-stack">
               <div class="swapRow first">
                 <div class="swapRow__main">
@@ -111,7 +103,6 @@
                     <div class="swapRow__amount">
                       <input
                         #fromAmountInput
-                        [readOnly]="swapType === 'EXACT_OUTPUT'"
                         class="amount"
                         [class.amount--muted]="isAmountMuted()"
                         type="text"
@@ -191,21 +182,23 @@
                     <span class="balance">{{ balanceLabel(toToken) }}</span>
                     <div class="swapRow__amount">
                       <div class="amountTrack">
-                        @if (swapType === 'EXACT_OUTPUT') {
-                          <input
-                            class="amount"
-                            type="text"
-                            inputmode="decimal"
-                            aria-label="Exact amount to receive"
-                            [value]="receiveAmount"
-                            (input)="setReceiveAmount($event)" />
-                        } @else {
-                          <output
-                            class="amount"
-                            [class.amount--muted]="isToAmountMuted()"
-                            >{{ toAmountFormatted() }}</output
-                          >
-                        }
+                        <input
+                          #toAmountInput
+                          class="amount"
+                          [class.amount--muted]="isToAmountMuted()"
+                          type="text"
+                          inputmode="decimal"
+                          autocomplete="off"
+                          autocorrect="off"
+                          autocapitalize="off"
+                          spellcheck="false"
+                          placeholder="0,00"
+                          aria-label="Amount to receive"
+                          (focus)="onReceiveAmountFocus($event)"
+                          (blur)="onReceiveAmountBlur($event)"
+                          (keydown)="onReceiveAmountKeydown($event)"
+                          (input)="onReceiveAmountInput($event)"
+                          (paste)="onReceiveAmountPaste($event)" />
                       </div>
                       <div class="usd">{{ toFiatEstimate() }}</div>
                     </div>
@@ -244,7 +237,7 @@
                 <button
                   type="button"
                   class="stat stat--action"
-                  aria-label="Edit slippage"
+                  aria-label="Open swap settings"
                   (click)="openSlippageSettings()">
                   <span>Slippage</span>
                   <b class="orange">{{ slippageLabel() }} &#9998;</b>
@@ -264,7 +257,7 @@
                 <button
                   type="button"
                   class="stat stat--action"
-                  aria-label="Edit slippage"
+                  aria-label="Open swap settings"
                   (click)="openSlippageSettings()">
                   <span>Slippage</span>
                   <b class="orange">{{ slippageLabel() }} &#9998;</b>
@@ -735,6 +728,10 @@
     [isOpen]="isSlippageSettingsOpen"
     [slippageToleranceBps]="slippageToleranceBps"
     [maxSlippageBps]="maxSlippageBps"
+    [route]="routeMode()"
+    [privacy]="confidentialSwap ? 'confidential' : 'public'"
+    [directRouteEnabled]="canSelectRoute('direct')"
+    [crossChainRouteEnabled]="canSelectRoute('cross-chain')"
     [limitLabel]="
       swapType === 'EXACT_OUTPUT' ? 'Maximum paid' : 'Receive at least'
     "
@@ -744,6 +741,6 @@
         : slippageReceiveAtLeastLabel()
     "
     (draftBpsChanged)="onSlippageDraftChanged($event)"
-    (saveRequested)="saveSlippageSettings($event)"
+    (saveRequested)="saveSwapSettings($event)"
     (closeRequested)="closeSlippageSettings()" />
 </div>

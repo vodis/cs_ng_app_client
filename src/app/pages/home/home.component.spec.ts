@@ -2196,7 +2196,7 @@ describe('HomeComponent market overview', () => {
     });
   }
 
-  it('keeps exact-output source amounts immutable through custom input handlers', () => {
+  it('treats a sell-amount edit as an exact-input swap', () => {
     expectComparisonRequest({
       base: 'USDC',
       quote: 'NEAR',
@@ -2204,22 +2204,65 @@ describe('HomeComponent market overview', () => {
     }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
     component.swapType = 'EXACT_OUTPUT';
     component.amount = '2';
+    component.receiveAmount = '5';
     const input = document.createElement('input');
-    input.value = '2';
-    input.addEventListener('keydown', event =>
-      component.onAmountKeydown(event)
-    );
-    input.addEventListener('input', event => component.onAmountInput(event));
-    input.addEventListener('paste', event => component.onAmountPaste(event));
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: ',' }));
     input.value = '99';
+    input.addEventListener('input', event => component.onAmountInput(event));
     input.dispatchEvent(new Event('input'));
-    const clipboard = new DataTransfer();
-    clipboard.setData('text/plain', '99');
-    input.dispatchEvent(
-      new ClipboardEvent('paste', { clipboardData: clipboard })
+    expect(component.swapType).toBe('EXACT_INPUT');
+    expect(component.amount).toBe('99');
+    expect(component.receiveAmount).toBe('');
+  });
+
+  it('treats a receive-amount edit as an exact-output swap', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    component.amount = '1';
+    const input = document.createElement('input');
+    input.value = '4,5';
+    input.addEventListener('input', event =>
+      component.onReceiveAmountInput(event)
     );
-    expect(component.amount).toBe('2');
+    input.dispatchEvent(new Event('input'));
+    expect(component.swapType).toBe('EXACT_OUTPUT');
+    expect(component.receiveAmount).toBe('4.5');
+  });
+
+  it('moves a cross-chain pair onto one network from swap settings', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    spyOn(
+      component as unknown as { loadMarketComparison(): void },
+      'loadMarketComparison'
+    );
+    component.exchangeTokens = [
+      component.fromToken,
+      component.toToken,
+      {
+        ...component.fromToken,
+        assetId: 'dai-on-eth',
+        symbol: 'DAI',
+        name: 'Dai',
+      },
+    ];
+    expect(component.routeMode()).toBe('cross-chain');
+
+    component.saveSwapSettings({
+      slippageToleranceBps: 50,
+      route: 'direct',
+      privacy: 'confidential',
+    });
+
+    expect(component.routeMode()).toBe('direct');
+    expect(component.toToken.blockchain).toBe(component.fromToken.blockchain);
+    expect(component.confidentialSwap).toBeTrue();
+    expect(component.isSlippageSettingsOpen).toBeFalse();
   });
 
   it('requests a one-click preview when an amount is pasted into From', () => {

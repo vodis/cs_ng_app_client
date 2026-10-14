@@ -348,16 +348,16 @@ app-account-sessions .profile-shell {
     text-decoration: underline;
     text-underline-offset: 0.15em;
 
-    &:hover:not(:disabled),
-    &:focus-visible:not(:disabled) {
-      color: var(--primary-text-color);
-      opacity: 0.88;
-    }
-
     &:disabled {
       cursor: not-allowed;
       opacity: 0.5;
       text-decoration: none;
+    }
+
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
+      color: var(--primary-text-color);
+      opacity: 0.88;
     }
   }
 
@@ -980,8 +980,8 @@ app-account-sessions .profile-shell {
   }
 
   &__panel--balances {
-    align-self: start;
     height: fit-content;
+    align-self: start;
   }
 
   &__balances {
@@ -1034,8 +1034,8 @@ app-account-sessions .profile-shell {
   &__balance-value {
     display: grid;
     min-width: 0;
-    justify-items: end;
     gap: 0.08rem;
+    justify-items: end;
     text-align: right;
   }
 
@@ -1054,8 +1054,8 @@ app-account-sessions .profile-shell {
     max-width: 100%;
     color: var(--main-text-color, #fff);
     font-size: 0.95rem;
-    font-weight: 600;
     font-variant-numeric: tabular-nums;
+    font-weight: 600;
     line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
