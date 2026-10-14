@@ -65,7 +65,12 @@ export class ConnectedWalletBalancesFacade {
     const account = request.account.trim();
     const blockchain = BLOCKCHAIN_BY_NETWORK[request.network];
 
-    if (!account || !blockchain) {
+    const supportedFamily =
+      Boolean(blockchain) ||
+      /^eip155:[1-9][0-9]*$/.test(request.network) ||
+      request.network === 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' ||
+      request.network === 'bip122:000000000019d6689c085ae165831e93';
+    if (!account || !supportedFamily) {
       return of({
         status: 'error',
         account,
@@ -80,7 +85,9 @@ export class ConnectedWalletBalancesFacade {
         tokens
           .filter(
             token =>
-              token.blockchain === blockchain &&
+              (token.sourceNetwork
+                ? token.sourceNetwork === request.network
+                : token.blockchain === blockchain) &&
               (blockchain === 'near'
                 ? canonicalBalanceAssetId(
                     token.assetId,

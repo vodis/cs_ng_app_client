@@ -12,9 +12,15 @@ const EVM_BLOCKCHAINS = new Set([
   'monad',
   'plasma',
   'scroll',
+  'abs',
+  'adi',
+  'hood',
+  'hlevm',
+  'hypercore',
 ]);
 
 const CHAIN_ID_TO_BLOCKCHAIN: Record<number, string> = {
+  2741: 'abs',
   1: 'eth',
   10: 'op',
   56: 'bsc',
@@ -24,6 +30,13 @@ const CHAIN_ID_TO_BLOCKCHAIN: Record<number, string> = {
   42161: 'arb',
   43114: 'avax',
   534352: 'scroll',
+  80094: 'bera',
+  143: 'monad',
+  196: 'xlayer',
+  9745: 'plasma',
+  36900: 'adi',
+  4663: 'hood',
+  999: 'hlevm',
 };
 
 const NETWORK_LABELS: Record<string, string> = {
@@ -122,13 +135,15 @@ export function recipientAddressError(
   if (EVM_BLOCKCHAINS.has(blockchain))
     valid = /^0x[a-fA-F0-9]{40}$/.test(address);
   else if (blockchain === 'near') valid = isNearWalletAddress(address);
-  else if (blockchain === 'sol')
+  else if (blockchain === 'sol' || blockchain === 'fogo')
     valid = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
   else if (blockchain === 'btc')
     valid =
       /^(?:[13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[ac-hj-np-z02-9]{11,87})$/i.test(
         address
       );
+  else if (blockchain === 'qtc')
+    valid = /^q[1-9A-HJ-NP-Za-km-z]{48}$/.test(address);
   else if (blockchain === 'doge')
     valid = /^[DA9][1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address);
   else if (blockchain === 'zec')
@@ -158,7 +173,11 @@ export function recipientAddressError(
   else if (blockchain === 'cardano')
     valid = /^addr1[0-9a-z]{20,}$/.test(address);
   else if (blockchain === 'aleo') valid = /^aleo1[0-9a-z]{58}$/.test(address);
-  else if (blockchain === 'aptos' || blockchain === 'sui')
+  else if (
+    blockchain === 'aptos' ||
+    blockchain === 'sui' ||
+    blockchain === 'movement'
+  )
     valid = /^0x[a-fA-F0-9]{64}$/.test(address);
   else if (blockchain === 'starknet')
     valid = /^0x[a-fA-F0-9]{1,64}$/.test(address);
@@ -168,4 +187,19 @@ export function recipientAddressError(
     )} are not supported yet.`;
 
   return valid ? '' : `Enter a valid ${networkLabel(blockchain)} address.`;
+}
+
+export function destinationMemoError(
+  blockchain: string,
+  memo: string,
+  recipient?: string
+): string {
+  if (!memo) return '';
+  if (recipient?.startsWith('X'))
+    return 'An XRP X-address already includes its destination tag.';
+  if (blockchain !== 'xrp')
+    return 'This network does not support a destination memo.';
+  return /^(0|[1-9][0-9]{0,9})$/.test(memo) && BigInt(memo) <= 4294967295n
+    ? ''
+    : 'Enter an XRP destination tag between 0 and 4294967295.';
 }

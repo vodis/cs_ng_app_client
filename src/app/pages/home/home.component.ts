@@ -80,6 +80,7 @@ import {
 import {
   networkLabel,
   recipientAddressError,
+  destinationMemoError,
   walletBlockchain,
 } from '@shared/utils/network.utils';
 import {
@@ -174,7 +175,13 @@ export class HomeComponent {
   public toAmountManual = '';
   public walletAddress = '';
   public walletChainId: number | null = null;
-  public walletChainType: 'ethereum' | 'near' | 'ton' | undefined;
+  public walletChainType:
+    | 'ethereum'
+    | 'near'
+    | 'ton'
+    | 'solana'
+    | 'bitcoin'
+    | undefined;
   public fromToken = this.exchangeTokens[0];
   public toToken = this.exchangeTokens[1];
   public isTokenSelectorOpen = false;
@@ -216,6 +223,8 @@ export class HomeComponent {
   public confidentialSwap = false;
   public slippageDraftBps = DEFAULT_SLIPPAGE_TOLERANCE_BPS;
   public recipientAddress = '';
+  private removedCatalogAssets = new Set<string>();
+  public destinationMemo = '';
   public crossNetworkRecipientIntentSignEnabled =
     environment.crossNetworkRecipientIntentSignEnabled;
   public swapFlowState: SwapFlowState = 'idle';
@@ -340,10 +349,13 @@ export class HomeComponent {
         this.walletChainType =
           chainType === 'near' ||
           chainType === 'ethereum' ||
-          chainType === 'ton'
+          chainType === 'ton' ||
+          chainType === 'solana' ||
+          chainType === 'bitcoin'
             ? chainType
             : undefined;
         this.recipientAddress = '';
+        this.destinationMemo = '';
         this.swapFlowFacade.reset();
         this.alignSelectionsToWallet();
         this.refreshSwapQuotePreview();
@@ -365,15 +377,38 @@ export class HomeComponent {
       .watchPrices()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(tokens => {
-        const prices = new Map(tokens.map(token => [token.assetId, token]));
-        const refresh = (token: ExchangeToken): ExchangeToken => ({
-          ...token,
-          priceUsd: prices.get(token.assetId)?.priceUsd,
-          priceUpdatedAt: prices.get(token.assetId)?.priceUpdatedAt,
-        });
-        this.exchangeTokens = this.exchangeTokens.map(refresh);
-        this.fromToken = refresh(this.fromToken);
-        this.toToken = refresh(this.toToken);
+        const catalog = new Map(tokens.map(token => [token.assetId, token]));
+        const identity = (token: ExchangeToken) =>
+          JSON.stringify([
+            token.assetId,
+            token.balanceAssetId,
+            token.executionAssetId,
+            token.blockchain,
+            token.contractAddress,
+            token.decimals,
+            token.sourceNetwork,
+          ]);
+        const nextFrom = catalog.get(this.fromToken.assetId);
+        const nextTo = catalog.get(this.toToken.assetId);
+        const changed =
+          !nextFrom ||
+          !nextTo ||
+          identity(nextFrom) !== identity(this.fromToken) ||
+          identity(nextTo) !== identity(this.toToken);
+        this.removedCatalogAssets = new Set(
+          [this.fromToken.assetId, this.toToken.assetId].filter(
+            id => !catalog.has(id)
+          )
+        );
+        this.exchangeTokens = tokens.map(token => this.enrichToken(token));
+        if (nextFrom) this.fromToken = this.enrichToken(nextFrom);
+        if (nextTo) this.toToken = this.enrichToken(nextTo);
+        if (changed) {
+          this.cancelPendingReview();
+          this.swapFlowFacade.watchQuotePreview(undefined);
+          this.quotePreview = undefined;
+          if (nextFrom && nextTo) this.refreshSwapQuotePreview();
+        }
         this.changeDetector.markForCheck();
       });
     // Re-evaluate time-based quote/balance eligibility even without wallet events.
@@ -574,6 +609,9 @@ export class HomeComponent {
       amount,
       account: this.walletAddress,
       recipient: this.effectiveRecipient(),
+      ...(this.destinationMemo
+        ? { destinationMemo: this.destinationMemo }
+        : {}),
       network: {
         id: this.balanceNetwork() ?? '',
         label: this.tokenNetworkLabel(this.fromToken),
@@ -998,9 +1036,7 @@ export class HomeComponent {
             authMethod:
               this.walletChainType === 'ethereum'
                 ? 'evm'
-                : this.walletChainType === 'ton'
-                  ? 'ton'
-                  : 'near',
+                : (this.walletChainType ?? 'near'),
           })
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
@@ -1438,6 +1474,11 @@ export class HomeComponent {
 
   private buildQuotePreviewInput(): SwapFormInput | undefined {
     if (
+      this.removedCatalogAssets.has(this.fromToken.assetId) ||
+      this.removedCatalogAssets.has(this.toToken.assetId)
+    )
+      return undefined;
+    if (
       this.activeWallet.wallet &&
       (!this.activeWallet.canRequestSwap || !this.walletAddress)
     )
@@ -1610,6 +1651,7 @@ export class HomeComponent {
       this.toToken = selected;
       this.toAmountManual = '';
       this.recipientAddress = '';
+      this.destinationMemo = '';
     }
 
     this.refreshSwapQuotePreview();
@@ -1641,17 +1683,8 @@ export class HomeComponent {
   }
 
   public tokenSelectorTokens(): ExchangeToken[] {
-    const blockchain = this.connectedWalletBlockchain();
-    if (!blockchain) {
-      return this.exchangeTokens;
-    }
-
-    if (this.tokenSelectorSide === 'from') {
-      return this.exchangeTokens.filter(
-        token => token.blockchain === blockchain
-      );
-    }
-
+    if (this.tokenSelectorSide === 'from' && this.walletAddress)
+      return this.exchangeTokens.filter(token => this.canFetchBalance(token));
     return this.exchangeTokens;
   }
 
@@ -1675,9 +1708,16 @@ export class HomeComponent {
   public connectedWalletBlockchain(): string | undefined {
     if (this.walletChainType === 'near') return 'near';
     if (this.walletChainType === 'ethereum') {
-      return walletBlockchain(this.walletAddress, this.walletChainId);
+      return (
+        this.exchangeTokens.find(
+          token => token.sourceNetwork === this.balanceNetwork()
+        )?.blockchain ??
+        walletBlockchain(this.walletAddress, this.walletChainId)
+      );
     }
     if (this.walletChainType === 'ton') return 'ton';
+    if (this.walletChainType === 'solana') return 'sol';
+    if (this.walletChainType === 'bitcoin') return 'btc';
     return walletBlockchain(this.walletAddress, this.walletChainId);
   }
 
@@ -1773,6 +1813,9 @@ export class HomeComponent {
   }
 
   public isForeignDestination(): boolean {
+    const network = this.balanceNetwork();
+    if (this.toToken.sourceNetwork && network)
+      return this.toToken.sourceNetwork !== network;
     const walletNetwork = this.connectedWalletBlockchain();
     return Boolean(walletNetwork && this.toToken.blockchain !== walletNetwork);
   }
@@ -1936,6 +1979,11 @@ export class HomeComponent {
   }
 
   public reviewBlockingReason(): string {
+    if (
+      this.removedCatalogAssets.has(this.fromToken.assetId) ||
+      this.removedCatalogAssets.has(this.toToken.assetId)
+    )
+      return 'This asset is no longer available. Select another token.';
     if (this.activeWallet.reason)
       return this.quoteError || this.activeWallet.reason;
     if (this.recipientValidationError()) return this.recipientValidationError();
@@ -1988,11 +2036,13 @@ export class HomeComponent {
       amount,
       signerId: this.walletAddress,
       recipient: this.effectiveRecipient(),
+      ...(this.destinationMemo
+        ? { destinationMemo: this.destinationMemo }
+        : {}),
       recipientType: 'DESTINATION_CHAIN',
       depositType: 'ORIGIN_CHAIN',
       refundType: 'ORIGIN_CHAIN',
-      authMethod:
-        chainType === 'ethereum' ? 'evm' : chainType === 'ton' ? 'ton' : 'near',
+      authMethod: chainType === 'ethereum' ? 'evm' : (chainType ?? 'near'),
       slippageTolerance: this.slippageToleranceBps,
       deadline: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     });
@@ -2236,22 +2286,18 @@ export class HomeComponent {
   private canFetchBalance(token: ExchangeToken): boolean {
     const blockchain = this.connectedWalletBlockchain();
     return Boolean(
-      this.balanceNetwork() && blockchain && token.blockchain === blockchain
+      this.balanceNetwork() &&
+      (token.sourceNetwork
+        ? token.sourceNetwork === this.balanceNetwork()
+        : blockchain && token.blockchain === blockchain)
     );
   }
 
   private pickDefaultFromToken(): ExchangeToken | undefined {
-    const blockchain = this.connectedWalletBlockchain();
-    return (
-      this.exchangeTokens.find(
-        token =>
-          token.symbol === 'USDC' &&
-          (!blockchain || token.blockchain === blockchain)
-      ) ??
-      this.exchangeTokens.find(
-        token => !blockchain || token.blockchain === blockchain
-      )
-    );
+    const candidates = this.walletAddress
+      ? this.exchangeTokens.filter(token => this.canFetchBalance(token))
+      : this.exchangeTokens;
+    return candidates.find(token => token.symbol === 'USDC') ?? candidates[0];
   }
 
   private pickDefaultToToken(): ExchangeToken | undefined {
@@ -2277,22 +2323,17 @@ export class HomeComponent {
 
   private alignSelectionsToWallet(): void {
     const blockchain = this.connectedWalletBlockchain();
-    if (!blockchain || this.exchangeTokens.length === 0) return;
-
-    if (this.fromToken.blockchain !== blockchain) {
+    if (!this.walletAddress || this.exchangeTokens.length === 0) return;
+    if (!this.canFetchBalance(this.fromToken)) {
       this.fromToken =
         this.exchangeTokens.find(
           token =>
-            token.blockchain === blockchain &&
+            this.canFetchBalance(token) &&
             token.symbol === this.fromToken.symbol
         ) ??
-        this.exchangeTokens.find(
-          token => token.blockchain === blockchain && token.symbol === 'USDC'
-        ) ??
-        this.exchangeTokens.find(token => token.blockchain === blockchain) ??
+        this.pickDefaultFromToken() ??
         this.fromToken;
     }
-
     if (
       this.toToken.blockchain !== blockchain ||
       this.toToken.assetId === this.fromToken.assetId
@@ -2325,6 +2366,12 @@ export class HomeComponent {
   }
 
   private recipientValidationError(): string {
+    const memoError = destinationMemoError(
+      this.toToken.blockchain,
+      this.destinationMemo,
+      this.effectiveRecipient()
+    );
+    if (memoError) return memoError;
     if (!this.isForeignDestination()) return '';
     if (!this.crossNetworkRecipientIntentSignEnabled) {
       return 'Cross-network recipients are not available until the backend and wallet execution contracts are enabled.';

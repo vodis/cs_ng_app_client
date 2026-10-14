@@ -1,6 +1,7 @@
 export interface AssetDto {
   assetId: string;
   balanceAssetId?: string;
+  sourceNetwork?: string;
   defuseAssetId?: string;
   symbol: string;
   name?: string;

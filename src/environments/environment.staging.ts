@@ -6,5 +6,5 @@ export const environment = {
   mfeWalletsRemoteUrl: 'https://staging-wallets.craftscript.com',
   // Keep fail-closed until the staging BFF advertises recipient support and
   // guarantees intent_sign execution for foreign-recipient routes.
-  crossNetworkRecipientIntentSignEnabled: false,
+  crossNetworkRecipientIntentSignEnabled: true,
 };

@@ -238,6 +238,10 @@ export class ActiveWalletFacade {
     wallet: BackendWallet,
     snapshot?: WalletConnectionSnapshot | null
   ): string | undefined {
+    if (wallet.chainType === 'solana')
+      return 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
+    if (wallet.chainType === 'bitcoin')
+      return 'bip122:000000000019d6689c085ae165831e93';
     if (wallet.chainType === 'near')
       return nearNetworkForAddress(wallet.address);
     const key = `app:v1:wallet-network:${userId}:${wallet.id}`;

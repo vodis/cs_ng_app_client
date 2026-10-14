@@ -331,6 +331,11 @@ export class WalletGatewayBridgeService {
     }
     if (input.swapType === 'EXACT_OUTPUT' && api.exactOutputVersion !== '1.0.0')
       throw new Error('Update the wallet app to use exact receive amounts.');
+    if (
+      input.destinationMemo !== undefined &&
+      api.destinationMemoVersion !== '1.0.0'
+    )
+      throw new Error('Update the wallet app to use a destination tag.');
     return api.requestSwapQuote(input, options);
   }
 
@@ -352,6 +357,11 @@ export class WalletGatewayBridgeService {
       api.exactOutputVersion !== '1.0.0'
     )
       throw new Error('Update the wallet app to use exact receive amounts.');
+    if (
+      review.input.destinationMemo !== undefined &&
+      api.destinationMemoVersion !== '1.0.0'
+    )
+      throw new Error('Update the wallet app to use a destination tag.');
     api.openWalletSwapReview(review);
   }
 

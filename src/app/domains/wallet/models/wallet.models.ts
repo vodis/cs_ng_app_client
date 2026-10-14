@@ -4,7 +4,7 @@ export interface WalletAccount {
   identity?: {
     connectorId: string;
     address: string;
-    chainType: 'ethereum' | 'near' | 'ton';
+    chainType: 'ethereum' | 'near' | 'ton' | 'solana' | 'bitcoin';
     walletType: 'embedded' | 'external';
   } | null;
 }

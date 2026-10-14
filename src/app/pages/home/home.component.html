@@ -725,6 +725,8 @@
       [isOpen]="isRecipientPanelOpen"
       [blockchain]="toToken.blockchain"
       [address]="recipientAddress"
+      [destinationMemo]="destinationMemo"
+      (memoSaved)="destinationMemo = $event"
       (addressSaved)="saveRecipientAddress($event)"
       (closeRequested)="closeRecipientPanel()" />
   </app-side-modal>

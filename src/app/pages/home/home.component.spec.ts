@@ -284,6 +284,57 @@ describe('HomeComponent market overview', () => {
     httpMock.verify();
   });
 
+  it('filters a backend-advertised EVM network without a host chain-map entry', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    component.walletAddress = '0x' + '11'.repeat(20);
+    component.walletChainType = 'ethereum';
+    component.walletChainId = 99999;
+    component.activeWallet = {
+      ...component.activeWallet,
+      network: 'eip155:99999',
+    };
+    const source = {
+      ...component.fromToken,
+      assetId: 'future-token',
+      blockchain: 'future',
+      sourceNetwork: 'eip155:99999',
+    };
+    const other = {
+      ...source,
+      assetId: 'other-token',
+      blockchain: 'eth',
+      sourceNetwork: 'eip155:1',
+    };
+    component.exchangeTokens = [source, other];
+    component.openTokenSelector('from');
+    expect(component.tokenSelectorTokens()).toEqual([source]);
+    component.toToken = other;
+    expect(component.isForeignDestination()).toBeTrue();
+    component.toToken = source;
+    expect(component.isForeignDestination()).toBeFalse();
+  });
+
+  it('invalidates a quote when the backend corrects only the balance asset identity', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    const flow = TestBed.inject(SwapFlowFacadeStub);
+    flow.watchQuotePreview.calls.reset();
+    assetPriceUpdates.next([
+      { ...component.fromToken, balanceAssetId: 'corrected/native' },
+      component.toToken,
+    ]);
+    expect(component.fromToken.balanceAssetId).toBe('corrected/native');
+    expect(flow.watchQuotePreview).toHaveBeenCalledWith(undefined);
+    expect(component.quotePreview).toBeUndefined();
+  });
+
   it('values canonical six-decimal USDC at cents without changing its atomic amount', () => {
     const response = comparisonResponse('USDC', 'NEAR', '1H');
     response.baseToken.currentPrice = 0.999734;
@@ -2796,6 +2847,7 @@ describe('HomeComponent market overview', () => {
   });
 
   it('fails closed when the foreign-recipient backend contract is disabled', () => {
+    component.crossNetworkRecipientIntentSignEnabled = false;
     const walletsService = TestBed.inject(
       WalletsService
     ) as unknown as WalletsServiceStub;

@@ -47,7 +47,7 @@ export type WalletIdentity = {
   connectorId: WalletConnectorId;
   address: string;
   providerWalletId?: string;
-  chainType: 'ethereum' | 'near' | 'ton';
+  chainType: 'ethereum' | 'near' | 'ton' | 'solana' | 'bitcoin';
   walletType: 'embedded' | 'external';
 };
 
@@ -140,6 +140,7 @@ export type WalletsMfeMountApi = {
   syncConnectedWallet?: () => Promise<WalletConnectionSnapshot>;
   disconnectWallet?: () => void;
   exactOutputVersion?: '1.0.0';
+  destinationMemoVersion?: '1.0.0';
   swapContractVersion?: '2.0.0';
   walletFundingVersion?: '1.0.0';
   /** Selected-wallet previews and MFE-owned execution readiness. */
