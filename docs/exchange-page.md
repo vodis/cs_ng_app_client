@@ -36,6 +36,8 @@ panels. At `1100px` and below, the panels share one flip card: Market Overview
 sits on the back face, and a chart (`show_chart`) control in the swap header
 rotates the card 180° to reveal it. The same control on the market face rotates
 back. Card height is measured from the active face so content does not overflow.
+The inactive mobile face is inert; flipping moves keyboard focus to the visible
+face's chart toggle. Both faces remain interactive on desktop.
 While the market face is open, the chart control keeps an orange icon and
 border; closed uses the default border. Desktop keeps both panels visible side
 by side (no flip chrome). On narrow screens, token Website / Whitepaper /

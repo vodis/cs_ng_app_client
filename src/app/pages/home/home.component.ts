@@ -1131,6 +1131,13 @@ export class HomeComponent {
 
   public toggleMobileMarketFace(): void {
     this.showMobileMarketFace = !this.showMobileMarketFace;
+    this.changeDetector.detectChanges();
+    const activeFace = this.showMobileMarketFace
+      ? this.swapMarketFlipBack?.nativeElement
+      : this.swapMarketFlipFront?.nativeElement;
+    activeFace
+      ?.querySelector<HTMLButtonElement>('.swap-market-toggle')
+      ?.focus({ preventScroll: true });
     // Size to the destination face immediately so the height transition
     // tracks the 3D flip instead of jumping after it.
     this.syncMobileSwapMarketCardHeight();

@@ -908,6 +908,48 @@ describe('HomeComponent market overview', () => {
     expect(component.showMobileMarketFace).toBeFalse();
   });
 
+  it('keeps only the visible mobile face interactive and moves focus when flipping (PR 223)', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    component.handleMobileSwapMarketLayoutChange({ matches: true });
+    fixture.detectChanges();
+    const root: unknown = fixture.nativeElement;
+    if (!(root instanceof HTMLElement)) throw new Error('Missing home element');
+    const front = root.querySelector<HTMLElement>(
+      '.swapMarketFlip__face--front'
+    );
+    const back = root.querySelector<HTMLElement>('.swapMarketFlip__face--back');
+    if (!front || !back) throw new Error('Missing flip-card faces');
+    expect(front.inert).toBeFalse();
+    expect(back.inert).toBeTrue();
+
+    component.toggleMobileMarketFace();
+    expect(front.inert).toBeTrue();
+    expect(back.inert).toBeFalse();
+    expect(document.activeElement).toBe(
+      back.querySelector('.swap-market-toggle')
+    );
+    front.querySelector<HTMLInputElement>('input')?.focus();
+    expect(document.activeElement).toBe(
+      back.querySelector('.swap-market-toggle')
+    );
+
+    component.toggleMobileMarketFace();
+    expect(front.inert).toBeFalse();
+    expect(back.inert).toBeTrue();
+    expect(document.activeElement).toBe(
+      front.querySelector('.swap-market-toggle')
+    );
+
+    component.handleMobileSwapMarketLayoutChange({ matches: false });
+    fixture.detectChanges();
+    expect(front.inert).toBeFalse();
+    expect(back.inert).toBeFalse();
+  });
+
   it('treats empty swap amounts as no swap details yet', () => {
     expectComparisonRequest({
       base: 'USDC',

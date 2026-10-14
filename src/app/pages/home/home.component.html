@@ -16,6 +16,9 @@
           class="panel swapPanel swapMarketFlip__face swapMarketFlip__face--front"
           #swapMarketFlipFront
           [class.swapPanel--foreign]="isForeignDestination()"
+          [attr.inert]="
+            isMobileSwapMarketLayout && showMobileMarketFace ? '' : null
+          "
           [attr.aria-hidden]="
             isMobileSwapMarketLayout && showMobileMarketFace ? 'true' : null
           ">
@@ -304,6 +307,9 @@
           class="panel marketPanel swapMarketFlip__face swapMarketFlip__face--back"
           #swapMarketFlipBack
           [class.marketPanel--advanced]="showAdvancedMarketView"
+          [attr.inert]="
+            isMobileSwapMarketLayout && !showMobileMarketFace ? '' : null
+          "
           [attr.aria-hidden]="
             isMobileSwapMarketLayout && !showMobileMarketFace ? 'true' : null
           ">
