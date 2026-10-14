@@ -6,431 +6,495 @@
 
   <section class="gridTop">
     <div
-      class="panel swapPanel"
-      [class.swapPanel--foreign]="isForeignDestination()">
-      <div class="panelHeader">
-        <h2 class="panelTitle">Swap Tokens</h2>
-        <button
-          type="button"
-          class="swap-settings"
-          aria-label="Open swap settings"
-          (click)="openSlippageSettings()">
-          <mat-icon aria-hidden="true">settings</mat-icon>
-        </button>
-      </div>
-
-      <form autocomplete="off" (ngSubmit)="submitQuote()">
-        <label class="swap-mode"
-          ><input
-            #receiveMode
-            type="checkbox"
-            [checked]="swapType === 'EXACT_OUTPUT'"
-            (change)="setSwapType(receiveMode.checked)" />
-          Specify exact receive amount</label
-        >
-        <div class="swap-stack">
-          <div class="swapRow first">
-            <div class="swapRow__main">
-              <div class="swapRow__left">
-                <div class="label">FROM</div>
-                <button
-                  type="button"
-                  class="select"
-                  (click)="openTokenSelector('from')">
-                  <span class="select__value">
-                    @if (resolveTokenIcon(fromToken); as fromIcon) {
-                      <span
-                        class="coin coin--image"
-                        [style.backgroundColor]="fromToken.color">
-                        <img
-                          [src]="fromIcon"
-                          [alt]="tokenSymbolLabel(fromToken)"
-                          loading="lazy"
-                          width="34"
-                          height="34" />
-                      </span>
-                    } @else {
-                      <span
-                        class="coin"
-                        [style.backgroundColor]="fromToken.color"
-                        >{{ tokenDisplay(tokenSymbolLabel(fromToken)) }}</span
-                      >
-                    }
-                    <span class="select__token-meta">
-                      <span class="select__symbol">{{
-                        tokenSymbolLabel(fromToken)
-                      }}</span>
-                      <small>{{ tokenNetworkLabel(fromToken) }}</small>
-                    </span>
-                    <span class="select__arrow" aria-hidden="true"
-                      >&#9662;</span
-                    >
-                  </span>
-                </button>
-              </div>
-              <div class="swapRow__right">
-                <button
-                  type="button"
-                  class="balance"
-                  [disabled]="!canApplyMaxBalance(fromToken)"
-                  [attr.title]="
-                    canApplyMaxBalance(fromToken) ? 'Use max balance' : null
-                  "
-                  [attr.aria-label]="
-                    'Use max ' + tokenSymbolLabel(fromToken) + ' balance'
-                  "
-                  (click)="applyMaxBalance('from')">
-                  {{ balanceLabel(fromToken) }}
-                </button>
-                <div class="swapRow__amount">
-                  <input
-                    #fromAmountInput
-                    [readOnly]="swapType === 'EXACT_OUTPUT'"
-                    class="amount"
-                    [class.amount--muted]="isAmountMuted()"
-                    type="text"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    autocorrect="off"
-                    autocapitalize="off"
-                    spellcheck="false"
-                    placeholder="0,00"
-                    aria-label="Amount to sell"
-                    (focus)="onAmountFocus($event)"
-                    (blur)="onAmountBlur($event)"
-                    (keydown)="onAmountKeydown($event)"
-                    (input)="onAmountInput($event)"
-                    (paste)="onAmountPaste($event)" />
-                  <div class="usd">{{ fromFiatEstimate() }}</div>
-                </div>
-              </div>
+      class="swapMarketFlip"
+      [class.swapMarketFlip--flipped]="showMobileMarketFace">
+      <div
+        class="swapMarketFlip__card"
+        #swapMarketFlipCard
+        [style.height]="mobileSwapMarketCardHeight">
+        <div
+          class="panel swapPanel swapMarketFlip__face swapMarketFlip__face--front"
+          #swapMarketFlipFront
+          [class.swapPanel--foreign]="isForeignDestination()"
+          [attr.inert]="
+            isMobileSwapMarketLayout && showMobileMarketFace ? '' : null
+          "
+          [attr.aria-hidden]="
+            isMobileSwapMarketLayout && showMobileMarketFace ? 'true' : null
+          ">
+          <div class="panelHeader">
+            <h2 class="panelTitle">Swap Tokens</h2>
+            <div class="panelHeader__actions">
+              <button
+                type="button"
+                class="swap-market-toggle"
+                aria-label="Show market overview chart"
+                [attr.aria-pressed]="showMobileMarketFace"
+                (click)="toggleMobileMarketFace()">
+                <mat-icon aria-hidden="true">show_chart</mat-icon>
+              </button>
+              <button
+                type="button"
+                class="swap-settings"
+                aria-label="Open swap settings"
+                (click)="openSlippageSettings()">
+                <mat-icon aria-hidden="true">settings</mat-icon>
+              </button>
             </div>
           </div>
 
-          <div class="swap-divider">
-            <button
-              type="button"
-              class="swapCircle"
-              aria-label="Swap tokens"
-              [disabled]="isForeignDestination()"
-              [attr.title]="
-                isForeignDestination()
-                  ? 'Connect a wallet on the destination network to reverse this swap'
-                  : null
-              "
-              (click)="swapTokens()">
-              <span class="swapCircle__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3 5 6.99h3V14h2V6.99h3L9 3z" />
-                </svg>
-              </span>
-            </button>
-          </div>
-
-          <div class="swapRow">
-            <div class="swapRow__main">
-              <div class="swapRow__left">
-                <div class="label">TO</div>
-                <button
-                  type="button"
-                  class="select"
-                  (click)="openTokenSelector('to')">
-                  <span class="select__value">
-                    @if (resolveTokenIcon(toToken); as toIcon) {
-                      <span
-                        class="coin coin--image"
-                        [style.backgroundColor]="toToken.color">
-                        <img
-                          [src]="toIcon"
-                          [alt]="tokenSymbolLabel(toToken)"
-                          loading="lazy"
-                          width="34"
-                          height="34" />
+          <form autocomplete="off" (ngSubmit)="submitQuote()">
+            <label class="swap-mode"
+              ><input
+                #receiveMode
+                type="checkbox"
+                [checked]="swapType === 'EXACT_OUTPUT'"
+                (change)="setSwapType(receiveMode.checked)" />
+              Specify exact receive amount</label
+            >
+            <div class="swap-stack">
+              <div class="swapRow first">
+                <div class="swapRow__main">
+                  <div class="swapRow__left">
+                    <div class="label">FROM</div>
+                    <button
+                      type="button"
+                      class="select"
+                      (click)="openTokenSelector('from')">
+                      <span class="select__value">
+                        @if (resolveTokenIcon(fromToken); as fromIcon) {
+                          <span
+                            class="coin coin--image"
+                            [style.backgroundColor]="fromToken.color">
+                            <img
+                              [src]="fromIcon"
+                              [alt]="tokenSymbolLabel(fromToken)"
+                              loading="lazy"
+                              width="34"
+                              height="34" />
+                          </span>
+                        } @else {
+                          <span
+                            class="coin"
+                            [style.backgroundColor]="fromToken.color"
+                            >{{
+                              tokenDisplay(tokenSymbolLabel(fromToken))
+                            }}</span
+                          >
+                        }
+                        <span class="select__token-meta">
+                          <span class="select__symbol">{{
+                            tokenSymbolLabel(fromToken)
+                          }}</span>
+                          <small>{{ tokenNetworkLabel(fromToken) }}</small>
+                        </span>
+                        <span class="select__arrow" aria-hidden="true"
+                          >&#9662;</span
+                        >
                       </span>
-                    } @else {
-                      <span
-                        class="coin"
-                        [style.backgroundColor]="toToken.color"
-                        >{{ tokenDisplay(tokenSymbolLabel(toToken)) }}</span
-                      >
-                    }
-                    <span class="select__token-meta">
-                      <span class="select__symbol">{{
-                        tokenSymbolLabel(toToken)
-                      }}</span>
-                      <small>{{ tokenNetworkLabel(toToken) }}</small>
-                    </span>
-                    <span class="select__arrow" aria-hidden="true"
-                      >&#9662;</span
-                    >
-                  </span>
-                </button>
-              </div>
-              <div class="swapRow__right">
-                <span class="balance">{{ balanceLabel(toToken) }}</span>
-                <div class="swapRow__amount">
-                  <div class="amountTrack">
-                    @if (swapType === 'EXACT_OUTPUT') {
+                    </button>
+                  </div>
+                  <div class="swapRow__right">
+                    <button
+                      type="button"
+                      class="balance"
+                      [disabled]="!canApplyMaxBalance(fromToken)"
+                      [attr.title]="
+                        canApplyMaxBalance(fromToken) ? 'Use max balance' : null
+                      "
+                      [attr.aria-label]="
+                        'Use max ' + tokenSymbolLabel(fromToken) + ' balance'
+                      "
+                      (click)="applyMaxBalance('from')">
+                      {{ balanceLabel(fromToken) }}
+                    </button>
+                    <div class="swapRow__amount">
                       <input
+                        #fromAmountInput
+                        [readOnly]="swapType === 'EXACT_OUTPUT'"
                         class="amount"
+                        [class.amount--muted]="isAmountMuted()"
                         type="text"
                         inputmode="decimal"
-                        aria-label="Exact amount to receive"
-                        [value]="receiveAmount"
-                        (input)="setReceiveAmount($event)" />
-                    } @else {
-                      <output
-                        class="amount"
-                        [class.amount--muted]="isToAmountMuted()"
-                        >{{ toAmountFormatted() }}</output
-                      >
-                    }
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        placeholder="0,00"
+                        aria-label="Amount to sell"
+                        (focus)="onAmountFocus($event)"
+                        (blur)="onAmountBlur($event)"
+                        (keydown)="onAmountKeydown($event)"
+                        (input)="onAmountInput($event)"
+                        (paste)="onAmountPaste($event)" />
+                      <div class="usd">{{ fromFiatEstimate() }}</div>
+                    </div>
                   </div>
-                  <div class="usd">{{ toFiatEstimate() }}</div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          @if (
-            isForeignDestination() && crossNetworkRecipientIntentSignEnabled
-          ) {
-            <button
-              type="button"
-              class="recipient-row"
-              (click)="openRecipientPanel()">
-              <span>
-                <small>RECIPIENT · {{ tokenNetworkLabel(toToken) }}</small>
-                <strong>{{ recipientAddressLabel() }}</strong>
-              </span>
-              <mat-icon>{{
-                recipientAddress ? 'edit' : 'arrow_forward'
-              }}</mat-icon>
-            </button>
-          }
-        </div>
-
-        <div class="stats" aria-label="Swap details">
-          <div class="stat">
-            <span>Rate</span>
-            <b>{{ swapRateLabel() }}</b>
-          </div>
-          <div class="stat">
-            <span>Price Impact</span>
-            <b>{{ swapPriceImpactLabel() }}</b>
-          </div>
-          <button
-            type="button"
-            class="stat stat--action"
-            aria-label="Edit slippage"
-            (click)="openSlippageSettings()">
-            <span>Slippage</span>
-            <b class="orange">{{ slippageLabel() }} &#9998;</b>
-          </button>
-          <div class="stat">
-            <span>Network Fee</span>
-            <b>{{ networkFeeLabel() }}</b>
-          </div>
-        </div>
-
-        @if (!activeWallet.wallet) {
-          <p class="exchange-notice">
-            Indicative estimate before destination network fees. Connect a
-            wallet for a final quote.
-          </p>
-        }
-        <p class="swap-limit" aria-live="polite">
-          {{
-            swapType === 'EXACT_OUTPUT'
-              ? 'Maximum paid: ' + amount + ' ' + fromToken.symbol
-              : 'Minimum received: ' + minimumReceivedLabel()
-          }}
-        </p>
-
-        <button
-          class="connectMain"
-          type="submit"
-          [class.connectMain--error]="primaryActionShowsError()"
-          [disabled]="isPrimaryActionDisabled()"
-          [attr.aria-live]="primaryActionShowsError() ? 'polite' : null">
-          {{ primaryActionLabel().toUpperCase() }}
-        </button>
-      </form>
-    </div>
-
-    <div
-      class="panel marketPanel"
-      [class.marketPanel--advanced]="showAdvancedMarketView">
-      @if (!showAdvancedMarketView) {
-        <div class="marketHead">
-          <div>
-            <div class="panelTitle">Market Overview</div>
-            <div class="tabs" aria-label="Market data tabs">
-              <button
-                type="button"
-                [class.active]="selectedMarketChartMode === 'price'"
-                (click)="changeMarketChartMode('price')">
-                Change
-              </button>
-              <button
-                type="button"
-                [class.active]="selectedMarketChartMode === 'relative'"
-                (click)="changeMarketChartMode('relative')">
-                Relative
-              </button>
-            </div>
-          </div>
-          <div class="range" aria-label="Comparison timeframe">
-            @for (timeframe of comparisonTimeframes; track timeframe) {
-              <button
-                type="button"
-                [class.active]="selectedComparisonTimeframe === timeframe"
-                (click)="changeComparisonTimeframe(timeframe)">
-                {{ timeframe }}
-              </button>
-            }
-          </div>
-        </div>
-      }
-
-      @if (showAdvancedMarketView) {
-        <div class="marketAdvanced">
-          <app-live-chart
-            [coin]="marketSymbolFor(toToken)"
-            [active]="showAdvancedMarketView" />
-          <div class="marketFooter marketFooter--advanced">
-            <div class="note">
-              Advanced chart shows live market data for the destination token
-            </div>
-            <button
-              type="button"
-              class="advanced"
-              (click)="toggleAdvancedMarketView()">
-              Hide Advanced Chart &rarr;
-            </button>
-          </div>
-        </div>
-      } @else {
-        <div class="marketBody">
-          @if (comparisonLoading) {
-            <div
-              class="market-skeleton market-skeleton--chart"
-              aria-hidden="true">
-              <span></span>
-            </div>
-          } @else {
-            <div class="chart">
-              @if (comparisonError) {
-                <p class="chart__empty">{{ comparisonError }}</p>
-              } @else {
-                <app-market-overview-chart
-                  [series]="comparisonChartSeries"
-                  [timeframe]="selectedComparisonTimeframe"
-                  [ariaLabel]="comparisonChartAriaLabel()">
-                </app-market-overview-chart>
-              }
-            </div>
-          }
-
-          <div class="marketBelow">
-            <div class="marketSummary">
-              <div class="pair">
-                <span class="pair__icons" aria-hidden="true">
-                  @if (tokenIconFor(fromToken); as fromIcon) {
-                    <span
-                      class="pair__iconWrap"
-                      [style.backgroundColor]="fromToken.color">
-                      <img
-                        class="pair__icon"
-                        [src]="fromIcon"
-                        [alt]="tokenSymbolLabel(fromToken)"
-                        loading="lazy"
-                        width="28"
-                        height="28" />
-                    </span>
-                  } @else {
-                    <span class="coin">{{
-                      tokenDisplay(tokenSymbolLabel(fromToken))
-                    }}</span>
-                  }
-                  @if (tokenIconFor(toToken); as toIcon) {
-                    <span
-                      class="pair__iconWrap"
-                      [style.backgroundColor]="toToken.color">
-                      <img
-                        class="pair__icon"
-                        [src]="toIcon"
-                        [alt]="tokenSymbolLabel(toToken)"
-                        loading="lazy"
-                        width="28"
-                        height="28" />
-                    </span>
-                  } @else {
-                    <span class="coin near">{{
-                      tokenDisplay(tokenSymbolLabel(toToken))
-                    }}</span>
-                  }
-                </span>
-                <span class="pair__label"
-                  >{{ tokenSymbolLabel(fromToken) }} /
-                  {{ tokenSymbolLabel(toToken) }}</span
-                >
+              <div class="swap-divider">
+                <button
+                  type="button"
+                  class="swapCircle"
+                  aria-label="Swap tokens"
+                  (click)="swapTokens()">
+                  <span class="swapCircle__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path
+                        d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3 5 6.99h3V14h2V6.99h3L9 3z" />
+                    </svg>
+                  </span>
+                </button>
               </div>
 
+              <div class="swapRow">
+                <div class="swapRow__main">
+                  <div class="swapRow__left">
+                    <div class="label">TO</div>
+                    <button
+                      type="button"
+                      class="select"
+                      (click)="openTokenSelector('to')">
+                      <span class="select__value">
+                        @if (resolveTokenIcon(toToken); as toIcon) {
+                          <span
+                            class="coin coin--image"
+                            [style.backgroundColor]="toToken.color">
+                            <img
+                              [src]="toIcon"
+                              [alt]="tokenSymbolLabel(toToken)"
+                              loading="lazy"
+                              width="34"
+                              height="34" />
+                          </span>
+                        } @else {
+                          <span
+                            class="coin"
+                            [style.backgroundColor]="toToken.color"
+                            >{{ tokenDisplay(tokenSymbolLabel(toToken)) }}</span
+                          >
+                        }
+                        <span class="select__token-meta">
+                          <span class="select__symbol">{{
+                            tokenSymbolLabel(toToken)
+                          }}</span>
+                          <small>{{ tokenNetworkLabel(toToken) }}</small>
+                        </span>
+                        <span class="select__arrow" aria-hidden="true"
+                          >&#9662;</span
+                        >
+                      </span>
+                    </button>
+                  </div>
+                  <div class="swapRow__right">
+                    <span class="balance">{{ balanceLabel(toToken) }}</span>
+                    <div class="swapRow__amount">
+                      <div class="amountTrack">
+                        @if (swapType === 'EXACT_OUTPUT') {
+                          <input
+                            class="amount"
+                            type="text"
+                            inputmode="decimal"
+                            aria-label="Exact amount to receive"
+                            [value]="receiveAmount"
+                            (input)="setReceiveAmount($event)" />
+                        } @else {
+                          <output
+                            class="amount"
+                            [class.amount--muted]="isToAmountMuted()"
+                            >{{ toAmountFormatted() }}</output
+                          >
+                        }
+                      </div>
+                      <div class="usd">{{ toFiatEstimate() }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              @if (
+                isForeignDestination() && crossNetworkRecipientIntentSignEnabled
+              ) {
+                <button
+                  type="button"
+                  class="recipient-row"
+                  (click)="openRecipientPanel()">
+                  <span>
+                    <small>RECIPIENT · {{ tokenNetworkLabel(toToken) }}</small>
+                    <strong>{{ recipientAddressLabel() }}</strong>
+                  </span>
+                  <mat-icon>{{
+                    recipientAddress ? 'edit' : 'arrow_forward'
+                  }}</mat-icon>
+                </button>
+              }
+            </div>
+
+            @if (hasSwapAmountEntered()) {
+              <div class="stats" aria-label="Swap details">
+                <div class="stat">
+                  <span>Rate</span>
+                  <b>{{ swapRateLabel() }}</b>
+                </div>
+                <div class="stat">
+                  <span>Price Impact</span>
+                  <b>{{ swapPriceImpactLabel() }}</b>
+                </div>
+                <button
+                  type="button"
+                  class="stat stat--action"
+                  aria-label="Edit slippage"
+                  (click)="openSlippageSettings()">
+                  <span>Slippage</span>
+                  <b class="orange">{{ slippageLabel() }} &#9998;</b>
+                </button>
+                <div class="stat">
+                  <span>Network Fee</span>
+                  <b>{{ networkFeeLabel() }}</b>
+                </div>
+              </div>
+            } @else {
+              <p class="swap-details-hint">
+                Enter an amount to see swap details.
+              </p>
+              <div
+                class="stats stats--empty"
+                aria-label="Slippage and network fee">
+                <button
+                  type="button"
+                  class="stat stat--action"
+                  aria-label="Edit slippage"
+                  (click)="openSlippageSettings()">
+                  <span>Slippage</span>
+                  <b class="orange">{{ slippageLabel() }} &#9998;</b>
+                </button>
+                <div class="stat">
+                  <span>Network Fee</span>
+                  <b>{{ networkFeeLabel() }}</b>
+                </div>
+              </div>
+            }
+
+            @if (!activeWallet.wallet) {
+              <p class="exchange-notice">
+                Indicative estimate before destination network fees. Connect a
+                wallet for a final quote.
+              </p>
+            }
+            @if (hasSwapAmountEntered()) {
+              <p class="swap-limit" aria-live="polite">
+                {{
+                  swapType === 'EXACT_OUTPUT'
+                    ? 'Maximum paid: ' + amount + ' ' + fromToken.symbol
+                    : 'Minimum received: ' + minimumReceivedLabel()
+                }}
+              </p>
+            }
+
+            <button
+              class="connectMain"
+              type="submit"
+              [class.connectMain--error]="primaryActionShowsError()"
+              [disabled]="isPrimaryActionDisabled()"
+              [attr.aria-live]="primaryActionShowsError() ? 'polite' : null">
+              {{ primaryActionLabel().toUpperCase() }}
+            </button>
+          </form>
+        </div>
+
+        <div
+          class="panel marketPanel swapMarketFlip__face swapMarketFlip__face--back"
+          #swapMarketFlipBack
+          [class.marketPanel--advanced]="showAdvancedMarketView"
+          [attr.inert]="
+            isMobileSwapMarketLayout && !showMobileMarketFace ? '' : null
+          "
+          [attr.aria-hidden]="
+            isMobileSwapMarketLayout && !showMobileMarketFace ? 'true' : null
+          ">
+          @if (!showAdvancedMarketView) {
+            <div class="marketHead">
+              <div class="marketHead__leading">
+                <div class="panelTitle">Market Overview</div>
+                <div class="tabs" aria-label="Market data tabs">
+                  <button
+                    type="button"
+                    [class.active]="selectedMarketChartMode === 'price'"
+                    (click)="changeMarketChartMode('price')">
+                    Change
+                  </button>
+                  <button
+                    type="button"
+                    [class.active]="selectedMarketChartMode === 'relative'"
+                    (click)="changeMarketChartMode('relative')">
+                    Relative
+                  </button>
+                </div>
+              </div>
+              <div class="marketHead__trailing">
+                <div class="range" aria-label="Comparison timeframe">
+                  @for (timeframe of comparisonTimeframes; track timeframe) {
+                    <button
+                      type="button"
+                      [class.active]="selectedComparisonTimeframe === timeframe"
+                      (click)="changeComparisonTimeframe(timeframe)">
+                      {{ timeframe }}
+                    </button>
+                  }
+                </div>
+                <button
+                  type="button"
+                  class="swap-market-toggle"
+                  aria-label="Show swap tokens"
+                  [attr.aria-pressed]="showMobileMarketFace"
+                  (click)="toggleMobileMarketFace()">
+                  <mat-icon aria-hidden="true">show_chart</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (showAdvancedMarketView) {
+            <div class="marketAdvanced">
+              <app-live-chart
+                [coin]="marketSymbolFor(toToken)"
+                [active]="showAdvancedMarketView" />
+              <div class="marketFooter marketFooter--advanced">
+                <div class="note">
+                  Advanced chart shows live market data for the destination
+                  token
+                </div>
+                <button
+                  type="button"
+                  class="advanced"
+                  (click)="toggleAdvancedMarketView()">
+                  Hide Advanced Chart &rarr;
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="marketBody">
               @if (comparisonLoading) {
-                <div class="market-skeleton" aria-hidden="true">
+                <div
+                  class="market-skeleton market-skeleton--chart"
+                  aria-hidden="true">
                   <span></span>
                 </div>
               } @else {
-                <div
-                  class="price"
-                  [class.price--with-tooltip]="marketSummaryHeadlineTitle()"
-                  [attr.title]="marketSummaryHeadlineTitle() || null">
-                  {{ marketSummaryHeadline() }}
-                </div>
-                <div
-                  class="change"
-                  [class.positive]="(marketSummaryChangePercent() ?? 0) > 0"
-                  [class.negative]="(marketSummaryChangePercent() ?? 0) < 0"
-                  [class.neutral]="
-                    marketSummaryChangePercent() === undefined ||
-                    marketSummaryChangePercent() === 0
-                  ">
-                  {{ marketSummaryChangeText() }}
+                <div class="chart">
+                  @if (comparisonError) {
+                    <p class="chart__empty">{{ comparisonError }}</p>
+                  } @else {
+                    <app-market-overview-chart
+                      [series]="comparisonChartSeries"
+                      [timeframe]="selectedComparisonTimeframe"
+                      [ariaLabel]="comparisonChartAriaLabel()">
+                    </app-market-overview-chart>
+                  }
                 </div>
               }
-            </div>
 
-            <div class="marketFooter">
-              <div class="note">{{ comparisonNoteText() }}</div>
-              <dl class="marketMeta" aria-label="Market and product">
-                <div class="marketMeta__row">
-                  <dt>Market</dt>
-                  <dd>{{ marketMetaMock.market }}</dd>
-                </div>
-                <div class="marketMeta__row">
-                  <dt>Product</dt>
-                  <dd>{{ marketMetaMock.product }}</dd>
-                </div>
-              </dl>
-            </div>
+              <div class="marketBelow">
+                <div class="marketSummary">
+                  <div class="pair">
+                    <span class="pair__icons" aria-hidden="true">
+                      @if (tokenIconFor(fromToken); as fromIcon) {
+                        <span
+                          class="pair__iconWrap"
+                          [style.backgroundColor]="fromToken.color">
+                          <img
+                            class="pair__icon"
+                            [src]="fromIcon"
+                            [alt]="tokenSymbolLabel(fromToken)"
+                            loading="lazy"
+                            width="28"
+                            height="28" />
+                        </span>
+                      } @else {
+                        <span class="coin">{{
+                          tokenDisplay(tokenSymbolLabel(fromToken))
+                        }}</span>
+                      }
+                      @if (tokenIconFor(toToken); as toIcon) {
+                        <span
+                          class="pair__iconWrap"
+                          [style.backgroundColor]="toToken.color">
+                          <img
+                            class="pair__icon"
+                            [src]="toIcon"
+                            [alt]="tokenSymbolLabel(toToken)"
+                            loading="lazy"
+                            width="28"
+                            height="28" />
+                        </span>
+                      } @else {
+                        <span class="coin near">{{
+                          tokenDisplay(tokenSymbolLabel(toToken))
+                        }}</span>
+                      }
+                    </span>
+                    <span class="pair__label"
+                      >{{ tokenSymbolLabel(fromToken) }} /
+                      {{ tokenSymbolLabel(toToken) }}</span
+                    >
+                  </div>
 
-            <div class="tokenDetails" aria-label="Token market overview">
-              <ng-container
-                *ngTemplateOutlet="
-                  tokenMarketCol;
-                  context: { $implicit: fromToken }
-                " />
-              <ng-container
-                *ngTemplateOutlet="
-                  tokenMarketCol;
-                  context: { $implicit: toToken }
-                " />
+                  @if (comparisonLoading) {
+                    <div class="market-skeleton" aria-hidden="true">
+                      <span></span>
+                    </div>
+                  } @else {
+                    <div
+                      class="price"
+                      [class.price--with-tooltip]="marketSummaryHeadlineTitle()"
+                      [attr.title]="marketSummaryHeadlineTitle() || null">
+                      {{ marketSummaryHeadline() }}
+                    </div>
+                    <div
+                      class="change"
+                      [class.positive]="(marketSummaryChangePercent() ?? 0) > 0"
+                      [class.negative]="(marketSummaryChangePercent() ?? 0) < 0"
+                      [class.neutral]="
+                        marketSummaryChangePercent() === undefined ||
+                        marketSummaryChangePercent() === 0
+                      ">
+                      {{ marketSummaryChangeText() }}
+                    </div>
+                  }
+                </div>
+
+                <div class="marketFooter">
+                  <div class="note">{{ comparisonNoteText() }}</div>
+                  <dl class="marketMeta" aria-label="Market and product">
+                    <div class="marketMeta__row">
+                      <dt>Market</dt>
+                      <dd>{{ marketMetaMock.market }}</dd>
+                    </div>
+                    <div class="marketMeta__row">
+                      <dt>Product</dt>
+                      <dd>{{ marketMetaMock.product }}</dd>
+                    </div>
+                  </dl>
+                </div>
+
+                <div class="tokenDetails" aria-label="Token market overview">
+                  <ng-container
+                    *ngTemplateOutlet="
+                      tokenMarketCol;
+                      context: { $implicit: fromToken }
+                    " />
+                  <ng-container
+                    *ngTemplateOutlet="
+                      tokenMarketCol;
+                      context: { $implicit: toToken }
+                    " />
+                </div>
+              </div>
             </div>
-          </div>
+          }
         </div>
-      }
+      </div>
     </div>
   </section>
 
@@ -460,6 +524,67 @@
           <p class="tokenDetails__name">{{ token.name }}</p>
         </div>
       </header>
+      @if (
+        tokenOverviewWebsiteUrl(token) || tokenOverviewWhitepaperUrl(token)
+      ) {
+        <div class="tokenDetails__projectLinks">
+          @if (tokenOverviewWebsiteUrl(token); as website) {
+            <a
+              class="tokenDetails__chip"
+              [href]="website"
+              target="_blank"
+              rel="noopener noreferrer"
+              [attr.title]="website">
+              <svg
+                class="tokenDetails__chipIcon"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                focusable="false">
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="5.5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.3" />
+                <path
+                  d="M2.5 8h11M8 2.5c1.6 1.7 2.4 3.5 2.4 5.5S9.6 11.8 8 13.5C6.4 11.8 5.6 10 5.6 8S6.4 4.2 8 2.5Z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.3" />
+              </svg>
+              Website
+            </a>
+          }
+          @if (tokenOverviewWhitepaperUrl(token); as whitepaper) {
+            <a
+              class="tokenDetails__chip"
+              [href]="whitepaper"
+              target="_blank"
+              rel="noopener noreferrer"
+              [attr.title]="whitepaper">
+              <svg
+                class="tokenDetails__chipIcon"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                focusable="false">
+                <path
+                  d="M4.2 2.2h5.1L12 4.9v8.9H4.2V2.2Z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.3"
+                  stroke-linejoin="round" />
+                <path
+                  d="M9.2 2.3v2.8H12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.3" />
+              </svg>
+              Whitepaper
+            </a>
+          }
+        </div>
+      }
       <div class="tokenDetails__facts">
         @if (tokenOverviewHasMarketCap(token)) {
           <div class="tokenDetails__row">
@@ -467,70 +592,6 @@
             <span class="tokenDetails__value">{{
               tokenOverviewMarketCapLabel(token)
             }}</span>
-          </div>
-        }
-        @if (
-          tokenOverviewWebsiteUrl(token) || tokenOverviewWhitepaperUrl(token)
-        ) {
-          <div class="tokenDetails__row">
-            <span class="tokenDetails__label">Website</span>
-            <span class="tokenDetails__links">
-              @if (tokenOverviewWebsiteUrl(token); as website) {
-                <a
-                  class="tokenDetails__chip"
-                  [href]="website"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  [attr.title]="website">
-                  <svg
-                    class="tokenDetails__chipIcon"
-                    viewBox="0 0 16 16"
-                    aria-hidden="true"
-                    focusable="false">
-                    <circle
-                      cx="8"
-                      cy="8"
-                      r="5.5"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.3" />
-                    <path
-                      d="M2.5 8h11M8 2.5c1.6 1.7 2.4 3.5 2.4 5.5S9.6 11.8 8 13.5C6.4 11.8 5.6 10 5.6 8S6.4 4.2 8 2.5Z"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.3" />
-                  </svg>
-                  Website
-                </a>
-              }
-              @if (tokenOverviewWhitepaperUrl(token); as whitepaper) {
-                <a
-                  class="tokenDetails__chip"
-                  [href]="whitepaper"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  [attr.title]="whitepaper">
-                  <svg
-                    class="tokenDetails__chipIcon"
-                    viewBox="0 0 16 16"
-                    aria-hidden="true"
-                    focusable="false">
-                    <path
-                      d="M4.2 2.2h5.1L12 4.9v8.9H4.2V2.2Z"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.3"
-                      stroke-linejoin="round" />
-                    <path
-                      d="M9.2 2.3v2.8H12"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.3" />
-                  </svg>
-                  Whitepaper
-                </a>
-              }
-            </span>
           </div>
         }
         @if (tokenOverviewSocialLinks(token).length > 0) {
@@ -613,16 +674,18 @@
           </div>
         }
         @if (tokenOverviewExplorerUrl(token); as explorer) {
-          <div class="tokenDetails__row">
+          <div class="tokenDetails__row tokenDetails__row--inline">
             <span class="tokenDetails__label">Explorers</span>
-            <a
-              class="tokenDetails__chip"
-              [href]="explorer"
-              target="_blank"
-              rel="noopener noreferrer"
-              [attr.title]="explorer">
-              {{ tokenOverviewExplorerLabel(token) }}
-            </a>
+            <span class="tokenDetails__links">
+              <a
+                class="tokenDetails__chip"
+                [href]="explorer"
+                target="_blank"
+                rel="noopener noreferrer"
+                [attr.title]="explorer">
+                {{ tokenOverviewExplorerLabel(token) }}
+              </a>
+            </span>
           </div>
         }
       </div>
