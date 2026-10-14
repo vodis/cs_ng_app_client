@@ -110,30 +110,34 @@ import {
                           {{ item.destinationSymbol }}</span
                         >
                       </td>
-                      <td class="swap-history__amount">
-                        <span class="swap-history__amount-value">
-                          {{ paidAmount(item) }}
-                          {{ item.sourceSymbol }}
-                        </span>
-                        <span class="swap-history__amount-meta">{{
-                          paidLabel(item)
-                        }}</span>
-                        @if (item.receipt?.refundedAmount; as refunded) {
-                          <span class="swap-history__amount-meta">
-                            Refunded:
-                            {{ formatAmount(refunded, item.sourceDecimals) }}
+                      <td>
+                        <div class="swap-history__amount">
+                          <span class="swap-history__amount-value">
+                            {{ paidAmount(item) }}
                             {{ item.sourceSymbol }}
                           </span>
-                        }
+                          <span class="swap-history__amount-meta">{{
+                            paidLabel(item)
+                          }}</span>
+                          @if (item.receipt?.refundedAmount; as refunded) {
+                            <span class="swap-history__amount-meta">
+                              Refunded:
+                              {{ formatAmount(refunded, item.sourceDecimals) }}
+                              {{ item.sourceSymbol }}
+                            </span>
+                          }
+                        </div>
                       </td>
-                      <td class="swap-history__amount">
-                        <span class="swap-history__amount-value">
-                          {{ receivedAmount(item) }}
-                          {{ item.destinationSymbol }}
-                        </span>
-                        <span class="swap-history__amount-meta">{{
-                          receivedLabel(item)
-                        }}</span>
+                      <td>
+                        <div class="swap-history__amount">
+                          <span class="swap-history__amount-value">
+                            {{ receivedAmount(item) }}
+                            {{ item.destinationSymbol }}
+                          </span>
+                          <span class="swap-history__amount-meta">{{
+                            receivedLabel(item)
+                          }}</span>
+                        </div>
                       </td>
                       <td>
                         <span
@@ -300,7 +304,10 @@ export class SwapHistoryComponent {
 
   onRefresh(event: Event): void {
     event.preventDefault();
-    if ((event.currentTarget as HTMLButtonElement).disabled) {
+    if (
+      event.currentTarget instanceof HTMLButtonElement &&
+      event.currentTarget.disabled
+    ) {
       return;
     }
     this.history.retry();

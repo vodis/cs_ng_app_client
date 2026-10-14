@@ -106,9 +106,9 @@ describe('SwapHistoryComponent recovery during outages', () => {
     fixture.detectChanges();
     expect(element.querySelector('tbody')?.textContent).toContain('NEAR');
     expect(element.querySelector('tbody')?.textContent).toContain('Processing');
-    const refresh = element.querySelector(
+    const refresh = element.querySelector<HTMLButtonElement>(
       '.swap-history__refresh'
-    ) as HTMLButtonElement | null;
+    );
     expect(refresh?.disabled).toBeTrue();
     refresh?.click();
     expect(history.retry).not.toHaveBeenCalled();
@@ -168,6 +168,15 @@ describe('SwapHistoryComponent recovery during outages', () => {
     expect(element.textContent).toContain('1,999999');
     expect(element.textContent).toContain('0,000000000000000000000001');
     expect(element.querySelector('.swap-history__view-all')).toBeNull();
+  });
+
+  it('keeps paid and received amounts in separate table columns', async () => {
+    const { element } = await setup(loaded);
+    const cells = element.querySelectorAll('tbody tr:first-child td');
+    expect(cells.length).toBe(6);
+    for (const index of [2, 3]) {
+      expect(getComputedStyle(cells[index]).display).toBe('table-cell');
+    }
   });
 
   it('shows the compact view-all link on the home panel', async () => {
