@@ -3,7 +3,9 @@ import {
   BehaviorSubject,
   catchError,
   combineLatest,
+  concat,
   distinctUntilChanged,
+  EMPTY,
   forkJoin,
   map,
   of,
@@ -35,6 +37,8 @@ export class SwapHistoryFacade {
   private readonly cursor = new BehaviorSubject<string>('');
   private readonly refresh = new BehaviorSubject(0);
   private reconciliationOffset = 0;
+  /** User-initiated refresh should show loading without clearing retained rows. */
+  private pendingUserRefresh = false;
   readonly state$ = this.session.session$.pipe(
     map(session =>
       session ? `${session.user.id}:${session.user.sessionId}` : ''
@@ -44,6 +48,7 @@ export class SwapHistoryFacade {
       this.cursor.next('');
       this.checkId.next('');
       this.reconciliationOffset = 0;
+      this.pendingUserRefresh = false;
       if (!identity)
         return of<SwapHistoryState>({
           items: [],
@@ -58,84 +63,108 @@ export class SwapHistoryFacade {
         this.checkId,
         timer(0, 15_000),
       ]).pipe(
-        switchMap(([cursor, , checkId]) =>
-          this.api.getHistory(cursor).pipe(
-            timeout(10_000),
-            switchMap(response => {
-              // Bound reconciliation traffic. Checking a status never starts another transfer.
-              const candidates = response.data.items.filter(
-                row =>
-                  row.preparationId !== checkId &&
-                  [
-                    'UNKNOWN',
-                    'AWAITING_APPROVAL',
-                    'SUBMITTED',
-                    'KNOWN_DEPOSIT_TX',
-                    'PENDING_DEPOSIT',
-                    'INCOMPLETE_DEPOSIT',
-                    'PROCESSING',
-                  ].includes(row.status)
-              );
-              const offset =
-                this.reconciliationOffset % Math.max(1, candidates.length);
-              const rotated = [
-                ...candidates.slice(offset),
-                ...candidates.slice(0, offset),
-              ];
-              const requested = response.data.items.find(
-                row => row.preparationId === checkId
-              );
-              const pending = (
-                requested ? [requested, ...rotated] : rotated
-              ).slice(0, 5);
-              this.reconciliationOffset += requested ? 4 : 5;
-              const checks = pending.map(row =>
-                this.api
-                  .getSwapStatus(row.preparationId, row.preparationId)
-                  .pipe(
-                    timeout(10_000),
-                    map(status => ({ id: row.preparationId, status })),
-                    catchError(() =>
-                      of({ id: row.preparationId, status: row.status })
-                    )
-                  )
-              );
-              return (checks.length ? forkJoin(checks) : of([])).pipe(
-                map(results => ({
-                  ...response.data,
-                  items: response.data.items.map(row => ({
-                    ...row,
-                    status: ['SUCCESS', 'REFUNDED', 'FAILED'].includes(
-                      row.status
-                    )
-                      ? row.status
-                      : (results.find(result => result.id === row.preparationId)
-                          ?.status ?? row.status),
-                  })),
+        switchMap(([cursor, , checkId]) => {
+          const showRefreshLoading = this.pendingUserRefresh;
+          this.pendingUserRefresh = false;
+          return concat(
+            showRefreshLoading
+              ? of<SwapHistoryState>({
+                  items: [],
+                  nextCursor: null,
                   error: '',
                   signedIn: true,
+                  loading: true,
+                })
+              : EMPTY,
+            this.api.getHistory(cursor).pipe(
+              timeout(10_000),
+              switchMap(response => {
+                // Bound reconciliation traffic. Checking a status never starts another transfer.
+                const candidates = response.data.items.filter(
+                  row =>
+                    row.preparationId !== checkId &&
+                    [
+                      'UNKNOWN',
+                      'AWAITING_APPROVAL',
+                      'SUBMITTED',
+                      'KNOWN_DEPOSIT_TX',
+                      'PENDING_DEPOSIT',
+                      'INCOMPLETE_DEPOSIT',
+                      'PROCESSING',
+                    ].includes(row.status)
+                );
+                const offset =
+                  this.reconciliationOffset % Math.max(1, candidates.length);
+                const rotated = [
+                  ...candidates.slice(offset),
+                  ...candidates.slice(0, offset),
+                ];
+                const requested = response.data.items.find(
+                  row => row.preparationId === checkId
+                );
+                const pending = (
+                  requested ? [requested, ...rotated] : rotated
+                ).slice(0, 5);
+                this.reconciliationOffset += requested ? 4 : 5;
+                const checks = pending.map(row =>
+                  this.api
+                    .getSwapStatus(row.preparationId, row.preparationId)
+                    .pipe(
+                      timeout(10_000),
+                      map(status => ({ id: row.preparationId, status })),
+                      catchError(() =>
+                        of({ id: row.preparationId, status: row.status })
+                      )
+                    )
+                );
+                return (checks.length ? forkJoin(checks) : of([])).pipe(
+                  map(results => ({
+                    ...response.data,
+                    items: response.data.items.map(row => ({
+                      ...row,
+                      status: ['SUCCESS', 'REFUNDED', 'FAILED'].includes(
+                        row.status
+                      )
+                        ? row.status
+                        : (results.find(
+                            result => result.id === row.preparationId
+                          )?.status ?? row.status),
+                    })),
+                    error: '',
+                    signedIn: true,
+                    loading: false,
+                  }))
+                );
+              }),
+              catchError(() =>
+                of<SwapHistoryState>({
+                  items: [],
+                  nextCursor: null,
+                  error:
+                    'Could not load swap history. Retry to check your exchanges.',
+                  signedIn: true,
                   loading: false,
-                }))
-              );
-            }),
-            catchError(() =>
-              of<SwapHistoryState>({
-                items: [],
-                nextCursor: null,
-                error:
-                  'Could not load swap history. Retry to check your exchanges.',
-                signedIn: true,
-                loading: false,
-              })
+                })
+              )
             )
-          )
-        ),
+          );
+        }),
         // Retain recovery references on refresh failure, scoped to this session.
-        scan((previous: SwapHistoryState, current: SwapHistoryState) =>
-          current.error
-            ? { ...previous, error: current.error, loading: false }
-            : current
-        ),
+        // Loading emissions keep prior rows so refresh does not blank the list.
+        scan((previous: SwapHistoryState, current: SwapHistoryState) => {
+          if (current.loading) {
+            return {
+              ...previous,
+              loading: true,
+              error: '',
+              signedIn: current.signedIn,
+            };
+          }
+          if (current.error) {
+            return { ...previous, error: current.error, loading: false };
+          }
+          return current;
+        }),
         startWith<SwapHistoryState>({
           items: [],
           nextCursor: null,
@@ -151,6 +180,7 @@ export class SwapHistoryFacade {
     this.checkId.next(id);
   }
   retry(): void {
+    this.pendingUserRefresh = true;
     this.refresh.next(this.refresh.value + 1);
   }
   page(cursor: string): void {
