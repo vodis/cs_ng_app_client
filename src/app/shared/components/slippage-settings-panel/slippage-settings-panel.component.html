@@ -1,65 +1,132 @@
-@if (isOpen) {
-  <div
-    class="slippage-settings-backdrop"
-    role="presentation"
-    (click)="onBackdropClick($event)">
-    <section
-      #dialog
-      class="slippage-settings"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="slippage-settings-title"
-      tabindex="-1"
-      cdkTrapFocus
-      [cdkTrapFocusAutoCapture]="true"
-      (click)="$event.stopPropagation()">
-      <header class="slippage-settings__header">
-        <h2 id="slippage-settings-title">Slippage</h2>
+<ng-template #sheet>
+  <section
+    class="swap-settings-sheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="swap-settings-title"
+    tabindex="-1"
+    cdkTrapFocus
+    [cdkTrapFocusAutoCapture]="true">
+    <div class="swap-settings-sheet__handle" aria-hidden="true"></div>
+    <header class="swap-settings-sheet__header">
+      <div>
+        <p>Swap</p>
+        <h2 id="swap-settings-title">Settings</h2>
+      </div>
+      <button
+        type="button"
+        class="swap-settings-sheet__close"
+        aria-label="Close swap settings"
+        (click)="close()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+
+    <section class="swap-settings-sheet__group">
+      <h3>Route</h3>
+      <div
+        class="swap-settings-sheet__choices"
+        role="radiogroup"
+        aria-label="Swap route"
+        aria-describedby="swap-settings-route-hint">
         <button
-          #closeButton
           type="button"
-          class="slippage-settings__close"
-          aria-label="Close slippage settings"
-          (click)="close()">
-          <mat-icon>close</mat-icon>
+          role="radio"
+          class="swap-settings-sheet__choice"
+          [class.swap-settings-sheet__choice--active]="draftRoute === 'direct'"
+          [attr.aria-checked]="draftRoute === 'direct'"
+          [disabled]="!directRouteEnabled"
+          (click)="selectRoute('direct')">
+          Direct
         </button>
-      </header>
-
-      <p class="slippage-settings__copy">
-        The slippage setting is a safety mechanism to protect you from getting a
-        final price that is very different than the quoted price. If the
-        specified slippage would be exceeded, your exchange may be refunded.
-        Network fees may still apply. The final review shows the limit for your
-        selected swap mode.
+        <button
+          type="button"
+          role="radio"
+          class="swap-settings-sheet__choice"
+          [class.swap-settings-sheet__choice--active]="
+            draftRoute === 'cross-chain'
+          "
+          [attr.aria-checked]="draftRoute === 'cross-chain'"
+          [disabled]="!crossChainRouteEnabled"
+          (click)="selectRoute('cross-chain')">
+          Cross-chain
+        </button>
+      </div>
+      <p id="swap-settings-route-hint" class="swap-settings-sheet__hint">
+        {{ routeHint() }}
       </p>
+    </section>
 
+    <section class="swap-settings-sheet__group">
+      <h3>Privacy</h3>
+      <div
+        class="swap-settings-sheet__choices"
+        role="radiogroup"
+        aria-label="Swap privacy"
+        aria-describedby="swap-settings-privacy-hint">
+        <button
+          type="button"
+          role="radio"
+          class="swap-settings-sheet__choice"
+          [class.swap-settings-sheet__choice--active]="
+            draftPrivacy === 'public'
+          "
+          [attr.aria-checked]="draftPrivacy === 'public'"
+          (click)="selectPrivacy('public')">
+          Public
+        </button>
+        <button
+          type="button"
+          role="radio"
+          class="swap-settings-sheet__choice"
+          [class.swap-settings-sheet__choice--active]="
+            draftPrivacy === 'confidential'
+          "
+          [attr.aria-checked]="draftPrivacy === 'confidential'"
+          (click)="selectPrivacy('confidential')">
+          Confidential
+        </button>
+      </div>
+      <p id="swap-settings-privacy-hint" class="swap-settings-sheet__hint">
+        {{ privacyHint() }}
+      </p>
+    </section>
+
+    <section class="swap-settings-sheet__group">
+      <div class="swap-settings-sheet__slippage-head">
+        <h3>Slippage</h3>
+        <p aria-live="polite">
+          <span>{{ limitLabel }}</span>
+          <strong>{{ receiveAtLeastLabel || '—' }}</strong>
+        </p>
+      </div>
+      <p class="swap-settings-sheet__hint">
+        If the price moves past this, the swap can refund. Network fees may
+        still apply.
+      </p>
       @if (highSlippage()) {
-        <p role="alert">
-          High slippage allows a substantially worse exchange price. Review the
-          limit carefully before confirming.
+        <p class="swap-settings-sheet__alert" role="alert">
+          High slippage allows a substantially worse price.
         </p>
       }
-      <div class="slippage-settings__receive" aria-live="polite">
-        <span>{{ limitLabel }}</span>
-        <strong>{{ receiveAtLeastLabel || '—' }}</strong>
-      </div>
-
       <div
-        class="slippage-settings__presets"
+        class="swap-settings-sheet__presets"
         role="group"
         aria-label="Slippage presets">
         @for (preset of presets; track preset) {
           <button
             type="button"
-            class="slippage-settings__preset"
-            [class.slippage-settings__preset--active]="isPresetSelected(preset)"
+            class="swap-settings-sheet__preset"
+            [class.swap-settings-sheet__preset--active]="
+              isPresetSelected(preset)
+            "
             (click)="selectPreset(preset)">
             {{ presetLabel(preset) }}
           </button>
         }
         <label
-          class="slippage-settings__custom"
-          [class.slippage-settings__custom--active]="
+          class="swap-settings-sheet__custom"
+          [class.swap-settings-sheet__custom--active]="
             selectedPresetBps === null
           ">
           <input
@@ -75,34 +142,25 @@
             (focus)="focusCustom()"
             (keydown)="onCustomKeydown($event)"
             (input)="onCustomInput($event)" />
-          <span class="slippage-settings__custom-suffix" aria-hidden="true"
+          <span class="swap-settings-sheet__custom-suffix" aria-hidden="true"
             >%</span
           >
         </label>
       </div>
-
       <p
-        class="slippage-settings__error"
-        [class.slippage-settings__error--visible]="!!validationError"
+        class="swap-settings-sheet__error"
+        [class.swap-settings-sheet__error--visible]="!!validationError"
         aria-live="polite">
         {{ validationError }}
       </p>
-
-      <div class="slippage-settings__actions">
-        <button
-          type="button"
-          class="slippage-settings__button slippage-settings__button--cancel"
-          (click)="close()">
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="slippage-settings__button slippage-settings__button--save"
-          [disabled]="!canSave()"
-          (click)="save()">
-          Save
-        </button>
-      </div>
     </section>
-  </div>
-}
+
+    <button
+      type="button"
+      class="swap-settings-sheet__done"
+      [disabled]="!canSave()"
+      (click)="save()">
+      Done
+    </button>
+  </section>
+</ng-template>

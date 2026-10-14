@@ -47,27 +47,34 @@ targets.
 
 ### Swap panel
 
-| Block          | Markup            | Behavior                                                           |
-| -------------- | ----------------- | ------------------------------------------------------------------ |
-| Header         | `.panelHeader`    | Title, mobile chart flip control, and settings (slippage)          |
-| From row       | `.swapRow.first`  | Token selector, clickable max balance, amount input, USD estimate  |
-| Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison            |
-| To row         | `.swapRow`        | Token selector, clickable max balance, quoted amount, USD estimate |
+| Block          | Markup            | Behavior                                                                                                                                                 |
+| -------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Header         | `.panelHeader`    | Title, mobile chart flip control, and swap settings                                                                                                      |
+| From row       | `.swapRow.first`  | Token selector, clickable max balance, amount input, USD estimate                                                                                        |
+| Flip control   | `.swapCircle`     | Swaps the selected tokens and reloads market comparison                                                                                                  |
+| To row         | `.swapRow`        | Token selector, clickable max balance, quoted amount, USD estimate                                                                                       |
 | Details        | `.stats`, `.stat` | Rate, price impact, editable slippage, and network fee. Empty amount hides rate / impact / min received and shows a short hint; slippage stays available |
-| Primary action | `.connectMain`    | Confirms a fresh balance, then opens MFE review. Disabled state is muted charcoal; enabled restores the orange CTA |
+| Primary action | `.connectMain`    | Confirms a fresh balance, then opens MFE review. Disabled state is muted charcoal; enabled restores the orange CTA                                       |
 
 Token selectors open `app-side-modal` with `app-token-select-panel`. Amount
 editing, paste guards, and decimal validation remain owned by `HomeComponent`.
-Clicking a usable From balance prefills the From amount. Native assets use the
-backend spendable estimate, reserving storage and gas; final preparation validates
-actual funding again. Destination balances are read-only. The exact-receive control
-switches to `EXACT_OUTPUT`, keeps the receive amount fixed, and requests its input
-cost. The quote mode participates in cancellation and preparation identity.
-The swap-panel settings button and the Slippage row both open
-`app-slippage-settings-panel` with presets
-(`0.1%`, `0.25%`, `0.5%`, `1%`, `3%`) plus custom input. The host stores the
-choice as basis points (default `50` = `0.5%`) and includes it in dry quote and
-review intent payloads.
+Clicking a usable From balance prefills the From amount and quotes exact input.
+Native assets use the backend spendable estimate, reserving storage and gas;
+final preparation validates actual funding again. Destination balances are
+read-only. Both amount fields stay editable. Typing a sell amount uses
+`EXACT_INPUT`. Typing a receive amount uses `EXACT_OUTPUT`, keeps that receive
+amount fixed, and requests its input cost. Clearing the receive amount returns
+to exact input. The quote mode participates in cancellation and preparation
+identity.
+The swap-panel settings button and the Slippage row open
+`app-slippage-settings-panel` as a mobile bottom sheet (centered dialog from
+768px). It sets the route (`direct` or `cross-chain`), privacy (`public` or
+`confidential`), and slippage presets (`0.1%`, `0.25%`, `0.5%`, `1%`, `3%`)
+plus custom input. Choosing a route selects a destination token on a matching
+network when one exists. The token selector still lists every destination
+network; picking a token makes the route follow that pair. The host stores
+slippage as basis points (default `50` = `0.5%`) and includes slippage and the
+privacy choice in dry quote and review intent payloads.
 
 ### Market panel
 

@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatButtonModule } from '@angular/material/button';
 import { A11yModule } from '@angular/cdk/a11y';
+import { OverlayModule } from '@angular/cdk/overlay';
 import { AnimateLineComponent } from './components/animate-line/animate-line.component';
 import { AnimateTitleComponent } from './components/animate-title/animate-title.component';
 import { MatIconModule } from '@angular/material/icon';
@@ -29,6 +30,7 @@ const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
   imports: [
     ...AngularMaterial,
     A11yModule,
+    OverlayModule,
     CommonModule,
     FormsModule,
     HttpClientModule,

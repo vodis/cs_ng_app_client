@@ -77,6 +77,10 @@ import {
   formatSlippagePercentLabel,
   minimumReceivedAtomic,
 } from '@shared/components/slippage-settings-panel/slippage-settings.utils';
+import type {
+  SwapRouteMode,
+  SwapSettingsSelection,
+} from '@shared/components/slippage-settings-panel/slippage-settings-panel.component';
 import {
   networkLabel,
   recipientAddressError,
@@ -193,23 +197,6 @@ export class HomeComponent {
   public swapType: 'EXACT_INPUT' | 'EXACT_OUTPUT' = 'EXACT_INPUT';
   public receiveAmount = '';
 
-  public setSwapType(exactOutput: boolean): void {
-    this.swapType = exactOutput ? 'EXACT_OUTPUT' : 'EXACT_INPUT';
-    this.receiveAmount = this.quotedToAmountDisplay();
-    this.toAmountManual = '';
-    this.refreshSwapQuotePreview();
-  }
-
-  public setReceiveAmount(event: Event): void {
-    if (!(event.target instanceof HTMLInputElement)) return;
-    this.receiveAmount = normalizeSwapAmountStorage(
-      normalizeAmountInputChars(event.target.value),
-      this.tokenDecimals(this.toToken.decimals)
-    );
-    event.target.value = this.receiveAmount;
-    this.refreshSwapQuotePreview();
-  }
-
   private requestedAmount(): string | undefined {
     return this.toBaseUnits(
       this.swapType === 'EXACT_OUTPUT' ? this.receiveAmount : this.amount,
@@ -285,6 +272,8 @@ export class HomeComponent {
 
   @ViewChild('fromAmountInput')
   private fromAmountInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('toAmountInput')
+  private toAmountInput?: ElementRef<HTMLInputElement>;
   @ViewChild('swapMarketFlipCard')
   private swapMarketFlipCard?: ElementRef<HTMLElement>;
   @ViewChild('swapMarketFlipFront')
@@ -453,9 +442,8 @@ export class HomeComponent {
             preview.amountInAtomic,
             this.tokenDecimals(this.fromToken.decimals)
           );
-          this.fromAmountInput?.nativeElement &&
-            (this.fromAmountInput.nativeElement.value = this.amount);
         }
+        this.syncAmountFieldsFromQuote();
         this.queueMobileSwapMarketHeightSync();
       });
 
@@ -797,7 +785,11 @@ export class HomeComponent {
   }
 
   public toFiatEstimate(): string {
-    return this.fiatEstimate(this.toToken, this.quotedToAmountDisplay());
+    const amount =
+      this.swapType === 'EXACT_OUTPUT'
+        ? this.receiveAmount
+        : this.quotedToAmountDisplay();
+    return this.fiatEstimate(this.toToken, amount);
   }
 
   public toAmountUi(): string {
@@ -1302,10 +1294,33 @@ export class HomeComponent {
   }
 
   public saveSlippageSettings(bps: number): void {
-    this.slippageToleranceBps = bps;
-    this.slippageDraftBps = bps;
+    this.saveSwapSettings({
+      slippageToleranceBps: bps,
+      route: this.routeMode(),
+      privacy: this.confidentialSwap ? 'confidential' : 'public',
+    });
+  }
+
+  public saveSwapSettings(selection: SwapSettingsSelection): void {
+    this.slippageToleranceBps = selection.slippageToleranceBps;
+    this.slippageDraftBps = selection.slippageToleranceBps;
+    this.confidentialSwap = selection.privacy === 'confidential';
+    this.applySwapRoute(selection.route);
     this.isSlippageSettingsOpen = false;
     this.refreshSwapQuotePreview();
+  }
+
+  public routeMode(): SwapRouteMode {
+    return this.tokensOnDifferentNetworks(this.fromToken, this.toToken)
+      ? 'cross-chain'
+      : 'direct';
+  }
+
+  public canSelectRoute(route: SwapRouteMode): boolean {
+    return (
+      route === this.routeMode() ||
+      this.destinationForRoute(route) !== undefined
+    );
   }
 
   public networkFeeLabel(): string {
@@ -1325,7 +1340,6 @@ export class HomeComponent {
   }
 
   public onAmountKeydown(event: KeyboardEvent): void {
-    if (this.swapType === 'EXACT_OUTPUT') return;
     const action = resolveAmountKeydownAction(event);
 
     if (action === 'allow') {
@@ -1342,7 +1356,6 @@ export class HomeComponent {
   }
 
   public onAmountInput(event: Event): void {
-    if (this.swapType === 'EXACT_OUTPUT') return;
     this.applySanitizedAmount(
       (event.target as HTMLInputElement).value,
       event.target as HTMLInputElement
@@ -1350,7 +1363,6 @@ export class HomeComponent {
   }
 
   public onAmountPaste(event: ClipboardEvent): void {
-    if (this.swapType === 'EXACT_OUTPUT') return;
     const input = event.target as HTMLInputElement;
     const pasted = this.readPastedText(event);
     if (!pasted) {
@@ -1394,7 +1406,9 @@ export class HomeComponent {
   }
 
   public isToAmountMuted(): boolean {
-    const normalized = this.toAmountUi().trim();
+    const normalized = (
+      this.swapType === 'EXACT_OUTPUT' ? this.receiveAmount : this.toAmountUi()
+    ).trim();
     if (!normalized) {
       return true;
     }
@@ -1422,6 +1436,11 @@ export class HomeComponent {
     const previousValue = input?.value ?? value;
     const sanitized = this.sanitizeAmountInput(value);
     const previousAmount = this.amount;
+    const switched = this.swapType === 'EXACT_OUTPUT';
+    if (switched) {
+      this.swapType = 'EXACT_INPUT';
+      this.receiveAmount = '';
+    }
     this.amountFieldTouched = true;
     this.amount = sanitized;
 
@@ -1448,11 +1467,159 @@ export class HomeComponent {
       }
     }
 
-    if (sanitized !== previousAmount) {
+    if (sanitized !== previousAmount || switched) {
       this.toAmountManual = '';
       this.refreshSwapQuotePreview();
       this.queueMobileSwapMarketHeightSync();
     }
+  }
+
+  public onReceiveAmountKeydown(event: KeyboardEvent): void {
+    const action = resolveAmountKeydownAction(event);
+    if (action === 'allow') return;
+    if (action === 'decimal-separator') {
+      event.preventDefault();
+      const input = event.target;
+      if (input instanceof HTMLInputElement) {
+        this.insertReceiveDecimalSeparator(input);
+      }
+      return;
+    }
+    event.preventDefault();
+  }
+
+  public onReceiveAmountInput(event: Event): void {
+    if (!(event.target instanceof HTMLInputElement)) return;
+    this.applySanitizedReceiveAmount(event.target.value, event.target);
+  }
+
+  public onReceiveAmountPaste(event: ClipboardEvent): void {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    const pasted = this.readPastedText(event);
+    if (!pasted) return;
+    event.preventDefault();
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    this.applySanitizedReceiveAmount(
+      input.value.slice(0, start) + pasted + input.value.slice(end),
+      input
+    );
+  }
+
+  public onReceiveAmountFocus(event: FocusEvent): void {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    const raw =
+      this.swapType === 'EXACT_OUTPUT'
+        ? this.receiveAmount
+        : this.canonicalAmountStorage(this.toAmountDisplay());
+    input.value = raw
+      ? this.formatSwapAmount(raw, this.receiveFractionDigits(), true)
+      : '';
+    this.scrollAmountToEnd(input);
+  }
+
+  public onReceiveAmountBlur(event: FocusEvent): void {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    if (
+      this.swapType === 'EXACT_OUTPUT' &&
+      (!this.receiveAmount.trim() || this.isZeroAmountValue(this.receiveAmount))
+    ) {
+      this.receiveAmount = '';
+      this.swapType = 'EXACT_INPUT';
+      this.refreshSwapQuotePreview();
+    }
+    this.syncAmountFieldsFromQuote();
+  }
+
+  private applySanitizedReceiveAmount(
+    value: string,
+    input?: HTMLInputElement
+  ): void {
+    const caret = input?.selectionStart ?? null;
+    const previousValue = input?.value ?? value;
+    const decimals = this.receiveFractionDigits();
+    const sanitized = normalizeSwapAmountStorage(
+      normalizeAmountInputChars(value),
+      decimals
+    );
+    const previousAmount = this.receiveAmount;
+    const switched = this.swapType !== 'EXACT_OUTPUT';
+    this.swapType = 'EXACT_OUTPUT';
+    this.toAmountManual = '';
+    this.receiveAmount = sanitized;
+
+    if (input) {
+      const display = this.formatSwapAmount(sanitized, decimals, true);
+      input.value = display;
+      if (sanitized.endsWith('.')) {
+        const commaIndex = display.lastIndexOf(AMOUNT_DECIMAL_SEPARATOR);
+        if (commaIndex !== -1) {
+          input.setSelectionRange(commaIndex + 1, commaIndex + 1);
+        }
+      } else if (previousValue !== display) {
+        this.restoreCaretAfterDigits(input, previousValue, caret, display);
+      }
+      if (display.length > previousValue.length) {
+        this.scrollAmountToEnd(input);
+      }
+    }
+
+    if (sanitized !== previousAmount || switched) {
+      this.refreshSwapQuotePreview();
+      this.queueMobileSwapMarketHeightSync();
+    }
+  }
+
+  private insertReceiveDecimalSeparator(input: HTMLInputElement): void {
+    if (displayHasDecimalSeparator(input.value, this.receiveFractionDigits())) {
+      return;
+    }
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    this.applySanitizedReceiveAmount(
+      input.value.slice(0, start) +
+        AMOUNT_DECIMAL_SEPARATOR +
+        input.value.slice(end),
+      input
+    );
+  }
+
+  private receiveFractionDigits(): number {
+    return Math.min(
+      this.tokenDecimals(this.toToken.decimals),
+      this.maxAmountFractionDigits
+    );
+  }
+
+  private syncAmountFieldsFromQuote(): void {
+    if (typeof document === 'undefined') return;
+    const from = this.fromAmountInput?.nativeElement;
+    if (
+      from &&
+      document.activeElement !== from &&
+      this.swapType === 'EXACT_OUTPUT'
+    ) {
+      from.value = this.amount
+        ? this.formatSwapAmount(this.amount, this.maxAmountFractionDigits, true)
+        : '';
+    }
+    const to = this.toAmountInput?.nativeElement;
+    if (!to || document.activeElement === to) return;
+    if (this.swapType === 'EXACT_OUTPUT') {
+      to.value = this.receiveAmount
+        ? this.formatSwapAmount(
+            this.receiveAmount,
+            this.receiveFractionDigits(),
+            true
+          )
+        : '';
+      return;
+    }
+    const quoted = this.quotedToAmountDisplay();
+    to.value = quoted ? this.toAmountFormatted() : '';
   }
 
   private refreshSwapQuotePreview(): void {
@@ -1810,6 +1977,46 @@ export class HomeComponent {
       TOKEN_PROJECT_MOCKS[this.marketSymbolFor(token)] ??
       TOKEN_PROJECT_MOCKS[this.normalizeMarketSymbol(token.symbol)]
     );
+  }
+
+  private applySwapRoute(route: SwapRouteMode): void {
+    if (route === this.routeMode()) return;
+    const next = this.destinationForRoute(route);
+    if (!next) return;
+    this.toToken = this.enrichToken(next);
+    this.toAmountManual = '';
+    this.receiveAmount = '';
+    this.swapType = 'EXACT_INPUT';
+    this.recipientAddress = '';
+    this.destinationMemo = '';
+    this.loadMarketComparison();
+    this.loadWalletBalances();
+  }
+
+  private destinationForRoute(route: SwapRouteMode): ExchangeToken | undefined {
+    const candidates = this.exchangeTokens.filter(
+      token =>
+        token.assetId !== this.fromToken.assetId &&
+        (route === 'direct'
+          ? !this.tokensOnDifferentNetworks(this.fromToken, token)
+          : this.tokensOnDifferentNetworks(this.fromToken, token))
+    );
+    const symbol = this.toToken.displaySymbol || this.toToken.symbol;
+    return (
+      candidates.find(
+        token => (token.displaySymbol || token.symbol) === symbol
+      ) ?? candidates[0]
+    );
+  }
+
+  private tokensOnDifferentNetworks(
+    left: ExchangeToken,
+    right: ExchangeToken
+  ): boolean {
+    if (left.sourceNetwork && right.sourceNetwork) {
+      return left.sourceNetwork !== right.sourceNetwork;
+    }
+    return left.blockchain !== right.blockchain;
   }
 
   public isForeignDestination(): boolean {
@@ -2242,6 +2449,11 @@ export class HomeComponent {
 
   private fillAmountValue(value: string): void {
     const previousAmount = this.amount;
+    const switched = this.swapType === 'EXACT_OUTPUT';
+    if (switched) {
+      this.swapType = 'EXACT_INPUT';
+      this.receiveAmount = '';
+    }
     this.amount = value;
 
     const input = this.fromAmountInput?.nativeElement;
@@ -2254,7 +2466,7 @@ export class HomeComponent {
       this.scrollAmountToEnd(input);
     }
 
-    if (value !== previousAmount) {
+    if (value !== previousAmount || switched) {
       this.toAmountManual = '';
       this.refreshSwapQuotePreview();
     }

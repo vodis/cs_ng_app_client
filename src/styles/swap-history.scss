@@ -8,11 +8,11 @@ app-swap-history {
 
 .swap-history {
   display: flex;
-  flex-direction: column;
   min-width: 0;
   height: auto;
-  gap: 12px;
   box-sizing: border-box;
+  flex-direction: column;
+  gap: 12px;
 
   &--compact {
     padding: 0;
@@ -64,6 +64,16 @@ app-swap-history {
       font-size: 1.15rem;
     }
 
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--primary-text-color);
+      outline-offset: 2px;
+    }
+
     &:hover:not(:disabled) {
       border-color: var(--primary-text-color);
       background: color-mix(
@@ -72,16 +82,6 @@ app-swap-history {
         transparent
       );
       color: var(--primary-text-color);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--primary-text-color);
-      outline-offset: 2px;
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.55;
     }
   }
 
@@ -94,11 +94,11 @@ app-swap-history {
     flex-shrink: 0;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 10px 14px;
     padding: 10px 12px;
     border: 1px solid var(--exchange-line, #2a3437);
     border-radius: 4px;
     background: rgb(0 0 0 / 18%);
+    gap: 10px 14px;
   }
 
   &__banner-text {
@@ -119,18 +119,18 @@ app-swap-history {
     border-radius: 4px;
     background: transparent;
     color: var(--main-text-color, #fff);
+    cursor: pointer;
     font-size: 13px;
     font-weight: 600;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-      border-color: var(--primary-text-color);
-      color: var(--primary-text-color);
-    }
 
     &:disabled {
       cursor: not-allowed;
       opacity: 0.55;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: var(--primary-text-color);
+      color: var(--primary-text-color);
     }
   }
 
@@ -143,8 +143,8 @@ app-swap-history {
   &__empty {
     display: flex;
     flex-direction: column;
-    gap: 4px;
     padding: 4px 0 0;
+    gap: 4px;
   }
 
   &__empty-title {
@@ -163,10 +163,10 @@ app-swap-history {
 
   &__body {
     display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
     min-width: 0;
     min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
   }
 
   &__table-wrap {
@@ -194,9 +194,9 @@ app-swap-history {
     td {
       padding: 10px 10px 10px 0;
       border-top: 1px solid var(--exchange-line-soft, #20292c);
-      vertical-align: top;
       font-size: 13px;
       line-height: 1.35;
+      vertical-align: top;
     }
 
     th:last-child,
@@ -235,9 +235,9 @@ app-swap-history {
 
   &__pair-text {
     display: inline;
-    overflow-wrap: anywhere;
     color: var(--main-text-color, #fff);
     font-weight: 600;
+    overflow-wrap: anywhere;
     word-break: break-word;
   }
 
@@ -249,9 +249,9 @@ app-swap-history {
 
   &__amount {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 2px;
-    min-width: 0;
   }
 
   &__amount-label {
@@ -263,9 +263,9 @@ app-swap-history {
   }
 
   &__amount-value {
-    overflow-wrap: anywhere;
     color: var(--main-text-color, #fff);
     font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
     word-break: break-word;
   }
 
@@ -278,11 +278,11 @@ app-swap-history {
   &__status-pill {
     display: inline-block;
     max-width: 100%;
-    overflow-wrap: anywhere;
     color: #c4c6c7;
     font-size: 12px;
     font-weight: 700;
     line-height: 1.3;
+    overflow-wrap: anywhere;
     word-break: break-word;
 
     &[data-status='success'] {
@@ -300,21 +300,21 @@ app-swap-history {
 
   &__list {
     display: none;
-    margin: 0;
     padding: 0;
+    margin: 0;
     list-style: none;
   }
 
   &__item {
     display: flex;
     flex-direction: column;
-    gap: 8px;
     padding: 12px 0;
     border-top: 1px solid var(--exchange-line-soft, #20292c);
+    gap: 8px;
 
     &:first-child {
-      border-top: 0;
       padding-top: 4px;
+      border-top: 0;
     }
   }
 
@@ -372,9 +372,9 @@ app-swap-history {
 
     summary {
       color: var(--primary-text-color);
+      cursor: pointer;
       font-size: 12px;
       font-weight: 600;
-      cursor: pointer;
       list-style: none;
 
       &::-webkit-details-marker {
@@ -385,17 +385,17 @@ app-swap-history {
 
   &__details-body {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding-top: 8px;
     max-width: 28rem;
+    flex-direction: column;
+    padding-top: 8px;
+    gap: 6px;
 
     p {
       margin: 0;
-      overflow-wrap: anywhere;
       color: #b6bbbc;
       font-size: 12px;
       line-height: 1.4;
+      overflow-wrap: anywhere;
     }
   }
 
@@ -414,9 +414,9 @@ app-swap-history {
     overflow: hidden;
     width: 1px;
     height: 1px;
+    border: 0;
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
-    border: 0;
   }
 }
 

@@ -1,7 +1,20 @@
 :host {
-  display: block;
   position: relative;
+  display: block;
   height: var(--shell-header-height);
+
+  .header__line,
+  .header__animate-line {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+  }
+
+  .header__line {
+    background: var(--main-border-color);
+  }
 
   &.header-host--mobile {
     .header__line {
@@ -119,19 +132,6 @@
     }
   }
 
-  .header__line,
-  .header__animate-line {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    height: 1px;
-  }
-
-  .header__line {
-    background: var(--main-border-color);
-  }
-
   .header.mobile {
     .header__content {
       display: flex;
@@ -172,7 +172,10 @@
       border-radius: 0;
       background: none;
       color: var(--main-text-color);
+    }
 
+    .header__account-link,
+    .header__icon-button {
       mat-icon {
         width: 1.75rem;
         height: 1.75rem;
