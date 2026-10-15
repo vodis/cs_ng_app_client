@@ -206,6 +206,27 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return [chain, kind].filter(Boolean).join(' • ');
   }
 
+  public walletListMeta(wallet: BackendWallet): string {
+    const parts = [this.walletMeta(wallet)];
+    if (this.isEmbeddedWallet(wallet) && !wallet.isPrimary) {
+      parts.push('Linked');
+    }
+    return parts.filter(Boolean).join(' • ');
+  }
+
+  public walletPrimaryStatusLabel(wallet: BackendWallet): string {
+    if (!wallet.isPrimary) {
+      return '';
+    }
+    if (this.activeWalletId === wallet.id && this.isLiveConnected()) {
+      return 'Active · Connected';
+    }
+    if (this.walletRestoring) {
+      return 'Active · Restoring';
+    }
+    return 'Active · Disconnected';
+  }
+
   public lastConnectedMeta(wallet: LastConnectedWallet): string {
     const chain = this.capitalizeLabel(this.lastConnectedChainType(wallet));
     const kind = this.isEmbeddedWallet(wallet) ? 'Embedded' : 'External';
@@ -569,6 +590,19 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public canRemoveLinkedWallet(wallet: BackendWallet): boolean {
     return !this.isEmbeddedWallet(wallet);
+  }
+
+  public canDisconnectWallet(wallet: BackendWallet): boolean {
+    if (!this.isLiveConnected() || !this.connectedAccount) {
+      return false;
+    }
+    return wallet.address.toLowerCase() === this.connectedAccount.toLowerCase();
+  }
+
+  public hasWalletMenuActions(wallet: BackendWallet): boolean {
+    return (
+      this.canDisconnectWallet(wallet) || this.canRemoveLinkedWallet(wallet)
+    );
   }
 
   public async openWalletModal(): Promise<void> {
