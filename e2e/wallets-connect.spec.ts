@@ -7,12 +7,12 @@ test.describe('Wallets MFE connect dialog', () => {
     await mockJsonApi(page, '/api/v1/balances', { data: [] });
   });
 
-  test('opens from Connect another wallet, keeps Jupiter soon-state, and closes on outside click', async ({
+  test('opens from Manage wallets, keeps Jupiter soon-state, and closes on outside click', async ({
     page,
   }) => {
     await page.goto('/en/profile');
 
-    await page.getByRole('button', { name: 'Connect another wallet' }).click();
+    await page.getByRole('button', { name: 'Manage wallets' }).click();
 
     const dialog = page.locator('.side-modal.open');
     await expect(dialog).toBeVisible();

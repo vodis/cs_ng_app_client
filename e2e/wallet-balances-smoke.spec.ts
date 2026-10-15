@@ -155,7 +155,7 @@ for (const [chain, signer] of [
       '$7.00'
     );
     await expect(page.locator('.profile-shell__wallet-badge')).toContainText(
-      signer ? 'Connected' : 'Signing disconnected'
+      signer ? 'Active · Connected' : 'Active · Disconnected'
     );
     await page.reload();
     await expect(holdings).toContainText(`2.5 ${symbol}`);

@@ -110,8 +110,11 @@ Flow direction:
   explicit balances refresh — not on every session tick. The wallet address
   pill above the balance is omitted — wallet identity and token balances live
   in Manage wallets. Wallet setup is not a blocking interstitial.
-- Connected wallets on `/profile` render as a table (Wallet, Network, Status,
-  Action), not a stacked list.
+- Connected wallets on `/profile` render as one compact list: address, network
+  meta with status under it, a per-row `⋯` menu for Disconnect/Remove, and a
+  compact outlined Make active control when needed. The panel header keeps
+  Manage wallets plus an icon-only refresh — not a second duplicate
+  “Connected” card.
 - Profile **Balances** hide zero balances by default (with a Show zero balances
   toggle), show token icon + symbol on the left, and USD (primary) with a
   compact token amount (secondary) on the right. USD uses two decimals,
