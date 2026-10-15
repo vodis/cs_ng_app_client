@@ -100,9 +100,17 @@ Flow direction:
 - Accounts with at least one linked wallet continue to the safe `returnUrl`.
 - First-time accounts with no linked or generated wallet go to `/profile`.
 - `/profile` shows a BFF-valued USD balance hero beside an Onboarding
-  portfolio card (wallet, passkey, five swaps). The hero reads
-  `GET /api/v1/portfolio`, passing the backend-selected wallet address and CAIP-2
-  network when available. It renders both USD value and token quantities.
+  portfolio card (wallet, passkey, five swaps). When all steps are done the
+  card collapses to a compact row (`Onboarding completed` + **Details**).
+  Expanding Details restores the full card (status, progress, checklist capped
+  at the swap goal, and **Go to Exchange**); **Hide details** collapses it
+  again. Incomplete onboarding stays fully expanded. Under the card, fund
+  actions offer **Send Funds** and **Add Funds** (desktop); mobile also shows
+  **Exchange**. Send opens the wallet drawer, Add Funds opens connect/receive,
+  and Exchange navigates to Token Exchange. The hero reads
+  `GET /api/v1/portfolio`, passing the backend-selected wallet address and
+  CAIP-2 network when available. It renders both USD value and token
+  quantities.
   While the first valuation is in flight the hero shows `Loading…`; zero is
   displayed only after a successful read. Same-wallet refreshes retain the
   previous value and show failures explicitly. Portfolio is fetched once per

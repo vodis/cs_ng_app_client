@@ -699,9 +699,37 @@ describe('ProfileComponent', () => {
 
     expect(component.onboardingRemainingCount()).toBe(0);
     expect(component.onboardingProgressPercent()).toBe(100);
+    expect(component.isOnboardingComplete()).toBeTrue();
+    expect(component.showOnboardingDetailsContent()).toBeFalse();
+    expect(component.onboardingDetailsOpen).toBeFalse();
     expect(component.nextOnboardingCta()).toBe('Go to Exchange');
     expect(component.showOnboardingGenerateWallet()).toBeFalse();
     expect(component.onboardingRemainingLabel()).toBe('All steps complete');
+    expect(
+      component.onboardingSteps().find(step => step.id === 'swaps')?.hint
+    ).toBe('5/5 swaps completed');
+
+    component.toggleOnboardingDetails();
+    expect(component.onboardingDetailsOpen).toBeTrue();
+    expect(component.showOnboardingDetailsContent()).toBeTrue();
+
+    component.toggleOnboardingDetails();
+    expect(component.onboardingDetailsOpen).toBeFalse();
+    expect(component.showOnboardingDetailsContent()).toBeFalse();
+  });
+
+  it('opens Send Funds, Add Funds, and Exchange from the fund action row', async () => {
+    await component.openSendFunds();
+    expect(walletGatewayBridge.syncConnectedWallet).toHaveBeenCalled();
+    expect(walletsService.requestOpen).toHaveBeenCalledWith('wallet');
+
+    walletsService.requestOpen.calls.reset();
+    await component.openAddFunds();
+    expect(walletsService.requestOpen).toHaveBeenCalledWith('connect');
+
+    await component.openExchange();
+    expect(localizedRouting.path).toHaveBeenCalledWith('/');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/en');
   });
 
   it('opens the wallet modal for the next wallet onboarding step', async () => {

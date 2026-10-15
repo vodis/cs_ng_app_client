@@ -34,6 +34,7 @@ export type ProfileOnboardingViewModel = {
   progressPercent: number;
   nextCta: string;
   nextTitle: string;
+  complete: boolean;
 };
 
 export type ProfileOnboardingState = {
@@ -169,7 +170,10 @@ export class ProfileFacade implements OnDestroy {
       {
         id: 'swaps',
         title: `Complete ${state.requiredSwapCount} swaps`,
-        hint: `${state.completedSwapCount} of ${state.requiredSwapCount} completed`,
+        hint: `${Math.min(
+          state.completedSwapCount,
+          state.requiredSwapCount
+        )}/${state.requiredSwapCount} swaps completed`,
         done: swapsDone,
       },
     ];
@@ -198,12 +202,28 @@ export class ProfileFacade implements OnDestroy {
               ? 'Start swapping'
               : 'Go to Exchange',
       nextTitle: nextStep?.title ?? "You're all set",
+      complete: remainingCount === 0,
     };
   }
 
   public async openWalletModal(): Promise<void> {
     await this.walletGatewayBridge.syncConnectedWallet().catch(() => undefined);
     this.walletsService.requestOpen('connect');
+  }
+
+  /** Open the wallet drawer for send / transfer actions. */
+  public async openSendFunds(): Promise<void> {
+    await this.walletGatewayBridge.syncConnectedWallet().catch(() => undefined);
+    this.walletsService.requestOpen('wallet');
+  }
+
+  /** Open the wallet drawer so the user can receive / add funds. */
+  public async openAddFunds(): Promise<void> {
+    await this.openWalletModal();
+  }
+
+  public async openExchange(): Promise<void> {
+    await this.navigateTo('/');
   }
 
   public async generateWallet(): Promise<void> {

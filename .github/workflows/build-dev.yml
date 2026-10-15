@@ -77,15 +77,17 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
-      - name: Install Chromium for headless tests
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium
+      # Ubuntu apt chromium is a snap wrapper; snapcraft timeouts break CI.
+      - name: Setup Chrome for headless tests
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
 
       - name: Angular tests
         run: pnpm exec ng test --no-watch --no-progress --browsers=ChromeHeadlessNoSandbox
         env:
-          CHROME_BIN: /usr/bin/chromium
+          CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
 
   shell-layout-e2e:
     runs-on: ubuntu-latest

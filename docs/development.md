@@ -269,7 +269,11 @@ Host auth routes live under `src/app/pages/auth/`.
 - Login/register without linked wallets routes to `/profile`, not a blocking
   wallet interstitial.
 - `/profile` shows a BFF-valued USD balance hero plus an Onboarding
-  portfolio card for wallet, passkey, and five swaps. The hero loads
+  portfolio card for wallet, passkey, and five swaps. Completed onboarding
+  collapses to `Onboarding completed` with Details / Hide details; expanded
+  view restores status, progress, capped swap progress, and Go to Exchange.
+  Fund actions sit under the onboarding card: Send Funds and Add Funds on
+  desktop; mobile also shows Exchange. The hero loads
   `GET /api/v1/portfolio`; for a live connected wallet it supplies the wallet
   address and CAIP-2 network so the backend can value that wallet directly.
   The hero shows `$0.00` while loading, then animates to the returned USD
