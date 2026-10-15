@@ -154,7 +154,7 @@ test.describe('active-wallet persistence with the real gateway', () => {
         await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
           mode === 'embedded' || mode === 'connected'
             ? 'Active · Connected'
-            : 'Active · Signing disconnected'
+            : 'Active · Disconnected'
         );
         await expect(
           page.locator('.wallets-mfe section[aria-label="Active wallet"]')
@@ -174,7 +174,7 @@ test.describe('active-wallet persistence with the real gateway', () => {
       expect(writes).toEqual([]);
       if (mode === 'wrong' || mode === 'rejected') {
         await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-          'Active · Signing disconnected'
+          'Active · Disconnected'
         );
         await page
           .getByRole('button', { name: 'Reconnect', exact: true })
