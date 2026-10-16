@@ -186,6 +186,6 @@ describe('SwapHistoryComponent recovery during outages', () => {
     ).toContain('Recent activity');
     expect(
       element.querySelector('.swap-history__view-all')?.getAttribute('href')
-    ).toBe('/history');
+    ).toBe('/transactions');
   });
 });

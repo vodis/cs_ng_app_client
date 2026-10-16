@@ -255,7 +255,7 @@ Host auth routes live under `src/app/pages/auth/`.
 ### Session redirect policy
 
 - Login is optional for public shell routes. Do not redirect `/`, `/farm`,
-  `/proposals`, `/home`, or `/history` to `/login`.
+  `/proposals`, `/home`, `/transactions`, or `/history` to `/login`.
 - Missing or non-renewable sessions redirect to `/login?returnUrl=<safe-path>`
   only on protected account routes (`/profile`, `/portfolio`).
 - `AuthGuard` waits for auth-provider readiness before attempting refresh.
