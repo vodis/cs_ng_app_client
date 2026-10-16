@@ -60,7 +60,12 @@ const routes: Routes = [
   {
     path: 'history',
     pathMatch: 'full',
-    redirectTo: () => preferredLocalePath('/history'),
+    redirectTo: () => preferredLocalePath('/transactions'),
+  },
+  {
+    path: 'transactions',
+    pathMatch: 'full',
+    redirectTo: () => preferredLocalePath('/transactions'),
   },
   {
     path: 'portfolio',

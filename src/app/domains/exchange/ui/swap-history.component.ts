@@ -24,7 +24,7 @@ import {
       @if (history.state$ | async; as state) {
         <header class="swap-history__head">
           <h2 class="swap-history__title">
-            {{ compact ? 'Recent activity' : 'Swap history' }}
+            {{ compact ? 'Recent activity' : 'Transactions' }}
           </h2>
           <button
             type="button"
@@ -224,7 +224,7 @@ import {
 
           <footer class="swap-history__footer">
             @if (compact) {
-              <a class="swap-history__view-all" routerLink="/history"
+              <a class="swap-history__view-all" routerLink="/transactions"
                 >View all swaps →</a
               >
             } @else {
@@ -252,7 +252,7 @@ import {
       } @else {
         <header class="swap-history__head">
           <h2 class="swap-history__title">
-            {{ compact ? 'Recent activity' : 'Swap history' }}
+            {{ compact ? 'Recent activity' : 'Transactions' }}
           </h2>
         </header>
         <p class="swap-history__status" role="status">Loading swap history…</p>
