@@ -24,7 +24,7 @@ import {
       @if (history.state$ | async; as state) {
         <header class="swap-history__head">
           <h2 class="swap-history__title">
-            {{ compact ? 'Recent activity' : 'Swap history' }}
+            {{ compact ? 'Recent activity' : 'Transactions' }}
           </h2>
           <button
             type="button"
@@ -159,51 +159,36 @@ import {
               </table>
             </div>
 
-            <ul class="swap-history__list">
+            <ul class="swap-history__list swap-history__list--dense">
               @for (item of visible; track item.preparationId) {
                 <li class="swap-history__item">
-                  <div class="swap-history__item-top">
-                    <span class="swap-history__pair-text"
-                      >{{ item.sourceSymbol }}
-                      <span class="swap-history__pair-arrow" aria-hidden="true"
-                        >→</span
+                  <div class="swap-history__dense-row">
+                    <div class="swap-history__dense-main">
+                      <span class="swap-history__pair-text"
+                        >{{ item.sourceSymbol }}
+                        <span
+                          class="swap-history__pair-arrow"
+                          aria-hidden="true"
+                          >→</span
+                        >
+                        {{ item.destinationSymbol }}</span
                       >
-                      {{ item.destinationSymbol }}</span
-                    >
+                      <span class="swap-history__dense-swap">
+                        {{ paidAmount(item) }}
+                        <span
+                          class="swap-history__pair-arrow"
+                          aria-hidden="true"
+                          >→</span
+                        >
+                        {{ denseAmount(receivedAmount(item)) }}
+                        {{ item.destinationSymbol }}
+                      </span>
+                    </div>
                     <span
-                      class="swap-history__status-pill"
+                      class="swap-history__status-pill swap-history__status-pill--chip"
                       [attr.data-status]="statusTone(item)"
                       >{{ status(item) }}</span
                     >
-                  </div>
-                  <div class="swap-history__item-amounts">
-                    <div class="swap-history__amount">
-                      <span class="swap-history__amount-label">Paid</span>
-                      <span class="swap-history__amount-value">
-                        {{ paidAmount(item) }}
-                        {{ item.sourceSymbol }}
-                      </span>
-                      <span class="swap-history__amount-meta">{{
-                        paidLabel(item)
-                      }}</span>
-                      @if (item.receipt?.refundedAmount; as refunded) {
-                        <span class="swap-history__amount-meta">
-                          Refunded:
-                          {{ formatAmount(refunded, item.sourceDecimals) }}
-                          {{ item.sourceSymbol }}
-                        </span>
-                      }
-                    </div>
-                    <div class="swap-history__amount">
-                      <span class="swap-history__amount-label">Received</span>
-                      <span class="swap-history__amount-value">
-                        {{ receivedAmount(item) }}
-                        {{ item.destinationSymbol }}
-                      </span>
-                      <span class="swap-history__amount-meta">{{
-                        receivedLabel(item)
-                      }}</span>
-                    </div>
                   </div>
                   <div class="swap-history__item-foot">
                     <time
@@ -224,7 +209,7 @@ import {
 
           <footer class="swap-history__footer">
             @if (compact) {
-              <a class="swap-history__view-all" routerLink="/history"
+              <a class="swap-history__view-all" routerLink="/transactions"
                 >View all swaps →</a
               >
             } @else {
@@ -252,7 +237,7 @@ import {
       } @else {
         <header class="swap-history__head">
           <h2 class="swap-history__title">
-            {{ compact ? 'Recent activity' : 'Swap history' }}
+            {{ compact ? 'Recent activity' : 'Transactions' }}
           </h2>
         </header>
         <p class="swap-history__status" role="status">Loading swap history…</p>
@@ -315,6 +300,23 @@ export class SwapHistoryComponent {
 
   formatAmount(value: string, decimals: number): string {
     return formatSwapAmountDisplay(atomicToDecimal(value, decimals), decimals);
+  }
+
+  /** Shorten long decimal strings for the dense mobile amount line. */
+  denseAmount(display: string, maxChars = 12): string {
+    const trimmed = display.trim();
+    if (trimmed.length <= maxChars) {
+      return trimmed;
+    }
+    const comma = trimmed.indexOf(',');
+    const dot = trimmed.indexOf('.');
+    const sep = comma >= 0 ? comma : dot;
+    if (sep < 0) {
+      return `${trimmed.slice(0, maxChars - 1)}…`;
+    }
+    const head = trimmed.slice(0, sep + 1);
+    const fracBudget = Math.max(2, maxChars - head.length - 1);
+    return `${head}${trimmed.slice(sep + 1, sep + 1 + fracBudget)}…`;
   }
 
   paidAmount(item: SwapHistoryItem): string {

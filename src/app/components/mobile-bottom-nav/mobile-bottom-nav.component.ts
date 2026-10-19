@@ -101,9 +101,9 @@ export class MobileBottomNavComponent implements OnDestroy {
       icon: 'bots',
     },
     {
-      name: 'Texts.sidebar-history',
-      fallback: 'History',
-      url: '/history',
+      name: 'Texts.sidebar-transactions',
+      fallback: 'Transactions',
+      url: '/transactions',
       icon: 'history',
     },
     {
@@ -129,7 +129,7 @@ export class MobileBottomNavComponent implements OnDestroy {
   private readonly moreSectionUrls = [
     '/farm',
     '/proposals',
-    '/history',
+    '/transactions',
     '/portfolio',
   ];
 

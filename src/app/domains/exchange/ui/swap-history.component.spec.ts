@@ -186,6 +186,35 @@ describe('SwapHistoryComponent recovery during outages', () => {
     ).toContain('Recent activity');
     expect(
       element.querySelector('.swap-history__view-all')?.getAttribute('href')
-    ).toBe('/history');
+    ).toBe('/transactions');
+  });
+
+  it('renders a dense mobile list row in compact mode', async () => {
+    const { element } = await setup(loaded, true);
+    expect(element.querySelector('.swap-history__list--dense')).toBeTruthy();
+    expect(
+      element.querySelector('.swap-history__dense-swap')?.textContent
+    ).toMatch(/USDC/);
+    expect(element.querySelector('.swap-history__amount-label')).toBeNull();
+    expect(element.textContent).not.toContain('Settled');
+  });
+
+  it('renders a dense mobile list row on the full Transactions page', async () => {
+    const { element } = await setup(loaded, false);
+    expect(element.querySelector('.swap-history__list--dense')).toBeTruthy();
+    expect(element.querySelector('.swap-history__amount-label')).toBeNull();
+    expect(
+      element.querySelector('.swap-history__status-pill--chip')
+    ).toBeTruthy();
+  });
+
+  it('shortens long dense amount strings for mobile rows', async () => {
+    const { fixture } = await setup(loaded, true);
+    expect(
+      fixture.componentInstance.denseAmount('0,002130874410066736', 12)
+    ).toBe('0,002130874…');
+    expect(fixture.componentInstance.denseAmount('1,05449', 12)).toBe(
+      '1,05449'
+    );
   });
 });

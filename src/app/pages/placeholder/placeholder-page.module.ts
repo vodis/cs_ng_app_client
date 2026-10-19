@@ -11,9 +11,14 @@ const routes: Routes = [
     data: { title: 'Home' },
   },
   {
-    path: 'history',
+    path: 'transactions',
     component: SwapHistoryComponent,
-    data: { title: 'History' },
+    data: { title: 'Transactions' },
+  },
+  {
+    path: 'history',
+    pathMatch: 'full',
+    redirectTo: 'transactions',
   },
 ];
 
