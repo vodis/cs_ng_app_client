@@ -356,7 +356,9 @@ Login is optional. Guests can browse the shell without a session.
 | --------------------- | ----------------------- |
 | `/`                   | Token Exchange          |
 | `/farm`, `/proposals` | Product pages           |
-| `/home`, `/history`   | Placeholder shell pages |
+| `/home`               | Placeholder shell page  |
+| `/transactions`       | Full swap activity (`app-swap-history`) |
+| `/history`            | Redirects to `/transactions` |
 | `/login`              | Returning-user sign in  |
 | `/register`           | New account creation    |
 

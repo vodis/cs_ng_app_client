@@ -64,7 +64,9 @@ describe('MobileBottomNavComponent', () => {
       'Profile',
       'More',
     ]);
-    expect(component.links.map(link => link.url)).not.toContain('/history');
+    expect(component.links.map(link => link.url)).not.toContain(
+      '/transactions'
+    );
     expect(component.links.map(link => link.url)).not.toContain('/portfolio');
     expect(
       component.links.find(link => link.fallback === 'Profile')?.icon
@@ -96,7 +98,7 @@ describe('MobileBottomNavComponent', () => {
       '/profile',
       '/farm',
       '/proposals',
-      '/history',
+      '/transactions',
       '/portfolio',
     ]);
     expect(new Set(destinations).size).toBe(destinations.length);
@@ -113,7 +115,7 @@ describe('MobileBottomNavComponent', () => {
     expect(component.moreLinks.map(link => link.fallback)).toEqual([
       'Grow',
       'Bots',
-      'History',
+      'Transactions',
       'Portfolio',
       'Craftscript.com',
       'Docs',
@@ -129,7 +131,7 @@ describe('MobileBottomNavComponent', () => {
       'Back',
       'Grow',
       'Bots',
-      'History',
+      'Transactions',
       'Portfolio',
       'Craftscript.com',
       'Docs',
