@@ -273,7 +273,8 @@ Host auth routes live under `src/app/pages/auth/`.
   collapses to `Onboarding completed` with Details / Hide details; expanded
   view restores status, progress, capped swap progress, and Go to Exchange.
   Fund actions sit under the onboarding card: Send Funds and Add Funds on
-  desktop; mobile also shows Exchange. The hero loads
+  desktop (disabled with Soon until transfer views exist); mobile also shows
+  Exchange. The hero loads
   `GET /api/v1/portfolio`; for a live connected wallet it supplies the wallet
   address and CAIP-2 network so the backend can value that wallet directly.
   The hero shows `$0.00` while loading, then animates to the returned USD

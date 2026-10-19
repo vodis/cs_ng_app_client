@@ -106,8 +106,8 @@ Flow direction:
   at the swap goal, and **Go to Exchange**); **Hide details** collapses it
   again. Incomplete onboarding stays fully expanded. Under the card, fund
   actions offer **Send Funds** and **Add Funds** (desktop); mobile also shows
-  **Exchange**. Send opens the wallet drawer, Add Funds opens connect/receive,
-  and Exchange navigates to Token Exchange. The hero reads
+  **Exchange**. Send/Add stay disabled with a **Soon** label until wallet
+  send/receive views ship; Exchange navigates to Token Exchange. The hero reads
   `GET /api/v1/portfolio`, passing the backend-selected wallet address and
   CAIP-2 network when available. It renders both USD value and token
   quantities.

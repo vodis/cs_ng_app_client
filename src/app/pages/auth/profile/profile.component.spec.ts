@@ -718,14 +718,16 @@ describe('ProfileComponent', () => {
     expect(component.showOnboardingDetailsContent()).toBeFalse();
   });
 
-  it('opens Send Funds, Add Funds, and Exchange from the fund action row', async () => {
-    await component.openSendFunds();
-    expect(walletGatewayBridge.syncConnectedWallet).toHaveBeenCalled();
-    expect(walletsService.requestOpen).toHaveBeenCalledWith('wallet');
+  it('keeps Send/Add Funds unavailable until transfer views exist; Exchange still works', async () => {
+    expect(component.profile.fundTransfersAvailable).toBeFalse();
 
-    walletsService.requestOpen.calls.reset();
+    await component.openSendFunds();
+    expect(walletGatewayBridge.syncConnectedWallet).not.toHaveBeenCalled();
+    expect(walletsService.requestOpen).not.toHaveBeenCalled();
+
     await component.openAddFunds();
-    expect(walletsService.requestOpen).toHaveBeenCalledWith('connect');
+    expect(walletGatewayBridge.syncConnectedWallet).not.toHaveBeenCalled();
+    expect(walletsService.requestOpen).not.toHaveBeenCalled();
 
     await component.openExchange();
     expect(localizedRouting.path).toHaveBeenCalledWith('/');

@@ -66,7 +66,16 @@
           <button
             class="profile-shell__fund-action"
             type="button"
-            [disabled]="walletLoading || walletActionBusy"
+            [disabled]="
+              !profile.fundTransfersAvailable ||
+              walletLoading ||
+              walletActionBusy
+            "
+            [attr.aria-label]="
+              profile.fundTransfersAvailable
+                ? 'Send Funds'
+                : 'Send Funds, coming soon'
+            "
             (click)="openSendFunds()">
             <mat-icon aria-hidden="true">north_east</mat-icon>
             <span
@@ -77,11 +86,25 @@
               class="profile-shell__fund-label profile-shell__fund-label--short"
               >Send</span
             >
+            <span
+              *ngIf="!profile.fundTransfersAvailable"
+              class="profile-shell__fund-soon"
+              >Soon</span
+            >
           </button>
           <button
             class="profile-shell__fund-action"
             type="button"
-            [disabled]="walletLoading || walletActionBusy"
+            [disabled]="
+              !profile.fundTransfersAvailable ||
+              walletLoading ||
+              walletActionBusy
+            "
+            [attr.aria-label]="
+              profile.fundTransfersAvailable
+                ? 'Add Funds'
+                : 'Add Funds, coming soon'
+            "
             (click)="openAddFunds()">
             <mat-icon aria-hidden="true">south_west</mat-icon>
             <span
@@ -91,6 +114,11 @@
             <span
               class="profile-shell__fund-label profile-shell__fund-label--short"
               >Add</span
+            >
+            <span
+              *ngIf="!profile.fundTransfersAvailable"
+              class="profile-shell__fund-soon"
+              >Soon</span
             >
           </button>
           <button
@@ -204,7 +232,16 @@
         <button
           class="profile-shell__fund-action"
           type="button"
-          [disabled]="walletLoading || walletActionBusy"
+          [disabled]="
+            !profile.fundTransfersAvailable ||
+            walletLoading ||
+            walletActionBusy
+          "
+          [attr.aria-label]="
+            profile.fundTransfersAvailable
+              ? 'Send Funds'
+              : 'Send Funds, coming soon'
+          "
           (click)="openSendFunds()">
           <mat-icon aria-hidden="true">north_east</mat-icon>
           <span
@@ -215,11 +252,25 @@
             class="profile-shell__fund-label profile-shell__fund-label--short"
             >Send</span
           >
+          <span
+            *ngIf="!profile.fundTransfersAvailable"
+            class="profile-shell__fund-soon"
+            >Soon</span
+          >
         </button>
         <button
           class="profile-shell__fund-action"
           type="button"
-          [disabled]="walletLoading || walletActionBusy"
+          [disabled]="
+            !profile.fundTransfersAvailable ||
+            walletLoading ||
+            walletActionBusy
+          "
+          [attr.aria-label]="
+            profile.fundTransfersAvailable
+              ? 'Add Funds'
+              : 'Add Funds, coming soon'
+          "
           (click)="openAddFunds()">
           <mat-icon aria-hidden="true">south_west</mat-icon>
           <span
@@ -229,6 +280,11 @@
           <span
             class="profile-shell__fund-label profile-shell__fund-label--short"
             >Add</span
+          >
+          <span
+            *ngIf="!profile.fundTransfersAvailable"
+            class="profile-shell__fund-soon"
+            >Soon</span
           >
         </button>
         <button

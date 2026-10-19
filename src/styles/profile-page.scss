@@ -320,6 +320,18 @@ app-account-sessions .profile-shell {
     }
   }
 
+  &__fund-soon {
+    padding: 0.05rem 0.35rem;
+    border-radius: 9999px;
+    background: rgb(254 108 0 / 12%);
+    color: var(--primary-text-color);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
   &__fund-label {
     overflow: hidden;
     max-width: 100%;
