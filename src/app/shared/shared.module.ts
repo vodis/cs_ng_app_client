@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
 import { A11yModule } from '@angular/cdk/a11y';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { AnimateLineComponent } from './components/animate-line/animate-line.component';
@@ -24,7 +25,12 @@ import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
 import { RecipientAddressPanelComponent } from '@shared/components/recipient-address-panel/recipient-address-panel.component';
 import { SlippageSettingsPanelComponent } from '@shared/components/slippage-settings-panel/slippage-settings-panel.component';
 
-const AngularMaterial = [MatExpansionModule, MatButtonModule, MatIconModule];
+const AngularMaterial = [
+  MatExpansionModule,
+  MatButtonModule,
+  MatIconModule,
+  MatMenuModule,
+];
 
 @NgModule({
   imports: [
