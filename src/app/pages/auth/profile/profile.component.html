@@ -60,75 +60,9 @@
           </button>
         </div>
 
-        <nav
-          class="profile-shell__fund-actions profile-shell__fund-actions--toolbar"
-          aria-label="Fund actions">
-          <button
-            class="profile-shell__fund-action"
-            type="button"
-            [disabled]="
-              !profile.fundTransfersAvailable ||
-              walletLoading ||
-              walletActionBusy
-            "
-            [attr.aria-label]="
-              profile.fundTransfersAvailable
-                ? 'Send Funds'
-                : 'Send Funds, coming soon'
-            "
-            (click)="openSendFunds()">
-            <mat-icon aria-hidden="true">north_east</mat-icon>
-            <span
-              class="profile-shell__fund-label profile-shell__fund-label--long"
-              >Send Funds</span
-            >
-            <span
-              class="profile-shell__fund-label profile-shell__fund-label--short"
-              >Send</span
-            >
-            <span
-              *ngIf="!profile.fundTransfersAvailable"
-              class="profile-shell__fund-soon"
-              >Soon</span
-            >
-          </button>
-          <button
-            class="profile-shell__fund-action"
-            type="button"
-            [disabled]="
-              !profile.fundTransfersAvailable ||
-              walletLoading ||
-              walletActionBusy
-            "
-            [attr.aria-label]="
-              profile.fundTransfersAvailable
-                ? 'Add Funds'
-                : 'Add Funds, coming soon'
-            "
-            (click)="openAddFunds()">
-            <mat-icon aria-hidden="true">south_west</mat-icon>
-            <span
-              class="profile-shell__fund-label profile-shell__fund-label--long"
-              >Add Funds</span
-            >
-            <span
-              class="profile-shell__fund-label profile-shell__fund-label--short"
-              >Add</span
-            >
-            <span
-              *ngIf="!profile.fundTransfersAvailable"
-              class="profile-shell__fund-soon"
-              >Soon</span
-            >
-          </button>
-          <button
-            class="profile-shell__fund-action profile-shell__fund-action--exchange"
-            type="button"
-            (click)="openExchange()">
-            <mat-icon aria-hidden="true">swap_horiz</mat-icon>
-            <span>Exchange</span>
-          </button>
-        </nav>
+        <ng-container
+          *ngTemplateOutlet="fundActionsNav; context: { toolbar: true }"
+        ></ng-container>
       </div>
 
       <section
@@ -225,78 +159,82 @@
         </div>
       </section>
 
-      <nav
-        class="profile-shell__fund-actions"
-        *ngIf="!isOnboardingComplete()"
-        aria-label="Fund actions">
-        <button
-          class="profile-shell__fund-action"
-          type="button"
-          [disabled]="
-            !profile.fundTransfersAvailable ||
-            walletLoading ||
-            walletActionBusy
-          "
-          [attr.aria-label]="
-            profile.fundTransfersAvailable
-              ? 'Send Funds'
-              : 'Send Funds, coming soon'
-          "
-          (click)="openSendFunds()">
-          <mat-icon aria-hidden="true">north_east</mat-icon>
-          <span
-            class="profile-shell__fund-label profile-shell__fund-label--long"
-            >Send Funds</span
-          >
-          <span
-            class="profile-shell__fund-label profile-shell__fund-label--short"
-            >Send</span
-          >
-          <span
-            *ngIf="!profile.fundTransfersAvailable"
-            class="profile-shell__fund-soon"
-            >Soon</span
-          >
-        </button>
-        <button
-          class="profile-shell__fund-action"
-          type="button"
-          [disabled]="
-            !profile.fundTransfersAvailable ||
-            walletLoading ||
-            walletActionBusy
-          "
-          [attr.aria-label]="
-            profile.fundTransfersAvailable
-              ? 'Add Funds'
-              : 'Add Funds, coming soon'
-          "
-          (click)="openAddFunds()">
-          <mat-icon aria-hidden="true">south_west</mat-icon>
-          <span
-            class="profile-shell__fund-label profile-shell__fund-label--long"
-            >Add Funds</span
-          >
-          <span
-            class="profile-shell__fund-label profile-shell__fund-label--short"
-            >Add</span
-          >
-          <span
-            *ngIf="!profile.fundTransfersAvailable"
-            class="profile-shell__fund-soon"
-            >Soon</span
-          >
-        </button>
-        <button
-          class="profile-shell__fund-action profile-shell__fund-action--exchange"
-          type="button"
-          (click)="openExchange()">
-          <mat-icon aria-hidden="true">swap_horiz</mat-icon>
-          <span>Exchange</span>
-        </button>
-      </nav>
+      <ng-container *ngIf="!isOnboardingComplete()">
+        <ng-container
+          *ngTemplateOutlet="fundActionsNav; context: { toolbar: false }"
+        ></ng-container>
+      </ng-container>
     </div>
   </div>
+
+  <ng-template #fundActionsNav let-toolbar="toolbar">
+    <nav
+      class="profile-shell__fund-actions"
+      [class.profile-shell__fund-actions--toolbar]="toolbar"
+      aria-label="Fund actions">
+      <button
+        class="profile-shell__fund-action"
+        type="button"
+        [disabled]="
+          !profile.fundTransfersAvailable || walletLoading || walletActionBusy
+        "
+        [attr.aria-label]="
+          profile.fundTransfersAvailable
+            ? 'Send Funds'
+            : 'Send Funds, coming soon'
+        "
+        (click)="openSendFunds()">
+        <mat-icon aria-hidden="true">north_east</mat-icon>
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--long"
+          >Send Funds</span
+        >
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--short"
+          >Send</span
+        >
+        <span
+          *ngIf="!profile.fundTransfersAvailable"
+          class="profile-shell__fund-soon"
+          >Soon</span
+        >
+      </button>
+      <button
+        class="profile-shell__fund-action"
+        type="button"
+        [disabled]="
+          !profile.fundTransfersAvailable || walletLoading || walletActionBusy
+        "
+        [attr.aria-label]="
+          profile.fundTransfersAvailable
+            ? 'Add Funds'
+            : 'Add Funds, coming soon'
+        "
+        (click)="openAddFunds()">
+        <mat-icon aria-hidden="true">south_west</mat-icon>
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--long"
+          >Add Funds</span
+        >
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--short"
+          >Add</span
+        >
+        <span
+          *ngIf="!profile.fundTransfersAvailable"
+          class="profile-shell__fund-soon"
+          >Soon</span
+        >
+      </button>
+      <button
+        class="profile-shell__fund-action profile-shell__fund-action--exchange"
+        type="button"
+        (click)="openExchange()">
+        <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+        <span>Exchange</span>
+      </button>
+    </nav>
+  </ng-template>
 
   <div class="profile-shell__header">
     <p class="profile-shell__eyebrow">Profile</p>
