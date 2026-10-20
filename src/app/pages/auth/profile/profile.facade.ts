@@ -34,6 +34,7 @@ export type ProfileOnboardingViewModel = {
   progressPercent: number;
   nextCta: string;
   nextTitle: string;
+  complete: boolean;
 };
 
 export type ProfileOnboardingState = {
@@ -169,7 +170,10 @@ export class ProfileFacade implements OnDestroy {
       {
         id: 'swaps',
         title: `Complete ${state.requiredSwapCount} swaps`,
-        hint: `${state.completedSwapCount} of ${state.requiredSwapCount} completed`,
+        hint: `${Math.min(
+          state.completedSwapCount,
+          state.requiredSwapCount
+        )}/${state.requiredSwapCount} swaps completed`,
         done: swapsDone,
       },
     ];
@@ -198,12 +202,40 @@ export class ProfileFacade implements OnDestroy {
               ? 'Start swapping'
               : 'Go to Exchange',
       nextTitle: nextStep?.title ?? "You're all set",
+      complete: remainingCount === 0,
     };
   }
 
   public async openWalletModal(): Promise<void> {
     await this.walletGatewayBridge.syncConnectedWallet().catch(() => undefined);
     this.walletsService.requestOpen('connect');
+  }
+
+  /**
+   * Send/receive transfer views are not shipped yet (wallet board still marks
+   * "Send & receive" as Soon). Keep fund CTAs disabled until those flows exist.
+   */
+  public readonly fundTransfersAvailable = false;
+
+  /** Open send/transfer when that view exists; no-op while unavailable. */
+  public async openSendFunds(): Promise<void> {
+    if (!this.fundTransfersAvailable) {
+      return;
+    }
+    await this.walletGatewayBridge.syncConnectedWallet().catch(() => undefined);
+    this.walletsService.requestOpen('wallet');
+  }
+
+  /** Open receive/add-funds when that view exists; no-op while unavailable. */
+  public async openAddFunds(): Promise<void> {
+    if (!this.fundTransfersAvailable) {
+      return;
+    }
+    await this.openWalletModal();
+  }
+
+  public async openExchange(): Promise<void> {
+    await this.navigateTo('/');
   }
 
   public async generateWallet(): Promise<void> {

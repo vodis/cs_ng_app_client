@@ -31,90 +31,210 @@
       </ng-container>
     </section>
 
-    <section
-      class="profile-shell__onboarding"
-      aria-label="Onboarding portfolio">
-      <h2 class="profile-shell__onboarding-title">Onboarding portfolio</h2>
-
-      <div class="profile-shell__onboarding-body">
-        <div class="profile-shell__onboarding-focus">
-          <h3>{{ nextOnboardingTitle() }}</h3>
-          <p class="profile-shell__onboarding-remaining">
-            {{ onboardingRemainingLabel() }}
+    <div
+      class="profile-shell__top-aside"
+      [class.profile-shell__top-aside--complete]="isOnboardingComplete()">
+      <div
+        class="profile-shell__complete-bar"
+        *ngIf="isOnboardingComplete()"
+        aria-label="Onboarding completed">
+        <div class="profile-shell__onboarding-summary">
+          <span
+            class="profile-shell__onboarding-summary-check"
+            aria-hidden="true">
+            <mat-icon>check_circle</mat-icon>
+          </span>
+          <p class="profile-shell__onboarding-summary-label">
+            Onboarding completed
           </p>
-          <div
-            class="profile-shell__onboarding-track"
-            role="progressbar"
-            [attr.aria-valuenow]="onboardingProgressPercent()"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            [attr.aria-label]="onboardingRemainingLabel()">
-            <span
-              class="profile-shell__onboarding-fill"
-              [style.width.%]="onboardingProgressPercent()"></span>
-          </div>
           <button
-            class="profile-shell__hero-action profile-shell__hero-action--primary"
             type="button"
-            [disabled]="walletLoading || walletActionBusy || passkeyLoading"
-            (click)="runOnboardingStep()">
-            {{ nextOnboardingCta() }}
-          </button>
-          <button
-            class="profile-shell__hero-action"
-            type="button"
-            *ngIf="showOnboardingGenerateWallet()"
-            [disabled]="walletLoading || walletActionBusy"
-            (click)="generateWallet()">
-            Generate wallet
+            class="profile-shell__onboarding-toggle"
+            [attr.aria-expanded]="onboardingDetailsOpen"
+            aria-controls="profile-onboarding-details"
+            (click)="toggleOnboardingDetails()">
+            {{ onboardingDetailsOpen ? 'Hide details' : 'Details' }}
+            <mat-icon aria-hidden="true">{{
+              onboardingDetailsOpen ? 'expand_less' : 'expand_more'
+            }}</mat-icon>
           </button>
         </div>
 
-        <ul class="profile-shell__onboarding-steps">
-          <li
-            *ngFor="
-              let step of onboardingSteps();
-              trackBy: trackByOnboardingStep
-            ">
-            <button
-              type="button"
-              class="profile-shell__onboarding-step"
-              [class.profile-shell__onboarding-step--done]="step.done"
-              [class.profile-shell__onboarding-step--current]="
-                isCurrentOnboardingStep(step)
-              "
-              [disabled]="walletLoading || walletActionBusy || passkeyLoading"
-              (click)="runOnboardingStep(step)">
-              <span class="profile-shell__onboarding-marker" aria-hidden="true">
-                <svg *ngIf="step.done" viewBox="0 0 16 16" focusable="false">
-                  <path
-                    d="M3.4 8.4 6.3 11.2 12.6 4.8"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.8" />
-                </svg>
-              </span>
-              <span class="profile-shell__onboarding-step-copy">
-                <span class="profile-shell__onboarding-step-title">{{
-                  step.title
-                }}</span>
-                <span class="profile-shell__onboarding-step-hint">{{
-                  step.hint
-                }}</span>
-              </span>
-              <span
-                class="profile-shell__onboarding-chevron"
-                aria-hidden="true">
-                ›
-              </span>
-            </button>
-          </li>
-        </ul>
+        <ng-container
+          *ngTemplateOutlet="fundActionsNav; context: { toolbar: true }"
+        ></ng-container>
       </div>
-    </section>
+
+      <section
+        class="profile-shell__onboarding"
+        *ngIf="showOnboardingDetailsContent()"
+        [class.profile-shell__onboarding--expanded]="
+          isOnboardingComplete() && onboardingDetailsOpen
+        "
+        aria-label="Onboarding portfolio">
+        <div class="profile-shell__onboarding-head">
+          <h2 class="profile-shell__onboarding-title">Onboarding portfolio</h2>
+        </div>
+
+        <div
+          class="profile-shell__onboarding-body"
+          id="profile-onboarding-details">
+          <div class="profile-shell__onboarding-focus">
+            <h3>{{ nextOnboardingTitle() }}</h3>
+            <p class="profile-shell__onboarding-remaining">
+              {{ onboardingRemainingLabel() }}
+            </p>
+            <div
+              class="profile-shell__onboarding-track"
+              role="progressbar"
+              [attr.aria-valuenow]="onboardingProgressPercent()"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-label]="onboardingRemainingLabel()">
+              <span
+                class="profile-shell__onboarding-fill"
+                [style.width.%]="onboardingProgressPercent()"></span>
+            </div>
+            <button
+              class="profile-shell__hero-action profile-shell__hero-action--primary"
+              type="button"
+              [disabled]="walletLoading || walletActionBusy || passkeyLoading"
+              (click)="runOnboardingStep()">
+              {{ nextOnboardingCta() }}
+            </button>
+            <button
+              class="profile-shell__hero-action"
+              type="button"
+              *ngIf="showOnboardingGenerateWallet()"
+              [disabled]="walletLoading || walletActionBusy"
+              (click)="generateWallet()">
+              Generate wallet
+            </button>
+          </div>
+
+          <ul class="profile-shell__onboarding-steps">
+            <li
+              *ngFor="
+                let step of onboardingSteps();
+                trackBy: trackByOnboardingStep
+              ">
+              <button
+                type="button"
+                class="profile-shell__onboarding-step"
+                [class.profile-shell__onboarding-step--done]="step.done"
+                [class.profile-shell__onboarding-step--current]="
+                  isCurrentOnboardingStep(step)
+                "
+                [disabled]="walletLoading || walletActionBusy || passkeyLoading"
+                (click)="runOnboardingStep(step)">
+                <span
+                  class="profile-shell__onboarding-marker"
+                  aria-hidden="true">
+                  <svg *ngIf="step.done" viewBox="0 0 16 16" focusable="false">
+                    <path
+                      d="M3.4 8.4 6.3 11.2 12.6 4.8"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.8" />
+                  </svg>
+                </span>
+                <span class="profile-shell__onboarding-step-copy">
+                  <span class="profile-shell__onboarding-step-title">{{
+                    step.title
+                  }}</span>
+                  <span class="profile-shell__onboarding-step-hint">{{
+                    step.hint
+                  }}</span>
+                </span>
+                <span
+                  class="profile-shell__onboarding-chevron"
+                  aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <ng-container *ngIf="!isOnboardingComplete()">
+        <ng-container
+          *ngTemplateOutlet="fundActionsNav; context: { toolbar: false }"
+        ></ng-container>
+      </ng-container>
+    </div>
   </div>
+
+  <ng-template #fundActionsNav let-toolbar="toolbar">
+    <nav
+      class="profile-shell__fund-actions"
+      [class.profile-shell__fund-actions--toolbar]="toolbar"
+      aria-label="Fund actions">
+      <button
+        class="profile-shell__fund-action"
+        type="button"
+        [disabled]="
+          !profile.fundTransfersAvailable || walletLoading || walletActionBusy
+        "
+        [attr.aria-label]="
+          profile.fundTransfersAvailable
+            ? 'Send Funds'
+            : 'Send Funds, coming soon'
+        "
+        (click)="openSendFunds()">
+        <mat-icon aria-hidden="true">north_east</mat-icon>
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--long"
+          >Send Funds</span
+        >
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--short"
+          >Send</span
+        >
+        <span
+          *ngIf="!profile.fundTransfersAvailable"
+          class="profile-shell__fund-soon"
+          >Soon</span
+        >
+      </button>
+      <button
+        class="profile-shell__fund-action"
+        type="button"
+        [disabled]="
+          !profile.fundTransfersAvailable || walletLoading || walletActionBusy
+        "
+        [attr.aria-label]="
+          profile.fundTransfersAvailable
+            ? 'Add Funds'
+            : 'Add Funds, coming soon'
+        "
+        (click)="openAddFunds()">
+        <mat-icon aria-hidden="true">south_west</mat-icon>
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--long"
+          >Add Funds</span
+        >
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--short"
+          >Add</span
+        >
+        <span
+          *ngIf="!profile.fundTransfersAvailable"
+          class="profile-shell__fund-soon"
+          >Soon</span
+        >
+      </button>
+      <button
+        class="profile-shell__fund-action profile-shell__fund-action--exchange"
+        type="button"
+        (click)="openExchange()">
+        <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+        <span>Exchange</span>
+      </button>
+    </nav>
+  </ng-template>
 
   <div class="profile-shell__header">
     <p class="profile-shell__eyebrow">Profile</p>

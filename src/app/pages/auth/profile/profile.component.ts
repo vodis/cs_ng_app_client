@@ -101,6 +101,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public connectedChainId: number | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
   public walletActionBusy = false;
+  public onboardingDetailsOpen = false;
   public walletLoading = false;
 
   public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
@@ -396,6 +397,21 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.onboarding.remainingLabel;
   }
 
+  public isOnboardingComplete(): boolean {
+    return this.onboarding.complete;
+  }
+
+  public showOnboardingDetailsContent(): boolean {
+    return !this.isOnboardingComplete() || this.onboardingDetailsOpen;
+  }
+
+  public toggleOnboardingDetails(): void {
+    if (!this.isOnboardingComplete()) {
+      return;
+    }
+    this.onboardingDetailsOpen = !this.onboardingDetailsOpen;
+  }
+
   public showOnboardingGenerateWallet(): boolean {
     return this.nextOnboardingStep()?.id === 'wallet';
   }
@@ -535,6 +551,18 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public async openActivityAnalyze(): Promise<void> {
     await this.profile.navigateTo('/portfolio');
+  }
+
+  public async openSendFunds(): Promise<void> {
+    await this.profile.openSendFunds();
+  }
+
+  public async openAddFunds(): Promise<void> {
+    await this.profile.openAddFunds();
+  }
+
+  public async openExchange(): Promise<void> {
+    await this.profile.openExchange();
   }
 
   public walletPillLabel(): string {
