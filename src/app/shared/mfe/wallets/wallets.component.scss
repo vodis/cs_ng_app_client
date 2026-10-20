@@ -1,12 +1,15 @@
 :host {
   display: block;
+  overflow: hidden;
   height: 100%;
+  max-height: 100%;
   min-height: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0%;
 }
 
 .wallets-host {
-  overflow: visible;
+  overflow: hidden;
   height: 100%;
+  max-height: 100%;
   min-height: 0;
 }

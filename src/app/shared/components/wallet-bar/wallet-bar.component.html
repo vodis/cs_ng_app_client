@@ -19,6 +19,7 @@
     <app-side-modal
       [isOpen]="isOpenWalletConnectMenu"
       [showCloseButton]="showHostCloseButton"
+      [containScroll]="drawerMode === 'swap-review'"
       (closeRequested)="handleCloseWalletMenu()">
       @if (
         isOpenWalletConnectMenu && hasActiveWallet && drawerMode === 'wallet'

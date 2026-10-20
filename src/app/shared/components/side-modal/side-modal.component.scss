@@ -56,7 +56,7 @@
 
     > :not(.side-modal__close) {
       min-height: 0;
-      flex: 1 1 auto;
+      flex: 1 1 0%;
     }
 
     &.open {
@@ -82,6 +82,10 @@
 
     @include media-breakpoint-up(xl) {
       width: 33.3%;
+    }
+
+    &--contain-scroll.open {
+      overflow: hidden;
     }
   }
 
