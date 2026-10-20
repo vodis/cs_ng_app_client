@@ -699,9 +699,39 @@ describe('ProfileComponent', () => {
 
     expect(component.onboardingRemainingCount()).toBe(0);
     expect(component.onboardingProgressPercent()).toBe(100);
+    expect(component.isOnboardingComplete()).toBeTrue();
+    expect(component.showOnboardingDetailsContent()).toBeFalse();
+    expect(component.onboardingDetailsOpen).toBeFalse();
     expect(component.nextOnboardingCta()).toBe('Go to Exchange');
     expect(component.showOnboardingGenerateWallet()).toBeFalse();
     expect(component.onboardingRemainingLabel()).toBe('All steps complete');
+    expect(
+      component.onboardingSteps().find(step => step.id === 'swaps')?.hint
+    ).toBe('5/5 swaps completed');
+
+    component.toggleOnboardingDetails();
+    expect(component.onboardingDetailsOpen).toBeTrue();
+    expect(component.showOnboardingDetailsContent()).toBeTrue();
+
+    component.toggleOnboardingDetails();
+    expect(component.onboardingDetailsOpen).toBeFalse();
+    expect(component.showOnboardingDetailsContent()).toBeFalse();
+  });
+
+  it('keeps Send/Add Funds unavailable until transfer views exist; Exchange still works', async () => {
+    expect(component.profile.fundTransfersAvailable).toBeFalse();
+
+    await component.openSendFunds();
+    expect(walletGatewayBridge.syncConnectedWallet).not.toHaveBeenCalled();
+    expect(walletsService.requestOpen).not.toHaveBeenCalled();
+
+    await component.openAddFunds();
+    expect(walletGatewayBridge.syncConnectedWallet).not.toHaveBeenCalled();
+    expect(walletsService.requestOpen).not.toHaveBeenCalled();
+
+    await component.openExchange();
+    expect(localizedRouting.path).toHaveBeenCalledWith('/');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/en');
   });
 
   it('opens the wallet modal for the next wallet onboarding step', async () => {
@@ -978,5 +1008,57 @@ describe('ProfileComponent', () => {
 
     expect(component.isLiveConnected()).toBeTrue();
     expect(component.showLastConnectedSection()).toBeFalse();
+  });
+
+  it('formats wallet list meta and primary status labels', () => {
+    const primary = linkedWalletSession.wallets[0];
+    const secondary: BackendWallet = {
+      ...primary,
+      id: 'wallet-2',
+      address: '0xabc',
+      isPrimary: false,
+      walletType: 'embedded',
+    };
+
+    expect(component.walletListMeta(primary)).toContain('Embedded');
+    expect(component.walletListMeta(secondary)).toContain('Linked');
+    expect(component.walletPrimaryStatusLabel(primary)).toBe(
+      'Active · Disconnected'
+    );
+
+    accountSubject.next({
+      account: primary.address,
+      chainId: 1,
+    });
+    component.activeWalletId = primary.id;
+
+    expect(component.walletPrimaryStatusLabel(primary)).toBe(
+      'Active · Connected'
+    );
+    expect(component.walletPrimaryStatusLabel(secondary)).toBe('');
+  });
+
+  it('scopes disconnect and menu actions to the matching wallet', () => {
+    const primary = linkedWalletSession.wallets[0];
+    const external: BackendWallet = {
+      ...primary,
+      id: 'wallet-ext',
+      address: 'mariia.near',
+      walletType: 'external',
+      isPrimary: false,
+    };
+
+    expect(component.canDisconnectWallet(primary)).toBeFalse();
+    expect(component.hasWalletMenuActions(primary)).toBeFalse();
+    expect(component.hasWalletMenuActions(external)).toBeTrue();
+
+    accountSubject.next({
+      account: primary.address,
+      chainId: 1,
+    });
+
+    expect(component.canDisconnectWallet(primary)).toBeTrue();
+    expect(component.hasWalletMenuActions(primary)).toBeTrue();
+    expect(component.canDisconnectWallet(external)).toBeFalse();
   });
 });

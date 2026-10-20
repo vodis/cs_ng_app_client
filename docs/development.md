@@ -255,7 +255,7 @@ Host auth routes live under `src/app/pages/auth/`.
 ### Session redirect policy
 
 - Login is optional for public shell routes. Do not redirect `/`, `/farm`,
-  `/proposals`, `/home`, or `/history` to `/login`.
+  `/proposals`, `/home`, `/transactions`, or `/history` to `/login`.
 - Missing or non-renewable sessions redirect to `/login?returnUrl=<safe-path>`
   only on protected account routes (`/profile`, `/portfolio`).
 - `AuthGuard` waits for auth-provider readiness before attempting refresh.
@@ -269,7 +269,12 @@ Host auth routes live under `src/app/pages/auth/`.
 - Login/register without linked wallets routes to `/profile`, not a blocking
   wallet interstitial.
 - `/profile` shows a BFF-valued USD balance hero plus an Onboarding
-  portfolio card for wallet, passkey, and five swaps. The hero loads
+  portfolio card for wallet, passkey, and five swaps. Completed onboarding
+  collapses to `Onboarding completed` with Details / Hide details; expanded
+  view restores status, progress, capped swap progress, and Go to Exchange.
+  Fund actions sit under the onboarding card: Send Funds and Add Funds on
+  desktop (disabled with Soon until transfer views exist); mobile also shows
+  Exchange. The hero loads
   `GET /api/v1/portfolio`; for a live connected wallet it supplies the wallet
   address and CAIP-2 network so the backend can value that wallet directly.
   The hero shows `$0.00` while loading, then animates to the returned USD

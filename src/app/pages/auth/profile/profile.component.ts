@@ -101,6 +101,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public connectedChainId: number | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
   public walletActionBusy = false;
+  public onboardingDetailsOpen = false;
   public walletLoading = false;
 
   public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
@@ -204,6 +205,27 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     const chain = this.capitalizeLabel(wallet.chainType);
     const kind = this.isEmbeddedWallet(wallet) ? 'Embedded' : 'External';
     return [chain, kind].filter(Boolean).join(' • ');
+  }
+
+  public walletListMeta(wallet: BackendWallet): string {
+    const parts = [this.walletMeta(wallet)];
+    if (this.isEmbeddedWallet(wallet) && !wallet.isPrimary) {
+      parts.push('Linked');
+    }
+    return parts.filter(Boolean).join(' • ');
+  }
+
+  public walletPrimaryStatusLabel(wallet: BackendWallet): string {
+    if (!wallet.isPrimary) {
+      return '';
+    }
+    if (this.activeWalletId === wallet.id && this.isLiveConnected()) {
+      return 'Active · Connected';
+    }
+    if (this.walletRestoring) {
+      return 'Active · Restoring';
+    }
+    return 'Active · Disconnected';
   }
 
   public lastConnectedMeta(wallet: LastConnectedWallet): string {
@@ -375,6 +397,21 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.onboarding.remainingLabel;
   }
 
+  public isOnboardingComplete(): boolean {
+    return this.onboarding.complete;
+  }
+
+  public showOnboardingDetailsContent(): boolean {
+    return !this.isOnboardingComplete() || this.onboardingDetailsOpen;
+  }
+
+  public toggleOnboardingDetails(): void {
+    if (!this.isOnboardingComplete()) {
+      return;
+    }
+    this.onboardingDetailsOpen = !this.onboardingDetailsOpen;
+  }
+
   public showOnboardingGenerateWallet(): boolean {
     return this.nextOnboardingStep()?.id === 'wallet';
   }
@@ -516,6 +553,18 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     await this.profile.navigateTo('/portfolio');
   }
 
+  public async openSendFunds(): Promise<void> {
+    await this.profile.openSendFunds();
+  }
+
+  public async openAddFunds(): Promise<void> {
+    await this.profile.openAddFunds();
+  }
+
+  public async openExchange(): Promise<void> {
+    await this.profile.openExchange();
+  }
+
   public walletPillLabel(): string {
     if (this.connectedAccount) {
       return this.shortAddress(this.connectedAccount);
@@ -569,6 +618,19 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public canRemoveLinkedWallet(wallet: BackendWallet): boolean {
     return !this.isEmbeddedWallet(wallet);
+  }
+
+  public canDisconnectWallet(wallet: BackendWallet): boolean {
+    if (!this.isLiveConnected() || !this.connectedAccount) {
+      return false;
+    }
+    return wallet.address.toLowerCase() === this.connectedAccount.toLowerCase();
+  }
+
+  public hasWalletMenuActions(wallet: BackendWallet): boolean {
+    return (
+      this.canDisconnectWallet(wallet) || this.canRemoveLinkedWallet(wallet)
+    );
   }
 
   public async openWalletModal(): Promise<void> {

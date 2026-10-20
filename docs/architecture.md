@@ -100,9 +100,17 @@ Flow direction:
 - Accounts with at least one linked wallet continue to the safe `returnUrl`.
 - First-time accounts with no linked or generated wallet go to `/profile`.
 - `/profile` shows a BFF-valued USD balance hero beside an Onboarding
-  portfolio card (wallet, passkey, five swaps). The hero reads
-  `GET /api/v1/portfolio`, passing the backend-selected wallet address and CAIP-2
-  network when available. It renders both USD value and token quantities.
+  portfolio card (wallet, passkey, five swaps). When all steps are done the
+  card collapses to a compact row (`Onboarding completed` + **Details**).
+  Expanding Details restores the full card (status, progress, checklist capped
+  at the swap goal, and **Go to Exchange**); **Hide details** collapses it
+  again. Incomplete onboarding stays fully expanded. Under the card, fund
+  actions offer **Send Funds** and **Add Funds** (desktop); mobile also shows
+  **Exchange**. Send/Add stay disabled with a **Soon** label until wallet
+  send/receive views ship; Exchange navigates to Token Exchange. The hero reads
+  `GET /api/v1/portfolio`, passing the backend-selected wallet address and
+  CAIP-2 network when available. It renders both USD value and token
+  quantities.
   While the first valuation is in flight the hero shows `Loading…`; zero is
   displayed only after a successful read. Same-wallet refreshes retain the
   previous value and show failures explicitly. Portfolio is fetched once per
@@ -110,8 +118,11 @@ Flow direction:
   explicit balances refresh — not on every session tick. The wallet address
   pill above the balance is omitted — wallet identity and token balances live
   in Manage wallets. Wallet setup is not a blocking interstitial.
-- Connected wallets on `/profile` render as a table (Wallet, Network, Status,
-  Action), not a stacked list.
+- Connected wallets on `/profile` render as one compact list: address, network
+  meta with status under it, a per-row `⋯` menu for Disconnect/Remove, and a
+  compact outlined Make active control when needed. The panel header keeps
+  Manage wallets plus an icon-only refresh — not a second duplicate
+  “Connected” card.
 - Profile **Balances** hide zero balances by default (with a Show zero balances
   toggle), show token icon + symbol on the left, and USD (primary) with a
   compact token amount (secondary) on the right. USD uses two decimals,
@@ -353,7 +364,9 @@ Login is optional. Guests can browse the shell without a session.
 | --------------------- | ----------------------- |
 | `/`                   | Token Exchange          |
 | `/farm`, `/proposals` | Product pages           |
-| `/home`, `/history`   | Placeholder shell pages |
+| `/home`               | Placeholder shell page  |
+| `/transactions`       | Full swap activity (`app-swap-history`) |
+| `/history`            | Redirects to `/transactions` |
 | `/login`              | Returning-user sign in  |
 | `/register`           | New account creation    |
 

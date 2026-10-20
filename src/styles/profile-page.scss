@@ -4,7 +4,7 @@ app-profile .profile-shell,
 app-account-sessions .profile-shell {
   display: grid;
   padding: clamp(1rem, 3vw, 2rem);
-  gap: 1rem;
+  gap: 0.85rem;
 
   // Portfolio already pads .portfolio-page — keep Sessions flush with other cards.
   .portfolio-page & {
@@ -99,20 +99,144 @@ app-account-sessions .profile-shell {
     }
   }
 
+  &__top-aside {
+    display: grid;
+    min-width: 0;
+    align-content: start;
+    gap: 0.65rem;
+
+    &--complete {
+      gap: 0.55rem;
+    }
+  }
+
+  &__complete-bar {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
   &__onboarding {
     min-width: 0;
+    height: auto;
     padding: 1.15rem 1.15rem 1.25rem;
     border: 1px solid rgb(255 255 255 / 14%);
     border-radius: 8px;
     background: rgb(255 255 255 / 3%);
+    box-sizing: border-box;
+
+    &--expanded {
+      .profile-shell__onboarding-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+      }
+
+      .profile-shell__onboarding-steps {
+        padding-top: 0.25rem;
+        border-top: 1px solid rgb(255 255 255 / 10%);
+      }
+
+      .profile-shell__onboarding-step {
+        min-height: 2.6rem;
+        padding: 0.4rem 0.1rem;
+      }
+
+      .profile-shell__hero-action--primary {
+        max-width: 18rem;
+      }
+    }
+  }
+
+  &__onboarding-summary {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  &__onboarding-summary-check {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--success, #7ee787);
+
+    mat-icon {
+      width: 1rem;
+      height: 1rem;
+      font-size: 1rem;
+      line-height: 1rem;
+    }
+  }
+
+  &__onboarding-summary-label {
+    margin: 0;
+    color: var(--main-text-color);
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  &__onboarding-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
   }
 
   &__onboarding-title {
-    margin: 0 0 1rem;
+    margin: 0;
     font-size: 1rem;
     font-weight: 600;
     line-height: 1.25;
     text-transform: none;
+  }
+
+  &__onboarding-toggle {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.6rem;
+    padding: 0.15rem 0.3rem;
+    border: 1px solid transparent;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: #e8e8e7;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    gap: 0.05rem;
+    line-height: 1.2;
+    transition:
+      border-color 160ms ease,
+      background-color 160ms ease,
+      color 160ms ease;
+
+    mat-icon {
+      width: 1rem;
+      height: 1rem;
+      font-size: 1rem;
+      line-height: 1rem;
+    }
+
+    &:hover {
+      border-color: rgb(255 255 255 / 14%);
+      background: rgb(255 255 255 / 8%);
+      color: var(--main-text-color);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--primary-text-color);
+      outline-offset: 2px;
+    }
   }
 
   &__onboarding-body {
@@ -131,6 +255,95 @@ app-account-sessions .profile-shell {
       font-weight: 600;
       line-height: 1.3;
       text-transform: none;
+    }
+  }
+
+  &__fund-actions {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    gap: 0.5rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    &--toolbar {
+      width: 100%;
+    }
+  }
+
+  &__fund-action {
+    display: inline-flex;
+    width: 100%;
+    min-width: 0;
+    height: 2.625rem;
+    min-height: 2.5rem;
+    max-height: 2.75rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.4rem;
+    border: 1px solid rgb(255 255 255 / 14%);
+    border-radius: 0.55rem;
+    background: rgb(255 255 255 / 4%);
+    color: var(--main-text-color);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    gap: 0.12rem;
+    line-height: 1.15;
+    transition:
+      border-color 160ms ease,
+      background-color 160ms ease,
+      color 160ms ease;
+
+    mat-icon {
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+      font-size: 1rem;
+      line-height: 1rem;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: rgb(255 255 255 / 22%);
+      background: rgb(255 255 255 / 8%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--primary-text-color);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+  }
+
+  &__fund-soon {
+    padding: 0.05rem 0.35rem;
+    border-radius: 9999px;
+    background: rgb(254 108 0 / 12%);
+    color: var(--primary-text-color);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  &__fund-label {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &--long {
+      display: none;
+    }
+
+    &--short {
+      display: inline;
     }
   }
 
@@ -253,6 +466,29 @@ app-account-sessions .profile-shell {
       grid-template-columns: minmax(0, 0.9fr) minmax(18rem, 1.1fr);
     }
 
+    &__top-aside {
+      gap: 0.7rem;
+    }
+
+    &__complete-bar {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 2.625rem;
+      gap: 0.75rem;
+    }
+
+    &__complete-bar .profile-shell__fund-actions--toolbar {
+      display: flex;
+      width: auto;
+      flex: 0 0 auto;
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      grid-template-columns: none;
+    }
+
     &__hero {
       // Match onboarding card top padding so balance sits on the same line.
       padding: 1.15rem 0 0.5rem;
@@ -271,10 +507,56 @@ app-account-sessions .profile-shell {
         max-width: 18rem;
       }
     }
+
+    &__fund-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      grid-template-columns: none;
+    }
+
+    &__fund-action--exchange {
+      display: none;
+    }
+
+    &__fund-label--long {
+      display: inline;
+    }
+
+    &__fund-label--short {
+      display: none;
+    }
+
+    &__fund-action {
+      width: auto;
+      height: 2.625rem;
+      min-height: 2.5rem;
+      max-height: 2.75rem;
+      flex: 0 0 auto;
+      flex-direction: row;
+      padding: 0 0.9rem;
+      font-size: 0.9375rem;
+      gap: 0.35rem;
+    }
+
+    &__onboarding--expanded .profile-shell__onboarding-body {
+      display: grid;
+      align-items: start;
+      gap: 1.25rem;
+      grid-template-columns: minmax(14rem, 0.85fr) minmax(0, 1.15fr);
+    }
+
+    &__onboarding--expanded .profile-shell__onboarding-steps {
+      padding-top: 0;
+      border-top: 0;
+    }
   }
 
   @media (width >= 1100px) {
-    &__onboarding-body {
+    &__onboarding:not(.profile-shell__onboarding--expanded)
+      .profile-shell__onboarding-body,
+    &__onboarding--expanded .profile-shell__onboarding-body {
       align-items: start;
       gap: 1.5rem;
       grid-template-columns: minmax(14rem, 0.85fr) minmax(0, 1.15fr);
@@ -384,21 +666,79 @@ app-account-sessions .profile-shell {
     text-transform: none;
   }
 
+  &__wallets-header-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.15rem 0.5rem;
+  }
+
+  &__refresh--icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    line-height: 2.25rem;
+
+    .mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
+
   &__wallet-connect {
     margin: 0 0 1rem;
   }
 
-  &__wallet-live,
-  &__last-wallet {
-    display: grid;
+  &__wallet-session {
+    display: flex;
     width: 100%;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 0.9rem 1rem;
-    border: 1px solid rgb(255 255 255 / 12%);
+    margin: 0 0 0.85rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgb(255 255 255 / 10%);
     border-radius: 8px;
-    background: rgb(255 255 255 / 4%);
-    gap: 0.85rem 1rem;
-    grid-template-columns: minmax(0, 1fr) auto;
+    background: rgb(255 255 255 / 3%);
+    gap: 0.65rem 0.85rem;
+  }
+
+  &__wallet-session-identity {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 12rem;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  &__wallet-session-copy {
+    display: grid;
+    min-width: 0;
+    gap: 0.15rem;
+  }
+
+  &__wallet-session-title {
+    color: var(--gray-30);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  &__wallet-session-hint {
+    flex: 1 1 10rem;
+    margin: 0;
+    color: var(--secondary-text-color);
+    font-size: 0.82rem;
+    line-height: 1.3;
+  }
+
+  &__wallet-session-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
   }
 
   &__wallet-identity {
@@ -406,7 +746,11 @@ app-account-sessions .profile-shell {
     min-width: 0;
     flex: 1;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.65rem;
+  }
+
+  &__panel--wallets {
+    padding-bottom: 1.25rem;
   }
 
   &__chain-logo {
@@ -416,47 +760,6 @@ app-account-sessions .profile-shell {
     border-radius: 999px;
     background: rgb(255 255 255 / 8%);
     object-fit: contain;
-  }
-
-  &__wallet-live-main,
-  &__last-wallet-copy {
-    display: grid;
-    min-width: 0;
-    gap: 0.2rem;
-  }
-
-  &__wallet-live-label,
-  &__last-wallet-label {
-    color: var(--secondary-text-color);
-    font-size: 0.78rem;
-    line-height: 1rem;
-  }
-
-  &__wallet-live-label {
-    color: var(--success, #7ee787);
-  }
-
-  &__wallet-live-address,
-  &__last-wallet-address {
-    color: var(--gray-30);
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.3;
-    overflow-wrap: anywhere;
-  }
-
-  &__wallet-live-actions,
-  &__last-wallet-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.65rem;
-  }
-
-  &__wallet-locked {
-    color: var(--secondary-text-color);
-    font-size: 0.78rem;
-    line-height: 1rem;
   }
 
   &__view-wallet {
@@ -475,6 +778,71 @@ app-account-sessions .profile-shell {
 
     span {
       margin-left: 0.15rem;
+    }
+  }
+
+  &__wallet-list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    gap: 0;
+  }
+
+  &__wallet-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgb(255 255 255 / 10%);
+    gap: 0.75rem;
+
+    &:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+  }
+
+  &__wallet-side {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+
+  &__wallet-menu-trigger {
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    padding: 0;
+    color: var(--gray-30);
+
+    .mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
+
+  &__make-active {
+    min-width: 0;
+    min-height: 2.125rem;
+    height: 2.125rem;
+    padding: 0 0.75rem;
+    border-radius: 8px;
+    border-color: rgb(255 255 255 / 22%);
+    color: var(--primary-text-color);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+
+    &.mat-mdc-outlined-button {
+      min-height: 2.125rem;
+      height: 2.125rem;
+      padding: 0 0.75rem;
+      border-radius: 8px;
     }
   }
 
@@ -505,120 +873,59 @@ app-account-sessions .profile-shell {
     overflow-wrap: anywhere;
   }
 
-  &__wallets-wrap {
-    min-width: 0;
-    overflow-x: auto;
-  }
-
-  &__wallets-table {
-    width: 100%;
-    border-collapse: collapse;
-
-    th,
-    td {
-      padding: 0.9rem 1.25rem 0.9rem 0;
-      text-align: left;
-      vertical-align: middle;
-    }
-
-    th {
-      border-bottom: 1px solid rgb(255 255 255 / 10%);
-      color: var(--secondary-text-color);
-      font-size: 0.78rem;
-      font-weight: 600;
-      line-height: 1.3;
-      white-space: nowrap;
-    }
-
-    td {
-      border-bottom: 1px solid rgb(255 255 255 / 10%);
-      color: var(--gray-30);
-      font-size: 0.9rem;
-      line-height: 1.35;
-    }
-
-    thead th {
-      padding-top: 0;
-    }
-
-    th:last-child,
-    td:last-child {
-      padding-right: 0;
-      text-align: right;
-    }
-
-    tbody tr:last-child td {
-      padding-bottom: 0;
-      border-bottom: 0;
-    }
-  }
-
   &__wallet-network {
-    color: var(--secondary-text-color);
-    font-size: 0.86rem;
-    line-height: 1.3;
-    white-space: nowrap;
+    color: var(--gray-30);
+    font-size: 0.78rem;
+    line-height: 1.25;
   }
 
   &__wallet-main {
     display: grid;
     min-width: 0;
     flex: 1;
-    gap: 0.15rem;
+    gap: 0.28rem;
   }
 
-  &__wallet-heading {
+  &__wallet-meta-row {
     display: flex;
     min-width: 0;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.35rem 0.55rem;
   }
 
   &__wallet-address {
     min-width: 0;
-    color: var(--gray-30);
-    font-size: 1rem;
+    color: var(--main-text-color);
+    font-size: 0.95rem;
     font-weight: 600;
-    line-height: 1.3;
-    white-space: nowrap;
-  }
-
-  &__wallet-status {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 0.65rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
   }
 
   &__wallet-badge {
     display: inline-flex;
+    width: fit-content;
     flex-shrink: 0;
     align-items: center;
-    padding: 0.12rem 0.45rem;
+    align-self: flex-start;
+    padding: 0.1rem 0.5rem;
     border-radius: 999px;
     background: rgb(126 231 135 / 14%);
     color: var(--success, #7ee787);
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 600;
-    gap: 0.3rem;
+    gap: 0.28rem;
     line-height: 1.2;
+    white-space: nowrap;
 
     &::before {
-      width: 0.35rem;
-      height: 0.35rem;
+      width: 0.3rem;
+      height: 0.3rem;
       border-radius: 999px;
       background: currentcolor;
       content: '';
     }
-  }
-
-  &__wallet-actions {
-    display: flex;
-    flex-shrink: 0;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.65rem;
   }
 
   &__sessions-wrap {
@@ -1206,20 +1513,22 @@ app-account-sessions .profile-shell {
       margin: 0 0 0.75rem;
     }
 
-    &__wallet-live,
-    &__last-wallet {
-      padding: 0;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      gap: 0.7rem;
-      grid-template-columns: 1fr;
+    &__wallets-header-actions {
+      gap: 0.1rem 0.25rem;
     }
 
-    &__last-wallet-actions {
+    &__wallet-session {
+      flex-direction: column;
+      align-items: stretch;
+      margin-bottom: 0.65rem;
+      padding: 0.55rem 0.65rem;
+      gap: 0.5rem;
+    }
+
+    &__wallet-session-actions {
       display: grid;
       gap: 0.35rem;
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr auto;
     }
 
     &__reconnect {
@@ -1228,78 +1537,68 @@ app-account-sessions .profile-shell {
 
     &__connect-another {
       min-width: 0;
-      padding: 0;
+      padding: 0 0.15rem;
       font-weight: 600;
-      justify-self: start;
+      justify-self: end;
     }
 
     &__refresh mat-icon {
       display: inline-block;
     }
 
-    &__wallets-wrap {
-      overflow: visible;
+    &__panel--wallets {
+      padding-bottom: 1.25rem;
     }
 
-    &__wallets-table {
-      thead {
-        display: none;
-      }
-
-      tbody {
-        display: grid;
-        gap: 0.5rem;
-      }
-
-      tr {
-        display: grid;
-        align-items: center;
-        padding: 0.7rem 0;
-        border-bottom: 1px solid rgb(255 255 255 / 10%);
-        gap: 0.15rem 0.75rem;
-        grid-template-columns: minmax(0, 1fr) auto;
-
-        &:first-child {
-          padding-top: 0;
-        }
-
-        &:last-child {
-          padding-bottom: 0;
-          border-bottom: 0;
-        }
-      }
-
-      td {
-        display: block;
-        padding: 0;
-        border-bottom: 0;
-
-        &::before {
-          display: none;
-        }
-
-        &:nth-child(1) {
-          grid-column: 1;
-          grid-row: 1;
-        }
-
-        &:nth-child(2),
-        &:nth-child(3) {
-          grid-column: 1;
-        }
-
-        &:nth-child(4) {
-          align-self: center;
-          grid-column: 2;
-          grid-row: 1 / span 3;
-          text-align: right;
-        }
-      }
+    &__wallet-row {
+      align-items: center;
+      padding: 1rem 0;
+      gap: 0.65rem;
     }
 
-    &__wallet-actions,
-    &__wallet-live-actions {
-      justify-content: flex-start;
+    &__wallet-side {
+      flex-direction: row;
+      gap: 0.25rem;
+    }
+
+    &__chain-logo {
+      width: 2.25rem;
+      height: 2.25rem;
+    }
+
+    &__wallet-address {
+      font-size: 0.9rem;
+    }
+
+    &__wallet-meta-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.3rem;
+    }
+
+    &__wallet-network {
+      font-size: 0.74rem;
+    }
+
+    &__wallet-badge {
+      width: fit-content;
+      align-self: flex-start;
+      margin-top: 0.1rem;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.64rem;
+    }
+
+    &__make-active {
+      min-height: 2rem;
+      height: 2rem;
+      padding: 0 0.65rem;
+      font-size: 0.875rem;
+
+      &.mat-mdc-outlined-button {
+        min-height: 2rem;
+        height: 2rem;
+        padding: 0 0.65rem;
+      }
     }
 
     &__panel--balances {

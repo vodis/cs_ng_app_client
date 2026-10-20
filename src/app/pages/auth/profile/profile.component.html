@@ -31,90 +31,210 @@
       </ng-container>
     </section>
 
-    <section
-      class="profile-shell__onboarding"
-      aria-label="Onboarding portfolio">
-      <h2 class="profile-shell__onboarding-title">Onboarding portfolio</h2>
-
-      <div class="profile-shell__onboarding-body">
-        <div class="profile-shell__onboarding-focus">
-          <h3>{{ nextOnboardingTitle() }}</h3>
-          <p class="profile-shell__onboarding-remaining">
-            {{ onboardingRemainingLabel() }}
+    <div
+      class="profile-shell__top-aside"
+      [class.profile-shell__top-aside--complete]="isOnboardingComplete()">
+      <div
+        class="profile-shell__complete-bar"
+        *ngIf="isOnboardingComplete()"
+        aria-label="Onboarding completed">
+        <div class="profile-shell__onboarding-summary">
+          <span
+            class="profile-shell__onboarding-summary-check"
+            aria-hidden="true">
+            <mat-icon>check_circle</mat-icon>
+          </span>
+          <p class="profile-shell__onboarding-summary-label">
+            Onboarding completed
           </p>
-          <div
-            class="profile-shell__onboarding-track"
-            role="progressbar"
-            [attr.aria-valuenow]="onboardingProgressPercent()"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            [attr.aria-label]="onboardingRemainingLabel()">
-            <span
-              class="profile-shell__onboarding-fill"
-              [style.width.%]="onboardingProgressPercent()"></span>
-          </div>
           <button
-            class="profile-shell__hero-action profile-shell__hero-action--primary"
             type="button"
-            [disabled]="walletLoading || walletActionBusy || passkeyLoading"
-            (click)="runOnboardingStep()">
-            {{ nextOnboardingCta() }}
-          </button>
-          <button
-            class="profile-shell__hero-action"
-            type="button"
-            *ngIf="showOnboardingGenerateWallet()"
-            [disabled]="walletLoading || walletActionBusy"
-            (click)="generateWallet()">
-            Generate wallet
+            class="profile-shell__onboarding-toggle"
+            [attr.aria-expanded]="onboardingDetailsOpen"
+            aria-controls="profile-onboarding-details"
+            (click)="toggleOnboardingDetails()">
+            {{ onboardingDetailsOpen ? 'Hide details' : 'Details' }}
+            <mat-icon aria-hidden="true">{{
+              onboardingDetailsOpen ? 'expand_less' : 'expand_more'
+            }}</mat-icon>
           </button>
         </div>
 
-        <ul class="profile-shell__onboarding-steps">
-          <li
-            *ngFor="
-              let step of onboardingSteps();
-              trackBy: trackByOnboardingStep
-            ">
-            <button
-              type="button"
-              class="profile-shell__onboarding-step"
-              [class.profile-shell__onboarding-step--done]="step.done"
-              [class.profile-shell__onboarding-step--current]="
-                isCurrentOnboardingStep(step)
-              "
-              [disabled]="walletLoading || walletActionBusy || passkeyLoading"
-              (click)="runOnboardingStep(step)">
-              <span class="profile-shell__onboarding-marker" aria-hidden="true">
-                <svg *ngIf="step.done" viewBox="0 0 16 16" focusable="false">
-                  <path
-                    d="M3.4 8.4 6.3 11.2 12.6 4.8"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.8" />
-                </svg>
-              </span>
-              <span class="profile-shell__onboarding-step-copy">
-                <span class="profile-shell__onboarding-step-title">{{
-                  step.title
-                }}</span>
-                <span class="profile-shell__onboarding-step-hint">{{
-                  step.hint
-                }}</span>
-              </span>
-              <span
-                class="profile-shell__onboarding-chevron"
-                aria-hidden="true">
-                ›
-              </span>
-            </button>
-          </li>
-        </ul>
+        <ng-container
+          *ngTemplateOutlet="fundActionsNav; context: { toolbar: true }"
+        ></ng-container>
       </div>
-    </section>
+
+      <section
+        class="profile-shell__onboarding"
+        *ngIf="showOnboardingDetailsContent()"
+        [class.profile-shell__onboarding--expanded]="
+          isOnboardingComplete() && onboardingDetailsOpen
+        "
+        aria-label="Onboarding portfolio">
+        <div class="profile-shell__onboarding-head">
+          <h2 class="profile-shell__onboarding-title">Onboarding portfolio</h2>
+        </div>
+
+        <div
+          class="profile-shell__onboarding-body"
+          id="profile-onboarding-details">
+          <div class="profile-shell__onboarding-focus">
+            <h3>{{ nextOnboardingTitle() }}</h3>
+            <p class="profile-shell__onboarding-remaining">
+              {{ onboardingRemainingLabel() }}
+            </p>
+            <div
+              class="profile-shell__onboarding-track"
+              role="progressbar"
+              [attr.aria-valuenow]="onboardingProgressPercent()"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-label]="onboardingRemainingLabel()">
+              <span
+                class="profile-shell__onboarding-fill"
+                [style.width.%]="onboardingProgressPercent()"></span>
+            </div>
+            <button
+              class="profile-shell__hero-action profile-shell__hero-action--primary"
+              type="button"
+              [disabled]="walletLoading || walletActionBusy || passkeyLoading"
+              (click)="runOnboardingStep()">
+              {{ nextOnboardingCta() }}
+            </button>
+            <button
+              class="profile-shell__hero-action"
+              type="button"
+              *ngIf="showOnboardingGenerateWallet()"
+              [disabled]="walletLoading || walletActionBusy"
+              (click)="generateWallet()">
+              Generate wallet
+            </button>
+          </div>
+
+          <ul class="profile-shell__onboarding-steps">
+            <li
+              *ngFor="
+                let step of onboardingSteps();
+                trackBy: trackByOnboardingStep
+              ">
+              <button
+                type="button"
+                class="profile-shell__onboarding-step"
+                [class.profile-shell__onboarding-step--done]="step.done"
+                [class.profile-shell__onboarding-step--current]="
+                  isCurrentOnboardingStep(step)
+                "
+                [disabled]="walletLoading || walletActionBusy || passkeyLoading"
+                (click)="runOnboardingStep(step)">
+                <span
+                  class="profile-shell__onboarding-marker"
+                  aria-hidden="true">
+                  <svg *ngIf="step.done" viewBox="0 0 16 16" focusable="false">
+                    <path
+                      d="M3.4 8.4 6.3 11.2 12.6 4.8"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.8" />
+                  </svg>
+                </span>
+                <span class="profile-shell__onboarding-step-copy">
+                  <span class="profile-shell__onboarding-step-title">{{
+                    step.title
+                  }}</span>
+                  <span class="profile-shell__onboarding-step-hint">{{
+                    step.hint
+                  }}</span>
+                </span>
+                <span
+                  class="profile-shell__onboarding-chevron"
+                  aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <ng-container *ngIf="!isOnboardingComplete()">
+        <ng-container
+          *ngTemplateOutlet="fundActionsNav; context: { toolbar: false }"
+        ></ng-container>
+      </ng-container>
+    </div>
   </div>
+
+  <ng-template #fundActionsNav let-toolbar="toolbar">
+    <nav
+      class="profile-shell__fund-actions"
+      [class.profile-shell__fund-actions--toolbar]="toolbar"
+      aria-label="Fund actions">
+      <button
+        class="profile-shell__fund-action"
+        type="button"
+        [disabled]="
+          !profile.fundTransfersAvailable || walletLoading || walletActionBusy
+        "
+        [attr.aria-label]="
+          profile.fundTransfersAvailable
+            ? 'Send Funds'
+            : 'Send Funds, coming soon'
+        "
+        (click)="openSendFunds()">
+        <mat-icon aria-hidden="true">north_east</mat-icon>
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--long"
+          >Send Funds</span
+        >
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--short"
+          >Send</span
+        >
+        <span
+          *ngIf="!profile.fundTransfersAvailable"
+          class="profile-shell__fund-soon"
+          >Soon</span
+        >
+      </button>
+      <button
+        class="profile-shell__fund-action"
+        type="button"
+        [disabled]="
+          !profile.fundTransfersAvailable || walletLoading || walletActionBusy
+        "
+        [attr.aria-label]="
+          profile.fundTransfersAvailable
+            ? 'Add Funds'
+            : 'Add Funds, coming soon'
+        "
+        (click)="openAddFunds()">
+        <mat-icon aria-hidden="true">south_west</mat-icon>
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--long"
+          >Add Funds</span
+        >
+        <span
+          class="profile-shell__fund-label profile-shell__fund-label--short"
+          >Add</span
+        >
+        <span
+          *ngIf="!profile.fundTransfersAvailable"
+          class="profile-shell__fund-soon"
+          >Soon</span
+        >
+      </button>
+      <button
+        class="profile-shell__fund-action profile-shell__fund-action--exchange"
+        type="button"
+        (click)="openExchange()">
+        <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+        <span>Exchange</span>
+      </button>
+    </nav>
+  </ng-template>
 
   <div class="profile-shell__header">
     <p class="profile-shell__eyebrow">Profile</p>
@@ -231,101 +351,75 @@
       </div>
     </section>
 
-    <section class="profile-shell__panel">
+    <section class="profile-shell__panel profile-shell__panel--wallets">
       <div class="profile-shell__panel-header">
         <h2>Wallets</h2>
-        <button
-          type="button"
-          mat-button
-          class="profile-shell__refresh"
-          (click)="refreshWallets()">
-          <mat-icon aria-hidden="true">refresh</mat-icon>
-          <span class="profile-shell__refresh-label">Refresh</span>
-        </button>
-      </div>
-
-      <div class="profile-shell__wallet-connect" *ngIf="isLiveConnected()">
-        <h3 class="profile-shell__section-title">Connected</h3>
-        <div class="profile-shell__wallet-live">
-          <div class="profile-shell__wallet-identity">
-            <ng-container *ngIf="resolveLastConnectedWallet() as liveMeta">
-              <img
-                *ngIf="lastConnectedChainIcon(liveMeta) as chainIcon"
-                class="profile-shell__chain-logo"
-                [src]="chainIcon"
-                alt="" />
-            </ng-container>
-            <div class="profile-shell__wallet-live-main">
-              <span class="profile-shell__wallet-live-address">{{
-                shortAddress(connectedAccount!)
-              }}</span>
-              <small *ngIf="resolveLastConnectedWallet() as liveMeta">{{
-                lastConnectedMeta(liveMeta)
-              }}</small>
-            </div>
-          </div>
-          <div class="profile-shell__wallet-live-actions">
-            <button
-              type="button"
-              mat-button
-              color="primary"
-              class="profile-shell__view-wallet"
-              [disabled]="walletActionBusy"
-              (click)="openWalletModal()">
-              Manage wallets
-              <span aria-hidden="true">›</span>
-            </button>
-            <button
-              type="button"
-              mat-stroked-button
-              [disabled]="walletActionBusy"
-              (click)="disconnectWallet()">
-              Disconnect
-            </button>
-          </div>
+        <div class="profile-shell__wallets-header-actions">
+          <button
+            type="button"
+            mat-button
+            color="primary"
+            class="profile-shell__view-wallet"
+            [disabled]="walletActionBusy"
+            (click)="openWalletModal()">
+            Manage wallets
+            <span aria-hidden="true">›</span>
+          </button>
+          <button
+            type="button"
+            mat-icon-button
+            class="profile-shell__refresh profile-shell__refresh--icon"
+            aria-label="Refresh wallets"
+            (click)="refreshWallets()">
+            <mat-icon aria-hidden="true">refresh</mat-icon>
+          </button>
         </div>
       </div>
 
       <div
-        class="profile-shell__wallet-connect"
+        class="profile-shell__wallet-session"
         *ngIf="showLastConnectedSection()">
-        <h3 class="profile-shell__section-title">Active wallet</h3>
         <div
-          class="profile-shell__last-wallet"
-          *ngIf="resolveLastConnectedWallet() as lastWallet">
-          <div class="profile-shell__wallet-identity">
-            <img
-              *ngIf="lastConnectedChainIcon(lastWallet) as chainIcon"
-              class="profile-shell__chain-logo"
-              [src]="chainIcon"
-              alt="" />
-            <div class="profile-shell__last-wallet-copy">
-              <span class="profile-shell__last-wallet-address">{{
-                shortAddress(lastWallet.account)
-              }}</span>
-              <small>{{ lastConnectedMeta(lastWallet) }}</small>
-            </div>
+          class="profile-shell__wallet-session-identity"
+          *ngIf="
+            !hasLinkedWallets() && resolveLastConnectedWallet() as lastWallet
+          ">
+          <img
+            *ngIf="lastConnectedChainIcon(lastWallet) as chainIcon"
+            class="profile-shell__chain-logo"
+            [src]="chainIcon"
+            alt="" />
+          <div class="profile-shell__wallet-session-copy">
+            <span class="profile-shell__wallet-session-title">{{
+              shortAddress(lastWallet.account)
+            }}</span>
+            <small>{{ lastConnectedMeta(lastWallet) }}</small>
           </div>
-          <div class="profile-shell__last-wallet-actions">
-            <button
-              type="button"
-              mat-flat-button
-              color="primary"
-              class="profile-shell__reconnect"
-              [disabled]="walletActionBusy"
-              (click)="reconnectWallet()">
-              Reconnect
-            </button>
-            <button
-              type="button"
-              mat-button
-              color="primary"
-              class="profile-shell__connect-another"
-              [disabled]="walletActionBusy"
-              (click)="connectAnotherWallet()">
-              Connect another wallet
-            </button>
-          </div>
+        </div>
+        <p
+          class="profile-shell__wallet-session-hint"
+          *ngIf="hasLinkedWallets()">
+          Reconnect to sign with the active wallet.
+        </p>
+        <div class="profile-shell__wallet-session-actions">
+          <button
+            type="button"
+            mat-flat-button
+            color="primary"
+            class="profile-shell__reconnect"
+            [disabled]="walletActionBusy"
+            (click)="reconnectWallet()">
+            Reconnect
+          </button>
+          <button
+            type="button"
+            mat-button
+            color="primary"
+            class="profile-shell__connect-another"
+            [disabled]="walletActionBusy"
+            (click)="connectAnotherWallet()">
+            Connect another
+          </button>
         </div>
       </div>
 
@@ -348,84 +442,81 @@
         No wallet linked yet.
       </div>
 
-      <div *ngIf="activeSession.wallets.length > 0">
-        <h3 class="profile-shell__section-title">Connected wallets</h3>
-        <div class="profile-shell__wallets-wrap">
-          <table class="profile-shell__wallets-table">
-            <thead>
-              <tr>
-                <th scope="col">Wallet</th>
-                <th scope="col">Network</th>
-                <th scope="col">Status</th>
-                <th scope="col">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let wallet of activeSession.wallets">
-                <td data-label="Wallet">
-                  <div class="profile-shell__wallet-identity">
-                    <img
-                      *ngIf="walletChainIcon(wallet.chainType) as chainIcon"
-                      class="profile-shell__chain-logo"
-                      [src]="chainIcon"
-                      alt="" />
-                    <span class="profile-shell__wallet-address">{{
-                      shortAddress(wallet.address)
-                    }}</span>
-                  </div>
-                </td>
-                <td data-label="Network">
-                  <span class="profile-shell__wallet-network">{{
-                    walletMeta(wallet)
-                  }}</span>
-                </td>
-                <td data-label="Status">
-                  <div class="profile-shell__wallet-status">
-                    <span
-                      class="profile-shell__wallet-badge"
-                      *ngIf="wallet.isPrimary"
-                      >Active{{
-                        activeWalletId === wallet.id && isLiveConnected()
-                          ? ' · Connected'
-                          : walletRestoring
-                            ? ' · Restoring connection'
-                            : ' · Signing disconnected'
-                      }}</span
-                    >
-                    <span
-                      class="profile-shell__wallet-locked"
-                      *ngIf="isEmbeddedWallet(wallet) && !wallet.isPrimary"
-                      >Linked</span
-                    >
-                  </div>
-                </td>
-                <td data-label="Action">
-                  <div
-                    class="profile-shell__wallet-actions"
-                    *ngIf="!wallet.isPrimary || canRemoveLinkedWallet(wallet)">
-                    <button
-                      type="button"
-                      mat-button
-                      *ngIf="!wallet.isPrimary"
-                      [disabled]="!!busyWalletId"
-                      (click)="setPrimaryWallet(wallet)">
-                      Make active
-                    </button>
-                    <button
-                      type="button"
-                      mat-button
-                      *ngIf="canRemoveLinkedWallet(wallet)"
-                      [disabled]="!!busyWalletId"
-                      (click)="deleteWallet(wallet)">
-                      Remove
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ul
+        class="profile-shell__wallet-list"
+        *ngIf="activeSession.wallets.length > 0"
+        role="list">
+        <li
+          class="profile-shell__wallet-row"
+          *ngFor="let wallet of activeSession.wallets">
+          <div class="profile-shell__wallet-identity">
+            <img
+              *ngIf="walletChainIcon(wallet.chainType) as chainIcon"
+              class="profile-shell__chain-logo"
+              [src]="chainIcon"
+              alt="" />
+            <div class="profile-shell__wallet-main">
+              <span class="profile-shell__wallet-address">{{
+                shortAddress(wallet.address)
+              }}</span>
+              <div class="profile-shell__wallet-meta-row">
+                <span class="profile-shell__wallet-network">{{
+                  walletListMeta(wallet)
+                }}</span>
+                <span
+                  class="profile-shell__wallet-badge"
+                  *ngIf="wallet.isPrimary"
+                  >{{ walletPrimaryStatusLabel(wallet) }}</span
+                >
+              </div>
+            </div>
+          </div>
+          <div
+            class="profile-shell__wallet-side"
+            *ngIf="hasWalletMenuActions(wallet) || !wallet.isPrimary">
+            <button
+              type="button"
+              mat-stroked-button
+              class="profile-shell__make-active"
+              *ngIf="!wallet.isPrimary"
+              [disabled]="!!busyWalletId"
+              (click)="setPrimaryWallet(wallet)">
+              Make active
+            </button>
+            <ng-container *ngIf="hasWalletMenuActions(wallet)">
+              <button
+                type="button"
+                mat-icon-button
+                class="profile-shell__wallet-menu-trigger"
+                [matMenuTriggerFor]="walletRowMenu"
+                [disabled]="walletActionBusy || !!busyWalletId"
+                [attr.aria-label]="
+                  'Wallet actions for ' + shortAddress(wallet.address)
+                ">
+                <mat-icon aria-hidden="true">more_horiz</mat-icon>
+              </button>
+              <mat-menu #walletRowMenu="matMenu" xPosition="before">
+                <button
+                  type="button"
+                  mat-menu-item
+                  *ngIf="canDisconnectWallet(wallet)"
+                  [disabled]="walletActionBusy"
+                  (click)="disconnectWallet()">
+                  Disconnect
+                </button>
+                <button
+                  type="button"
+                  mat-menu-item
+                  *ngIf="canRemoveLinkedWallet(wallet)"
+                  [disabled]="!!busyWalletId"
+                  (click)="deleteWallet(wallet)">
+                  Remove
+                </button>
+              </mat-menu>
+            </ng-container>
+          </div>
+        </li>
+      </ul>
     </section>
 
     <section class="profile-shell__panel profile-shell__panel--balances">
