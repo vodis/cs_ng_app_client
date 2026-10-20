@@ -109,13 +109,15 @@ areas on narrow screens.
 
 ### Recent activity
 
-The compact home panel (`.activity` → `app-swap-history`) and `/history` share
-one component. Desktop uses an aligned table (time, pair, paid, received,
-status, details). At `<= 1100px` (Trade Recent activity and Transactions) rows use a dense list:
-pair + inline `paid → received` with status, then time and Details.
-Settled/refunded meta stay behind Details so long lists stay scannable.
-Desktop keeps the full table.
-The section title matches other panel headings (uppercase). Refresh is an icon
+The compact home panel (`.activity` → `app-swap-history` with `compact`) and
+the Transactions page (`/transactions` → same component, full list) share one
+component. `/history` redirects to `/transactions`. Desktop uses an aligned
+table (time, pair, paid, received, status, details). At `<= 1100px` (Trade
+Recent activity and Transactions) rows use a dense list: pair + inline
+`paid → received` with status, then time and Details. Settled/refunded meta
+stay behind Details so long lists stay scannable. Desktop keeps the full
+table. The section title matches other panel headings (uppercase): “Recent
+activity” on Trade, “Transactions” on the full page. Refresh is an icon
 control styled like swap settings; it disables and spins while a user-initiated
 fetch is in flight and keeps previously loaded rows visible.
 Empty copy is “No swaps yet” with muted “Your swap history will appear here.”
@@ -126,9 +128,9 @@ when available and labeled separately from quote estimates; refunded amounts
 appear when present. Status labels stay one-to-one with history statuses
 (approval, submission, deposit detected, pending deposit, incomplete deposit,
 processing, completed, refunded, failed, cancelled, unknown). Explorer links
-come from validated settlement receipts. Compact mode links to `/transactions` via
-the orange “View all swaps →” control. `/history` redirects there too. Mobile content clearance for the floating
-nav FAB is owned by the shell main content padding.
+come from validated settlement receipts. Compact mode links to `/transactions`
+via the orange “View all swaps →” control. Mobile content clearance for the
+floating nav FAB is owned by the shell main content padding.
 
 ## API and asset ownership
 
