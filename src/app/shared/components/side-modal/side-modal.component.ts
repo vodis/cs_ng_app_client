@@ -16,6 +16,8 @@ export class SideModalComponent {
   @Input() isOpen = false;
   @Input() placement: 'left' | 'right' = 'right';
   @Input() showCloseButton = true;
+  /** Keep panel overflow hidden so nested surfaces (swap-review) own scrolling. */
+  @Input() containScroll = false;
   @Output() closeRequested = new EventEmitter<void>();
 
   public handleHostClose(event: Event): void {

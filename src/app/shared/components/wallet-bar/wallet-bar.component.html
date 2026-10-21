@@ -19,6 +19,7 @@
     <app-side-modal
       [isOpen]="isOpenWalletConnectMenu"
       [showCloseButton]="showHostCloseButton"
+      [containScroll]="drawerMode === 'swap-review'"
       (closeRequested)="handleCloseWalletMenu()">
       @if (
         isOpenWalletConnectMenu && hasActiveWallet && drawerMode === 'wallet'
@@ -29,6 +30,9 @@
         class="wallet-bar__mfe-host"
         [class.wallet-bar__mfe-host--hidden]="
           hasActiveWallet && drawerMode === 'wallet'
+        "
+        [class.wallet-bar__mfe-host--swap-review]="
+          drawerMode === 'swap-review'
         ">
         <app-wallets (dialogCloseReady)="mfeProvidesClose = $event" />
       </div>

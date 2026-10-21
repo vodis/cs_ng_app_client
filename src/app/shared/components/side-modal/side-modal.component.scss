@@ -83,6 +83,16 @@
     @include media-breakpoint-up(xl) {
       width: 33.3%;
     }
+
+    &--contain-scroll.open {
+      overflow: hidden;
+
+      > :not(.side-modal__close) {
+        overflow: hidden;
+        min-height: 0;
+        flex: 1 1 0%;
+      }
+    }
   }
 
   .side-modal__close {

@@ -119,6 +119,26 @@ describe('WalletBarComponent', () => {
     expect(component.showHostCloseButton).toBeTrue();
   });
 
+  it('scopes overflow containment to swap-review and leaves the picker scrollable', () => {
+    component.hostModal = true;
+    component.hasActiveWallet = false;
+    component.isOpenWalletConnectMenu = true;
+
+    wallets.drawerMode.next('connect');
+    fixture.detectChanges();
+    expect(component.drawerMode).toBe('connect');
+    expect(
+      fixture.nativeElement.querySelector('.wallet-bar__mfe-host--swap-review')
+    ).toBeNull();
+
+    wallets.drawerMode.next('swap-review');
+    fixture.detectChanges();
+    expect(component.drawerMode).toBe('swap-review');
+    expect(
+      fixture.nativeElement.querySelector('.wallet-bar__mfe-host--swap-review')
+    ).toBeTruthy();
+  });
+
   it('closes the host shell when the MFE propagates onCloseRequested', () => {
     component.hostModal = true;
     component.isOpenWalletConnectMenu = true;
