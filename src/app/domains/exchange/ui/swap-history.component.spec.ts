@@ -188,4 +188,86 @@ describe('SwapHistoryComponent recovery during outages', () => {
       element.querySelector('.swap-history__view-all')?.getAttribute('href')
     ).toBe('/transactions');
   });
+
+  it('renders a dense mobile list row in compact mode', async () => {
+    const { element } = await setup(loaded, true);
+    const denseSwap = element.querySelector(
+      '.swap-history__list--dense .swap-history__dense-swap'
+    );
+    expect(element.querySelector('.swap-history__list--dense')).toBeTruthy();
+    expect(denseSwap?.textContent).toMatch(/USDC/);
+    expect(denseSwap?.querySelector('.swap-history__amount-meta')).toBeNull();
+    expect(denseSwap?.textContent).not.toContain('Settled');
+    expect(denseSwap?.textContent).not.toContain('Quoted');
+    expect(denseSwap?.textContent).not.toContain('Refunded');
+  });
+
+  it('renders a dense mobile list row on the full Transactions page', async () => {
+    const { element } = await setup(loaded, false);
+    expect(element.querySelector('.swap-history__list--dense')).toBeTruthy();
+    expect(
+      element.querySelector(
+        '.swap-history__list--dense .swap-history__dense-swap .swap-history__amount-meta'
+      )
+    ).toBeNull();
+    expect(
+      element.querySelector('.swap-history__status-pill--chip')
+    ).toBeTruthy();
+  });
+
+  it('shortens long dense amount strings for mobile rows', async () => {
+    const { fixture } = await setup(loaded, true);
+    expect(
+      fixture.componentInstance.denseAmount('0,002130874410066736', 12)
+    ).toBe('0,002130874…');
+    expect(fixture.componentInstance.denseAmount('1,05449', 12)).toBe(
+      '1,05449'
+    );
+  });
+
+  it('puts quoted settlement labels in Details for pending mobile rows', async () => {
+    const { element } = await setup(loaded, true);
+    const details = element.querySelector(
+      '.swap-history__list--dense .swap-history__details-body'
+    );
+    expect(details?.textContent).toContain('Quoted');
+    expect(details?.textContent).toMatch(/Paid[\s\S]*Quoted/);
+    expect(details?.textContent).toMatch(/Received[\s\S]*Quoted/);
+    expect(details?.textContent).not.toContain('Settled');
+    expect(details?.textContent).not.toMatch(/Refunded\s/);
+  });
+
+  it('puts refunded amount in Details for refunded mobile rows', async () => {
+    const { element } = await setup(
+      {
+        ...loaded,
+        items: [
+          {
+            ...loaded.items[0],
+            preparationId: 'refunded-reference',
+            status: 'REFUNDED',
+            amountIn: '1000000000000000000000000',
+            amountOut: '1000000',
+            receipt: {
+              amountIn: '1000000000000000000000000',
+              refundedAmount: '250000000000000000000000',
+              transactions: [],
+            },
+          },
+        ],
+      },
+      true
+    );
+    const details = element.querySelector(
+      '.swap-history__list--dense .swap-history__details-body'
+    );
+    const denseSwap = element.querySelector(
+      '.swap-history__list--dense .swap-history__dense-swap'
+    );
+    expect(details?.textContent).toMatch(/Refunded\s+0,25/);
+    expect(details?.textContent).toMatch(/Paid[\s\S]*Settled/);
+    expect(details?.textContent).toMatch(/Received[\s\S]*Quoted/);
+    expect(denseSwap?.textContent).not.toMatch(/Refunded/);
+    expect(denseSwap?.textContent).not.toContain('0,25');
+  });
 });

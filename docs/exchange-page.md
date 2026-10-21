@@ -112,13 +112,14 @@ areas on narrow screens.
 The compact home panel (`.activity` → `app-swap-history` with `compact`) and
 the Transactions page (`/transactions` → same component, full list) share one
 component. `/history` redirects to `/transactions`. Desktop uses an aligned
-table (time, pair, paid, received, status, details). At `<= 1100px` the same
-rows render as a compact list: pair and status on the first line, paid/received
-amounts, then secondary date/time.
-The section title matches other panel headings (uppercase): “Recent activity”
-on Trade, “Transactions” on the full page. Refresh is an icon control styled
-like swap settings; it disables and spins while a user-initiated fetch is in
-flight and keeps previously loaded rows visible.
+table (time, pair, paid, received, status, details). At `<= 1100px` (Trade
+Recent activity and Transactions) rows use a dense list: pair + inline
+`paid → received` with status, then time and Details. Settled/refunded meta
+stay behind Details so long lists stay scannable. Desktop keeps the full
+table. The section title matches other panel headings (uppercase): “Recent
+activity” on Trade, “Transactions” on the full page. Refresh is an icon
+control styled like swap settings; it disables and spins while a user-initiated
+fetch is in flight and keeps previously loaded rows visible.
 Empty copy is “No swaps yet” with muted “Your swap history will appear here.”
 Loading and error states include Retry; failed refreshes retain the last loaded
 exchanges and pagination cursor with a stale-status warning.
