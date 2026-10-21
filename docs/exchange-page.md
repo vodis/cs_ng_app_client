@@ -157,20 +157,37 @@ must not authorize a swap. The UI must not substitute demo or zero balances when
 the backend has no fresh result, and failed requests remain retryable after
 provider initialization or a transient backend failure.
 
-The source-token selector shows a **Your tokens** section between search and the
-full token catalog when a wallet is connected. It includes only non-zero,
-network-specific balances for the connected wallet, renders each entry as
-`Token_Network` with its available token amount, and selects the exact 1Click
-asset id. Destination-token selection lists every supported asset/network variant.
+Both token selectors use two steps in the same drawer. First, backend-provided
+assets are grouped by display symbol (for example ETH), with a total across the
+user's active linked wallets. This is display grouping only: it does not assert
+that same-symbol contracts are interchangeable. Wrapped/native symbols remain
+separate. Search matches names, symbols, networks, contracts and asset IDs; a
+matching variant makes its group visible.
 
-The catalog includes every valid asset returned by the backend's 1Click token
-feed; it is not a curated symbol list. Source selection retains each asset id,
-including tokens sharing a symbol on the same network, and is restricted to the
-active funding wallet's network. Neither selector groups assets by symbol or combines wrapped and native tokens.
-Every row shows its network and contract (or asset id); search also matches these
-identifiers. Every destination network remains
-browsable even when cross-network execution is disabled; the existing recipient
-and execution checks still block unavailable routes.
+Selecting a group always opens its network/asset variants, even for one variant.
+Each variant retains its exact contract and execution identity. From displays
+compatible linked funding wallets under each variant; choosing one saves that
+wallet as the backend primary wallet and sets the chosen network as explicit
+product context for the current session. Live signer events cannot silently
+replace that network choice; the MFE must still validate/reconnect the signer
+before execution. Destination selection changes no wallet selection. Back keeps
+the search; closing/reopening resets the picker.
+
+The linked-wallet balance facade reads backend `sourceNetwork` metadata and
+requests compatible wallet/network holdings in batches of at most 20 assets,
+with at most three network targets in flight. It rejects mismatched response
+provenance and clears/cancels reads on logout, account changes and drawer close.
+Totals use exact raw-amount arithmetic and deduplicate wallet address, network
+and canonical balance identity. Missing reads are unavailable, never fabricated
+zeroes; partial or expired values are marked incomplete/last known and can be
+retried. Networks lacking compatible linked wallets remain visible. Guests can
+browse/select exact assets without balance reads.
+
+Combined balances are informational. Max amount, quotes and final funding checks
+use the selected wallet's exact asset/network only. The backend remains the asset
+and execution authority, and unsupported routes remain blocked by the existing
+funding/recipient checks. The existing asset, balance, primary-wallet and MFE swap
+contracts are reused without a version change.
 
 ### Native NEAR identity
 

@@ -1,7 +1,9 @@
 import {
-  tokenBalance,
-  hasPositiveBalance,
-} from '@shared/utils/balance-asset.utils';
+  LinkedWalletBalancesFacade,
+  type LinkedBalancesState,
+  type LinkedTokenHolding,
+} from '@domains/wallet/application/linked-wallet-balances.facade';
+import { tokenBalance } from '@shared/utils/balance-asset.utils';
 import {
   afterNextRender,
   ChangeDetectorRef,
@@ -71,7 +73,6 @@ import {
   tokenAvatarLabel,
 } from '@shared/utils/token-avatar.utils';
 import type { MarketOverviewChartSeries } from '@shared/components/market-overview-chart/market-overview-chart.component';
-import type { WalletTokenOption } from '@shared/components/token-select-panel/token-select-panel.models';
 import {
   DEFAULT_SLIPPAGE_TOLERANCE_BPS,
   formatSlippagePercentLabel,
@@ -294,6 +295,15 @@ export class HomeComponent {
   };
   private walletContextKey = '';
   private activeReviewTraceId = '';
+  public linkedBalances: LinkedBalancesState = {
+    holdings: [],
+    loading: false,
+    incomplete: false,
+  };
+  public tokenSelectionBusy = false;
+  public tokenSelectionError = '';
+  private tokenSelectionVersion = 0;
+  private readonly linkedBalancesFacade = inject(LinkedWalletBalancesFacade);
 
   constructor(
     private readonly httpClient: HttpClient,
@@ -306,11 +316,22 @@ export class HomeComponent {
     private readonly executableQuotes: SwapExecutableQuoteCoordinator,
     private readonly walletGatewayBridge: WalletGatewayBridgeService
   ) {
+    this.linkedBalancesFacade.state$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        this.linkedBalances = state;
+      });
+    this.destroyRef.onDestroy(() => this.closeTokenSelector());
     this.activeWalletFacade.revalidateBalances();
     this.activeWalletFacade.state$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(state => {
         const previous = this.activeWallet;
+        if (
+          previous.userId !== state.userId ||
+          previous.sessionId !== state.sessionId
+        )
+          this.closeTokenSelector();
         if (
           previous.userId !== state.userId ||
           previous.sessionId !== state.sessionId ||
@@ -390,6 +411,7 @@ export class HomeComponent {
           )
         );
         this.exchangeTokens = tokens.map(token => this.enrichToken(token));
+        if (this.isTokenSelectorOpen) this.refreshSelectorBalances();
         if (nextFrom) this.fromToken = this.enrichToken(nextFrom);
         if (nextTo) this.toToken = this.enrichToken(nextTo);
         if (changed) {
@@ -1802,11 +1824,54 @@ export class HomeComponent {
   public openTokenSelector(side: TokenSelectorSide): void {
     this.tokenSelectorSide = side;
     this.isTokenSelectorOpen = true;
+    this.tokenSelectionError = '';
+    this.refreshSelectorBalances();
   }
 
   public closeTokenSelector(): void {
     this.isTokenSelectorOpen = false;
     this.tokenSelectorSide = null;
+    this.tokenSelectionVersion++;
+    this.activeWalletFacade.cancelFundingSelection();
+    this.tokenSelectionBusy = false;
+    this.tokenSelectionError = '';
+    this.linkedBalancesFacade.close();
+  }
+
+  public refreshSelectorBalances(): void {
+    this.linkedBalancesFacade.refresh(this.exchangeTokens);
+  }
+
+  public async handleFundingSelected(
+    holding: LinkedTokenHolding
+  ): Promise<void> {
+    if (this.tokenSelectionBusy || this.tokenSelectorSide !== 'from') return;
+    const version = ++this.tokenSelectionVersion;
+    this.tokenSelectionBusy = true;
+    this.tokenSelectionError = '';
+    this.cancelPendingReview();
+    this.swapFlowFacade.reset();
+    try {
+      await this.activeWalletFacade.selectFundingWallet(
+        holding.wallet.id,
+        holding.network
+      );
+      if (version !== this.tokenSelectionVersion) return;
+      const token = this.exchangeTokens.find(
+        item =>
+          item.assetId === holding.token.assetId &&
+          item.sourceNetwork === holding.network
+      );
+      if (!token) throw new Error('Selected asset is no longer available.');
+      this.handleTokenSelected(token);
+    } catch {
+      if (version === this.tokenSelectionVersion)
+        this.tokenSelectionError =
+          'Could not switch the active wallet. Select the wallet again to retry.';
+    } finally {
+      if (version === this.tokenSelectionVersion)
+        this.tokenSelectionBusy = false;
+    }
   }
 
   public handleTokenSelected(token: ExchangeToken): void {
@@ -1850,26 +1915,7 @@ export class HomeComponent {
   }
 
   public tokenSelectorTokens(): ExchangeToken[] {
-    if (this.tokenSelectorSide === 'from' && this.walletAddress)
-      return this.exchangeTokens.filter(token => this.canFetchBalance(token));
     return this.exchangeTokens;
-  }
-
-  public tokenSelectorWalletTokens(): WalletTokenOption[] {
-    if (!this.tokenSelectorSide) return [];
-
-    return this.tokenSelectorTokens().flatMap(token => {
-      const balance = this.balanceForToken(token);
-      if (!balance || !hasPositiveBalance(balance)) return [];
-
-      return [
-        {
-          token,
-          balanceLabel: `${this.formatBalance(balance)} ${this.tokenSymbolLabel(token)}`,
-          stale: balance.stale || this.isBalanceExpired(balance),
-        },
-      ];
-    });
   }
 
   public connectedWalletBlockchain(): string | undefined {
@@ -2134,6 +2180,7 @@ export class HomeComponent {
     this.exchangeAssetsService.loadAssets().subscribe({
       next: tokens => {
         this.exchangeTokens = tokens.map(token => this.enrichToken(token));
+        if (this.isTokenSelectorOpen) this.refreshSelectorBalances();
         this.exchangeAssetsLoading = false;
 
         if (tokens.length === 0) {
@@ -2175,6 +2222,7 @@ export class HomeComponent {
       },
       error: () => {
         this.exchangeTokens = [];
+        if (this.isTokenSelectorOpen) this.refreshSelectorBalances();
         this.exchangeAssetsLoading = false;
         this.exchangeAssetsError = 'Failed to load assets. Try again later.';
       },

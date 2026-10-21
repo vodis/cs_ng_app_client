@@ -1,6 +1,20 @@
-<div class="token-select-panel">
+<div class="token-select-panel" (keydown.escape)="handleClose()">
   <header class="token-select-panel__header">
-    <h6 class="token-select-panel__title">{{ title }}</h6>
+    @if (selectedGroup) {
+      <button
+        type="button"
+        class="token-select-panel__close"
+        aria-label="Back to tokens"
+        [disabled]="selectionBusy"
+        (click)="back()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+    }
+    <h6 #stepTitle tabindex="-1" class="token-select-panel__title">
+      {{
+        selectedGroup ? 'Select ' + selectedGroup.symbol + ' network' : title
+      }}
+    </h6>
     <button
       type="button"
       class="token-select-panel__close"
@@ -9,7 +23,6 @@
       <mat-icon>close</mat-icon>
     </button>
   </header>
-
   <div class="token-select-panel__body">
     @if (viewModel.state !== 'ready') {
       <p
@@ -18,138 +31,160 @@
         {{ viewModel.statusMessage }}
       </p>
     } @else {
-      <label class="token-select-panel__search">
-        <span class="token-select-panel__search-label"
-          >Search by name, symbol, network or contract</span
-        >
-        <input
-          type="search"
-          class="token-select-panel__search-input"
-          placeholder="Search tokens"
-          autocomplete="off"
-          spellcheck="false"
-          [(ngModel)]="filterQuery"
-          (keydown.escape)="handleClose()" />
-      </label>
-
+      @if (selectionError) {
+        <p
+          class="token-select-panel__status token-select-panel__status--error"
+          role="alert">
+          {{ selectionError }}
+        </p>
+      }
       @if (showWalletTokens) {
-        <section
-          class="token-select-panel__wallet-tokens"
-          aria-labelledby="wallet-token-list-title">
-          <p
-            id="wallet-token-list-title"
-            class="token-select-panel__section-label">
-            Your tokens
-          </p>
+        <p class="token-select-panel__section-status" aria-live="polite">
           @if (walletTokensLoading) {
-            <p class="token-select-panel__section-status">
-              Loading wallet balances...
-            </p>
-          } @else if (walletTokensError) {
-            <p
-              class="token-select-panel__section-status token-select-panel__section-status--error">
-              {{ walletTokensError }}
-            </p>
+            Loading linked wallet balances…
+          } @else if (balancesIncomplete) {
+            Some balances are unavailable. Totals may be incomplete.
+          } @else {
+            Balances across linked wallets
           }
-          @if (filteredWalletTokens.length > 0) {
-            <ul
-              class="token-select-panel__list token-select-panel__list--wallet"
-              role="listbox"
-              aria-label="Tokens in connected wallet">
-              @for (
-                option of filteredWalletTokens;
-                track option.token.assetId
-              ) {
-                <li role="presentation">
+          <button
+            type="button"
+            [disabled]="walletTokensLoading || selectionBusy"
+            (click)="retryRequested.emit()">
+            Refresh balances
+          </button>
+        </p>
+      }
+      @if (selectedGroup; as group) {
+        <p class="token-select-panel__section-label">
+          Choose a network{{ fundingSelection ? ' and funding wallet' : '' }}
+        </p>
+        @if (selectionBusy) {
+          <p class="token-select-panel__section-status" role="status">
+            Switching active wallet…
+          </p>
+        }
+        <ul class="token-select-panel__list" aria-label="Token networks">
+          @for (token of group.tokens; track token.assetId) {
+            <li>
+              @if (fundingSelection && showWalletTokens) {
+                <div class="token-select-panel__network">
+                  <strong>{{ tokenNetworkLabel(token) }}</strong>
+                  <span>{{ token.contractAddress || token.assetId }}</span>
+                </div>
+                @for (
+                  holding of holdingsFor([token]);
+                  track holding.wallet.id
+                ) {
                   <button
                     type="button"
-                    class="token-select-panel__item token-select-panel__item--wallet"
-                    role="option"
-                    [attr.aria-selected]="
-                      option.token.assetId === selectedAssetId
-                    "
-                    [class.token-select-panel__item--selected]="
-                      option.token.assetId === selectedAssetId
-                    "
-                    (click)="handleWalletTokenSelect(option)">
-                    <span
-                      class="token-select-panel__icon"
-                      [style.backgroundColor]="option.token.color">
-                      @if (resolveTokenIcon(option.token); as icon) {
-                        <img [src]="icon" [alt]="option.token.symbol" />
-                      } @else {
-                        {{ avatarFallback(option.token) }}
-                      }
-                    </span>
-                    <span class="token-select-panel__meta">
-                      <strong>{{ tokenNetworkLabel(option.token) }}</strong>
-                      <span>{{ option.token.name }}</span>
-                      <span>{{
-                        option.token.contractAddress || option.token.assetId
-                      }}</span>
-                    </span>
-                    <span class="token-select-panel__wallet-balance">
-                      <strong>{{ option.balanceLabel }}</strong>
-                      @if (option.stale) {
-                        <span>Last known balance</span>
-                      } @else {
-                        <span>Available</span>
+                    class="token-select-panel__item"
+                    [disabled]="selectionBusy"
+                    (click)="chooseHolding(holding)">
+                    <span class="token-select-panel__meta"
+                      ><strong>{{ holding.wallet.address }}</strong
+                      ><span>{{
+                        holding.wallet.isPrimary
+                          ? 'Active wallet'
+                          : 'Use as active wallet'
+                      }}</span></span
+                    >
+                    @let summary = holdingSummary(holding);
+                    <span class="token-select-panel__wallet-balance"
+                      ><strong>{{ summary.label }}</strong>
+                      @if (summary.incomplete) {
+                        <span>Incomplete / last known</span>
                       }
                     </span>
                   </button>
-                </li>
+                } @empty {
+                  <p class="token-select-panel__section-status">
+                    No compatible linked wallet. Connect one to fund this
+                    network.
+                  </p>
+                }
+              } @else {
+                <button
+                  type="button"
+                  class="token-select-panel__item"
+                  [class.token-select-panel__item--selected]="
+                    token.assetId === selectedAssetId
+                  "
+                  [disabled]="selectionBusy"
+                  (click)="handleSelect(token)">
+                  <span class="token-select-panel__meta"
+                    ><strong>{{ tokenNetworkLabel(token) }}</strong
+                    ><span>{{
+                      token.contractAddress || token.assetId
+                    }}</span></span
+                  >
+                  @if (showWalletTokens) {
+                    @let summary = balanceSummary([token]);
+                    <span class="token-select-panel__wallet-balance"
+                      ><strong>{{ summary.label }}</strong>
+                      @if (summary.incomplete) {
+                        <span>Incomplete / last known</span>
+                      }
+                    </span>
+                  }
+                </button>
               }
-            </ul>
-          } @else if (!walletTokensLoading && !walletTokensError) {
-            <p class="token-select-panel__section-status">
-              {{
-                filterQuery
-                  ? 'No matching wallet tokens.'
-                  : 'No token balances found.'
-              }}
-            </p>
+            </li>
           }
-        </section>
-
-        <p
-          class="token-select-panel__section-label token-select-panel__section-label--all">
-          All tokens
-        </p>
-      }
-      @if (filteredTokens.length === 0) {
-        <p class="token-select-panel__status">No matching tokens.</p>
+        </ul>
       } @else {
-        <ul
-          class="token-select-panel__list"
-          role="listbox"
-          [attr.aria-label]="title">
-          @for (token of filteredTokens; track token.assetId) {
-            <li role="presentation">
+        <label class="token-select-panel__search">
+          <span class="token-select-panel__search-label"
+            >Search by name, symbol, network or contract</span
+          >
+          <input
+            type="search"
+            class="token-select-panel__search-input"
+            placeholder="Search tokens"
+            autocomplete="off"
+            spellcheck="false"
+            [(ngModel)]="filterQuery" />
+        </label>
+        <ul class="token-select-panel__list" [attr.aria-label]="title">
+          @for (group of groups; track group.symbol) {
+            <li>
               <button
                 type="button"
                 class="token-select-panel__item"
-                role="option"
-                [attr.aria-selected]="token.assetId === selectedAssetId"
                 [class.token-select-panel__item--selected]="
-                  token.assetId === selectedAssetId
+                  groupSelected(group)
                 "
-                (click)="handleSelect(token)">
+                [attr.aria-pressed]="groupSelected(group)"
+                (click)="openGroup(group)">
                 <span
                   class="token-select-panel__icon"
-                  [style.backgroundColor]="token.color">
-                  @if (resolveTokenIcon(token); as icon) {
-                    <img [src]="icon" [alt]="token.symbol" />
+                  [style.backgroundColor]="group.token.color">
+                  @if (resolveTokenIcon(group.token); as icon) {
+                    <img [src]="icon" alt="" />
                   } @else {
-                    {{ avatarFallback(token) }}
+                    {{ avatarFallback(group.token) }}
                   }
                 </span>
-                <span class="token-select-panel__meta">
-                  <strong>{{ token.displaySymbol || token.symbol }}</strong>
-                  <span>{{ token.name }} · {{ networkName(token) }}</span>
-                  <span>{{ token.contractAddress || token.assetId }}</span>
-                </span>
+                <span class="token-select-panel__meta"
+                  ><strong>{{ group.symbol }}</strong
+                  ><span
+                    >{{ group.tokens.length }} network / asset options</span
+                  ></span
+                >
+                @if (showWalletTokens) {
+                  @let summary = balanceSummary(group.tokens);
+                  <span class="token-select-panel__wallet-balance"
+                    ><strong>{{ summary.label }}</strong>
+                    @if (summary.incomplete || balancesIncomplete) {
+                      <span>Incomplete / last known</span>
+                    }
+                  </span>
+                }
+                <mat-icon>chevron_right</mat-icon>
               </button>
             </li>
+          } @empty {
+            <li class="token-select-panel__status">No matching tokens.</li>
           }
         </ul>
       }

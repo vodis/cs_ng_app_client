@@ -67,6 +67,7 @@ for (const [chain, signer] of [
           symbol,
           name: symbol,
           blockchain: isNear ? 'near' : 'eth',
+          sourceNetwork: network,
           decimals,
         },
         {
@@ -74,6 +75,7 @@ for (const [chain, signer] of [
           symbol: isNear ? 'wNEAR' : 'USDC',
           name: tokenName,
           blockchain: isNear ? 'near' : 'eth',
+          sourceNetwork: network,
           decimals,
           contractAddress: isNear ? 'wrap.near' : '0x' + 'b'.repeat(40),
         },
@@ -171,12 +173,17 @@ for (const [chain, signer] of [
       isNear ? /Balance: 2[,.]5 NEAR/ : /Balance: 1 USDC/
     );
     await page.locator('.swapRow.first .select').click();
-    const yourTokens = page.getByRole('listbox', {
-      name: 'Tokens in connected wallet',
-    });
-    await expect(yourTokens).toContainText(new RegExp(`2[,.]5 ${symbol}`));
-    await expect(yourTokens).toContainText(tokenName);
-    expect(readRequests.length).toBe(beforeNavigation);
+    const picker = page.locator('app-token-select-panel');
+    await expect(
+      picker.getByRole('button', { name: new RegExp(`^${symbol} `) })
+    ).toContainText(/2[,.]5/);
+    await picker
+      .getByRole('button', { name: new RegExp(`^${symbol} `) })
+      .click();
+    await expect(picker).toContainText('Choose a network and funding wallet');
+    await expect(picker).toContainText(address);
+    await expect(picker).toContainText(/2[,.]5/);
+    expect(readRequests.length).toBeGreaterThan(beforeNavigation);
     await page.reload();
     await expect(page.locator('.swapRow.first')).toContainText(
       isNear ? /Balance: 2[,.]5 NEAR/ : /Balance: 1 USDC/

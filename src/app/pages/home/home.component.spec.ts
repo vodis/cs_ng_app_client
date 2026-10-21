@@ -1,3 +1,4 @@
+import { LinkedWalletBalancesFacade } from '@domains/wallet/application/linked-wallet-balances.facade';
 import { nearNetworkForAddress } from '@shared/utils/network.utils';
 import {
   ActiveWalletFacade,
@@ -224,6 +225,8 @@ class ActiveWalletStub {
   ) {
     this.wallets.swapSettled.subscribe(() => this.refreshBalances());
   }
+  async selectFundingWallet(): Promise<void> {}
+  cancelFundingSelection(): void {}
   revalidateBalances() {}
   refreshBalances() {
     this.refresh.next(this.refresh.value + 1);
@@ -244,6 +247,14 @@ describe('HomeComponent market overview', () => {
       imports: [CommonModule, FormsModule, HttpClientTestingModule],
       declarations: [HomeComponent],
       providers: [
+        {
+          provide: LinkedWalletBalancesFacade,
+          useValue: {
+            state$: of({ holdings: [], loading: false, incomplete: false }),
+            refresh: () => undefined,
+            close: () => undefined,
+          },
+        },
         { provide: ActiveWalletFacade, useClass: ActiveWalletStub },
         { provide: WalletsService, useClass: WalletsServiceStub },
         { provide: SwapFlowFacade, useClass: SwapFlowFacadeStub },
@@ -284,6 +295,96 @@ describe('HomeComponent market overview', () => {
     httpMock.verify();
   });
 
+  it('keeps the picker open after a funding switch failure and ignores completion after close', async () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    const funding = spyOn(
+      TestBed.inject(ActiveWalletFacade),
+      'selectFundingWallet'
+    ).and.rejectWith(new Error('offline'));
+    const select = spyOn(component, 'handleTokenSelected');
+    const holding = {
+      token: component.fromToken,
+      wallet: {
+        id: 'alice',
+        providerWalletId: 'alice',
+        address: 'alice.near',
+        chainType: 'near',
+        walletType: 'external',
+        isPrimary: false,
+      },
+      network: 'near:mainnet',
+    };
+    component.openTokenSelector('from');
+    await component.handleFundingSelected(holding);
+    expect(component.isTokenSelectorOpen).toBeTrue();
+    expect(component.tokenSelectionError).toContain('retry');
+    expect(select).not.toHaveBeenCalled();
+    funding.and.resolveTo();
+    const pending = component.handleFundingSelected(holding);
+    component.closeTokenSelector();
+    await pending;
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it('ignores funding completion after navigating away', async () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    spyOn(
+      TestBed.inject(ActiveWalletFacade),
+      'selectFundingWallet'
+    ).and.resolveTo();
+    const cancel = spyOn(
+      TestBed.inject(ActiveWalletFacade),
+      'cancelFundingSelection'
+    );
+    const select = spyOn(component, 'handleTokenSelected');
+    component.openTokenSelector('from');
+    const pending = component.handleFundingSelected({
+      token: component.fromToken,
+      wallet: {
+        id: 'alice',
+        providerWalletId: 'alice',
+        address: 'alice.near',
+        chainType: 'near',
+        walletType: 'external',
+        isPrimary: false,
+      },
+      network: 'near:mainnet',
+    });
+    fixture.destroy();
+    await pending;
+    expect(cancel).toHaveBeenCalled();
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it('refreshes an open picker when the asset catalog arrives', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    const refresh = spyOn(
+      TestBed.inject(LinkedWalletBalancesFacade),
+      'refresh'
+    );
+    component.openTokenSelector('from');
+    refresh.calls.reset();
+    assetPriceUpdates.next(
+      component.exchangeTokens.map(token => ({
+        ...token,
+        sourceNetwork: 'near:mainnet',
+      }))
+    );
+    expect(refresh).toHaveBeenCalledOnceWith(component.exchangeTokens);
+  });
+
   it('filters a backend-advertised EVM network without a host chain-map entry', () => {
     expectComparisonRequest({
       base: 'USDC',
@@ -311,7 +412,7 @@ describe('HomeComponent market overview', () => {
     };
     component.exchangeTokens = [source, other];
     component.openTokenSelector('from');
-    expect(component.tokenSelectorTokens()).toEqual([source]);
+    expect(component.tokenSelectorTokens()).toEqual(component.exchangeTokens);
     component.toToken = other;
     expect(component.isForeignDestination()).toBeTrue();
     component.toToken = source;
@@ -1821,130 +1922,6 @@ describe('HomeComponent market overview', () => {
     expect(component.toToken.assetId).toBe('nep141:usdt.near');
   });
 
-  it('exposes every non-zero connected-network balance to the source selector', () => {
-    const balancesService = TestBed.inject(
-      WalletBalancesService
-    ) as unknown as WalletBalancesServiceStub;
-    const walletsService = TestBed.inject(
-      WalletsService
-    ) as unknown as WalletsServiceStub;
-    const tokens = Array.from(
-      { length: 21 },
-      (_, index): ExchangeToken => ({
-        assetId: `nep141:token-${index}.near`,
-        symbol: index === 20 ? 'ZEC' : `T${index}`,
-        name: index === 20 ? 'Zcash' : `Token ${index}`,
-        color: '#2fd17c',
-        decimals: 8,
-        blockchain: 'near',
-      })
-    );
-    component.exchangeTokens = tokens;
-    const assetsService = TestBed.inject(
-      ExchangeAssetsService
-    ) as unknown as ExchangeAssetsServiceStub;
-    assetsService.tokens = tokens;
-    balancesService.balances = [
-      {
-        walletId: 'wallet-1',
-        walletAddress: 'alice.near',
-        chainType: 'near',
-        network: 'near:mainnet',
-        assetId: tokens[20].assetId,
-        symbol: 'ZEC',
-        decimals: 8,
-        balanceRaw: '100000',
-        balanceDecimal: '0.001',
-        source: 'near_rpc',
-        fetchedAt: '2026-09-17T12:00:00.000Z',
-        expiresAt: '2099-09-17T12:00:15.000Z',
-        stale: false,
-      },
-    ];
-
-    expectComparisonRequest({
-      base: 'USDC',
-      quote: 'NEAR',
-      timeframe: '1H',
-    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
-
-    walletsService.account.next({ account: 'alice.near', chainId: null });
-    component.openTokenSelector('from');
-
-    const tokenRequests = balancesService.calls.filter(call => call.assetIds);
-    expect(tokenRequests.flatMap(call => call.assetIds ?? []).length).toBe(21);
-    expect(tokenRequests.flatMap(call => call.assetIds ?? [])).toContain(
-      tokens[20].assetId
-    );
-    expect(component.tokenSelectorWalletTokens()).toEqual([
-      {
-        token: tokens[20],
-        balanceLabel: '0,001 ZEC',
-        stale: false,
-      },
-    ]);
-  });
-
-  it('exposes non-zero connected-network balances to the destination selector', () => {
-    const balancesService = TestBed.inject(WalletBalancesServiceStub);
-    const walletsService = TestBed.inject(WalletsServiceStub);
-    const assetsService = TestBed.inject(ExchangeAssetsServiceStub);
-    const sourceToken: ExchangeToken = {
-      assetId: 'nep141:wrap.near',
-      symbol: 'NEAR',
-      name: 'NEAR Protocol',
-      color: '#2fd17c',
-      decimals: 24,
-      blockchain: 'near',
-    };
-    const heldToken: ExchangeToken = {
-      assetId: 'nep141:usdt.near',
-      symbol: 'USDT',
-      name: 'Tether USD',
-      color: '#26a17b',
-      decimals: 6,
-      blockchain: 'near',
-    };
-    component.exchangeTokens = [sourceToken, heldToken];
-    component.fromToken = sourceToken;
-    component.toToken = heldToken;
-    assetsService.tokens = component.exchangeTokens;
-    balancesService.balances = [
-      {
-        walletId: 'wallet-1',
-        walletAddress: 'alice.near',
-        chainType: 'near',
-        network: 'near:mainnet',
-        assetId: heldToken.assetId,
-        symbol: 'USDT',
-        decimals: 6,
-        balanceRaw: '2500000',
-        balanceDecimal: '2.5',
-        source: 'near_rpc',
-        fetchedAt: '2026-09-17T12:00:00.000Z',
-        expiresAt: '2099-09-17T12:00:15.000Z',
-        stale: false,
-      },
-    ];
-
-    expectComparisonRequest({
-      base: 'USDC',
-      quote: 'NEAR',
-      timeframe: '1H',
-    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
-
-    walletsService.account.next({ account: 'alice.near', chainId: null });
-    component.openTokenSelector('to');
-
-    expect(component.tokenSelectorWalletTokens()).toEqual([
-      {
-        token: heldToken,
-        balanceLabel: '2,5 USDT',
-        stale: false,
-      },
-    ]);
-  });
-
   it('still requests a dry quote when the entered amount exceeds the displayed balance', () => {
     const balancesService = TestBed.inject(
       WalletBalancesService
@@ -2929,9 +2906,7 @@ describe('HomeComponent market overview', () => {
     component.openTokenSelector('to');
     expect(component.tokenSelectorTokens()).toEqual(component.exchangeTokens);
     component.openTokenSelector('from');
-    expect(
-      component.tokenSelectorTokens().every(token => token.blockchain === 'eth')
-    ).toBeTrue();
+    expect(component.tokenSelectorTokens()).toEqual(component.exchangeTokens);
   });
 
   it('requests a dry quote without waiting for a wallet balance', () => {
