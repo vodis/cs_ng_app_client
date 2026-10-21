@@ -248,6 +248,25 @@ import {
       <details class="swap-history__details">
         <summary>Details</summary>
         <div class="swap-history__details-body">
+          <p>
+            Paid {{ paidAmount(item) }} {{ item.sourceSymbol }}
+            <span class="swap-history__amount-meta"
+              >({{ paidLabel(item) }})</span
+            >
+          </p>
+          <p>
+            Received {{ receivedAmount(item) }} {{ item.destinationSymbol }}
+            <span class="swap-history__amount-meta"
+              >({{ receivedLabel(item) }})</span
+            >
+          </p>
+          @if (item.receipt?.refundedAmount; as refunded) {
+            <p>
+              Refunded
+              {{ formatAmount(refunded, item.sourceDecimals) }}
+              {{ item.sourceSymbol }}
+            </p>
+          }
           <p>{{ item.network }} → {{ item.destinationNetwork }}</p>
           <p>Recipient: {{ item.recipient }}</p>
           <p>Reference: {{ item.preparationId }}</p>
