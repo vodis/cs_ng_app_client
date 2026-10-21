@@ -89,7 +89,24 @@ describe('backend-owned active wallet', () => {
       providers: [
         {
           provide: AuthSessionService,
-          useValue: { session$: sessions, clear: () => sessions.next(null) },
+          useValue: {
+            session$: sessions,
+            get session() {
+              return sessions.value;
+            },
+            clear: () => sessions.next(null),
+            setPrimaryWallet: async (id: string) => {
+              const current = sessions.value;
+              if (current)
+                sessions.next({
+                  ...current,
+                  wallets: current.wallets.map(wallet => ({
+                    ...wallet,
+                    isPrimary: wallet.id === id,
+                  })),
+                });
+            },
+          },
         },
         {
           provide: WalletGatewayBridgeService,
@@ -107,6 +124,78 @@ describe('backend-owned active wallet', () => {
       ],
     });
     facade = TestBed.inject(ActiveWalletFacade);
+  });
+
+  it('selects a linked funding wallet through backend primary selection', async () => {
+    sessions.next(session);
+    await facade.selectFundingWallet('bob', 'near:mainnet');
+    expect(facade.state.wallet?.id).toBe('bob');
+    expect(facade.state.network).toBe('near:mainnet');
+  });
+
+  it('retains an explicit EVM network despite old signer events', async () => {
+    const evm: BackendWallet = {
+      ...alice,
+      id: 'evm',
+      address: '0x123',
+      chainType: 'ethereum',
+    };
+    sessions.next({ ...session, wallets: [evm] });
+    await facade.selectFundingWallet('evm', 'eip155:8453');
+    const snapshot: WalletConnectionSnapshot = {
+      ...connected('0x123'),
+      chainId: 1,
+      identity: {
+        connectorId: 'metamask',
+        address: '0x123',
+        chainType: 'ethereum' as const,
+        walletType: 'external' as const,
+      },
+    };
+    snapshots.next(snapshot);
+    expect(facade.state.network).toBe('eip155:8453');
+    sessions.next(null);
+    sessions.next({ ...session, wallets: [evm] });
+    expect(facade.state.network).toBe('eip155:1');
+  });
+
+  it('does not let an older funding selection overwrite a newer network', async () => {
+    const evm: BackendWallet = {
+      ...bob,
+      id: 'evm',
+      address: '0x123',
+      chainType: 'ethereum',
+    };
+    sessions.next({ ...session, wallets: [alice, evm] });
+    let finish: () => void = () => undefined;
+    spyOn(TestBed.inject(AuthSessionService), 'setPrimaryWallet').and.callFake(
+      async () => {
+        sessions.next({
+          ...session,
+          wallets: [
+            { ...alice, isPrimary: false },
+            { ...evm, isPrimary: true },
+          ],
+        });
+        await new Promise<void>(resolve => {
+          finish = resolve;
+        });
+        return { ...evm, isPrimary: true };
+      }
+    );
+    const first = facade.selectFundingWallet('evm', 'eip155:1');
+    await facade.selectFundingWallet('evm', 'eip155:8453');
+    finish();
+    await expectAsync(first).toBeRejected();
+    expect(facade.state.network).toBe('eip155:8453');
+  });
+
+  it('rejects incompatible funding networks without changing selection', async () => {
+    sessions.next(session);
+    await expectAsync(
+      facade.selectFundingWallet('alice', 'eip155:1')
+    ).toBeRejected();
+    expect(facade.state.wallet?.id).toBe('alice');
   });
 
   function watch() {
