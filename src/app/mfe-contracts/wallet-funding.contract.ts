@@ -17,6 +17,14 @@ export type WalletDepositTransaction = {
         };
       }
   >;
+  solana?: {
+    expiresAt: string;
+    blockhash: string;
+    lastValidBlockHeight: number;
+    mint?: string;
+    decimals?: number;
+  };
+  bitcoin?: { feeRate: number };
   ton?: {
     validUntil: number;
     network: '-239' | '-3';
