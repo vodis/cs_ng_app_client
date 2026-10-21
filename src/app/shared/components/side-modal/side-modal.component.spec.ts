@@ -34,6 +34,52 @@ describe('SideModalComponent', () => {
     expect(getComputedStyle(panel()).overflowY).toBe('auto');
   });
 
+  it('contains overflow only when containScroll is enabled', () => {
+    expect(
+      panel().classList.contains('side-modal--contain-scroll')
+    ).toBeFalse();
+    expect(getComputedStyle(panel()).overflowY).toBe('auto');
+
+    component.containScroll = true;
+    fixture.detectChanges();
+
+    expect(panel().classList.contains('side-modal--contain-scroll')).toBeTrue();
+    expect(getComputedStyle(panel()).overflowY).toBe('hidden');
+  });
+
+  it('lets tall projected content extend scroll height for the wallet picker', () => {
+    // Mirror the wallet picker: an unconstrained host with overflow:visible
+    // and tall inner content. The drawer (not an intermediate wrapper) scrolls.
+    const mfeHost = document.createElement('div');
+    mfeHost.style.minHeight = '0';
+    mfeHost.style.flex = '1 1 auto';
+    mfeHost.style.overflow = 'visible';
+    const tall = document.createElement('div');
+    tall.style.height = '1020px';
+    tall.textContent = 'wallet-list';
+    mfeHost.appendChild(tall);
+    panel().appendChild(mfeHost);
+    fixture.detectChanges();
+
+    expect(getComputedStyle(panel()).overflowY).toBe('auto');
+    expect(panel().clientHeight).toBeLessThan(1020);
+    expect(panel().scrollHeight).toBeGreaterThan(panel().clientHeight);
+  });
+
+  it('clips tall content to the panel when containScroll is enabled', () => {
+    component.containScroll = true;
+    fixture.detectChanges();
+
+    const mfeHost = document.createElement('div');
+    mfeHost.style.height = '1020px';
+    mfeHost.textContent = 'swap-review';
+    panel().appendChild(mfeHost);
+    fixture.detectChanges();
+
+    expect(getComputedStyle(panel()).overflowY).toBe('hidden');
+    expect(panel().scrollHeight).toBe(panel().clientHeight);
+  });
+
   it('stacks above the mobile floating nav', () => {
     expect(
       Number.parseInt(getComputedStyle(backdrop()).zIndex, 10)

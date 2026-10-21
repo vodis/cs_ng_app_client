@@ -1,4 +1,8 @@
-.wallet-bar__mfe-host {
+.wallet-bar__mfe-host--hidden {
+  display: none;
+}
+
+.wallet-bar__mfe-host--swap-review {
   display: flex;
   overflow: hidden;
   height: 100%;
@@ -6,8 +10,4 @@
   min-height: 0;
   flex: 1 1 0%;
   flex-direction: column;
-}
-
-.wallet-bar__mfe-host--hidden {
-  display: none;
 }

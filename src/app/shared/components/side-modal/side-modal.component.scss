@@ -56,7 +56,7 @@
 
     > :not(.side-modal__close) {
       min-height: 0;
-      flex: 1 1 0%;
+      flex: 1 1 auto;
     }
 
     &.open {
@@ -86,6 +86,12 @@
 
     &--contain-scroll.open {
       overflow: hidden;
+
+      > :not(.side-modal__close) {
+        overflow: hidden;
+        min-height: 0;
+        flex: 1 1 0%;
+      }
     }
   }
 

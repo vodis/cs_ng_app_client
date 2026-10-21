@@ -38,4 +38,29 @@ test.describe('Wallets MFE connect dialog', () => {
         .getByRole('heading', { name: 'Connect', exact: true })
     ).toBeHidden();
   });
+
+  test('keeps the wallet picker scrollable on a short viewport', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 640 });
+    await page.goto('/en/profile');
+    await page.getByRole('button', { name: 'Manage wallets' }).click();
+
+    const dialog = page.locator('.side-modal.open');
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByRole('heading', { name: 'Connect', exact: true })
+    ).toBeVisible();
+
+    const metrics = await dialog.evaluate(el => ({
+      clientHeight: el.clientHeight,
+      scrollHeight: el.scrollHeight,
+      overflowY: getComputedStyle(el).overflowY,
+      containScroll: el.classList.contains('side-modal--contain-scroll'),
+    }));
+
+    expect(metrics.containScroll).toBe(false);
+    expect(metrics.overflowY).toMatch(/auto|scroll/);
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+  });
 });
