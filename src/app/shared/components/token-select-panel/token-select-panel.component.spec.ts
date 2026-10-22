@@ -1,327 +1,164 @@
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { ExchangeToken } from '@shared/models/exchange-token.model';
+import type { ExchangeToken } from '@shared/models/exchange-token.model';
 import { TokenSelectPanelComponent } from './token-select-panel.component';
 
 describe('TokenSelectPanelComponent', () => {
-  const tokens: ExchangeToken[] = [
-    {
-      symbol: 'USDC',
-      name: 'USD Coin',
-      assetId: 'usdc-asset',
-      color: '#2f8cff',
-      blockchain: 'eth',
-    },
-    {
-      symbol: 'NEAR',
-      name: 'NEAR Protocol',
-      assetId: 'near-asset',
-      color: '#2fd17c',
-      blockchain: 'near',
-    },
-  ];
-
+  const eth: ExchangeToken = {
+    symbol: 'ETH',
+    name: 'Ethereum',
+    assetId: 'eth',
+    color: '#627eea',
+    blockchain: 'eth',
+    sourceNetwork: 'eip155:1',
+  };
+  const nearEth = {
+    ...eth,
+    assetId: 'eth-near',
+    blockchain: 'near',
+    sourceNetwork: 'near:mainnet',
+    contractAddress: 'eth.near',
+  };
   let component: TokenSelectPanelComponent;
   let fixture: ComponentFixture<TokenSelectPanelComponent>;
-
+  let element: HTMLElement;
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [FormsModule],
       declarations: [TokenSelectPanelComponent],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
-
     fixture = TestBed.createComponent(TokenSelectPanelComponent);
     component = fixture.componentInstance;
-    component.tokens = tokens;
-    component.title = 'Select source token';
+    element = fixture.nativeElement;
+    component.tokens = [eth, nearEth];
     fixture.detectChanges();
   });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should render the panel title', () => {
-    const title = fixture.nativeElement.querySelector(
-      '.token-select-panel__title'
-    );
-
-    expect(title?.textContent?.trim()).toBe('Select source token');
-  });
-
-  it('should exclude the provided symbol from available tokens', () => {
-    component.excludedAssetId = 'near-asset';
+  const buttons = () =>
+    element.querySelectorAll<HTMLButtonElement>('.token-select-panel__item');
+  it('groups variants and emits only after selecting an exact network asset', () => {
+    const emit = spyOn(component.tokenSelected, 'emit');
+    expect(buttons().length).toBe(1);
+    buttons()[0].click();
     fixture.detectChanges();
-
-    expect(component.availableTokens).toEqual([tokens[0]]);
-
-    const options = fixture.nativeElement.querySelectorAll(
-      '.token-select-panel__item'
-    );
-    expect(options.length).toBe(1);
-    expect(options[0].textContent).toContain('USDC');
+    expect(emit).not.toHaveBeenCalled();
+    expect(buttons().length).toBe(2);
+    expect(buttons()[1].textContent).toContain('ETH_NEAR');
+    expect(buttons()[1].textContent).toContain('eth.near');
+    buttons()[1].click();
+    expect(emit).toHaveBeenCalledOnceWith(nearEth);
   });
-
-  it('should mark the selected token in the list', () => {
-    component.selectedAssetId = 'usdc-asset';
+  it('requires the network step even for one variant', () => {
+    component.tokens = [eth];
     fixture.detectChanges();
-
-    const selected = fixture.nativeElement.querySelector(
-      '.token-select-panel__item--selected'
-    );
-
-    expect(selected?.textContent).toContain('USDC');
-    expect(selected?.getAttribute('aria-selected')).toBe('true');
+    const emit = spyOn(component.tokenSelected, 'emit');
+    buttons()[0].click();
+    fixture.detectChanges();
+    expect(emit).not.toHaveBeenCalled();
+    expect(element.textContent).toContain('Select ETH network');
+    buttons()[0].click();
+    expect(emit).toHaveBeenCalledOnceWith(eth);
   });
-
-  it('should emit tokenSelected when a token is chosen', () => {
-    const emitSpy = spyOn(component.tokenSelected, 'emit');
-
-    component.handleSelect(tokens[1]);
-
-    expect(emitSpy).toHaveBeenCalledWith(tokens[1]);
+  it('searches contracts without hiding sibling networks in step two', () => {
+    component.filterQuery = 'eth.near';
+    fixture.detectChanges();
+    expect(buttons().length).toBe(1);
+    buttons()[0].click();
+    fixture.detectChanges();
+    expect(buttons().length).toBe(2);
+    component.back();
+    fixture.detectChanges();
+    expect(component.filterQuery).toBe('eth.near');
+    expect(buttons().length).toBe(1);
   });
-
-  it('renders and selects every same-symbol asset separately', () => {
-    const emitSpy = spyOn(component.tokenSelected, 'emit');
+  it('keeps wrapped and native token groups separate and excludes exact IDs', () => {
     component.tokens = [
-      tokens[0],
-      { ...tokens[0], assetId: 'usdc-near', blockchain: 'near' },
-      { ...tokens[0], assetId: 'usdc-bridged', contractAddress: '0x1234' },
+      eth,
+      nearEth,
+      { ...eth, symbol: 'WETH', assetId: 'weth' },
     ];
-    component.selectedAssetId = 'usdc-bridged';
+    component.excludedAssetId = 'eth';
     fixture.detectChanges();
-    const element: HTMLElement = fixture.nativeElement;
-    const options =
-      element.querySelectorAll<HTMLButtonElement>('[role="option"]');
-    expect(options.length).toBe(3);
-    expect(options[0].textContent).toContain('Ethereum');
-    expect(options[1].textContent).toContain('NEAR');
-    expect(options[2].textContent).toContain('0x1234');
-    expect(options[0].getAttribute('aria-selected')).toBe('false');
-    expect(options[2].getAttribute('aria-selected')).toBe('true');
-    options[1].click();
-    expect(emitSpy).toHaveBeenCalledWith(component.tokens[1]);
-    options[2].click();
-    expect(emitSpy).toHaveBeenCalledWith(component.tokens[2]);
+    expect(component.groups.map(group => group.symbol)).toEqual([
+      'ETH',
+      'WETH',
+    ]);
+    buttons()[0].click();
+    fixture.detectChanges();
+    expect(buttons().length).toBe(1);
+    expect(buttons()[0].textContent).toContain('ETH_NEAR');
   });
-
-  it('keeps native and wrapped tokens separately selectable', () => {
-    component.tokens = [
-      { ...tokens[1], assetId: 'near:native' },
-      {
-        ...tokens[1],
-        assetId: 'nep141:wrap.near',
-        symbol: 'wNEAR',
-        name: 'Wrapped NEAR',
-      },
-      { ...tokens[0], assetId: 'btc', symbol: 'BTC' },
-      { ...tokens[0], assetId: 'wbtc', symbol: 'wBTC' },
+  it('shows total holdings and emits the explicitly chosen funding wallet', () => {
+    const wallet = {
+      id: 'wallet',
+      providerWalletId: 'provider',
+      address: 'alice.near',
+      chainType: 'near',
+      walletType: 'external',
+      isPrimary: false,
+    };
+    const balance = {
+      walletId: wallet.id,
+      walletAddress: wallet.address,
+      chainType: 'near',
+      network: 'near:mainnet',
+      assetId: nearEth.assetId,
+      symbol: 'ETH',
+      decimals: 18,
+      balanceRaw: '1000000000000000000',
+      source: 'rpc',
+      fetchedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+      stale: false,
+    };
+    component.showWalletTokens = true;
+    component.fundingSelection = true;
+    component.holdings = [
+      { token: nearEth, wallet, network: balance.network, balance },
     ];
     fixture.detectChanges();
-    const element: HTMLElement = fixture.nativeElement;
-    const options =
-      element.querySelectorAll<HTMLButtonElement>('[role="option"]');
-    expect(
-      Array.from(options, option =>
-        option.querySelector('strong')?.textContent?.trim()
-      )
-    ).toEqual(['NEAR', 'wNEAR', 'BTC', 'wBTC']);
+    expect(buttons()[0].textContent).toContain('1');
+    buttons()[0].click();
+    fixture.detectChanges();
+    expect(element.textContent).toContain('No compatible linked wallet');
+    const emit = spyOn(component.fundingSelected, 'emit');
+    buttons()[0].click();
+    expect(emit).toHaveBeenCalledOnceWith(component.holdings[0]);
+    component.selectionBusy = true;
+    fixture.detectChanges();
+    expect(buttons()[0].disabled).toBeTrue();
   });
-
-  it('should emit closeRequested when close is clicked', () => {
-    const emitSpy = spyOn(component.closeRequested, 'emit');
-
+  it('displays retryable balance and selection errors', () => {
+    component.showWalletTokens = true;
+    component.balancesIncomplete = true;
+    component.selectionError = 'Could not switch the active wallet.';
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Totals may be incomplete');
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'Could not switch'
+    );
+    const retry = spyOn(component.retryRequested, 'emit');
+    Array.from(element.querySelectorAll('button'))
+      .find(button => button.textContent?.includes('Refresh balances'))
+      ?.click();
+    expect(retry).toHaveBeenCalled();
+  });
+  it('resets the network step on close and reports empty search/loading/error states', () => {
+    component.openGroup(component.groups[0]);
+    const close = spyOn(component.closeRequested, 'emit');
     component.handleClose();
-
-    expect(emitSpy).toHaveBeenCalled();
-  });
-
-  it('should emit closeRequested from the close button', () => {
-    const emitSpy = spyOn(component.closeRequested, 'emit');
-    const closeButton = fixture.nativeElement.querySelector(
-      '.token-select-panel__close'
-    ) as HTMLButtonElement;
-
-    closeButton.click();
-
-    expect(emitSpy).toHaveBeenCalled();
-  });
-
-  it('should emit tokenSelected when a list item is clicked', () => {
-    const emitSpy = spyOn(component.tokenSelected, 'emit');
-    const firstOption = fixture.nativeElement.querySelector(
-      '.token-select-panel__item'
-    ) as HTMLButtonElement;
-
-    firstOption.click();
-
-    expect(emitSpy).toHaveBeenCalledWith(tokens[0]);
-  });
-
-  it('should render loading status when assets are loading', () => {
+    expect(close).toHaveBeenCalled();
+    expect(component.selectedGroup).toBeUndefined();
+    component.filterQuery = 'missing';
+    fixture.detectChanges();
+    expect(element.textContent).toContain('No matching tokens.');
     component.loading = true;
     fixture.detectChanges();
-
-    const status = fixture.nativeElement.querySelector(
-      '.token-select-panel__status'
-    );
-
-    expect(status?.textContent?.trim()).toBe('Loading assets...');
-    expect(
-      fixture.nativeElement.querySelector('.token-select-panel__list')
-    ).toBeNull();
-  });
-
-  it('should render error status when asset loading fails', () => {
-    component.loadError = 'Failed to load assets.';
+    expect(element.textContent).toContain('Loading assets...');
+    component.loading = false;
+    component.loadError = 'Catalog unavailable';
     fixture.detectChanges();
-
-    const status = fixture.nativeElement.querySelector(
-      '.token-select-panel__status--error'
-    );
-
-    expect(status?.textContent?.trim()).toBe('Failed to load assets.');
-  });
-
-  it('should render empty status when no tokens are available', () => {
-    component.tokens = [];
-    fixture.detectChanges();
-
-    const status = fixture.nativeElement.querySelector(
-      '.token-select-panel__status'
-    );
-
-    expect(status?.textContent?.trim()).toBe('No assets available.');
-  });
-
-  it('should filter tokens by name or symbol', () => {
-    component.filterQuery = 'near';
-    fixture.detectChanges();
-
-    expect(component.filteredTokens).toEqual([tokens[1]]);
-
-    const options = fixture.nativeElement.querySelectorAll(
-      '.token-select-panel__item'
-    );
-    expect(options.length).toBe(1);
-    expect(options[0].textContent).toContain('NEAR');
-  });
-
-  it('shows wallet tokens between search and the full token list', () => {
-    component.showWalletTokens = true;
-    component.walletTokens = [
-      { token: tokens[1], balanceLabel: '1.25 NEAR', stale: false },
-    ];
-    fixture.detectChanges();
-
-    const search = fixture.nativeElement.querySelector(
-      '.token-select-panel__search'
-    ) as HTMLElement;
-    const walletSection = fixture.nativeElement.querySelector(
-      '.token-select-panel__wallet-tokens'
-    ) as HTMLElement;
-    const fullList = fixture.nativeElement.querySelector(
-      '.token-select-panel__section-label--all'
-    ) as HTMLElement;
-
-    expect(
-      search.compareDocumentPosition(walletSection) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-    expect(
-      walletSection.compareDocumentPosition(fullList) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-    expect(walletSection.textContent).toContain('NEAR_NEAR');
-    expect(walletSection.textContent).toContain('1.25 NEAR');
-    expect(walletSection.textContent).toContain('Available');
-  });
-
-  it('selects the exact network asset from the wallet-token section', () => {
-    const emitSpy = spyOn(component.tokenSelected, 'emit');
-    component.showWalletTokens = true;
-    component.walletTokens = [
-      { token: tokens[1], balanceLabel: '1.25 NEAR', stale: false },
-    ];
-    fixture.detectChanges();
-
-    const option = fixture.nativeElement.querySelector(
-      '.token-select-panel__item--wallet'
-    ) as HTMLButtonElement;
-    option.click();
-
-    expect(emitSpy).toHaveBeenCalledWith(tokens[1]);
-  });
-
-  it('distinguishes and selects same-symbol wallet holdings by contract', () => {
-    const emitSpy = spyOn(component.tokenSelected, 'emit');
-    component.tokens = [
-      { ...tokens[0], assetId: 'usdc-native', contractAddress: '0x1111' },
-      { ...tokens[0], assetId: 'usdc-bridged', contractAddress: '0x2222' },
-    ];
-    component.showWalletTokens = true;
-    component.walletTokens = component.tokens.map(token => ({
-      token,
-      balanceLabel: '1 USDC',
-      stale: false,
-    }));
-    fixture.detectChanges();
-
-    const element: HTMLElement = fixture.nativeElement;
-    const options = element.querySelectorAll<HTMLButtonElement>(
-      '.token-select-panel__item--wallet'
-    );
-    expect(options.length).toBe(2);
-    expect(options[0].textContent).toContain('0x1111');
-    expect(options[1].textContent).toContain('0x2222');
-    options[1].click();
-    expect(emitSpy).toHaveBeenCalledWith(component.tokens[1]);
-  });
-
-  it('filters wallet tokens with the shared search query', () => {
-    component.showWalletTokens = true;
-    component.walletTokens = [
-      { token: tokens[1], balanceLabel: '1.25 NEAR', stale: false },
-    ];
-    component.filterQuery = 'usdc';
-    fixture.detectChanges();
-
-    expect(component.filteredWalletTokens).toEqual([]);
-    expect(
-      fixture.nativeElement.querySelector('.token-select-panel__wallet-tokens')
-        ?.textContent
-    ).toContain('No matching wallet tokens.');
-  });
-
-  it('should show no matching tokens message when filter has no results', () => {
-    component.filterQuery = 'btc';
-    fixture.detectChanges();
-
-    const status = fixture.nativeElement.querySelector(
-      '.token-select-panel__status'
-    );
-
-    expect(status?.textContent?.trim()).toBe('No matching tokens.');
-    expect(
-      fixture.nativeElement.querySelector('.token-select-panel__item')
-    ).toBeNull();
-  });
-
-  it('should reset filter when panel opens', () => {
-    component.filterQuery = 'near';
-    component.isOpen = true;
-    component.ngOnChanges({
-      isOpen: {
-        currentValue: true,
-        previousValue: false,
-        firstChange: false,
-        isFirstChange: () => false,
-      },
-    });
-
-    expect(component.filterQuery).toBe('');
+    expect(element.textContent).toContain('Catalog unavailable');
   });
 });
