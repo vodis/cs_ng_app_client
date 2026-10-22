@@ -295,12 +295,41 @@ describe('HomeComponent market overview', () => {
     httpMock.verify();
   });
 
-  it('keeps the picker open after a funding switch failure and ignores completion after close', async () => {
+  it('preserves a valid quote after a funding switch failure and ignores completion after close', async () => {
     expectComparisonRequest({
       base: 'USDC',
       quote: 'NEAR',
       timeframe: '1H',
     }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    TestBed.inject(WalletsServiceStub).account.next(nearWallet());
+    component.fromToken = {
+      assetId: 'near:native',
+      executionAssetId: 'nep141:wrap.near',
+      symbol: 'NEAR',
+      name: 'NEAR Protocol',
+      color: '#2fd17c',
+      decimals: 24,
+      blockchain: 'near',
+    };
+    component.toToken = {
+      assetId: 'nep141:usdc.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+      blockchain: 'near',
+    };
+    component.amount = '1';
+    const flow = TestBed.inject(SwapFlowFacadeStub);
+    const preview: SwapQuotePreview = {
+      amountOut: '1000000',
+      amountOutAtomic: '1000000',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      raw: {},
+    };
+    flow.emitQuote(preview);
+    expect(component.canReviewSwap()).toBeTrue();
+    const reset = spyOn(flow, 'reset').and.callThrough();
     const funding = spyOn(
       TestBed.inject(ActiveWalletFacade),
       'selectFundingWallet'
@@ -323,6 +352,11 @@ describe('HomeComponent market overview', () => {
     expect(component.isTokenSelectorOpen).toBeTrue();
     expect(component.tokenSelectionError).toContain('retry');
     expect(select).not.toHaveBeenCalled();
+    component.closeTokenSelector();
+    expect(component.quotePreview).toBe(preview);
+    expect(component.canReviewSwap()).toBeTrue();
+    expect(reset).not.toHaveBeenCalled();
+    component.openTokenSelector('from');
     funding.and.resolveTo();
     const pending = component.handleFundingSelected(holding);
     component.closeTokenSelector();

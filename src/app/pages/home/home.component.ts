@@ -1850,7 +1850,6 @@ export class HomeComponent {
     this.tokenSelectionBusy = true;
     this.tokenSelectionError = '';
     this.cancelPendingReview();
-    this.swapFlowFacade.reset();
     try {
       await this.activeWalletFacade.selectFundingWallet(
         holding.wallet.id,
