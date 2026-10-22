@@ -5,6 +5,7 @@ import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { walletSupportsNetwork } from './linked-wallet-balances.facade';
 import { nearNetworkForAddress } from '@shared/utils/network.utils';
 import { canonicalBalanceAssetId } from '@shared/utils/balance-asset.utils';
 import {
@@ -57,6 +58,13 @@ export class ActiveWalletFacade {
     network: '',
     rows: [],
   });
+  private fundingSelectionVersion = 0;
+  private selectedNetwork?: {
+    userId: string;
+    sessionId: string;
+    walletId: string;
+    network: string;
+  };
   private loadedAt = 0;
   private refreshQueued = false;
   private balanceKey = '';
@@ -181,6 +189,33 @@ export class ActiveWalletFacade {
     return this.stateSubject.value;
   }
 
+  async selectFundingWallet(walletId: string, network: string): Promise<void> {
+    const version = ++this.fundingSelectionVersion;
+    const session = this.auth.session;
+    const wallet = session?.wallets.find(item => item.id === walletId);
+    if (!session || !wallet || !walletSupportsNetwork(wallet, network))
+      throw new Error('Wallet is not available for this network.');
+    if (!wallet.isPrimary) await this.auth.setPrimaryWallet(walletId);
+    if (
+      version !== this.fundingSelectionVersion ||
+      this.auth.session?.user.id !== session.user.id ||
+      this.auth.session?.user.sessionId !== session.user.sessionId ||
+      this.state.wallet?.id !== walletId
+    )
+      throw new Error('Wallet selection changed. Please try again.');
+    this.selectedNetwork = {
+      userId: session.user.id,
+      sessionId: session.user.sessionId,
+      walletId,
+      network,
+    };
+    this.resolve(this.auth.session, this.state.snapshot);
+  }
+
+  cancelFundingSelection(): void {
+    this.fundingSelectionVersion++;
+  }
+
   requestConnection(): void {
     if (this.state.snapshot?.account && !this.state.connected)
       this.gateway.disconnectWallet();
@@ -238,6 +273,13 @@ export class ActiveWalletFacade {
     wallet: BackendWallet,
     snapshot?: WalletConnectionSnapshot | null
   ): string | undefined {
+    const selection = this.selectedNetwork;
+    if (
+      selection?.userId === userId &&
+      selection.walletId === wallet.id &&
+      selection.sessionId === this.auth.session?.user.sessionId
+    )
+      return selection.network;
     if (wallet.chainType === 'solana')
       return 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
     if (wallet.chainType === 'bitcoin')
@@ -277,6 +319,7 @@ export class ActiveWalletFacade {
     snapshot: WalletConnectionSnapshot | null | undefined
   ): void {
     if (!session) {
+      this.selectedNetwork = undefined;
       this.stateSubject.next({
         connected: false,
         canRequestSwap: false,

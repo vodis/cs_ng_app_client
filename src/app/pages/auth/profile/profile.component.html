@@ -61,8 +61,10 @@
         </div>
 
         <ng-container
-          *ngTemplateOutlet="fundActionsNav; context: { toolbar: true }"
-        ></ng-container>
+          *ngTemplateOutlet="
+            fundActionsNav;
+            context: { toolbar: true }
+          "></ng-container>
       </div>
 
       <section
@@ -161,8 +163,10 @@
 
       <ng-container *ngIf="!isOnboardingComplete()">
         <ng-container
-          *ngTemplateOutlet="fundActionsNav; context: { toolbar: false }"
-        ></ng-container>
+          *ngTemplateOutlet="
+            fundActionsNav;
+            context: { toolbar: false }
+          "></ng-container>
       </ng-container>
     </div>
   </div>
@@ -185,12 +189,10 @@
         "
         (click)="openSendFunds()">
         <mat-icon aria-hidden="true">north_east</mat-icon>
-        <span
-          class="profile-shell__fund-label profile-shell__fund-label--long"
+        <span class="profile-shell__fund-label profile-shell__fund-label--long"
           >Send Funds</span
         >
-        <span
-          class="profile-shell__fund-label profile-shell__fund-label--short"
+        <span class="profile-shell__fund-label profile-shell__fund-label--short"
           >Send</span
         >
         <span
@@ -212,12 +214,10 @@
         "
         (click)="openAddFunds()">
         <mat-icon aria-hidden="true">south_west</mat-icon>
-        <span
-          class="profile-shell__fund-label profile-shell__fund-label--long"
+        <span class="profile-shell__fund-label profile-shell__fund-label--long"
           >Add Funds</span
         >
-        <span
-          class="profile-shell__fund-label profile-shell__fund-label--short"
+        <span class="profile-shell__fund-label profile-shell__fund-label--short"
           >Add</span
         >
         <span
