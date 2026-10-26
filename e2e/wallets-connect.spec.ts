@@ -7,12 +7,12 @@ test.describe('Wallets MFE connect dialog', () => {
     await mockJsonApi(page, '/api/v1/balances', { data: [] });
   });
 
-  test('opens from Manage wallets, keeps Jupiter soon-state, and closes on outside click', async ({
+  test('opens from the header wallets control, keeps Jupiter soon-state, and closes on outside click', async ({
     page,
   }) => {
     await page.goto('/en/profile');
 
-    await page.getByRole('button', { name: 'Manage wallets' }).click();
+    await page.getByRole('button', { name: 'Wallets' }).click();
 
     const dialog = page.locator('.side-modal.open');
     await expect(dialog).toBeVisible();
@@ -48,7 +48,7 @@ test.describe('Wallets MFE connect dialog', () => {
   }) => {
     await page.setViewportSize({ width: 390, height: 640 });
     await page.goto('/en/profile');
-    await page.getByRole('button', { name: 'Manage wallets' }).click();
+    await page.getByRole('button', { name: 'Wallets' }).click();
 
     const dialog = page.locator('.side-modal.open');
     await expect(dialog).toBeVisible();

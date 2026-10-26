@@ -1038,7 +1038,7 @@ describe('ProfileComponent', () => {
     expect(component.walletPrimaryStatusLabel(secondary)).toBe('');
   });
 
-  it('scopes disconnect and menu actions to the matching wallet', () => {
+  it('scopes disconnect to the live connected wallet only', () => {
     const primary = linkedWalletSession.wallets[0];
     const external: BackendWallet = {
       ...primary,
@@ -1049,8 +1049,7 @@ describe('ProfileComponent', () => {
     };
 
     expect(component.canDisconnectWallet(primary)).toBeFalse();
-    expect(component.hasWalletMenuActions(primary)).toBeFalse();
-    expect(component.hasWalletMenuActions(external)).toBeTrue();
+    expect(component.canDisconnectWallet(external)).toBeFalse();
 
     accountSubject.next({
       account: primary.address,
@@ -1058,7 +1057,22 @@ describe('ProfileComponent', () => {
     });
 
     expect(component.canDisconnectWallet(primary)).toBeTrue();
-    expect(component.hasWalletMenuActions(primary)).toBeTrue();
     expect(component.canDisconnectWallet(external)).toBeFalse();
+  });
+
+  it('copies the wallet address to the clipboard', async () => {
+    const writeText = jasmine.createSpy('writeText').and.resolveTo(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    await component.copyWalletAddress(linkedWalletSession.wallets[0]);
+
+    expect(writeText).toHaveBeenCalledOnceWith(
+      linkedWalletSession.wallets[0].address
+    );
+    expect(component.walletMessage).toBe('Address copied');
+    expect(component.copiedWalletId).toBe(linkedWalletSession.wallets[0].id);
   });
 });
