@@ -3,7 +3,18 @@ import { mockJsonApi, useAuthenticatedSession } from './utils/auth-fixtures';
 
 test.describe('Wallets MFE connect dialog', () => {
   test.beforeEach(async ({ page }) => {
-    await useAuthenticatedSession(page);
+    // Empty linked wallets so header open stays on the Connect picker instead of
+    // the connected-wallet board (drawerMode defaults to "wallet").
+    await useAuthenticatedSession(page, {
+      user: {
+        id: 'e2e-user',
+        providerUserId: 'e2e-provider-user',
+        sessionId: 'e2e-session',
+        email: 'e2e@craftscript.test',
+      },
+      wallets: [],
+      accessToken: 'e2e-access-token',
+    });
     await mockJsonApi(page, '/api/v1/balances', { data: [] });
   });
 
