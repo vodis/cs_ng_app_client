@@ -12,7 +12,10 @@ test.describe('Wallets MFE connect dialog', () => {
   }) => {
     await page.goto('/en/profile');
 
-    await page.getByRole('button', { name: 'Wallets' }).click();
+    await page
+      .locator('header')
+      .getByRole('button', { name: 'Wallets', exact: true })
+      .click();
 
     const dialog = page.locator('.side-modal.open');
     await expect(dialog).toBeVisible();
@@ -48,7 +51,10 @@ test.describe('Wallets MFE connect dialog', () => {
   }) => {
     await page.setViewportSize({ width: 390, height: 640 });
     await page.goto('/en/profile');
-    await page.getByRole('button', { name: 'Wallets' }).click();
+    await page
+      .locator('header')
+      .getByRole('button', { name: 'Wallets', exact: true })
+      .click();
 
     const dialog = page.locator('.side-modal.open');
     await expect(dialog).toBeVisible();
