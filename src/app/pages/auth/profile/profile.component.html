@@ -503,6 +503,16 @@
               <mat-icon aria-hidden="true">sync</mat-icon>
               <span>Make active</span>
             </button>
+            <button
+              type="button"
+              mat-stroked-button
+              class="profile-shell__wallet-action profile-shell__wallet-action--remove"
+              *ngIf="canRemoveLinkedWallet(wallet)"
+              [disabled]="!!busyWalletId || walletActionBusy"
+              (click)="deleteWallet(wallet)">
+              <mat-icon aria-hidden="true">delete_outline</mat-icon>
+              <span>Remove</span>
+            </button>
           </div>
         </li>
       </ul>

@@ -1038,7 +1038,7 @@ describe('ProfileComponent', () => {
     expect(component.walletPrimaryStatusLabel(secondary)).toBe('');
   });
 
-  it('scopes disconnect to the live connected wallet only', () => {
+  it('scopes disconnect to the live session and remove to external wallets', () => {
     const primary = linkedWalletSession.wallets[0];
     const external: BackendWallet = {
       ...primary,
@@ -1049,7 +1049,9 @@ describe('ProfileComponent', () => {
     };
 
     expect(component.canDisconnectWallet(primary)).toBeFalse();
+    expect(component.canRemoveLinkedWallet(primary)).toBeFalse();
     expect(component.canDisconnectWallet(external)).toBeFalse();
+    expect(component.canRemoveLinkedWallet(external)).toBeTrue();
 
     accountSubject.next({
       account: primary.address,
@@ -1058,6 +1060,7 @@ describe('ProfileComponent', () => {
 
     expect(component.canDisconnectWallet(primary)).toBeTrue();
     expect(component.canDisconnectWallet(external)).toBeFalse();
+    expect(component.canRemoveLinkedWallet(external)).toBeTrue();
   });
 
   it('copies the wallet address to the clipboard', async () => {

@@ -98,6 +98,7 @@ test('desktop profile wallets match compact address and action layout', async ({
   await expect(
     primary.getByRole('button', { name: 'Make active' })
   ).toHaveCount(0);
+  await expect(primary.getByRole('button', { name: 'Remove' })).toHaveCount(0);
 
   const secondary = rows.nth(1);
   await expect(
@@ -106,16 +107,19 @@ test('desktop profile wallets match compact address and action layout', async ({
   await expect(
     secondary.getByRole('button', { name: 'Make active' })
   ).toBeVisible();
+  await expect(secondary.getByRole('button', { name: 'Remove' })).toBeVisible();
   await expect(
     secondary.getByRole('button', { name: 'Disconnect' })
   ).toHaveCount(0);
 
-  await wallets.evaluate(el => {
-    el.scrollIntoView({ block: 'center' });
+  await page.evaluate(() => {
+    document
+      .querySelector('.profile-shell__panel--wallets')
+      ?.scrollIntoView({ block: 'center' });
   });
-  await expect(wallets.getByRole('button', { name: 'Disconnect' })).toBeVisible();
-  const desktopBox = await wallets.boundingBox();
-  expect(desktopBox).toBeTruthy();
+  const desktopPanel = page.locator('.profile-shell__panel--wallets');
+  await expect(desktopPanel).toBeVisible();
+  const desktopBox = await desktopPanel.boundingBox();
   if (desktopBox) {
     const clip = {
       x: Math.max(0, desktopBox.x),

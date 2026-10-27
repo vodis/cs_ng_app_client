@@ -120,11 +120,12 @@ Flow direction:
   in the Wallets list. Wallet setup is not a blocking interstitial.
 - Connected wallets on `/profile` render as one compact list: address with an
   adjacent copy icon, network meta under it, a green Active status badge beside
-  Disconnect when primary, and outlined Disconnect / Make active actions
-  (Disconnect only for the live browser session; Make active only for
-  non-primary wallets). The panel header keeps an icon-only refresh — wallet
-  connect stays in the header wallets control, not a Manage wallets link or
-  connected-wallet dialog from profile.
+  Disconnect when primary, and outlined Disconnect / Make active / Remove
+  actions (Disconnect only for the live browser session; Make active only for
+  non-primary wallets; Remove for external linked wallets so unlink stays
+  available without the old row menu). The panel header keeps an icon-only
+  refresh — wallet connect stays in the header wallets control, not a Manage
+  wallets link or connected-wallet dialog from profile.
 - Profile **Balances** hide zero balances by default (with a Show zero balances
   toggle), show token icon + symbol on the left, and USD (primary) with a
   compact token amount (secondary) on the right. USD uses two decimals,

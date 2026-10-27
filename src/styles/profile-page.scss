@@ -853,6 +853,18 @@ app-account-sessions .profile-shell {
         color: var(--primary-text-color);
       }
     }
+
+    &--remove {
+      color: var(--gray-30);
+      --mdc-outlined-button-label-text-color: var(--gray-30);
+      --mat-outlined-button-label-text-color: var(--gray-30);
+
+      .mdc-button__label,
+      mat-icon,
+      .mat-icon {
+        color: var(--gray-30);
+      }
+    }
   }
 
   dl {
