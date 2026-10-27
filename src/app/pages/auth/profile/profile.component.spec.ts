@@ -947,7 +947,37 @@ describe('ProfileComponent', () => {
     component.connectAnotherWallet();
 
     expect(walletGatewayBridge.syncConnectedWallet).not.toHaveBeenCalled();
-    expect(walletsService.requestOpen).toHaveBeenCalledTimes(1);
+    expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('connect');
+  });
+
+  it('shows Connect another on the wallets header while live-connected', () => {
+    expect(component.showConnectedConnectAnother()).toBeFalse();
+
+    accountSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: 1,
+    });
+    sessionSubject.next(linkedWalletSession);
+
+    expect(component.isLiveConnected()).toBeTrue();
+    expect(component.showConnectedConnectAnother()).toBeTrue();
+    expect(component.showLastConnectedSection()).toBeFalse();
+
+    component.connectAnotherWallet();
+    expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('connect');
+  });
+
+  it('defers to the reconnect strip Connect another when disconnected', () => {
+    sessionSubject.next(linkedWalletSession);
+    lastConnectedSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: 1,
+      walletType: 'embedded',
+    });
+
+    expect(component.isLiveConnected()).toBeFalse();
+    expect(component.showLastConnectedSection()).toBeTrue();
+    expect(component.showConnectedConnectAnother()).toBeFalse();
   });
 
   it('blocks competing wallet mutations until activation finishes', async () => {
@@ -1038,7 +1068,7 @@ describe('ProfileComponent', () => {
     expect(component.walletPrimaryStatusLabel(secondary)).toBe('');
   });
 
-  it('scopes disconnect and menu actions to the matching wallet', () => {
+  it('scopes disconnect to the live session and remove to external wallets', () => {
     const primary = linkedWalletSession.wallets[0];
     const external: BackendWallet = {
       ...primary,
@@ -1049,8 +1079,9 @@ describe('ProfileComponent', () => {
     };
 
     expect(component.canDisconnectWallet(primary)).toBeFalse();
-    expect(component.hasWalletMenuActions(primary)).toBeFalse();
-    expect(component.hasWalletMenuActions(external)).toBeTrue();
+    expect(component.canRemoveLinkedWallet(primary)).toBeFalse();
+    expect(component.canDisconnectWallet(external)).toBeFalse();
+    expect(component.canRemoveLinkedWallet(external)).toBeTrue();
 
     accountSubject.next({
       account: primary.address,
@@ -1058,7 +1089,23 @@ describe('ProfileComponent', () => {
     });
 
     expect(component.canDisconnectWallet(primary)).toBeTrue();
-    expect(component.hasWalletMenuActions(primary)).toBeTrue();
     expect(component.canDisconnectWallet(external)).toBeFalse();
+    expect(component.canRemoveLinkedWallet(external)).toBeTrue();
+  });
+
+  it('copies the wallet address to the clipboard', async () => {
+    const writeText = jasmine.createSpy('writeText').and.resolveTo(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    await component.copyWalletAddress(linkedWalletSession.wallets[0]);
+
+    expect(writeText).toHaveBeenCalledOnceWith(
+      linkedWalletSession.wallets[0].address
+    );
+    expect(component.walletMessage).toBe('Address copied');
+    expect(component.copiedWalletId).toBe(linkedWalletSession.wallets[0].id);
   });
 });

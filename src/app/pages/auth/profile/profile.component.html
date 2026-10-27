@@ -359,11 +359,11 @@
             type="button"
             mat-button
             color="primary"
-            class="profile-shell__view-wallet"
+            class="profile-shell__connect-another-header"
+            *ngIf="showConnectedConnectAnother()"
             [disabled]="walletActionBusy"
-            (click)="openWalletModal()">
-            Manage wallets
-            <span aria-hidden="true">›</span>
+            (click)="connectAnotherWallet()">
+            Connect another
           </button>
           <button
             type="button"
@@ -456,64 +456,73 @@
               [src]="chainIcon"
               alt="" />
             <div class="profile-shell__wallet-main">
-              <span class="profile-shell__wallet-address">{{
-                shortAddress(wallet.address)
-              }}</span>
-              <div class="profile-shell__wallet-meta-row">
-                <span class="profile-shell__wallet-network">{{
-                  walletListMeta(wallet)
+              <div class="profile-shell__wallet-address-row">
+                <span class="profile-shell__wallet-address">{{
+                  shortAddress(wallet.address)
                 }}</span>
-                <span
-                  class="profile-shell__wallet-badge"
-                  *ngIf="wallet.isPrimary"
-                  >{{ walletPrimaryStatusLabel(wallet) }}</span
-                >
+                <button
+                  type="button"
+                  class="profile-shell__wallet-copy"
+                  [disabled]="walletActionBusy"
+                  [attr.aria-label]="
+                    copiedWalletId === wallet.id
+                      ? 'Address copied'
+                      : 'Copy address'
+                  "
+                  [attr.title]="
+                    copiedWalletId === wallet.id
+                      ? 'Address copied'
+                      : 'Copy address'
+                  "
+                  (click)="copyWalletAddress(wallet)">
+                  <mat-icon aria-hidden="true">{{
+                    copiedWalletId === wallet.id ? 'check' : 'content_copy'
+                  }}</mat-icon>
+                </button>
               </div>
+              <span class="profile-shell__wallet-network">{{
+                walletListMeta(wallet)
+              }}</span>
             </div>
           </div>
-          <div
-            class="profile-shell__wallet-side"
-            *ngIf="hasWalletMenuActions(wallet) || !wallet.isPrimary">
+          <div class="profile-shell__wallet-side">
+            <span
+              class="profile-shell__wallet-badge"
+              *ngIf="
+                wallet.isPrimary && walletPrimaryStatusLabel(wallet) as status
+              "
+              >{{ status }}</span
+            >
             <button
               type="button"
               mat-stroked-button
-              class="profile-shell__make-active"
+              class="profile-shell__wallet-action profile-shell__wallet-action--disconnect"
+              *ngIf="canDisconnectWallet(wallet)"
+              [disabled]="walletActionBusy"
+              (click)="disconnectWallet()">
+              <mat-icon aria-hidden="true">block</mat-icon>
+              <span>Disconnect</span>
+            </button>
+            <button
+              type="button"
+              mat-stroked-button
+              class="profile-shell__wallet-action profile-shell__wallet-action--make-active"
               *ngIf="!wallet.isPrimary"
               [disabled]="!!busyWalletId"
               (click)="setPrimaryWallet(wallet)">
-              Make active
+              <mat-icon aria-hidden="true">sync</mat-icon>
+              <span>Make active</span>
             </button>
-            <ng-container *ngIf="hasWalletMenuActions(wallet)">
-              <button
-                type="button"
-                mat-icon-button
-                class="profile-shell__wallet-menu-trigger"
-                [matMenuTriggerFor]="walletRowMenu"
-                [disabled]="walletActionBusy || !!busyWalletId"
-                [attr.aria-label]="
-                  'Wallet actions for ' + shortAddress(wallet.address)
-                ">
-                <mat-icon aria-hidden="true">more_horiz</mat-icon>
-              </button>
-              <mat-menu #walletRowMenu="matMenu" xPosition="before">
-                <button
-                  type="button"
-                  mat-menu-item
-                  *ngIf="canDisconnectWallet(wallet)"
-                  [disabled]="walletActionBusy"
-                  (click)="disconnectWallet()">
-                  Disconnect
-                </button>
-                <button
-                  type="button"
-                  mat-menu-item
-                  *ngIf="canRemoveLinkedWallet(wallet)"
-                  [disabled]="!!busyWalletId"
-                  (click)="deleteWallet(wallet)">
-                  Remove
-                </button>
-              </mat-menu>
-            </ng-container>
+            <button
+              type="button"
+              mat-stroked-button
+              class="profile-shell__wallet-action profile-shell__wallet-action--remove"
+              *ngIf="canRemoveLinkedWallet(wallet)"
+              [disabled]="!!busyWalletId || walletActionBusy"
+              (click)="deleteWallet(wallet)">
+              <mat-icon aria-hidden="true">delete_outline</mat-icon>
+              <span>Remove</span>
+            </button>
           </div>
         </li>
       </ul>

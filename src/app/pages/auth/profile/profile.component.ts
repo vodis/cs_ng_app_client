@@ -103,12 +103,14 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public walletActionBusy = false;
   public onboardingDetailsOpen = false;
   public walletLoading = false;
+  public copiedWalletId = '';
 
   public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
   public activity: ProfileActivitySnapshot;
   public onboarding: ProfileOnboardingViewModel;
 
   private subscription?: Subscription;
+  private copiedWalletClearTimer: ReturnType<typeof setTimeout> | null = null;
   private portfolioRequestId = 0;
   private portfolioCacheKeyLoaded: string | null = null;
   private portfolioInFlightKey: string | null = null;
@@ -194,6 +196,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public ngOnDestroy(): void {
     this.portfolioRequestId += 1;
     this.cancelBalanceAnimation();
+    this.clearCopiedWalletFeedback();
     this.subscription?.unsubscribe();
   }
 
@@ -598,6 +601,19 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
+  /**
+   * While a live browser session is connected, the header Wallets control opens
+   * the balances board (wallet mode) with no connect-another path. Keep an
+   * explicit connect-mode entry on the profile wallets header whenever the
+   * reconnect strip is not already offering Connect another.
+   */
+  public showConnectedConnectAnother(): boolean {
+    if (this.showLastConnectedSection()) {
+      return false;
+    }
+    return this.isLiveConnected() || this.hasLinkedWallets();
+  }
+
   public resolveLastConnectedWallet(): LastConnectedWallet | null {
     return this.lastConnectedWallet;
   }
@@ -627,14 +643,33 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return wallet.address.toLowerCase() === this.connectedAccount.toLowerCase();
   }
 
-  public hasWalletMenuActions(wallet: BackendWallet): boolean {
-    return (
-      this.canDisconnectWallet(wallet) || this.canRemoveLinkedWallet(wallet)
-    );
-  }
-
   public async openWalletModal(): Promise<void> {
     await this.profile.openWalletModal();
+  }
+
+  public async copyWalletAddress(wallet: BackendWallet): Promise<void> {
+    this.error = '';
+    this.walletMessage = '';
+    try {
+      await navigator.clipboard.writeText(wallet.address);
+      this.walletMessage = 'Address copied';
+      this.copiedWalletId = wallet.id;
+      this.clearCopiedWalletFeedback();
+      this.copiedWalletClearTimer = setTimeout(() => {
+        this.copiedWalletId = '';
+        this.copiedWalletClearTimer = null;
+      }, 2000);
+    } catch {
+      this.error = 'Could not copy address';
+      this.copiedWalletId = '';
+    }
+  }
+
+  private clearCopiedWalletFeedback(): void {
+    if (this.copiedWalletClearTimer !== null) {
+      clearTimeout(this.copiedWalletClearTimer);
+      this.copiedWalletClearTimer = null;
+    }
   }
 
   public async generateWallet(): Promise<void> {
