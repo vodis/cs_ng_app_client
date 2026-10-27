@@ -369,10 +369,12 @@ Login is optional. Guests can browse the shell without a session.
 | `/history`            | Redirects to `/transactions` |
 | `/login`              | Returning-user sign in  |
 | `/register`           | New account creation    |
+| `/terms`              | Post-auth Terms gate (session required) |
 
-`/login` and `/register` render outside the main shell (no header/sidebar). Route
-prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
-`LayoutComponent` via `*ngIf` — do not duplicate them in `index.html`.
+`/login`, `/register`, and `/terms` render outside the main shell (no
+header/sidebar). Route prefixes are owned in
+`src/app/core/routing/auth-shell.routes.ts` and applied by `LayoutComponent`
+via `*ngIf` — do not duplicate them in `index.html`.
 
 ### Protected routes
 
@@ -381,6 +383,7 @@ prefixes are owned in `src/app/core/routing/auth-shell.routes.ts` and applied by
 | `/profile`         | `AuthGuard` | Balance hero, onboarding portfolio, activity, wallets  |
 | `/portfolio`       | `AuthGuard` | Agent preferences, 2FA/passkey, sessions (no holdings) |
 | `/generate-wallet` | `AuthGuard` | Legacy redirect to `/profile`                          |
+| `/terms`           | `TermsGuard` | Scroll-to-agree Terms; requires session, skips if already accepted |
 
 ### Login methods on `/login`
 
@@ -412,19 +415,41 @@ after refresh on Token Exchange) without blocking navigation.
 
 `AuthGuard` behavior:
 
-1. Allow navigation when `AuthSessionService.session` is already populated.
+1. Allow navigation when `AuthSessionService.session` is already populated and
+   the current Terms version is accepted for that user.
 2. Otherwise wait for the auth provider to reach a terminal state.
 3. Attempt `AuthSessionService.refresh()` when the provider is `ready`.
 4. Redirect to `/login?returnUrl=<safe-path>` when there is no valid session and
    refresh cannot restore one.
+5. Redirect to `/terms?returnUrl=<safe-path>` when a session exists but the
+   current Terms version is not accepted (covers refresh and deep links into
+   protected routes).
 
 Logout clears host session state and navigates to Token Exchange (`/`).
 
+### Terms acceptance (host prototype)
+
+After successful login/register, the host routes through `/terms` when the user
+has not accepted `CURRENT_TERMS_VERSION`. Titles:
+
+- First acceptance: **Terms and Conditions**
+- Prior acceptance of an older version: **Our Terms of Service have changed**
+
+Acceptance is stored per backend `user.id` in localStorage under
+`craftscript.termsAcceptance.v1.prototype`. This is an explicit browser-local
+prototype — it does not sync across devices or browsers. Replace with a
+backend-backed acceptance record before production multi-device enforcement.
+Wallet MFE is out of scope: Terms are host UX after a normalized session exists.
+
+`I agree` stays disabled until the Terms panel is scrolled to the end (or the
+content fits without overflow). `returnUrl` from login is preserved through the
+Terms step.
+
 ### Post-auth wallet onboarding
 
-Account creation or login without linked wallets still enters the app shell.
-The host routes to `/profile`, which shows a `$0.00` balance hero and an
-Onboarding portfolio card.
+Account creation or login without linked wallets still enters the app shell
+after Terms acceptance. The host routes to `/profile`, which shows a `$0.00`
+balance hero and an Onboarding portfolio card.
 
 First-time setup on `/profile`:
 

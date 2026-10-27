@@ -5,6 +5,7 @@ import { LoginComponent } from './login/login.component';
 import { ProfileComponent } from './profile/profile.component';
 import { RegisterComponent } from './register/register.component';
 import { AuthSocialButtonsComponent } from './shared/auth-social-buttons.component';
+import { TermsComponent } from './terms/terms.component';
 
 @NgModule({
   imports: [SharedModule, AuthRoutingModule],
@@ -12,6 +13,7 @@ import { AuthSocialButtonsComponent } from './shared/auth-social-buttons.compone
     LoginComponent,
     ProfileComponent,
     RegisterComponent,
+    TermsComponent,
     AuthSocialButtonsComponent,
   ],
 })

@@ -1,6 +1,10 @@
 import type { WalletConnectionSnapshot } from '../../src/app/mfe-contracts/wallet-mfe.types';
 import type { Page, Route } from '@playwright/test';
 
+import {
+  CURRENT_TERMS_VERSION,
+  TERMS_ACCEPTANCE_STORAGE_KEY,
+} from '../../src/app/core/auth/terms-acceptance.constants';
 import { resolveWalletRemoteEntryUrl } from '../../src/app/mfe-contracts/wallet-remote-entrypoints';
 import { environment } from '../../src/environments/environment';
 
@@ -42,6 +46,13 @@ export type E2eAuthenticatedSession = {
   accessToken: string;
   connection?: WalletConnectionSnapshot;
   requireLogin?: boolean;
+  /**
+   * Host Terms prototype seed for protected-route e2e.
+   * - `current` (default): accept CURRENT_TERMS_VERSION
+   * - `stale`: store an older version so the “have changed” title appears
+   * - `none`: leave acceptance empty so AuthGuard routes through `/terms`
+   */
+  termsAcceptance?: 'current' | 'stale' | 'none';
 };
 
 const DEFAULT_AUTHENTICATED_SESSION: E2eAuthenticatedSession = {
@@ -78,8 +89,46 @@ export async function useAuthenticatedSession(
   session: E2eAuthenticatedSession = DEFAULT_AUTHENTICATED_SESSION,
   realGatewayUrl?: string
 ): Promise<void> {
+  await seedTermsAcceptance(page, session.user.id, session.termsAcceptance);
   await mockAuthProviderRemote(page, session, realGatewayUrl);
   await mockAuthSessionApi(page, session);
+}
+
+/** Prototype host Terms gate — seed so authenticated e2e can reach protected routes. */
+export async function seedTermsAcceptance(
+  page: Page,
+  userId: string,
+  mode: 'current' | 'stale' | 'none' = 'current'
+): Promise<void> {
+  await page.addInitScript(
+    ({ storageKey, id, acceptanceMode, currentVersion }) => {
+      if (acceptanceMode === 'none') {
+        window.localStorage.removeItem(storageKey);
+        return;
+      }
+
+      const version =
+        acceptanceMode === 'stale' ? '1970-01-01' : currentVersion;
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          [id]: {
+            version,
+            acceptedAt:
+              acceptanceMode === 'stale'
+                ? '1970-01-01T00:00:00.000Z'
+                : new Date().toISOString(),
+          },
+        })
+      );
+    },
+    {
+      storageKey: TERMS_ACCEPTANCE_STORAGE_KEY,
+      id: userId,
+      acceptanceMode: mode,
+      currentVersion: CURRENT_TERMS_VERSION,
+    }
+  );
 }
 
 export async function mockJsonApi(

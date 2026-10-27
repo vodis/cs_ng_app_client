@@ -1,4 +1,8 @@
-export const AUTH_SHELL_ROUTE_PREFIXES = ['/login', '/register'] as const;
+export const AUTH_SHELL_ROUTE_PREFIXES = [
+  '/login',
+  '/register',
+  '/terms',
+] as const;
 
 export function isAuthShellRoute(url: string): boolean {
   const path = url

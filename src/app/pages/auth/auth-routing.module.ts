@@ -3,7 +3,9 @@ import { RouterModule, Routes } from '@angular/router';
 import { LoginComponent } from './login/login.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AuthGuard } from '@core/auth/auth.guard';
+import { TermsGuard } from '@core/auth/terms.guard';
 import { RegisterComponent } from './register/register.component';
+import { TermsComponent } from './terms/terms.component';
 
 const routes: Routes = [
   {
@@ -13,6 +15,11 @@ const routes: Routes = [
   {
     path: 'register',
     component: RegisterComponent,
+  },
+  {
+    path: 'terms',
+    component: TermsComponent,
+    canActivate: [TermsGuard],
   },
   {
     path: 'generate-wallet',
