@@ -70,6 +70,37 @@ async function openProfileWithWallets(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/en\/profile/);
 }
 
+async function screenshotWalletsPanel(
+  page: Page,
+  path: string,
+  maxHeight?: number
+): Promise<void> {
+  await page.evaluate(() => {
+    document
+      .querySelector('.profile-shell__panel--wallets')
+      ?.scrollIntoView({ block: 'center' });
+  });
+  const clip = await page.evaluate(limit => {
+    const el = document.querySelector('.profile-shell__panel--wallets');
+    if (!(el instanceof HTMLElement)) {
+      return null;
+    }
+    const rect = el.getBoundingClientRect();
+    return {
+      x: Math.max(0, rect.x),
+      y: Math.max(0, rect.y),
+      width: rect.width,
+      height:
+        typeof limit === 'number'
+          ? Math.min(rect.height, limit - Math.max(0, rect.y))
+          : rect.height,
+    };
+  }, maxHeight);
+  if (clip && clip.width > 0 && clip.height > 0) {
+    await page.screenshot({ path, clip });
+  }
+}
+
 test('desktop profile wallets match compact address and action layout', async ({
   page,
 }) => {
@@ -93,6 +124,9 @@ test('desktop profile wallets match compact address and action layout', async ({
     'Active · Connected'
   );
   await expect(
+    wallets.getByRole('button', { name: 'Connect another', exact: true })
+  ).toBeVisible();
+  await expect(
     primary.getByRole('button', { name: 'Disconnect' })
   ).toBeVisible();
   await expect(
@@ -112,26 +146,11 @@ test('desktop profile wallets match compact address and action layout', async ({
     secondary.getByRole('button', { name: 'Disconnect' })
   ).toHaveCount(0);
 
-  await page.evaluate(() => {
-    document
-      .querySelector('.profile-shell__panel--wallets')
-      ?.scrollIntoView({ block: 'center' });
-  });
-  const desktopPanel = page.locator('.profile-shell__panel--wallets');
-  await expect(desktopPanel).toBeVisible();
-  const desktopBox = await desktopPanel.boundingBox();
-  if (desktopBox) {
-    const clip = {
-      x: Math.max(0, desktopBox.x),
-      y: Math.max(0, desktopBox.y),
-      width: desktopBox.width,
-      height: Math.min(desktopBox.height, 800 - Math.max(0, desktopBox.y)),
-    };
-    await page.screenshot({
-      path: 'tmp/screenshots/profile-wallets-desktop.png',
-      clip,
-    });
-  }
+  await screenshotWalletsPanel(
+    page,
+    'tmp/screenshots/profile-wallets-desktop.png',
+    800
+  );
 });
 
 test('mobile profile wallets stack status and actions under details', async ({
@@ -142,24 +161,11 @@ test('mobile profile wallets stack status and actions under details', async ({
 
   const wallets = page.locator('.profile-shell__panel--wallets');
   await expect(wallets).toBeVisible();
-  await page.evaluate(() => {
-    document
-      .querySelector('.profile-shell__panel--wallets')
-      ?.scrollIntoView({ block: 'center' });
-  });
+  await expect(
+    wallets.getByRole('button', { name: 'Connect another', exact: true })
+  ).toBeVisible();
 
   const primary = wallets.locator('.profile-shell__wallet-row').nth(0);
-  const addressBox = await primary
-    .locator('.profile-shell__wallet-address-row')
-    .boundingBox();
-  const sideBox = await primary
-    .locator('.profile-shell__wallet-side')
-    .boundingBox();
-  expect(addressBox && sideBox).toBeTruthy();
-  if (addressBox && sideBox) {
-    expect(sideBox.y).toBeGreaterThan(addressBox.y + addressBox.height - 4);
-  }
-
   await expect(
     primary.getByRole('button', { name: 'Copy address' })
   ).toBeVisible();
@@ -167,12 +173,24 @@ test('mobile profile wallets stack status and actions under details', async ({
     primary.getByRole('button', { name: 'Disconnect' })
   ).toBeVisible();
 
-  const mobileBox = await wallets.boundingBox();
-  expect(mobileBox).toBeTruthy();
-  if (mobileBox) {
-    await page.screenshot({
-      path: 'tmp/screenshots/profile-wallets-mobile.png',
-      clip: mobileBox,
-    });
-  }
+  const stacked = await page.evaluate(() => {
+    document
+      .querySelector('.profile-shell__panel--wallets')
+      ?.scrollIntoView({ block: 'center' });
+    const row = document.querySelector('.profile-shell__wallet-row');
+    const address = row?.querySelector('.profile-shell__wallet-address-row');
+    const side = row?.querySelector('.profile-shell__wallet-side');
+    if (!(address instanceof HTMLElement) || !(side instanceof HTMLElement)) {
+      return null;
+    }
+    const addressRect = address.getBoundingClientRect();
+    const sideRect = side.getBoundingClientRect();
+    return sideRect.y > addressRect.y + addressRect.height - 4;
+  });
+  expect(stacked).toBe(true);
+
+  await screenshotWalletsPanel(
+    page,
+    'tmp/screenshots/profile-wallets-mobile.png'
+  );
 });

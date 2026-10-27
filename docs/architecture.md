@@ -124,8 +124,11 @@ Flow direction:
   actions (Disconnect only for the live browser session; Make active only for
   non-primary wallets; Remove for external linked wallets so unlink stays
   available without the old row menu). The panel header keeps an icon-only
-  refresh — wallet connect stays in the header wallets control, not a Manage
-  wallets link or connected-wallet dialog from profile.
+  refresh and a Connect another control that opens the drawer in connect mode
+  when linked wallets are present or a live session is connected (the header
+  Wallets control defaults to wallet mode / the balances board, which has no
+  connect-another path). Disconnected reconnect UI still exposes Connect
+  another when the last-connected strip is showing.
 - Profile **Balances** hide zero balances by default (with a Show zero balances
   toggle), show token icon + symbol on the left, and USD (primary) with a
   compact token amount (secondary) on the right. USD uses two decimals,

@@ -947,7 +947,37 @@ describe('ProfileComponent', () => {
     component.connectAnotherWallet();
 
     expect(walletGatewayBridge.syncConnectedWallet).not.toHaveBeenCalled();
-    expect(walletsService.requestOpen).toHaveBeenCalledTimes(1);
+    expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('connect');
+  });
+
+  it('shows Connect another on the wallets header while live-connected', () => {
+    expect(component.showConnectedConnectAnother()).toBeFalse();
+
+    accountSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: 1,
+    });
+    sessionSubject.next(linkedWalletSession);
+
+    expect(component.isLiveConnected()).toBeTrue();
+    expect(component.showConnectedConnectAnother()).toBeTrue();
+    expect(component.showLastConnectedSection()).toBeFalse();
+
+    component.connectAnotherWallet();
+    expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('connect');
+  });
+
+  it('defers to the reconnect strip Connect another when disconnected', () => {
+    sessionSubject.next(linkedWalletSession);
+    lastConnectedSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: 1,
+      walletType: 'embedded',
+    });
+
+    expect(component.isLiveConnected()).toBeFalse();
+    expect(component.showLastConnectedSection()).toBeTrue();
+    expect(component.showConnectedConnectAnother()).toBeFalse();
   });
 
   it('blocks competing wallet mutations until activation finishes', async () => {

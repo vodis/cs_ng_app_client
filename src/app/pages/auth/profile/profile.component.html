@@ -357,6 +357,16 @@
         <div class="profile-shell__wallets-header-actions">
           <button
             type="button"
+            mat-button
+            color="primary"
+            class="profile-shell__connect-another-header"
+            *ngIf="showConnectedConnectAnother()"
+            [disabled]="walletActionBusy"
+            (click)="connectAnotherWallet()">
+            Connect another
+          </button>
+          <button
+            type="button"
             mat-icon-button
             class="profile-shell__refresh profile-shell__refresh--icon"
             aria-label="Refresh wallets"

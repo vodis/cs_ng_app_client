@@ -601,6 +601,19 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
+  /**
+   * While a live browser session is connected, the header Wallets control opens
+   * the balances board (wallet mode) with no connect-another path. Keep an
+   * explicit connect-mode entry on the profile wallets header whenever the
+   * reconnect strip is not already offering Connect another.
+   */
+  public showConnectedConnectAnother(): boolean {
+    if (this.showLastConnectedSection()) {
+      return false;
+    }
+    return this.isLiveConnected() || this.hasLinkedWallets();
+  }
+
   public resolveLastConnectedWallet(): LastConnectedWallet | null {
     return this.lastConnectedWallet;
   }
