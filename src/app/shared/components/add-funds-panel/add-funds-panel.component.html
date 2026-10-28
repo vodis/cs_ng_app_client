@@ -191,7 +191,7 @@
                   {{ networkInitial(token) }}
                 </span>
                 <span class="add-funds-panel__row-copy">
-                  <strong>{{ networkLabel(token) }}</strong>
+                  <strong>{{ token.blockchain }}</strong>
                   <span>Deposit {{ group.symbol }}</span>
                 </span>
                 <span class="add-funds-panel__row-meta">
@@ -234,7 +234,7 @@
                 aria-hidden="true">
                 {{ networkInitial(token) }}
               </span>
-              <strong>{{ networkLabel(token) }}</strong>
+              <strong>{{ token.blockchain }}</strong>
             </div>
             @if (canChangeNetwork) {
               <button
@@ -251,66 +251,115 @@
           </div>
         </div>
 
-        <p class="add-funds-panel__warning" role="status">
-          Send only
-          <strong>{{ token.displaySymbol || token.symbol }}</strong>
-          on
-          <strong>{{ networkLabel(token) }}</strong>
-          to this address.
-        </p>
+        <label class="add-funds-panel__search-label" for="deposit-amount"
+          >Amount to send ({{ token.symbol }})</label
+        >
+        <input
+          class="add-funds-panel__search"
+          id="deposit-amount"
+          type="text"
+          inputmode="decimal"
+          maxlength="80"
+          [value]="depositAmount"
+          (input)="changeAmount(amountInput.value)"
+          #amountInput />
+        @if (depositAddress) {
+          <p>
+            Send exactly {{ depositInstructions?.amount }} {{ token.symbol }} on
+            {{ token.blockchain }}.
+          </p>
+          <p>
+            Receive at least {{ depositInstructions?.minimumReceived }}
+            {{ token.symbol }} after fees in your active linked wallet.
+          </p>
+          <p>
+            Underpayments and excess funds are refunded to your active linked
+            wallet. Do not reuse this address after this deposit.
+          </p>
+          <p class="add-funds-panel__warning" role="status">
+            Send only
+            <strong>{{ token.displaySymbol || token.symbol }}</strong>
+            on
+            <strong>{{ token.blockchain }}</strong>
+            to this address.
+          </p>
 
-        <div
-          class="add-funds-panel__qr"
-          [class.add-funds-panel__qr--loading]="qrLoading && !qrDataUrl"
-          aria-live="polite">
-          @if (qrDataUrl) {
-            <img
-              class="add-funds-panel__qr-image"
-              [src]="qrDataUrl"
-              width="280"
-              height="280"
-              alt="Deposit address QR code" />
-          } @else if (qrLoading) {
-            <div
-              class="add-funds-panel__qr-skeleton"
-              role="status"
-              aria-label="Generating QR code">
-              <span class="add-funds-panel__qr-skeleton-shimmer"></span>
-              <span class="add-funds-panel__qr-skeleton-label">Generating QR…</span>
-            </div>
-          } @else if (qrError) {
-            <p class="add-funds-panel__status add-funds-panel__status--error">
-              {{ qrError }}
-            </p>
-          }
-        </div>
-
-        <div class="add-funds-panel__address">
-          <div class="add-funds-panel__address-top">
-            <span class="add-funds-panel__address-label">Deposit address</span>
-            <span class="add-funds-panel__demo-badge">Demo</span>
+          <div
+            class="add-funds-panel__qr"
+            [class.add-funds-panel__qr--loading]="qrLoading && !qrDataUrl"
+            aria-live="polite">
+            @if (qrDataUrl) {
+              <img
+                class="add-funds-panel__qr-image"
+                [src]="qrDataUrl"
+                width="280"
+                height="280"
+                alt="Deposit address QR code" />
+            } @else if (qrLoading) {
+              <div
+                class="add-funds-panel__qr-skeleton"
+                role="status"
+                aria-label="Generating QR code">
+                <span class="add-funds-panel__qr-skeleton-shimmer"></span>
+                <span class="add-funds-panel__qr-skeleton-label"
+                  >Generating QR…</span
+                >
+              </div>
+            } @else if (qrError) {
+              <p class="add-funds-panel__status add-funds-panel__status--error">
+                {{ qrError }}
+              </p>
+            }
           </div>
-          <code class="add-funds-panel__address-value">{{
-            depositAddress
-          }}</code>
+
+          <div class="add-funds-panel__address">
+            <div class="add-funds-panel__address-top">
+              <span class="add-funds-panel__address-label"
+                >Deposit address</span
+              >
+            </div>
+            <code class="add-funds-panel__address-value">{{
+              depositAddress
+            }}</code>
+            <button
+              type="button"
+              class="add-funds-panel__copy"
+              (click)="copyAddress()">
+              <mat-icon aria-hidden="true">{{
+                copied ? 'check' : 'content_copy'
+              }}</mat-icon>
+              {{ copied ? 'Copied!' : 'Copy address' }}
+            </button>
+            @if (copyError) {
+              <p class="add-funds-panel__status add-funds-panel__status--error">
+                {{ copyError }}
+              </p>
+            }
+            @if (depositInstructions?.memo; as memo) {
+              <p role="alert">
+                Include this memo/tag with your deposit: <code>{{ memo }}</code>
+              </p>
+            }
+            <p>
+              Valid until {{ depositInstructions?.expiresAt | date: 'short' }}
+            </p>
+          </div>
+        } @else {
+          <p class="add-funds-panel__status" role="status">
+            {{
+              depositLoading
+                ? 'Preparing deposit instructions…'
+                : depositError || 'Enter an amount to get a deposit address.'
+            }}
+          </p>
           <button
             type="button"
-            class="add-funds-panel__copy"
-            (click)="copyAddress()">
-            <mat-icon aria-hidden="true">{{
-              copied ? 'check' : 'content_copy'
-            }}</mat-icon>
-            {{ copied ? 'Copied!' : 'Copy address' }}
+            class="add-funds-panel__retry"
+            [disabled]="depositLoading || !validAmount"
+            (click)="requestDeposit()">
+            Get deposit address
           </button>
-          @if (copyError) {
-            <p class="add-funds-panel__status add-funds-panel__status--error">
-              {{ copyError }}
-            </p>
-          }
-          <p class="add-funds-panel__demo-note">
-            Demo address. Do not send funds.
-          </p>
-        </div>
+        }
       </div>
     }
   </div>

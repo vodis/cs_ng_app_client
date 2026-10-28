@@ -1,7 +1,6 @@
 import type { ExchangeToken } from '@shared/models/exchange-token.model';
 import {
   buildAddFundsGroups,
-  buildDemoDepositAddress,
   filterTokenGroups,
   networkOptionLabel,
   splitPopularGroups,
@@ -68,12 +67,5 @@ describe('add-funds-deposit.utils', () => {
   it('uses friendly network labels without contract ids', () => {
     expect(networkOptionLabel(tokens[0])).toBe('Ethereum');
     expect(networkOptionLabel(tokens[1])).toBe('Base');
-  });
-
-  it('builds a deterministic demo deposit address', () => {
-    const first = buildDemoDepositAddress(tokens[0]);
-    const second = buildDemoDepositAddress(tokens[0]);
-    expect(first).toMatch(/^0x[a-f0-9]{40}$/);
-    expect(first).toBe(second);
   });
 });

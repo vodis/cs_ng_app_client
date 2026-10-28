@@ -101,38 +101,3 @@ export function networkOptionLabel(token: ExchangeToken): string {
     (chain ? chain.charAt(0).toUpperCase() + chain.slice(1) : 'Unknown network')
   );
 }
-
-/**
- * Demo deposit address only — never a live linked wallet address while the
- * flow is labeled Demo.
- */
-export function buildDemoDepositAddress(token: ExchangeToken): string {
-  const chain = token.blockchain.trim().toLowerCase() || 'unknown';
-  const seed = `${token.assetId}:${token.symbol}`.replace(/[^a-zA-Z0-9]/g, '');
-  const hex = hashToHex(seed);
-
-  if (chain === 'near' || chain === 'nearprotocol') {
-    return `demo-${hex.slice(0, 8)}.near`;
-  }
-  if (chain === 'sol' || chain === 'solana') {
-    return `Demo${hex.slice(0, 40)}`;
-  }
-  if (chain === 'ton') {
-    return `EQ${hex.slice(0, 46)}`;
-  }
-  if (chain === 'btc' || chain === 'bitcoin') {
-    return `bc1q${hex.slice(0, 38)}`;
-  }
-  return `0x${hex.slice(0, 40)}`;
-}
-
-function hashToHex(value: string): string {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i++) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  const positive = hash >>> 0;
-  const base = positive.toString(16).padStart(8, '0');
-  return `${base}${base}${base}${base}${base}`;
-}

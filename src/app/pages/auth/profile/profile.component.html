@@ -627,6 +627,10 @@
     <app-add-funds-panel
       [isOpen]="profile.addFundsOpen"
       [tokens]="profile.addFundsTokens"
+      [depositInstructions]="profile.depositInstructions"
+      [depositLoading]="profile.depositLoading"
+      [depositError]="profile.depositError"
+      (depositRequested)="profile.requestDeposit($event)"
       [loading]="profile.addFundsLoading"
       [loadError]="profile.addFundsError"
       (closeRequested)="closeAddFunds()"

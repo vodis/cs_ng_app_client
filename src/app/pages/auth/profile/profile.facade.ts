@@ -1,3 +1,5 @@
+import { DepositApiService } from '@shared/services/deposit-api.service';
+import type { DepositInstructions } from '@shared/components/add-funds-panel/deposit-instructions';
 import { map, Subscription } from 'rxjs';
 import { ActiveWalletFacade } from '@domains/wallet/application/active-wallet.facade';
 import { Injectable, OnDestroy } from '@angular/core';
@@ -84,7 +86,8 @@ export class ProfileFacade implements OnDestroy {
     private readonly localizedRouting: LocalizedRoutingService,
     private readonly portfolioApi: PortfolioApiService,
     private readonly activeWallet: ActiveWalletFacade,
-    private readonly exchangeAssets: ExchangeAssetsService
+    private readonly exchangeAssets: ExchangeAssetsService,
+    private readonly deposits: DepositApiService
   ) {
     this.subscriptions.add(
       this.activeWallet.state$.subscribe(state => {
@@ -94,7 +97,10 @@ export class ProfileFacade implements OnDestroy {
           state.wallet?.id,
           state.network,
         ]);
-        if (key !== this.contextKey) this.portfolioCache = undefined;
+        if (key !== this.contextKey) {
+          this.portfolioCache = undefined;
+          this.closeAddFunds();
+        }
         this.contextKey = key;
       })
     );
@@ -106,6 +112,7 @@ export class ProfileFacade implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.closeAddFunds();
     this.addFundsAssetsSub?.unsubscribe();
     this.subscriptions.unsubscribe();
   }
@@ -221,13 +228,17 @@ export class ProfileFacade implements OnDestroy {
    */
   public readonly fundTransfersAvailable = false;
 
-  /** Host Add Funds receive dialog (token → network → mock address + QR). */
+  /** Host receive drawer; deposit instructions require backend integration. */
   public readonly addFundsAvailable = true;
   public addFundsOpen = false;
   public addFundsTokens: ExchangeToken[] = [];
   public addFundsLoading = false;
   public addFundsError = '';
   private addFundsAssetsSub?: Subscription;
+  public depositInstructions: DepositInstructions | null = null;
+  public depositLoading = false;
+  public depositError = '';
+  private depositGeneration = 0;
 
   /** Open send/transfer when that view exists; no-op while unavailable. */
   public async openSendFunds(): Promise<void> {
@@ -249,6 +260,49 @@ export class ProfileFacade implements OnDestroy {
 
   public closeAddFunds(): void {
     this.addFundsOpen = false;
+    this.depositGeneration++;
+    this.depositInstructions = null;
+    this.depositLoading = false;
+    this.depositError = '';
+  }
+
+  public async requestDeposit({
+    token,
+    amount,
+  }: {
+    token: ExchangeToken;
+    amount: string;
+  }): Promise<void> {
+    const generation = ++this.depositGeneration;
+    this.depositInstructions = null;
+    this.depositError = '';
+    this.depositLoading = false;
+    const wallet = this.authSession.session?.wallets.find(
+      item => item.isPrimary && !item.deletedAt
+    );
+    if (!this.addFundsOpen || !wallet || !token.sourceNetwork) {
+      this.depositError =
+        'Select an active wallet and a supported network to receive funds.';
+      return;
+    }
+    this.depositLoading = true;
+    try {
+      const instructions = await this.deposits.create(
+        wallet.id,
+        token.assetId,
+        token.sourceNetwork,
+        wallet.address,
+        amount
+      );
+      if (generation === this.depositGeneration)
+        this.depositInstructions = instructions;
+    } catch {
+      if (generation === this.depositGeneration)
+        this.depositError =
+          'Deposit instructions are unavailable for this wallet and network. Try again or select another network.';
+    } finally {
+      if (generation === this.depositGeneration) this.depositLoading = false;
+    }
   }
 
   /** Load / retry depositable assets for the Add Funds drawer. */

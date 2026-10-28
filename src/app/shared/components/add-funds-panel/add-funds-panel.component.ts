@@ -5,6 +5,7 @@ import {
   EventEmitter,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   SimpleChanges,
   ViewChild,
@@ -18,13 +19,16 @@ import {
 import type { TokenGroup } from '../token-select-panel/token-groups.utils';
 import {
   buildAddFundsGroups,
-  buildDemoDepositAddress,
   filterTokenGroups,
   networkOptionLabel,
   splitPopularGroups,
   type AddFundsStep,
 } from './add-funds-deposit.utils';
 import { buildDepositQrDataUrl } from './add-funds-qr.utils';
+import {
+  DepositInstructions,
+  usableDepositInstructions,
+} from './deposit-instructions';
 
 @Component({
   selector: 'app-add-funds-panel',
@@ -32,11 +36,22 @@ import { buildDepositQrDataUrl } from './add-funds-qr.utils';
   templateUrl: './add-funds-panel.component.html',
   styleUrls: ['./add-funds-panel.component.scss'],
 })
-export class AddFundsPanelComponent implements OnChanges, AfterViewInit {
+export class AddFundsPanelComponent
+  implements OnChanges, AfterViewInit, OnDestroy
+{
   @Input() isOpen = false;
   @Input() tokens: ExchangeToken[] = [];
   @Input() loading = false;
   @Input() loadError = '';
+  @Input() depositLoading = false;
+  @Input() depositError = '';
+  @Input() depositInstructions: DepositInstructions | null = null;
+  @Output() depositRequested = new EventEmitter<{
+    token: ExchangeToken;
+    amount: string;
+  }>();
+  private qrGeneration = 0;
+  private expiryTimer?: ReturnType<typeof setTimeout>;
 
   @Output() closeRequested = new EventEmitter<void>();
   @Output() retryRequested = new EventEmitter<void>();
@@ -50,6 +65,8 @@ export class AddFundsPanelComponent implements OnChanges, AfterViewInit {
   public selectedGroup: TokenGroup | null = null;
   public selectedToken: ExchangeToken | null = null;
   public depositAddress = '';
+  public depositAmount = '';
+  private requestedAmount: string | null = null;
   public qrDataUrl = '';
   public qrError = '';
   public qrLoading = false;
@@ -109,7 +126,14 @@ export class AddFundsPanelComponent implements OnChanges, AfterViewInit {
     }
   }
 
+  public ngOnDestroy(): void {
+    this.clearDepositState();
+  }
+
   public ngOnChanges(changes: SimpleChanges): void {
+    if (changes['depositInstructions'] && this.step === 'deposit') {
+      this.applyDepositInstructions();
+    }
     if (changes['isOpen']) {
       if (this.isOpen) {
         queueMicrotask(() => this.focusInitialControl());
@@ -165,11 +189,36 @@ export class AddFundsPanelComponent implements OnChanges, AfterViewInit {
           group.tokens.some(item => item.assetId === token.assetId)
         ) ?? null;
     }
-    this.depositAddress = buildDemoDepositAddress(token);
+    this.clearDepositState();
     this.step = 'deposit';
     this.copied = false;
     this.copyError = '';
-    void this.renderQr(token, this.depositAddress);
+    this.depositAmount = '';
+    this.requestedAmount = null;
+  }
+
+  public changeAmount(value: string): void {
+    this.depositAmount = value;
+    this.requestedAmount = null;
+    this.clearDepositState();
+  }
+
+  public get validAmount(): boolean {
+    return (
+      /^(0|[1-9]\d*)(\.\d+)?$/.test(this.depositAmount) &&
+      /[1-9]/.test(this.depositAmount) &&
+      this.depositAmount.length <= 80
+    );
+  }
+
+  public requestDeposit(): void {
+    if (!this.selectedToken || !this.validAmount || this.depositLoading) return;
+    this.clearDepositState();
+    this.requestedAmount = this.depositAmount;
+    this.depositRequested.emit({
+      token: this.selectedToken,
+      amount: this.depositAmount,
+    });
   }
 
   public changeToken(): void {
@@ -198,7 +247,17 @@ export class AddFundsPanelComponent implements OnChanges, AfterViewInit {
   }
 
   public async copyAddress(): Promise<void> {
-    if (!this.depositAddress) {
+    if (
+      !this.selectedToken ||
+      this.requestedAmount === null ||
+      this.depositInstructions?.amount !== this.requestedAmount ||
+      !usableDepositInstructions(
+        this.depositInstructions,
+        this.selectedToken.assetId
+      ) ||
+      !this.depositAddress
+    ) {
+      this.clearDepositState();
       return;
     }
     this.copyError = '';
@@ -219,20 +278,52 @@ export class AddFundsPanelComponent implements OnChanges, AfterViewInit {
     return count === 1 ? '1 network' : `${count} networks`;
   }
 
+  private applyDepositInstructions(): void {
+    this.clearDepositState();
+    if (
+      !this.selectedToken ||
+      this.requestedAmount === null ||
+      this.depositInstructions?.amount !== this.requestedAmount ||
+      !usableDepositInstructions(
+        this.depositInstructions,
+        this.selectedToken.assetId
+      )
+    ) {
+      return;
+    }
+    const instructions = this.depositInstructions;
+    this.depositAddress = instructions.address;
+    this.expiryTimer = setTimeout(
+      () => this.clearDepositState(),
+      Math.min(Date.parse(instructions.expiresAt) - Date.now(), 2147483647)
+    );
+    // Address-only QR cannot carry mandatory routing memos safely.
+    if (!instructions.memo) {
+      void this.renderQr(this.selectedToken, instructions.address);
+    }
+  }
+
   private async renderQr(token: ExchangeToken, address: string): Promise<void> {
+    const generation = this.qrGeneration;
     this.qrLoading = true;
     this.qrError = '';
     this.qrDataUrl = '';
     try {
-      this.qrDataUrl = await buildDepositQrDataUrl({
+      const dataUrl = await buildDepositQrDataUrl({
         address,
         symbol: token.displaySymbol || token.symbol,
         iconUrl: this.tokenIconUrl(token),
       });
+      if (
+        generation === this.qrGeneration &&
+        usableDepositInstructions(this.depositInstructions, token.assetId)
+      )
+        this.qrDataUrl = dataUrl;
     } catch {
-      this.qrError = 'Could not generate QR code.';
+      if (generation === this.qrGeneration)
+        this.qrError = 'Could not generate QR code.';
     } finally {
-      this.qrLoading = false;
+      if (generation === this.qrGeneration) this.qrLoading = false;
     }
   }
 
@@ -245,6 +336,8 @@ export class AddFundsPanelComponent implements OnChanges, AfterViewInit {
   }
 
   private clearDepositState(): void {
+    this.qrGeneration++;
+    clearTimeout(this.expiryTimer);
     this.depositAddress = '';
     this.qrDataUrl = '';
     this.qrError = '';

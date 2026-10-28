@@ -1,3 +1,5 @@
+import { SimpleChange } from '@angular/core';
+import { fakeAsync, tick } from '@angular/core/testing';
 import type { ExchangeToken } from '@shared/models/exchange-token.model';
 import { AddFundsPanelComponent } from './add-funds-panel.component';
 
@@ -47,7 +49,8 @@ describe('AddFundsPanelComponent', () => {
 
     expect(component.step).toBe('deposit');
     expect(component.selectedToken?.assetId).toBe('near:native');
-    expect(component.depositAddress.startsWith('demo-')).toBeTrue();
+    expect(component.depositAddress).toBe('');
+    expect(component.qrDataUrl).toBe('');
     expect(component.networkLabel(component.selectedToken!)).toBe('NEAR');
   });
 
@@ -86,9 +89,100 @@ describe('AddFundsPanelComponent', () => {
     expect(component.canChangeNetwork).toBeTrue();
   });
 
+  it('requests instructions without inventing an address', () => {
+    const request = spyOn(component.depositRequested, 'emit');
+    component.selectNetwork(usdcEth);
+    expect(request).not.toHaveBeenCalled();
+    component.changeAmount('1');
+    component.requestDeposit();
+    expect(request).toHaveBeenCalledOnceWith({ token: usdcEth, amount: '1' });
+    expect(component.depositAddress).toBe('');
+    expect(component.qrDataUrl).toBe('');
+  });
+
+  it('rejects instructions for a different selected asset', () => {
+    component.depositInstructions = {
+      amount: '1',
+      minimumReceived: '0.9',
+      assetId: usdcEth.assetId,
+      address: 'receiver',
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+    };
+    component.selectNetwork(usdcBase);
+    expect(component.depositAddress).toBe('');
+  });
+
+  it('clears expired instructions and does not create an address-only QR for a memo deposit', fakeAsync(() => {
+    component.depositInstructions = {
+      amount: '1',
+      minimumReceived: '0.9',
+      assetId: near.assetId,
+      address: 'receiver.near',
+      memo: '123',
+      expiresAt: new Date(Date.now() + 1000).toISOString(),
+    };
+    component.selectNetwork(near);
+    component.changeAmount('1');
+    component.requestDeposit();
+    component.ngOnChanges({
+      depositInstructions: new SimpleChange(
+        null,
+        component.depositInstructions,
+        false
+      ),
+    });
+    expect(component.depositAddress).toBe('receiver.near');
+    expect(component.qrDataUrl).toBe('');
+    tick(1000);
+    expect(component.depositAddress).toBe('');
+  }));
+
+  it('hides a delayed quote after editing away from and back to its amount', () => {
+    component.selectNetwork(near);
+    component.changeAmount('1');
+    component.requestDeposit();
+    component.changeAmount('2');
+    component.changeAmount('1');
+    component.depositInstructions = {
+      assetId: near.assetId,
+      amount: '1',
+      minimumReceived: '0.9',
+      address: 'receiver.near',
+      expiresAt: '2099-01-01T00:00:00Z',
+    };
+    component.ngOnChanges({
+      depositInstructions: new SimpleChange(
+        null,
+        component.depositInstructions,
+        false
+      ),
+    });
+    expect(component.depositAddress).toBe('');
+    expect(component.qrDataUrl).toBe('');
+  });
+
+  afterEach(() => component.ngOnDestroy());
+
   it('marks the address as copied when clipboard write succeeds', async () => {
+    component.depositInstructions = {
+      amount: '1',
+      minimumReceived: '0.9',
+      assetId: near.assetId,
+      address: 'receiver.near',
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+      memo: 'required-memo',
+    };
     const group = component.allGroups.find(item => item.symbol === 'NEAR');
     component.selectGroup(group!);
+    component.changeAmount('1');
+    component.requestDeposit();
+    component.ngOnChanges({
+      depositInstructions: new SimpleChange(
+        null,
+        component.depositInstructions,
+        false
+      ),
+    });
     const writeText = jasmine.createSpy('writeText').and.resolveTo(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
