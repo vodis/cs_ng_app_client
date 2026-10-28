@@ -150,8 +150,8 @@ Flow direction:
 Profile boundary rules:
 
 - `ProfileComponent` owns presentation state and formatting only.
-- `ProfileFacade` owns wallet, passkey, balance, and navigation workflows and is
-  the component's only integration dependency.
+- `ProfileFacade` owns wallet, passkey, balance, Add Funds asset loading, and
+  navigation workflows and is the component's only integration dependency.
 - `ProfileActivitySource` supplies one activity snapshot for the activity panel
   and swap-onboarding progress. The temporary mock implementation is
   component-scoped and can be replaced by a backend adapter without changing

@@ -6,6 +6,8 @@ import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import type { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
+import type { ExchangeToken } from '@shared/models/exchange-token.model';
+import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
@@ -81,7 +83,8 @@ export class ProfileFacade implements OnDestroy {
     private readonly router: Router,
     private readonly localizedRouting: LocalizedRoutingService,
     private readonly portfolioApi: PortfolioApiService,
-    private readonly activeWallet: ActiveWalletFacade
+    private readonly activeWallet: ActiveWalletFacade,
+    private readonly exchangeAssets: ExchangeAssetsService
   ) {
     this.subscriptions.add(
       this.activeWallet.state$.subscribe(state => {
@@ -103,6 +106,7 @@ export class ProfileFacade implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.addFundsAssetsSub?.unsubscribe();
     this.subscriptions.unsubscribe();
   }
 
@@ -220,6 +224,10 @@ export class ProfileFacade implements OnDestroy {
   /** Host Add Funds receive dialog (token → network → mock address + QR). */
   public readonly addFundsAvailable = true;
   public addFundsOpen = false;
+  public addFundsTokens: ExchangeToken[] = [];
+  public addFundsLoading = false;
+  public addFundsError = '';
+  private addFundsAssetsSub?: Subscription;
 
   /** Open send/transfer when that view exists; no-op while unavailable. */
   public async openSendFunds(): Promise<void> {
@@ -235,11 +243,32 @@ export class ProfileFacade implements OnDestroy {
     if (!this.addFundsAvailable) {
       return;
     }
+    this.loadAddFundsTokens();
     this.addFundsOpen = true;
   }
 
   public closeAddFunds(): void {
     this.addFundsOpen = false;
+  }
+
+  /** Load / retry depositable assets for the Add Funds drawer. */
+  public loadAddFundsTokens(): void {
+    this.addFundsAssetsSub?.unsubscribe();
+    this.addFundsLoading = true;
+    this.addFundsError = '';
+    this.addFundsAssetsSub = this.exchangeAssets.loadAssets().subscribe({
+      next: tokens => {
+        this.addFundsTokens = tokens;
+        this.addFundsLoading = false;
+        if (tokens.length === 0) {
+          this.addFundsError = 'No assets available to receive.';
+        }
+      },
+      error: () => {
+        this.addFundsLoading = false;
+        this.addFundsError = 'Failed to load assets. Try again later.';
+      },
+    });
   }
 
   public async openExchange(): Promise<void> {

@@ -227,15 +227,6 @@ describe('ProfileComponent', () => {
     activeWallet.requestConnection.and.callFake(() =>
       walletsService.requestOpen()
     );
-    const profile = new ProfileFacade(
-      authSession,
-      walletsService,
-      walletGatewayBridge,
-      router,
-      localizedRouting,
-      portfolioApi,
-      activeWallet
-    );
     const exchangeAssets = jasmine.createSpyObj<ExchangeAssetsService>(
       'ExchangeAssetsService',
       ['loadAssets']
@@ -251,11 +242,17 @@ describe('ProfileComponent', () => {
         },
       ])
     );
-    component = new ProfileComponent(
-      profile,
-      new MockProfileActivitySource(),
+    const profile = new ProfileFacade(
+      authSession,
+      walletsService,
+      walletGatewayBridge,
+      router,
+      localizedRouting,
+      portfolioApi,
+      activeWallet,
       exchangeAssets
     );
+    component = new ProfileComponent(profile, new MockProfileActivitySource());
     component.ngOnInit();
   });
 
@@ -751,7 +748,9 @@ describe('ProfileComponent', () => {
     expect(walletGatewayBridge.syncConnectedWallet).not.toHaveBeenCalled();
     expect(walletsService.requestOpen).not.toHaveBeenCalled();
     expect(component.profile.addFundsOpen).toBeTrue();
-    expect(component.addFundsTokens.length).toBe(1);
+    expect(component.profile.addFundsTokens.length).toBe(1);
+    expect(component.profile.addFundsLoading).toBeFalse();
+    expect(component.profile.addFundsError).toBe('');
 
     component.closeAddFunds();
     expect(component.profile.addFundsOpen).toBeFalse();

@@ -67,7 +67,8 @@ Production wallet remote policy:
   uses the existing provider-neutral `linkPasskey()` contract; disable/recover
   and 2FA enrollment remain host UI until the auth-provider contract grows.
 - Keep profile integrations behind `ProfileFacade`; do not inject auth, wallet
-  gateway, or router services directly into `ProfileComponent`.
+  gateway, exchange assets, or router services directly into
+  `ProfileComponent`. Add Funds token load/error state lives on the facade.
 - Supply activity through `ProfileActivitySource` so the activity panel and
   onboarding progress cannot diverge.
 

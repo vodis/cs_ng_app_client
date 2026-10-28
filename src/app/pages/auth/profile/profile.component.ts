@@ -42,8 +42,6 @@ import {
   type ProfileOnboardingStep,
   type ProfileOnboardingViewModel,
 } from './profile.facade';
-import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
-import type { ExchangeToken } from '@shared/models/exchange-token.model';
 
 const CHAIN_ICON_URLS: Record<string, string> = {
   ethereum: EXCHANGE_TOKEN_ICON_URLS['ETH'],
@@ -106,9 +104,6 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public onboardingDetailsOpen = false;
   public walletLoading = false;
   public copiedWalletId = '';
-  public addFundsTokens: ExchangeToken[] = [];
-  public addFundsLoading = false;
-  public addFundsError = '';
   private addFundsTrigger: HTMLElement | null = null;
 
   public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
@@ -126,8 +121,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     public readonly profile: ProfileFacade,
-    private readonly activitySource: ProfileActivitySource,
-    private readonly exchangeAssets: ExchangeAssetsService
+    private readonly activitySource: ProfileActivitySource
   ) {
     this.activity = this.activitySource.snapshot();
     this.onboarding = this.buildOnboardingViewModel();
@@ -571,7 +565,6 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     const target = event?.currentTarget;
     this.addFundsTrigger =
       target instanceof HTMLElement ? target : this.addFundsTrigger;
-    this.loadAddFundsTokens();
     await this.profile.openAddFunds();
   }
 
@@ -581,22 +574,8 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     queueMicrotask(() => trigger?.focus());
   }
 
-  public loadAddFundsTokens(): void {
-    this.addFundsLoading = true;
-    this.addFundsError = '';
-    this.exchangeAssets.loadAssets().subscribe({
-      next: tokens => {
-        this.addFundsTokens = tokens;
-        this.addFundsLoading = false;
-        if (tokens.length === 0) {
-          this.addFundsError = 'No assets available to receive.';
-        }
-      },
-      error: () => {
-        this.addFundsLoading = false;
-        this.addFundsError = 'Failed to load assets. Try again later.';
-      },
-    });
+  public retryAddFundsTokens(): void {
+    this.profile.loadAddFundsTokens();
   }
 
   public async openExchange(): Promise<void> {

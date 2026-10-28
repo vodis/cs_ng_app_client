@@ -626,11 +626,11 @@
     (closeRequested)="closeAddFunds()">
     <app-add-funds-panel
       [isOpen]="profile.addFundsOpen"
-      [tokens]="addFundsTokens"
-      [loading]="addFundsLoading"
-      [loadError]="addFundsError"
+      [tokens]="profile.addFundsTokens"
+      [loading]="profile.addFundsLoading"
+      [loadError]="profile.addFundsError"
       (closeRequested)="closeAddFunds()"
-      (retryRequested)="loadAddFundsTokens()">
+      (retryRequested)="retryAddFundsTokens()">
     </app-add-funds-panel>
   </app-side-modal>
 </section>
