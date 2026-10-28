@@ -59,4 +59,27 @@ describe('TermsAcceptanceService', () => {
     );
     expect(service.hasAcceptedCurrent('user-1')).toBeFalse();
   });
+
+  it('keeps acceptance in memory when localStorage writes fail', () => {
+    spyOn(window.localStorage, 'setItem').and.throwError('quota exceeded');
+
+    service.acceptCurrent('user-1');
+
+    expect(service.hasAcceptedCurrent('user-1')).toBeTrue();
+    expect(service.getAcceptedVersion('user-1')).toBe(CURRENT_TERMS_VERSION);
+    expect(
+      window.localStorage.getItem(TERMS_ACCEPTANCE_STORAGE_KEY)
+    ).toBeNull();
+  });
+
+  it('still honors memory acceptance after a failed write when storage reads are empty', () => {
+    spyOn(window.localStorage, 'setItem').and.throwError('storage blocked');
+    spyOn(window.localStorage, 'getItem').and.returnValue(null);
+
+    service.acceptCurrent('user-1');
+
+    expect(service.hasAcceptedCurrent('user-1')).toBeTrue();
+    expect(service.hasPriorAcceptance('user-1')).toBeTrue();
+    expect(service.isVersionUpdate('user-1')).toBeFalse();
+  });
 });

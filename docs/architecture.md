@@ -439,6 +439,8 @@ Acceptance is stored per backend `user.id` in localStorage under
 `craftscript.termsAcceptance.v1.prototype`. This is an explicit browser-local
 prototype — it does not sync across devices or browsers. Replace with a
 backend-backed acceptance record before production multi-device enforcement.
+If `localStorage` writes fail (quota/blocked), the host keeps acceptance in
+memory for the current tab so AuthGuard does not bounce back to `/terms`.
 Wallet MFE is out of scope: Terms are host UX after a normalized session exists.
 
 `I agree` stays disabled until the Terms panel is scrolled to the end (or the

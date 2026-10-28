@@ -8,6 +8,13 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class TermsAcceptanceService {
+  /**
+   * Session-scoped fallback when localStorage is blocked or quota-exceeded.
+   * Always updated on accept so AuthGuard does not bounce the user back to
+   * `/terms` after a failed persistence write.
+   */
+  private readonly memoryStore: TermsAcceptanceStore = {};
+
   hasAcceptedCurrent(userId: string): boolean {
     const record = this.readRecord(userId);
     return record?.version === CURRENT_TERMS_VERSION;
@@ -30,22 +37,27 @@ export class TermsAcceptanceService {
   }
 
   acceptCurrent(userId: string): void {
-    const store = this.readStore();
-    store[userId] = {
+    const record: TermsAcceptanceRecord = {
       version: CURRENT_TERMS_VERSION,
       acceptedAt: new Date().toISOString(),
     };
-    this.writeStore(store);
+    this.memoryStore[userId] = record;
+
+    const store = this.readPersistedStore();
+    store[userId] = record;
+    this.writePersistedStore(store);
   }
 
   private readRecord(userId: string): TermsAcceptanceRecord | null {
     if (!userId) {
       return null;
     }
-    return this.readStore()[userId] ?? null;
+    return (
+      this.memoryStore[userId] ?? this.readPersistedStore()[userId] ?? null
+    );
   }
 
-  private readStore(): TermsAcceptanceStore {
+  private readPersistedStore(): TermsAcceptanceStore {
     try {
       const raw = window.localStorage.getItem(TERMS_ACCEPTANCE_STORAGE_KEY);
       if (!raw) {
@@ -68,14 +80,14 @@ export class TermsAcceptanceService {
     }
   }
 
-  private writeStore(store: TermsAcceptanceStore): void {
+  private writePersistedStore(store: TermsAcceptanceStore): void {
     try {
       window.localStorage.setItem(
         TERMS_ACCEPTANCE_STORAGE_KEY,
         JSON.stringify(store)
       );
     } catch {
-      // Prototype storage may be blocked; acceptance will be re-prompted.
+      // Persistence may be blocked; memoryStore keeps acceptance for this tab.
     }
   }
 }
