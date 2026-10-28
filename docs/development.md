@@ -60,7 +60,9 @@ Production wallet remote policy:
 - Users who already have a linked wallet still continue to `returnUrl`.
 - When the current Terms version is not accepted for the user, login/register
   and `AuthGuard` route through `/terms` first and keep the final destination
-  in `returnUrl`. Acceptance storage is a labeled localStorage prototype
+  in `returnUrl`. Guest hits on `/terms` and unauthenticated protected routes
+  redirect to a localized `/login?returnUrl=…` so the locale redirect hop does
+  not drop query params. Acceptance storage is a labeled localStorage prototype
   (`craftscript.termsAcceptance.v1.prototype`); prefer a backend record later.
 - Authenticated Playwright fixtures seed Terms acceptance via
   `seedTermsAcceptance` so protected-route e2e does not stop on `/terms`.

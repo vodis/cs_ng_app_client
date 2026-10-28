@@ -419,11 +419,13 @@ after refresh on Token Exchange) without blocking navigation.
    the current Terms version is accepted for that user.
 2. Otherwise wait for the auth provider to reach a terminal state.
 3. Attempt `AuthSessionService.refresh()` when the provider is `ready`.
-4. Redirect to `/login?returnUrl=<safe-path>` when there is no valid session and
-   refresh cannot restore one.
-5. Redirect to `/terms?returnUrl=<safe-path>` when a session exists but the
-   current Terms version is not accepted (covers refresh and deep links into
-   protected routes).
+4. Redirect to a **localized** `/login?returnUrl=<safe-path>` (via
+   `preferredLocalePath`) when there is no valid session and refresh cannot
+   restore one. Unprefixed `/login` locale redirects drop query params.
+5. Redirect to a **localized** `/terms?returnUrl=<safe-path>` when a session
+   exists but the current Terms version is not accepted (covers refresh and
+   deep links into protected routes). `TermsGuard` similarly sends guests to
+   localized `/login` so `returnUrl` survives.
 
 Logout clears host session state and navigates to Token Exchange (`/`).
 

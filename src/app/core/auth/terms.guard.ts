@@ -5,6 +5,7 @@ import {
   Router,
   UrlTree,
 } from '@angular/router';
+import { preferredLocalePath } from '@core/routing/localized-routing.service';
 import { AuthProviderService } from './auth-provider.service';
 import { AuthSessionService } from './auth-session.service';
 import { TermsAcceptanceService } from './terms-acceptance.service';
@@ -23,9 +24,11 @@ export class TermsGuard implements CanActivate {
     const returnUrl = this.safeReturnUrl(route.queryParamMap.get('returnUrl'));
 
     if (!session) {
-      return this.router.createUrlTree(['/login'], {
-        queryParams: { returnUrl },
-      });
+      // Prefer a localized `/login` URL so query params are not dropped by the
+      // unprefixed `/login` → `/en/login` redirect hop.
+      return this.router.parseUrl(
+        `${preferredLocalePath('/login')}?returnUrl=${encodeURIComponent(returnUrl)}`
+      );
     }
 
     if (this.termsAcceptance.hasAcceptedCurrent(session.user.id)) {

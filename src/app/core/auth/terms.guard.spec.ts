@@ -27,18 +27,14 @@ describe('TermsGuard', () => {
       'TermsAcceptanceService',
       ['hasAcceptedCurrent']
     );
-    router = jasmine.createSpyObj<Router>('Router', [
-      'createUrlTree',
-      'parseUrl',
-    ]);
+    router = jasmine.createSpyObj<Router>('Router', ['parseUrl']);
     loginTree = {} as UrlTree;
     returnTree = {} as UrlTree;
-    router.createUrlTree.and.returnValue(loginTree);
     router.parseUrl.and.returnValue(returnTree);
     guard = new TermsGuard(authSession, authProvider, termsAcceptance, router);
   });
 
-  it('redirects guests to login while preserving returnUrl', async () => {
+  it('redirects guests to localized login while preserving returnUrl', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'disabled',
       loginMethods: [],
@@ -47,15 +43,16 @@ describe('TermsGuard', () => {
       passkeyLinkEnabled: false,
       embeddedWalletEnabled: false,
     });
+    router.parseUrl.and.returnValue(loginTree);
 
     const result = await guard.canActivate({
       queryParamMap: convertToParamMap({ returnUrl: '/farm' }),
     } as never);
 
     expect(result).toBe(loginTree);
-    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
-      queryParams: { returnUrl: '/farm' },
-    });
+    expect(router.parseUrl).toHaveBeenCalledOnceWith(
+      '/en/login?returnUrl=%2Ffarm'
+    );
   });
 
   it('allows the Terms page when acceptance is still required', async () => {

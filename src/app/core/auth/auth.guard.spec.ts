@@ -28,13 +28,9 @@ describe('AuthGuard', () => {
       ['hasAcceptedCurrent']
     );
     termsAcceptance.hasAcceptedCurrent.and.returnValue(true);
-    router = jasmine.createSpyObj<Router>('Router', [
-      'createUrlTree',
-      'parseUrl',
-    ]);
+    router = jasmine.createSpyObj<Router>('Router', ['parseUrl']);
     loginTree = {} as UrlTree;
     termsTree = {} as UrlTree;
-    router.createUrlTree.and.returnValue(loginTree);
     router.parseUrl.and.returnValue(termsTree);
     guard = new AuthGuard(authSession, authProvider, termsAcceptance, router);
   });
@@ -86,12 +82,18 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    await guard.canActivate({} as never, { url: '/profile' } as never);
+    router.parseUrl.and.returnValue(loginTree);
+
+    const result = await guard.canActivate(
+      {} as never,
+      { url: '/profile' } as never
+    );
 
     expect(authSession.refresh).not.toHaveBeenCalled();
-    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
-      queryParams: { returnUrl: '/profile' },
-    });
+    expect(result).toBe(loginTree);
+    expect(router.parseUrl).toHaveBeenCalledOnceWith(
+      '/en/login?returnUrl=%2Fprofile'
+    );
   });
 
   it('uses root as the return URL when the requested URL is unsafe', async () => {
@@ -103,12 +105,15 @@ describe('AuthGuard', () => {
       passkeyLinkEnabled: false,
       embeddedWalletEnabled: false,
     });
+    router.parseUrl.and.returnValue(loginTree);
 
-    await guard.canActivate({} as never, { url: '//example.test' } as never);
+    const result = await guard.canActivate(
+      {} as never,
+      { url: '//example.test' } as never
+    );
 
-    expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], {
-      queryParams: { returnUrl: '/' },
-    });
+    expect(result).toBe(loginTree);
+    expect(router.parseUrl).toHaveBeenCalledOnceWith('/en/login?returnUrl=%2F');
   });
 
   it('redirects authenticated users without Terms acceptance to /terms', async () => {
