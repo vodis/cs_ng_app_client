@@ -18,6 +18,8 @@ export class SideModalComponent {
   @Input() showCloseButton = true;
   /** Keep panel overflow hidden so nested surfaces (swap-review) own scrolling. */
   @Input() containScroll = false;
+  /** Narrow right drawer (~480–520px) for flows like Add Funds. */
+  @Input() size: 'drawer' | 'compact' = 'drawer';
   @Output() closeRequested = new EventEmitter<void>();
 
   public handleHostClose(event: Event): void {

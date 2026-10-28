@@ -212,10 +212,14 @@ export class ProfileFacade implements OnDestroy {
   }
 
   /**
-   * Send/receive transfer views are not shipped yet (wallet board still marks
-   * "Send & receive" as Soon). Keep fund CTAs disabled until those flows exist.
+   * Send transfer view is not shipped yet (wallet board still marks
+   * "Send & receive" as Soon). Keep Send Funds disabled until that flow exists.
    */
   public readonly fundTransfersAvailable = false;
+
+  /** Host Add Funds receive dialog (token → network → mock address + QR). */
+  public readonly addFundsAvailable = true;
+  public addFundsOpen = false;
 
   /** Open send/transfer when that view exists; no-op while unavailable. */
   public async openSendFunds(): Promise<void> {
@@ -226,12 +230,16 @@ export class ProfileFacade implements OnDestroy {
     this.walletsService.requestOpen('wallet');
   }
 
-  /** Open receive/add-funds when that view exists; no-op while unavailable. */
+  /** Open the host Add Funds receive dialog (no wallet connect / select). */
   public async openAddFunds(): Promise<void> {
-    if (!this.fundTransfersAvailable) {
+    if (!this.addFundsAvailable) {
       return;
     }
-    await this.openWalletModal();
+    this.addFundsOpen = true;
+  }
+
+  public closeAddFunds(): void {
+    this.addFundsOpen = false;
   }
 
   public async openExchange(): Promise<void> {

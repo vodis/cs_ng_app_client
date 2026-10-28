@@ -1,0 +1,317 @@
+<section
+  #panelRoot
+  class="add-funds-panel"
+  tabindex="-1"
+  [attr.data-direction]="transitionDirection"
+  (keydown.escape)="handleClose()">
+  <header class="add-funds-panel__header">
+    @if (step !== 'token') {
+      <button
+        type="button"
+        class="add-funds-panel__icon-btn"
+        aria-label="Back"
+        (click)="handleBack()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+    } @else {
+      <span class="add-funds-panel__icon-spacer" aria-hidden="true"></span>
+    }
+
+    <div class="add-funds-panel__heading">
+      <h2 class="add-funds-panel__title">{{ stepTitle }}</h2>
+      <ol class="add-funds-panel__steps" aria-label="Add funds steps">
+        <li
+          [class.add-funds-panel__step--active]="stepIndex === 0"
+          [class.add-funds-panel__step--done]="stepIndex > 0">
+          <span class="add-funds-panel__step-dot" aria-hidden="true"></span>
+          Token
+        </li>
+        <li
+          [class.add-funds-panel__step--active]="stepIndex === 1"
+          [class.add-funds-panel__step--done]="stepIndex > 1">
+          <span class="add-funds-panel__step-dot" aria-hidden="true"></span>
+          Network
+        </li>
+        <li [class.add-funds-panel__step--active]="stepIndex === 2">
+          <span class="add-funds-panel__step-dot" aria-hidden="true"></span>
+          Deposit
+        </li>
+      </ol>
+    </div>
+
+    <button
+      type="button"
+      class="add-funds-panel__icon-btn"
+      aria-label="Close add funds"
+      (click)="handleClose()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <div
+    class="add-funds-panel__content"
+    [attr.data-step]="step"
+    [attr.data-direction]="transitionDirection">
+    @if (step === 'token') {
+      <div class="add-funds-panel__token-step">
+        <label class="add-funds-panel__search-label" for="add-funds-search">
+          Search name or symbol
+        </label>
+        <input
+          #searchInput
+          id="add-funds-search"
+          class="add-funds-panel__search"
+          type="search"
+          name="addFundsSearch"
+          autocomplete="off"
+          placeholder="Search name or symbol"
+          [(ngModel)]="filterQuery" />
+
+        @if (loading) {
+          <p class="add-funds-panel__status" role="status">Loading tokens…</p>
+        } @else if (loadError) {
+          <div class="add-funds-panel__error" role="alert">
+            <p>{{ loadError }}</p>
+            <button type="button" (click)="retryRequested.emit()">
+              Try again
+            </button>
+          </div>
+        } @else if (emptySearch) {
+          <p class="add-funds-panel__status">No tokens match your search.</p>
+        } @else {
+          <div class="add-funds-panel__list-scroll">
+            @if (popularGroups.length && !hasSearchQuery) {
+              <p class="add-funds-panel__section">Popular</p>
+              <ul class="add-funds-panel__list" aria-label="Popular tokens">
+                @for (group of popularGroups; track group.symbol) {
+                  <li>
+                    <button
+                      type="button"
+                      class="add-funds-panel__row"
+                      (click)="selectGroup(group)">
+                      <span class="add-funds-panel__icon" aria-hidden="true">
+                        @if (tokenIconUrl(group.token); as icon) {
+                          <img [src]="icon" alt="" />
+                        } @else {
+                          {{
+                            tokenAvatarFallback(tokenAvatarLabel(group.token))
+                          }}
+                        }
+                      </span>
+                      <span class="add-funds-panel__row-copy">
+                        <strong>{{ group.symbol }}</strong>
+                        <span>{{ group.token.name }}</span>
+                      </span>
+                      <span class="add-funds-panel__row-meta">
+                        {{ networkCountLabel(group) }}
+                        <mat-icon>chevron_right</mat-icon>
+                      </span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+
+            <p class="add-funds-panel__section">
+              {{ hasSearchQuery ? 'Results' : 'All tokens' }}
+            </p>
+            <ul class="add-funds-panel__list" aria-label="All tokens">
+              @for (
+                group of hasSearchQuery ? filteredGroups : remainingGroups;
+                track group.symbol
+              ) {
+                <li>
+                  <button
+                    type="button"
+                    class="add-funds-panel__row"
+                    (click)="selectGroup(group)">
+                    <span class="add-funds-panel__icon" aria-hidden="true">
+                      @if (tokenIconUrl(group.token); as icon) {
+                        <img [src]="icon" alt="" />
+                      } @else {
+                        {{ tokenAvatarFallback(tokenAvatarLabel(group.token)) }}
+                      }
+                    </span>
+                    <span class="add-funds-panel__row-copy">
+                      <strong>{{ group.symbol }}</strong>
+                      <span>{{ group.token.name }}</span>
+                    </span>
+                    <span class="add-funds-panel__row-meta">
+                      {{ networkCountLabel(group) }}
+                      <mat-icon>chevron_right</mat-icon>
+                    </span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+
+    @if (step === 'network' && selectedGroup; as group) {
+      <div class="add-funds-panel__network-step">
+        <button
+          type="button"
+          class="add-funds-panel__selected-token"
+          (click)="changeToken()">
+          <span class="add-funds-panel__icon" aria-hidden="true">
+            @if (tokenIconUrl(group.token); as icon) {
+              <img [src]="icon" alt="" />
+            } @else {
+              {{ tokenAvatarFallback(tokenAvatarLabel(group.token)) }}
+            }
+          </span>
+          <span class="add-funds-panel__row-copy">
+            <strong>{{ group.symbol }}</strong>
+            <span>{{ group.token.name }}</span>
+          </span>
+          <span class="add-funds-panel__change">Change</span>
+        </button>
+
+        <p class="add-funds-panel__hint">
+          Choose the same network you’re sending from.
+        </p>
+
+        <ul
+          class="add-funds-panel__list add-funds-panel__list--networks"
+          aria-label="Networks">
+          @for (token of group.tokens; track token.assetId) {
+            <li>
+              <button
+                type="button"
+                class="add-funds-panel__row"
+                [class.add-funds-panel__row--selected]="
+                  selectedToken?.assetId === token.assetId
+                "
+                (click)="selectNetwork(token)">
+                <span
+                  class="add-funds-panel__icon add-funds-panel__icon--network"
+                  aria-hidden="true">
+                  {{ networkInitial(token) }}
+                </span>
+                <span class="add-funds-panel__row-copy">
+                  <strong>{{ networkLabel(token) }}</strong>
+                  <span>Deposit {{ group.symbol }}</span>
+                </span>
+                <span class="add-funds-panel__row-meta">
+                  <mat-icon>chevron_right</mat-icon>
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    @if (step === 'deposit' && selectedToken; as token) {
+      <div class="add-funds-panel__deposit-step">
+        <div class="add-funds-panel__summary-card">
+          <div class="add-funds-panel__summary-row">
+            <span class="add-funds-panel__summary-label">Asset</span>
+            <div class="add-funds-panel__summary-value">
+              <span class="add-funds-panel__icon" aria-hidden="true">
+                @if (tokenIconUrl(token); as icon) {
+                  <img [src]="icon" alt="" />
+                } @else {
+                  {{ tokenAvatarFallback(tokenAvatarLabel(token)) }}
+                }
+              </span>
+              <strong>{{ token.displaySymbol || token.symbol }}</strong>
+            </div>
+            <button
+              type="button"
+              class="add-funds-panel__change"
+              (click)="changeToken()">
+              Change
+            </button>
+          </div>
+          <div class="add-funds-panel__summary-row">
+            <span class="add-funds-panel__summary-label">Network</span>
+            <div class="add-funds-panel__summary-value">
+              <span
+                class="add-funds-panel__icon add-funds-panel__icon--network"
+                aria-hidden="true">
+                {{ networkInitial(token) }}
+              </span>
+              <strong>{{ networkLabel(token) }}</strong>
+            </div>
+            @if (canChangeNetwork) {
+              <button
+                type="button"
+                class="add-funds-panel__change"
+                (click)="changeNetwork()">
+                Change
+              </button>
+            } @else {
+              <span
+                class="add-funds-panel__change-spacer"
+                aria-hidden="true"></span>
+            }
+          </div>
+        </div>
+
+        <p class="add-funds-panel__warning" role="status">
+          Send only
+          <strong>{{ token.displaySymbol || token.symbol }}</strong>
+          on
+          <strong>{{ networkLabel(token) }}</strong>
+          to this address.
+        </p>
+
+        <div
+          class="add-funds-panel__qr"
+          [class.add-funds-panel__qr--loading]="qrLoading && !qrDataUrl"
+          aria-live="polite">
+          @if (qrDataUrl) {
+            <img
+              class="add-funds-panel__qr-image"
+              [src]="qrDataUrl"
+              width="280"
+              height="280"
+              alt="Deposit address QR code" />
+          } @else if (qrLoading) {
+            <div
+              class="add-funds-panel__qr-skeleton"
+              role="status"
+              aria-label="Generating QR code">
+              <span class="add-funds-panel__qr-skeleton-shimmer"></span>
+              <span class="add-funds-panel__qr-skeleton-label">Generating QR…</span>
+            </div>
+          } @else if (qrError) {
+            <p class="add-funds-panel__status add-funds-panel__status--error">
+              {{ qrError }}
+            </p>
+          }
+        </div>
+
+        <div class="add-funds-panel__address">
+          <div class="add-funds-panel__address-top">
+            <span class="add-funds-panel__address-label">Deposit address</span>
+            <span class="add-funds-panel__demo-badge">Demo</span>
+          </div>
+          <code class="add-funds-panel__address-value">{{
+            depositAddress
+          }}</code>
+          <button
+            type="button"
+            class="add-funds-panel__copy"
+            (click)="copyAddress()">
+            <mat-icon aria-hidden="true">{{
+              copied ? 'check' : 'content_copy'
+            }}</mat-icon>
+            {{ copied ? 'Copied!' : 'Copy address' }}
+          </button>
+          @if (copyError) {
+            <p class="add-funds-panel__status add-funds-panel__status--error">
+              {{ copyError }}
+            </p>
+          }
+          <p class="add-funds-panel__demo-note">
+            Demo address. Do not send funds.
+          </p>
+        </div>
+      </div>
+    }
+  </div>
+</section>

@@ -8,6 +8,7 @@
 @use './styles/swap-history';
 @use './styles/register-page';
 @use './styles/profile-page';
+@use './styles/add-funds-panel';
 
 @include mat.elevation-classes();
 @include mat.app-background();

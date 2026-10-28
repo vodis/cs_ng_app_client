@@ -1,5 +1,6 @@
 /// <reference types="jasmine" />
 
+import { A11yModule } from '@angular/cdk/a11y';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatIconModule } from '@angular/material/icon';
 import { SideModalComponent } from './side-modal.component';
@@ -11,7 +12,7 @@ describe('SideModalComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [SideModalComponent],
-      imports: [MatIconModule],
+      imports: [A11yModule, MatIconModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SideModalComponent);
@@ -106,8 +107,9 @@ describe('SideModalComponent', () => {
     fixture.detectChanges();
 
     const dialog = panel();
+    expect(dialog.classList.contains('open')).toBeFalse();
     expect(getComputedStyle(dialog).pointerEvents).toBe('none');
-    expect(getComputedStyle(dialog).visibility).toBe('hidden');
+    // visibility stays visible briefly while the close transform animates
     expect(dialog.inert).toBeTrue();
     expect(dialog.getAttribute('aria-hidden')).toBe('true');
   });
@@ -167,5 +169,13 @@ describe('SideModalComponent', () => {
     expect(
       fixture.nativeElement.querySelector('.side-modal__close')
     ).toBeNull();
+  });
+
+  it('keeps compact size as a right-side drawer class', () => {
+    component.size = 'compact';
+    fixture.detectChanges();
+
+    expect(panel().classList.contains('side-modal--compact')).toBeTrue();
+    expect(panel().classList.contains('side-modal--left')).toBeFalse();
   });
 });

@@ -42,6 +42,8 @@ import {
   type ProfileOnboardingStep,
   type ProfileOnboardingViewModel,
 } from './profile.facade';
+import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
+import type { ExchangeToken } from '@shared/models/exchange-token.model';
 
 const CHAIN_ICON_URLS: Record<string, string> = {
   ethereum: EXCHANGE_TOKEN_ICON_URLS['ETH'],
@@ -104,6 +106,10 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public onboardingDetailsOpen = false;
   public walletLoading = false;
   public copiedWalletId = '';
+  public addFundsTokens: ExchangeToken[] = [];
+  public addFundsLoading = false;
+  public addFundsError = '';
+  private addFundsTrigger: HTMLElement | null = null;
 
   public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
   public activity: ProfileActivitySnapshot;
@@ -120,7 +126,8 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     public readonly profile: ProfileFacade,
-    private readonly activitySource: ProfileActivitySource
+    private readonly activitySource: ProfileActivitySource,
+    private readonly exchangeAssets: ExchangeAssetsService
   ) {
     this.activity = this.activitySource.snapshot();
     this.onboarding = this.buildOnboardingViewModel();
@@ -549,7 +556,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public async openActivityReceive(): Promise<void> {
-    await this.openWalletModal();
+    await this.openAddFunds();
   }
 
   public async openActivityAnalyze(): Promise<void> {
@@ -560,8 +567,36 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     await this.profile.openSendFunds();
   }
 
-  public async openAddFunds(): Promise<void> {
+  public async openAddFunds(event?: Event): Promise<void> {
+    const target = event?.currentTarget;
+    this.addFundsTrigger =
+      target instanceof HTMLElement ? target : this.addFundsTrigger;
+    this.loadAddFundsTokens();
     await this.profile.openAddFunds();
+  }
+
+  public closeAddFunds(): void {
+    this.profile.closeAddFunds();
+    const trigger = this.addFundsTrigger;
+    queueMicrotask(() => trigger?.focus());
+  }
+
+  public loadAddFundsTokens(): void {
+    this.addFundsLoading = true;
+    this.addFundsError = '';
+    this.exchangeAssets.loadAssets().subscribe({
+      next: tokens => {
+        this.addFundsTokens = tokens;
+        this.addFundsLoading = false;
+        if (tokens.length === 0) {
+          this.addFundsError = 'No assets available to receive.';
+        }
+      },
+      error: () => {
+        this.addFundsLoading = false;
+        this.addFundsError = 'Failed to load assets. Try again later.';
+      },
+    });
   }
 
   public async openExchange(): Promise<void> {
