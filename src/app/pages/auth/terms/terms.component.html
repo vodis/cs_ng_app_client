@@ -1,0 +1,51 @@
+<section class="register-shell register-shell--centered" @authPageTransition>
+  <div class="register-shell__content">
+    <section class="register-shell__panel terms-shell">
+      <div class="register-shell__brand">
+        <img
+          src="../../../assets/img/logo/logo.svg"
+          alt="CraftScript"
+          width="40"
+          height="40" />
+        <span>CraftScript</span>
+      </div>
+
+      <h2>{{ title }}</h2>
+      <p class="terms-shell__intro">
+        Please review the Terms below. Scroll to the end to enable agreement.
+      </p>
+
+      <div
+        #termsBody
+        class="terms-shell__body"
+        tabindex="0"
+        role="region"
+        aria-label="Terms and Conditions"
+        (scroll)="onTermsScroll()">
+        <p *ngFor="let paragraph of paragraphs">{{ paragraph }}</p>
+        <p class="terms-shell__version">Version {{ termsVersion }}</p>
+      </div>
+
+      <p class="terms-shell__hint" *ngIf="!canAgree">
+        Scroll to the end of the terms to agree
+      </p>
+
+      <div class="terms-shell__actions">
+        <button
+          type="button"
+          class="terms-shell__agree"
+          [disabled]="!canAgree || accepting || loggingOut"
+          (click)="agree()">
+          I agree
+        </button>
+        <button
+          type="button"
+          class="terms-shell__logout"
+          [disabled]="accepting || loggingOut"
+          (click)="logout()">
+          Log out
+        </button>
+      </div>
+    </section>
+  </div>
+</section>

@@ -1,5 +1,6 @@
 import { convertToParamMap, ParamMap, Router } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
+import { TermsAcceptanceService } from '@core/auth/terms-acceptance.service';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { of } from 'rxjs';
 import { RegisterComponent } from './register.component';
@@ -7,6 +8,7 @@ import { RegisterComponent } from './register.component';
 describe('RegisterComponent', () => {
   let component: RegisterComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
+  let termsAcceptance: jasmine.SpyObj<TermsAcceptanceService>;
   let router: jasmine.SpyObj<Router>;
   let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
   let queryParamMap: ParamMap;
@@ -24,8 +26,21 @@ describe('RegisterComponent', () => {
           passkeyLinkEnabled: true,
           embeddedWalletEnabled: true,
         }),
+        session: {
+          user: {
+            id: 'account-1',
+            providerUserId: 'provider-user-1',
+            sessionId: 'session-1',
+          },
+          wallets: [],
+        },
       }
     );
+    termsAcceptance = jasmine.createSpyObj<TermsAcceptanceService>(
+      'TermsAcceptanceService',
+      ['hasAcceptedCurrent']
+    );
+    termsAcceptance.hasAcceptedCurrent.and.returnValue(true);
     authSession.sendEmailCode.and.resolveTo();
     authSession.verifyEmailCode.and.resolveTo({
       user: {
@@ -53,17 +68,10 @@ describe('RegisterComponent', () => {
       path === '/' ? '/en' : `/en${path}`
     );
 
-    component = new RegisterComponent(
-      authSession,
-      router,
-      {
-        snapshot: { queryParamMap },
-      } as never,
-      localizedRouting
-    );
+    component = createComponent();
   });
 
-  it('requires a valid email and accepted policy before email registration', async () => {
+  it('requires a valid email before email registration', async () => {
     await component.registerWithEmail();
 
     expect(component.error).toBe('Email is required.');
@@ -74,17 +82,10 @@ describe('RegisterComponent', () => {
 
     expect(component.error).toBe('Enter a valid email address.');
     expect(authSession.sendEmailCode).not.toHaveBeenCalled();
-
-    component.email = 'user@example.com';
-    await component.registerWithEmail();
-
-    expect(component.error).toBe('Please accept the policy to continue.');
-    expect(authSession.sendEmailCode).not.toHaveBeenCalled();
   });
 
   it('sends an email code and opens the verification modal', async () => {
     component.email = 'user@example.com';
-    component.agreedToPolicy = true;
 
     await component.registerWithEmail();
 
@@ -95,7 +96,8 @@ describe('RegisterComponent', () => {
     expect(component.isOpenEmailCodeModal).toBeTrue();
   });
 
-  it('routes verified accounts without wallets to profile', async () => {
+  it('routes verified accounts through Terms when acceptance is required', async () => {
+    termsAcceptance.hasAcceptedCurrent.and.returnValue(false);
     component.codeEmail = 'user@example.com';
     component.emailCode = '123456';
 
@@ -106,13 +108,14 @@ describe('RegisterComponent', () => {
       '123456'
     );
     expect(component.isOpenEmailCodeModal).toBeFalse();
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/profile');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith(
+      '/en/terms?returnUrl=%2Fen%2Fprofile'
+    );
   });
 
-  it('navigates to a safe return URL when login already has wallets', async () => {
+  it('navigates to a safe return URL when Terms are already accepted', async () => {
     queryParamMap = convertToParamMap({ returnUrl: '/farm' });
     component = createComponent();
-    component.agreedToPolicy = true;
     authSession.login.and.resolveTo({
       user: {
         id: 'account-1',
@@ -138,8 +141,8 @@ describe('RegisterComponent', () => {
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/farm');
   });
 
-  it('routes wallet-less social registration to profile', async () => {
-    component.agreedToPolicy = true;
+  it('routes social registration through Terms when acceptance is required', async () => {
+    termsAcceptance.hasAcceptedCurrent.and.returnValue(false);
     authSession.login.and.resolveTo({
       user: {
         id: 'account-1',
@@ -152,7 +155,9 @@ describe('RegisterComponent', () => {
     await component.continueWith('apple');
 
     expect(authSession.reloadWallets).toHaveBeenCalledTimes(1);
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/profile');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith(
+      '/en/terms?returnUrl=%2Fen%2Fprofile'
+    );
   });
 
   function createComponent(): RegisterComponent {
@@ -162,7 +167,8 @@ describe('RegisterComponent', () => {
       {
         snapshot: { queryParamMap },
       } as never,
-      localizedRouting
+      localizedRouting,
+      termsAcceptance
     );
   }
 });

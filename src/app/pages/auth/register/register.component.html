@@ -60,18 +60,6 @@
                 [(ngModel)]="email"
                 [disabled]="provider.status !== 'ready' || loading" />
 
-              <label class="register-shell__policy">
-                <input
-                  type="checkbox"
-                  name="policy"
-                  [(ngModel)]="agreedToPolicy"
-                  [disabled]="provider.status !== 'ready' || loading" />
-                <span>
-                  By creating an account, I agree to CraftScript's
-                  <a href="/policy">Terms</a>.
-                </span>
-              </label>
-
               <button
                 type="submit"
                 [disabled]="provider.status !== 'ready' || loading">

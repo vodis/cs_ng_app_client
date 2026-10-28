@@ -5,7 +5,7 @@ import type { LoginMethod } from '@core/auth/auth-session.types';
 import type { AuthSocialMethod } from '../shared/auth-social-buttons.component';
 import { authPageTransition } from '../shared/auth-page.animations';
 import {
-  hasLinkedWallets,
+  navigateAfterAuth as continueAfterAuth,
   readReturnUrl,
 } from '../shared/auth-navigation.helper';
 import {
@@ -14,6 +14,7 @@ import {
 } from '../shared/auth-login-messages.helper';
 import { ProductEventsService } from '@core/product-events/product-events.service';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import { TermsAcceptanceService } from '@core/auth/terms-acceptance.service';
 
 const LOGIN_SOCIAL_METHODS: AuthSocialMethod[] = [
   'passkey',
@@ -64,7 +65,8 @@ export class LoginComponent {
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly productEvents: ProductEventsService,
-    public readonly localizedRouting: LocalizedRoutingService
+    public readonly localizedRouting: LocalizedRoutingService,
+    private readonly termsAcceptance: TermsAcceptanceService
   ) {}
 
   public async loginWithEmail(): Promise<void> {
@@ -181,15 +183,13 @@ export class LoginComponent {
   }
 
   private async navigateAfterAuth(initialWalletCount: number): Promise<void> {
-    if (await hasLinkedWallets(this.authSession, initialWalletCount)) {
-      await this.router.navigateByUrl(
-        this.localizedRouting.path(
-          readReturnUrl(this.route.snapshot.queryParamMap)
-        )
-      );
-      return;
-    }
-
-    await this.router.navigateByUrl(this.localizedRouting.path('/profile'));
+    await continueAfterAuth({
+      authSession: this.authSession,
+      termsAcceptance: this.termsAcceptance,
+      router: this.router,
+      localizedRouting: this.localizedRouting,
+      initialWalletCount,
+      returnUrl: readReturnUrl(this.route.snapshot.queryParamMap),
+    });
   }
 }

@@ -1,5 +1,6 @@
 import { convertToParamMap, ParamMap } from '@angular/router';
 import { AuthSessionService } from '@core/auth/auth-session.service';
+import { TermsAcceptanceService } from '@core/auth/terms-acceptance.service';
 import { ProductEventsService } from '@core/product-events/product-events.service';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import { of } from 'rxjs';
@@ -12,6 +13,7 @@ import { LoginComponent } from './login.component';
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let authSession: jasmine.SpyObj<AuthSessionService>;
+  let termsAcceptance: jasmine.SpyObj<TermsAcceptanceService>;
   let productEvents: jasmine.SpyObj<ProductEventsService>;
   let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
   let router: jasmine.SpyObj<{
@@ -38,8 +40,21 @@ describe('LoginComponent', () => {
         }),
         enabledLoginMethods: ['email', 'passkey', 'google', 'apple'],
         passkeyLoginEnabled: true,
+        session: {
+          user: {
+            id: 'account-1',
+            providerUserId: 'provider-user-1',
+            sessionId: 'session-1',
+          },
+          wallets: [],
+        },
       }
     );
+    termsAcceptance = jasmine.createSpyObj<TermsAcceptanceService>(
+      'TermsAcceptanceService',
+      ['hasAcceptedCurrent']
+    );
+    termsAcceptance.hasAcceptedCurrent.and.returnValue(true);
     router = jasmine.createSpyObj('Router', ['navigateByUrl', 'navigate']);
     queryParamMap = convertToParamMap({});
     router.navigateByUrl.and.resolveTo(true);
@@ -82,13 +97,7 @@ describe('LoginComponent', () => {
       path === '/' ? '/en' : `/en${path}`
     );
 
-    component = new LoginComponent(
-      authSession,
-      router as never,
-      { snapshot: { queryParamMap } } as never,
-      productEvents,
-      localizedRouting
-    );
+    component = createComponent();
   });
 
   it('requires a valid email before email login', async () => {
@@ -177,6 +186,18 @@ describe('LoginComponent', () => {
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en/profile');
   });
 
+  it('routes through terms when acceptance is still required', async () => {
+    termsAcceptance.hasAcceptedCurrent.and.returnValue(false);
+    queryParamMap = convertToParamMap({ returnUrl: '/farm' });
+    component = createComponent();
+
+    await component.continueWith('passkey');
+
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith(
+      '/en/terms?returnUrl=%2Fen%2Ffarm'
+    );
+  });
+
   it('shows a coming soon message for telegram login', async () => {
     await component.continueWithSocial('telegram');
 
@@ -190,7 +211,8 @@ describe('LoginComponent', () => {
       router as never,
       { snapshot: { queryParamMap } } as never,
       productEvents,
-      localizedRouting
+      localizedRouting,
+      termsAcceptance
     );
   }
 });

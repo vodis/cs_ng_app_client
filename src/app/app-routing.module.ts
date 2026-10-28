@@ -88,6 +88,11 @@ const routes: Routes = [
     redirectTo: () => preferredLocalePath('/register'),
   },
   {
+    path: 'terms',
+    pathMatch: 'full',
+    redirectTo: () => preferredLocalePath('/terms'),
+  },
+  {
     path: 'generate-wallet',
     pathMatch: 'full',
     redirectTo: () => preferredLocalePath('/profile'),
