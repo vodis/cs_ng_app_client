@@ -107,11 +107,24 @@ Flow direction:
   again. Incomplete onboarding stays fully expanded. Under the card, fund
   actions offer **Send Funds** and **Add Funds** (desktop); mobile also shows
   **Exchange**. **Send Funds** stays disabled with a **Soon** label until the
-  send view ships.   **Add Funds** opens a compact right-side host drawer (Token → Network →
-  Deposit) with popular tokens, friendly network names, demo address + QR
-  (logo/letter cleared via `qr-code-styling`), and Copy confirmation. It does
-  not open the wallet Select modal. Replace the demo address with a
-  backend-issued receive address before production. Exchange navigates to Token Exchange. The hero reads
+  send view ships. **Add Funds** opens a compact right-side host drawer (Token →
+  Network → Deposit) with popular tokens and friendly network names. The panel
+  accepts validated receive instructions, renders an address QR for memo-free
+  deposits, and offers Copy confirmation. Expired or mismatched instructions
+  are hidden. It does not open the wallet Select modal. The demo address
+  generator is removed. ProfileFacade requests authenticated backend deposit
+  instructions for the selected asset and active linked wallet. The backend
+  resolves the wallet recipient/refund address and requests a 1Click
+  `dry: false`, `EXACT_INPUT` quote using the entered decimal amount, converted
+  to atomic units using server decimals. This requires provider support for the
+  same-asset route; rejection leaves the panel without an address. No arbitrary amount or direct-wallet
+  fallback is substituted. The UI shows the exact input, minimum received after
+  fees, refund destination and deadline. Editing the amount hides old instructions.
+  Wallet/session changes close the drawer and discard
+  pending results. Memo-required deposits show the memo and omit address-only QR
+  codes. Expiry removes the QR and copy target until instructions are renewed.
+  Receiving uses no local signer and does not invoke the MFE swap workflow.
+  Exchange navigates to Token Exchange. The hero reads
   `GET /api/v1/portfolio`, passing the backend-selected wallet address and
   CAIP-2 network when available. It renders both USD value and token
   quantities.

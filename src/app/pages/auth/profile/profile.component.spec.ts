@@ -1,3 +1,4 @@
+import { DepositApiService } from '@shared/services/deposit-api.service';
 import type { SwapSettlementResult } from '@mfe-contracts/swap-review.types';
 import {
   ActiveWalletFacade,
@@ -24,6 +25,7 @@ import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
 import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 
 describe('ProfileComponent', () => {
+  let deposits: jasmine.SpyObj<DepositApiService>;
   let activeWallet: jasmine.SpyObj<ActiveWalletFacade>;
   let component: ProfileComponent;
   let settlementSubject: Subject<SwapSettlementResult>;
@@ -242,6 +244,12 @@ describe('ProfileComponent', () => {
         },
       ])
     );
+    deposits = jasmine.createSpyObj<DepositApiService>('DepositApiService', [
+      'create',
+    ]);
+    Object.defineProperty(authSession, 'session', {
+      get: () => sessionSubject.value,
+    });
     const profile = new ProfileFacade(
       authSession,
       walletsService,
@@ -250,7 +258,8 @@ describe('ProfileComponent', () => {
       localizedRouting,
       portfolioApi,
       activeWallet,
-      exchangeAssets
+      exchangeAssets,
+      deposits
     );
     component = new ProfileComponent(profile, new MockProfileActivitySource());
     component.ngOnInit();
@@ -760,6 +769,63 @@ describe('ProfileComponent', () => {
     expect(router.navigateByUrl).toHaveBeenCalledWith('/en');
   });
 
+  it('clears pending deposit results when the active wallet changes', async () => {
+    sessionSubject.next(linkedWalletSession);
+    await component.openAddFunds();
+    const token = {
+      ...component.profile.addFundsTokens[0],
+      sourceNetwork: 'eip155:8453',
+    };
+    let complete:
+      | ((value: {
+          assetId: string;
+          address: string;
+          amount: string;
+          minimumReceived: string;
+          expiresAt: string;
+        }) => void)
+      | undefined;
+    deposits.create.and.returnValue(
+      new Promise(resolve => (complete = resolve))
+    );
+    const pending = component.profile.requestDeposit({ token, amount: '1' });
+    expect(deposits.create).toHaveBeenCalledWith(
+      linkedWalletSession.wallets[0].id,
+      token.assetId,
+      token.sourceNetwork,
+      linkedWalletSession.wallets[0].address,
+      '1'
+    );
+    sessionSubject.next(externalWalletSession);
+    complete?.({
+      assetId: token.assetId,
+      address: 'deposit-address',
+      amount: '1',
+      minimumReceived: '0.9',
+      expiresAt: '2099-01-01T00:00:00Z',
+    });
+    await pending;
+    expect(component.profile.depositInstructions).toBeNull();
+    expect(component.profile.addFundsOpen).toBeFalse();
+    expect(component.profile.depositLoading).toBeFalse();
+  });
+
+  it('shows provider rejection without a fallback address', async () => {
+    sessionSubject.next(linkedWalletSession);
+    await component.openAddFunds();
+    deposits.create.and.rejectWith(new Error('unavailable'));
+    await component.profile.requestDeposit({
+      amount: '1',
+      token: {
+        ...component.profile.addFundsTokens[0],
+        sourceNetwork: 'eip155:8453',
+      },
+    });
+    expect(component.profile.depositInstructions).toBeNull();
+    expect(component.profile.depositError).toContain('unavailable');
+    expect(component.profile.depositLoading).toBeFalse();
+  });
+
   it('opens the wallet modal for the next wallet onboarding step', async () => {
     await component.runOnboardingStep();
 
@@ -1037,7 +1103,8 @@ describe('ProfileComponent', () => {
     sessionSubject.next(linkedWalletSession);
     expect(walletsService.rememberConnectedWallet).not.toHaveBeenCalled();
     expect(component.resolveLastConnectedWallet()?.account).toBe(
-      linkedWalletSession.wallets[0].address
+      linkedWalletSession.wallets[0].address,
+      '1'
     );
     expect(component.showLastConnectedSection()).toBeTrue();
   });

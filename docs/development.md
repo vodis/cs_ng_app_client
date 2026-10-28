@@ -283,7 +283,7 @@ Host auth routes live under `src/app/pages/auth/`.
   view restores status, progress, capped swap progress, and Go to Exchange.
   Fund actions sit under the onboarding card: Send Funds (Soon until send
   ships) and Add Funds (compact right-side Token → Network → Deposit drawer
-  with demo address/QR via qr-code-styling; does not open Select wallet) on
+  with validated receive instructions; does not open Select wallet) on
   desktop; mobile also shows Exchange. The hero loads
   `GET /api/v1/portfolio`; for a live connected wallet it supplies the wallet
   address and CAIP-2 network so the backend can value that wallet directly.
