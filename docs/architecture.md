@@ -106,8 +106,12 @@ Flow direction:
   at the swap goal, and **Go to Exchange**); **Hide details** collapses it
   again. Incomplete onboarding stays fully expanded. Under the card, fund
   actions offer **Send Funds** and **Add Funds** (desktop); mobile also shows
-  **Exchange**. Send/Add stay disabled with a **Soon** label until wallet
-  send/receive views ship; Exchange navigates to Token Exchange. The hero reads
+  **Exchange**. **Send Funds** stays disabled with a **Soon** label until the
+  send view ships.   **Add Funds** opens a compact right-side host drawer (Token → Network →
+  Deposit) with popular tokens, friendly network names, demo address + QR
+  (logo/letter cleared via `qr-code-styling`), and Copy confirmation. It does
+  not open the wallet Select modal. Replace the demo address with a
+  backend-issued receive address before production. Exchange navigates to Token Exchange. The hero reads
   `GET /api/v1/portfolio`, passing the backend-selected wallet address and
   CAIP-2 network when available. It renders both USD value and token
   quantities.
@@ -146,8 +150,8 @@ Flow direction:
 Profile boundary rules:
 
 - `ProfileComponent` owns presentation state and formatting only.
-- `ProfileFacade` owns wallet, passkey, balance, and navigation workflows and is
-  the component's only integration dependency.
+- `ProfileFacade` owns wallet, passkey, balance, Add Funds asset loading, and
+  navigation workflows and is the component's only integration dependency.
 - `ProfileActivitySource` supplies one activity snapshot for the activity panel
   and swap-onboarding progress. The temporary mock implementation is
   component-scoped and can be replaced by a backend adapter without changing

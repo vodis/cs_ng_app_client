@@ -205,14 +205,12 @@
         class="profile-shell__fund-action"
         type="button"
         [disabled]="
-          !profile.fundTransfersAvailable || walletLoading || walletActionBusy
+          !profile.addFundsAvailable || walletLoading || walletActionBusy
         "
         [attr.aria-label]="
-          profile.fundTransfersAvailable
-            ? 'Add Funds'
-            : 'Add Funds, coming soon'
+          profile.addFundsAvailable ? 'Add Funds' : 'Add Funds, coming soon'
         "
-        (click)="openAddFunds()">
+        (click)="openAddFunds($event)">
         <mat-icon aria-hidden="true">south_west</mat-icon>
         <span class="profile-shell__fund-label profile-shell__fund-label--long"
           >Add Funds</span
@@ -221,7 +219,7 @@
           >Add</span
         >
         <span
-          *ngIf="!profile.fundTransfersAvailable"
+          *ngIf="!profile.addFundsAvailable"
           class="profile-shell__fund-soon"
           >Soon</span
         >
@@ -619,4 +617,20 @@
     {{ passkeyMessage }}
   </p>
   <p class="profile-shell__error" *ngIf="error">{{ error }}</p>
+
+  <app-side-modal
+    [isOpen]="profile.addFundsOpen"
+    size="compact"
+    [showCloseButton]="false"
+    [containScroll]="true"
+    (closeRequested)="closeAddFunds()">
+    <app-add-funds-panel
+      [isOpen]="profile.addFundsOpen"
+      [tokens]="profile.addFundsTokens"
+      [loading]="profile.addFundsLoading"
+      [loadError]="profile.addFundsError"
+      (closeRequested)="closeAddFunds()"
+      (retryRequested)="retryAddFundsTokens()">
+    </app-add-funds-panel>
+  </app-side-modal>
 </section>

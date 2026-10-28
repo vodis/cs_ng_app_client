@@ -15,15 +15,16 @@ import { ConnectedWalletBoardComponent } from '@shared/components/connected-wall
 import { SparklineComponent } from '@shared/components/sparkline/sparkline.component';
 import { SideModalComponent } from '@shared/components/side-modal/side-modal.component';
 import { TokenSelectPanelComponent } from '@shared/components/token-select-panel/token-select-panel.component';
-import { LiveChartComponent } from '@shared/components/live-chart/live-chart.component';
-import { MarketOverviewChartComponent } from '@shared/components/market-overview-chart/market-overview-chart.component';
+import { LiveChartComponent } from './components/live-chart/live-chart.component';
+import { MarketOverviewChartComponent } from './components/market-overview-chart/market-overview-chart.component';
 import { CommonModule } from '@angular/common';
 import { AvatarComponent } from '@shared/components/avatar/avatar.component';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
 import { RecipientAddressPanelComponent } from '@shared/components/recipient-address-panel/recipient-address-panel.component';
-import { SlippageSettingsPanelComponent } from '@shared/components/slippage-settings-panel/slippage-settings-panel.component';
+import { SlippageSettingsPanelComponent } from './components/slippage-settings-panel/slippage-settings-panel.component';
+import { AddFundsPanelComponent } from './components/add-funds-panel/add-funds-panel.component';
 
 const AngularMaterial = [
   MatExpansionModule,
@@ -56,6 +57,7 @@ const AngularMaterial = [
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
     SlippageSettingsPanelComponent,
+    AddFundsPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
   ],
@@ -73,6 +75,7 @@ const AngularMaterial = [
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
     SlippageSettingsPanelComponent,
+    AddFundsPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
     AvatarComponent,

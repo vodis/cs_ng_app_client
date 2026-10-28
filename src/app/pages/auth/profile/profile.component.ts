@@ -104,6 +104,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public onboardingDetailsOpen = false;
   public walletLoading = false;
   public copiedWalletId = '';
+  private addFundsTrigger: HTMLElement | null = null;
 
   public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
   public activity: ProfileActivitySnapshot;
@@ -549,7 +550,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public async openActivityReceive(): Promise<void> {
-    await this.openWalletModal();
+    await this.openAddFunds();
   }
 
   public async openActivityAnalyze(): Promise<void> {
@@ -560,8 +561,21 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     await this.profile.openSendFunds();
   }
 
-  public async openAddFunds(): Promise<void> {
+  public async openAddFunds(event?: Event): Promise<void> {
+    const target = event?.currentTarget;
+    this.addFundsTrigger =
+      target instanceof HTMLElement ? target : this.addFundsTrigger;
     await this.profile.openAddFunds();
+  }
+
+  public closeAddFunds(): void {
+    this.profile.closeAddFunds();
+    const trigger = this.addFundsTrigger;
+    queueMicrotask(() => trigger?.focus());
+  }
+
+  public retryAddFundsTokens(): void {
+    this.profile.loadAddFundsTokens();
   }
 
   public async openExchange(): Promise<void> {

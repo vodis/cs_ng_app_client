@@ -21,6 +21,7 @@ import {
 import { ProfileComponent } from './profile.component';
 import { ProfileFacade } from './profile.facade';
 import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
+import { ExchangeAssetsService } from '@shared/services/exchange-assets.service';
 
 describe('ProfileComponent', () => {
   let activeWallet: jasmine.SpyObj<ActiveWalletFacade>;
@@ -226,6 +227,21 @@ describe('ProfileComponent', () => {
     activeWallet.requestConnection.and.callFake(() =>
       walletsService.requestOpen()
     );
+    const exchangeAssets = jasmine.createSpyObj<ExchangeAssetsService>(
+      'ExchangeAssetsService',
+      ['loadAssets']
+    );
+    exchangeAssets.loadAssets.and.returnValue(
+      of([
+        {
+          symbol: 'USDC',
+          name: 'USD Coin',
+          assetId: 'usdc-eth',
+          blockchain: 'eth',
+          color: '#2f8cff',
+        },
+      ])
+    );
     const profile = new ProfileFacade(
       authSession,
       walletsService,
@@ -233,7 +249,8 @@ describe('ProfileComponent', () => {
       router,
       localizedRouting,
       portfolioApi,
-      activeWallet
+      activeWallet,
+      exchangeAssets
     );
     component = new ProfileComponent(profile, new MockProfileActivitySource());
     component.ngOnInit();
@@ -311,7 +328,7 @@ describe('ProfileComponent', () => {
     expect(inRangeDays[inRangeDays.length - 1].isoDate).toBe('2025-12-31');
   });
 
-  it('routes Activity Pay and Analyze AI, and opens the wallet for Receive', async () => {
+  it('routes Activity Pay and Analyze AI, and opens Add Funds for Receive', async () => {
     await component.openActivityPay();
     expect(localizedRouting.path).toHaveBeenCalledWith('/');
     expect(router.navigateByUrl).toHaveBeenCalledWith('/en');
@@ -321,7 +338,8 @@ describe('ProfileComponent', () => {
     expect(router.navigateByUrl).toHaveBeenCalledWith('/en/portfolio');
 
     await component.openActivityReceive();
-    expect(walletsService.requestOpen).toHaveBeenCalled();
+    expect(walletsService.requestOpen).not.toHaveBeenCalled();
+    expect(component.profile.addFundsOpen).toBeTrue();
   });
 
   it('does not claim a zero portfolio before a wallet is selected', () => {
@@ -718,8 +736,9 @@ describe('ProfileComponent', () => {
     expect(component.showOnboardingDetailsContent()).toBeFalse();
   });
 
-  it('keeps Send/Add Funds unavailable until transfer views exist; Exchange still works', async () => {
+  it('keeps Send Funds unavailable and opens Add Funds host dialog', async () => {
     expect(component.profile.fundTransfersAvailable).toBeFalse();
+    expect(component.profile.addFundsAvailable).toBeTrue();
 
     await component.openSendFunds();
     expect(walletGatewayBridge.syncConnectedWallet).not.toHaveBeenCalled();
@@ -728,6 +747,13 @@ describe('ProfileComponent', () => {
     await component.openAddFunds();
     expect(walletGatewayBridge.syncConnectedWallet).not.toHaveBeenCalled();
     expect(walletsService.requestOpen).not.toHaveBeenCalled();
+    expect(component.profile.addFundsOpen).toBeTrue();
+    expect(component.profile.addFundsTokens.length).toBe(1);
+    expect(component.profile.addFundsLoading).toBeFalse();
+    expect(component.profile.addFundsError).toBe('');
+
+    component.closeAddFunds();
+    expect(component.profile.addFundsOpen).toBeFalse();
 
     await component.openExchange();
     expect(localizedRouting.path).toHaveBeenCalledWith('/');
