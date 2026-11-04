@@ -927,6 +927,36 @@ describe('ProfileComponent', () => {
     expect(component.showLastConnectedSection()).toBeTrue();
   });
 
+  it('hides the reconnect strip while the live wallet session is restoring', () => {
+    sessionSubject.next(linkedWalletSession);
+    lastConnectedSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: null,
+      walletType: 'embedded',
+      source: 'privy',
+      connectorId: 'privy',
+    });
+    component.walletRestoring = true;
+
+    expect(component.isLiveConnected()).toBeFalse();
+    expect(component.showLastConnectedSection()).toBeFalse();
+    expect(component.showConnectedConnectAnother()).toBeTrue();
+  });
+
+  it('hides the reconnect strip while a replacement wallet connect is in flight', () => {
+    sessionSubject.next(linkedWalletSession);
+    lastConnectedSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: null,
+      walletType: 'embedded',
+      source: 'privy',
+      connectorId: 'privy',
+    });
+    component.walletConnecting = true;
+
+    expect(component.showLastConnectedSection()).toBeFalse();
+  });
+
   it('omits provider details from last connected copy', () => {
     sessionSubject.next(linkedWalletSession);
     lastConnectedSubject.next({

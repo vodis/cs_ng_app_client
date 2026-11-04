@@ -41,7 +41,11 @@ export type WalletConnectorId =
   | 'coinbase'
   | 'near'
   | 'tonkeeper'
-  | 'privy';
+  | 'privy'
+  | 'phantom'
+  | 'solflare'
+  | 'jupiter'
+  | 'unisat';
 
 export type WalletIdentity = {
   connectorId: WalletConnectorId;
@@ -139,6 +143,8 @@ export type WalletsMfeMountApi = {
   createEmbeddedWallet?: () => Promise<WalletOnboardingResult>;
   syncConnectedWallet?: () => Promise<WalletConnectionSnapshot>;
   disconnectWallet?: () => void;
+  /** Show the Connect catalog even while a live wallet session exists. */
+  openConnectPicker?: () => void;
   exactOutputVersion?: '1.0.0';
   destinationMemoVersion?: '1.0.0';
   swapContractVersion?: '2.0.0';

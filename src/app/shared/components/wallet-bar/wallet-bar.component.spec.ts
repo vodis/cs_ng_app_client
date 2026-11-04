@@ -56,6 +56,7 @@ describe('WalletBarComponent', () => {
         'isExecutionInProgress',
         'resetConnection',
         'supportsConnectionSnapshots',
+        'openConnectPicker',
       ],
       { snapshot$: snapshots }
     );

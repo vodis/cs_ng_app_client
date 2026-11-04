@@ -31,6 +31,8 @@ export type ActiveWalletState = {
   snapshot?: WalletConnectionSnapshot;
   network?: string;
   restoring?: boolean;
+  /** True while MFE is replacing the live signer (Connect another). */
+  connecting?: boolean;
   connected: boolean;
   canRequestSwap: boolean;
   reason: string;
@@ -330,16 +332,25 @@ export class ActiveWalletFacade {
     const available = session.wallets.filter(wallet => this.available(wallet));
     // The authenticated backend owns selection; connection restoration must not replace it.
     const wallet = available.find(item => item.isPrimary);
-    const connected = Boolean(
+    const liveConnected = Boolean(
       wallet &&
       this.matches(wallet, snapshot) &&
       snapshot?.status === 'connected'
     );
+    // "Connect another" publishes status=connecting with a cleared account. Keep the
+    // prior live session for host UI so the Reconnect strip does not flash/jump.
+    const previous = this.stateSubject.value;
+    const switching = snapshot?.status === 'connecting';
+    const connected = liveConnected || (switching && previous.connected);
+    const uiSnapshot =
+      switching && previous.connected && previous.snapshot?.account
+        ? previous.snapshot
+        : (snapshot ?? undefined);
     const network = wallet
       ? this.resolveNetwork(
           session.user.id,
           wallet,
-          connected ? snapshot : undefined
+          connected ? uiSnapshot : undefined
         )
       : undefined;
     const restoring =
@@ -356,10 +367,11 @@ export class ActiveWalletFacade {
       userId: session.user.id,
       sessionId: session.user.sessionId,
       wallet,
-      snapshot: snapshot ?? undefined,
+      snapshot: uiSnapshot,
       network,
       connected,
       restoring,
+      connecting: switching,
       canRequestSwap: !reason,
       reason,
     });

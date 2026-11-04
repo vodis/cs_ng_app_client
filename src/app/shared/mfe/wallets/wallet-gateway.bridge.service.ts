@@ -301,6 +301,11 @@ export class WalletGatewayBridgeService {
     this.sendGatewayEvent({ type: 'RESET' });
   }
 
+  /** Ask the MFE to show the Connect catalog (host "Connect another"). */
+  openConnectPicker(): void {
+    this.mountApi?.openConnectPicker?.();
+  }
+
   disconnectWallet(): void {
     const disconnect = this.mountApi?.disconnectWallet;
     if (disconnect) {

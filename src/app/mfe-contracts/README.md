@@ -12,8 +12,11 @@ Use this as the source of truth for runtime communication in the Angular app.
 ## Scope
 
 - Host app: `cs_ng_app_client`
-- Wallet MFE source: `../mfe-wallets`
-- Wallet MFE remote: `git@github.com:vodis/cs_mfe-wallets.git`
+- Wallet MFE source: `../cs_mfe-wallets` (local) / `git@github.com:vodis/cs_mfe-wallets.git`
+- Wallet connector IDs consumed by the host include Solana providers
+  (`phantom`, `solflare`, `jupiter`) in addition to EVM/NEAR/TON/Bitcoin IDs.
+  Connect and ownership proof for those wallets are MFE-owned; the host only
+  mirrors `WalletConnectorId` on the session identity contract.
 
 ## Account provider contract
 
