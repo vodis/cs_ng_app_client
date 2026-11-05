@@ -284,10 +284,17 @@ const modules = {
       <h1 class="connect-wallet__title">Connect</h1>
     </div>
     <div class="connect-wallet__grid">
-      <button type="button" class="connect-wallet__grid-btn connect-wallet__grid-btn--disabled" disabled>
+      <button type="button" class="connect-wallet__grid-btn" data-wallet="phantom">
+        <span class="connect-wallet__grid-name">Phantom</span>
+        <span class="connect-wallet__grid-desc">Solana wallet for web and mobile</span>
+      </button>
+      <button type="button" class="connect-wallet__grid-btn" data-wallet="solflare">
+        <span class="connect-wallet__grid-name">Solflare</span>
+        <span class="connect-wallet__grid-desc">Solana wallet extension</span>
+      </button>
+      <button type="button" class="connect-wallet__grid-btn" data-wallet="jupiter">
         <span class="connect-wallet__grid-name">Jupiter</span>
         <span class="connect-wallet__grid-desc">Solana super-app wallet</span>
-        <span class="connect-wallet__soon">Soon</span>
       </button>
     </div>
   </div>

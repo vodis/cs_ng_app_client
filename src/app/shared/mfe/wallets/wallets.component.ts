@@ -343,6 +343,12 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    // Keep the previous live account while a replacement connect is in flight so
+    // "Connect another" does not flash a full profile disconnect / layout jump.
+    if (snapshot.status === 'connecting') {
+      return;
+    }
+
     this.walletsService.setAccount(undefined);
   }
 

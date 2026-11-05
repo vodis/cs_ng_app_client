@@ -116,6 +116,10 @@ export class WalletBarComponent {
       .subscribe(openRequested => {
         if (this.hostModal && openRequested) {
           this.setWalletMenuOpen(true);
+          if (this.walletsService.drawerMode.value === 'connect') {
+            // Defer until the drawer hosts the MFE mount so the picker API exists.
+            queueMicrotask(() => this.walletGatewayBridge.openConnectPicker());
+          }
           this.walletsService.clearOpenRequest();
         }
       });
@@ -124,6 +128,13 @@ export class WalletBarComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(mode => {
         this.drawerMode = mode;
+        if (
+          this.hostModal &&
+          this.isOpenWalletConnectMenu &&
+          mode === 'connect'
+        ) {
+          queueMicrotask(() => this.walletGatewayBridge.openConnectPicker());
+        }
         this.changeDetector.markForCheck();
       });
   }

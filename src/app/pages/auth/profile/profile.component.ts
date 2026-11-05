@@ -97,6 +97,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public activeAccount: string | null = null;
   public activeNetwork?: string;
   public walletRestoring = false;
+  public walletConnecting = false;
   public connectedAccount: string | null = null;
   public connectedChainId: number | null = null;
   public lastConnectedWallet: LastConnectedWallet | null = null;
@@ -141,6 +142,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
         this.activeAccount = state.wallet?.address ?? null;
         this.activeNetwork = state.network;
         this.walletRestoring = state.restoring === true;
+        this.walletConnecting = state.connecting === true;
         const session = state.session ?? null;
         const account = state.connected ? state.snapshot : undefined;
         this.connectedAccount = account?.account ?? null;
@@ -224,7 +226,9 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
       return '';
     }
     if (this.activeWalletId === wallet.id && this.isLiveConnected()) {
-      return 'Active · Connected';
+      return this.walletConnecting
+        ? 'Active · Connecting'
+        : 'Active · Connected';
     }
     if (this.walletRestoring) {
       return 'Active · Restoring';
@@ -602,8 +606,12 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public showLastConnectedSection(): boolean {
+    // Avoid flashing the Reconnect strip while restoring or switching wallets.
     return (
-      !this.isLiveConnected() && Boolean(this.resolveLastConnectedWallet())
+      !this.walletRestoring &&
+      !this.walletConnecting &&
+      !this.isLiveConnected() &&
+      Boolean(this.resolveLastConnectedWallet())
     );
   }
 
@@ -742,18 +750,6 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     this.error = '';
     this.walletMessage = '';
     this.profile.requestWalletOpen();
-  }
-
-  public async refreshWallets(): Promise<void> {
-    this.error = '';
-    this.walletMessage = '';
-    try {
-      await this.profile.reloadWallets();
-      this.walletMessage = 'Wallets refreshed';
-    } catch (error) {
-      this.error =
-        error instanceof Error ? error.message : 'Wallet refresh failed';
-    }
   }
 
   public async refreshBalances(): Promise<void> {

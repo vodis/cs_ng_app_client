@@ -518,11 +518,13 @@ carried as `destinationMemo` through preview, executable quote identity and revi
 An XRP X-address cannot also provide a separate tag. Other memo types remain
 unsupported. Tagged requests require remote `destinationMemoVersion: '1.0.0'`.
 
-Connected-wallet sources include the shared EVM adapter, NEAR, TON, Phantom on
-Solana and UniSat on Bitcoin mainnet. Their CAIP identifiers and balance aliases
-come from the BFF catalog. The host carries provider-neutral Solana/Bitcoin
-transaction envelopes; the MFE owns all wallet/provider I/O. Bitcoin never enters
-the Intents signature path. Unsupported chains have no manual external-deposit
-fallback. Bitcoin forks and Solana Token-2022/non-associated source accounts need
-further adapter support. Deploy BFF, MFE, then host; RPC/Esplora configuration must
-be enabled separately by the operator. No real-value transfer is part of tests.
+Connected-wallet sources include the shared EVM adapter, NEAR, TON, Solana
+(Phantom / Solflare / Jupiter) and UniSat on Bitcoin mainnet. Their CAIP
+identifiers and balance aliases come from the BFF catalog. The host carries
+provider-neutral Solana/Bitcoin transaction envelopes and mirrors Solana
+`WalletConnectorId` values; the MFE owns all wallet/provider I/O. Bitcoin never
+enters the Intents signature path. Unsupported chains have no manual
+external-deposit fallback. Bitcoin forks and Solana Token-2022/non-associated
+source accounts need further adapter support. Deploy BFF, MFE, then host;
+RPC/Esplora configuration must be enabled separately by the operator. No
+real-value transfer is part of tests.
