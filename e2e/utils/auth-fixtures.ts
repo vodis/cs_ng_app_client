@@ -296,6 +296,14 @@ const modules = {
         <span class="connect-wallet__grid-name">Jupiter</span>
         <span class="connect-wallet__grid-desc">Solana super-app wallet</span>
       </button>
+      <button type="button" class="connect-wallet__grid-btn" data-wallet="tonkeeper">
+        <span class="connect-wallet__grid-name">TON Wallets</span>
+        <span class="connect-wallet__grid-desc">Scan with your mobile wallet</span>
+      </button>
+      <button type="button" class="connect-wallet__grid-btn" data-wallet="unisat">
+        <span class="connect-wallet__grid-name">UniSat</span>
+        <span class="connect-wallet__grid-desc">Connect your Bitcoin wallet</span>
+      </button>
     </div>
   </div>
 </div>`)};
