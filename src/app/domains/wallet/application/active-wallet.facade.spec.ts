@@ -126,6 +126,82 @@ describe('backend-owned active wallet', () => {
     facade = TestBed.inject(ActiveWalletFacade);
   });
 
+  it('retains the same selected connection while another connect is pending', () => {
+    sessions.next(session);
+    const live = connected();
+    snapshots.next(live);
+    snapshots.next({
+      ...live,
+      status: 'connecting',
+      account: null,
+      identity: null,
+    });
+    expect(facade.state.connected).toBeTrue();
+    expect(facade.state.snapshot).toBe(live);
+    expect(facade.state.connecting).toBeTrue();
+  });
+
+  for (const change of ['wallet', 'user', 'session', 'address', 'removed']) {
+    it(`drops the retained signer on a ${change} change during connection`, () => {
+      const evm: BackendWallet = {
+        ...alice,
+        address: '0x' + 'a'.repeat(40),
+        chainType: 'ethereum',
+      };
+      const current: AuthSession = { ...session, wallets: [evm] };
+      sessions.next(current);
+      snapshots.next({
+        ...connected(evm.address),
+        chainId: 1,
+        identity: {
+          connectorId: 'metamask',
+          address: evm.address,
+          chainType: 'ethereum',
+          walletType: 'external',
+        },
+      });
+      snapshots.next({
+        ...connected(),
+        status: 'connecting',
+        account: null,
+        identity: null,
+        chainId: null,
+      });
+      const next: AuthSession = {
+        ...current,
+        user: {
+          ...current.user,
+          id: change === 'user' ? 'other-user' : current.user.id,
+          sessionId:
+            change === 'session' ? 'other-session' : current.user.sessionId,
+        },
+        wallets:
+          change === 'removed'
+            ? []
+            : [
+                {
+                  ...evm,
+                  id: change === 'wallet' ? 'other-wallet' : evm.id,
+                  address:
+                    change === 'address' ? '0x' + 'b'.repeat(40) : evm.address,
+                },
+              ],
+      };
+      sessions.next(next);
+      expect(facade.state.connected).toBeFalse();
+      expect(facade.state.snapshot?.account).toBeNull();
+      if (change === 'wallet' || change === 'user') {
+        expect(facade.state.network).toBeUndefined();
+        expect(
+          localStorage.getItem(
+            `app:v1:wallet-network:${next.user.id}:${next.wallets[0].id}`
+          )
+        ).toBeNull();
+      }
+      localStorage.removeItem('app:v1:wallet-network:user:alice');
+    });
+  }
+
   it('selects a linked funding wallet through backend primary selection', async () => {
     sessions.next(session);
     await facade.selectFundingWallet('bob', 'near:mainnet');

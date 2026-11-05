@@ -341,11 +341,19 @@ export class ActiveWalletFacade {
     // prior live session for host UI so the Reconnect strip does not flash/jump.
     const previous = this.stateSubject.value;
     const switching = snapshot?.status === 'connecting';
-    const connected = liveConnected || (switching && previous.connected);
-    const uiSnapshot =
-      switching && previous.connected && previous.snapshot?.account
-        ? previous.snapshot
-        : (snapshot ?? undefined);
+    const retainConnection = Boolean(
+      switching &&
+      previous.connected &&
+      previous.userId === session.user.id &&
+      previous.sessionId === session.user.sessionId &&
+      wallet &&
+      previous.wallet?.id === wallet.id &&
+      this.matches(wallet, previous.snapshot)
+    );
+    const connected = liveConnected || retainConnection;
+    const uiSnapshot = retainConnection
+      ? previous.snapshot
+      : (snapshot ?? undefined);
     const network = wallet
       ? this.resolveNetwork(
           session.user.id,
