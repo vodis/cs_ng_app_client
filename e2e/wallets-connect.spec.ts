@@ -76,7 +76,7 @@ async function loginToProfile(page: Page, email: string): Promise<void> {
 }
 
 test.describe('Wallets MFE connect dialog', () => {
-  test('opens from the header wallets control, lists Solana wallets, and closes on outside click', async ({
+  test('opens from the header wallets control, lists enabled wallets, and closes on outside click', async ({
     page,
   }) => {
     await useEmptyWalletSession(page);
@@ -96,14 +96,20 @@ test.describe('Wallets MFE connect dialog', () => {
     const phantom = dialog.getByRole('button', { name: /Phantom/i });
     const solflare = dialog.getByRole('button', { name: /Solflare/i });
     const jupiter = dialog.getByRole('button', { name: /Jupiter/i });
+    const tonWallets = dialog.getByRole('button', { name: /TON Wallets/i });
+    const unisat = dialog.getByRole('button', { name: /UniSat/i });
     await expect(phantom).toBeVisible();
     await expect(solflare).toBeVisible();
     await expect(jupiter).toBeVisible();
+    await expect(tonWallets).toBeVisible();
+    await expect(unisat).toBeVisible();
     await expect(jupiter).toBeEnabled();
+    await expect(tonWallets).toBeEnabled();
+    await expect(unisat).toBeEnabled();
     await expect(dialog.locator('.connect-wallet__soon')).toHaveCount(0);
     // Drawer owns scrolling for the picker — click via DOM so a clipped
-    // cell still exercises the enabled Solana wallet path.
-    await jupiter.evaluate(node => {
+    // cell still exercises an enabled non-Solana wallet path.
+    await tonWallets.evaluate(node => {
       node.scrollIntoView({ block: 'center', inline: 'nearest' });
       if (node instanceof HTMLElement) {
         node.click();
