@@ -898,24 +898,7 @@ describe('ProfileComponent', () => {
     expect(component.walletMessage).toBe('Wallet disconnected');
   });
 
-  it('ignores browser history for wallets absent from the authenticated account', () => {
-    lastConnectedSubject.next({
-      account: linkedWalletSession.wallets[0].address,
-      chainId: null,
-      walletType: 'embedded',
-      source: 'privy',
-      connectorId: 'privy',
-    });
-
-    expect(component.showLastConnectedSection()).toBeFalse();
-
-    expect(
-      component.canRemoveLinkedWallet(linkedWalletSession.wallets[0])
-    ).toBeFalse();
-  });
-
-  it('keeps reconnect available when the remembered wallet is linked', () => {
-    sessionSubject.next(linkedWalletSession);
+  it('keeps browser history for the orphan reconnect strip when no wallets are linked', () => {
     lastConnectedSubject.next({
       account: linkedWalletSession.wallets[0].address,
       chainId: null,
@@ -925,9 +908,33 @@ describe('ProfileComponent', () => {
     });
 
     expect(component.showLastConnectedSection()).toBeTrue();
+    expect(component.showEmptyConnectSection()).toBeFalse();
+    expect(
+      component.canRemoveLinkedWallet(linkedWalletSession.wallets[0])
+    ).toBeFalse();
   });
 
-  it('hides the reconnect strip while the live wallet session is restoring', () => {
+  it('reconnects linked wallets inline instead of the last-connected strip', () => {
+    sessionSubject.next(linkedWalletSession);
+    lastConnectedSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: null,
+      walletType: 'embedded',
+      source: 'privy',
+      connectorId: 'privy',
+    });
+
+    expect(component.showLastConnectedSection()).toBeFalse();
+    expect(component.showConnectedConnectAnother()).toBeTrue();
+    expect(
+      component.canReconnectPrimaryWallet(linkedWalletSession.wallets[0])
+    ).toBeTrue();
+    expect(
+      component.showPrimaryReconnectHint(linkedWalletSession.wallets[0])
+    ).toBeTrue();
+  });
+
+  it('hides inline reconnect while the live wallet session is restoring', () => {
     sessionSubject.next(linkedWalletSession);
     lastConnectedSubject.next({
       account: linkedWalletSession.wallets[0].address,
@@ -941,9 +948,12 @@ describe('ProfileComponent', () => {
     expect(component.isLiveConnected()).toBeFalse();
     expect(component.showLastConnectedSection()).toBeFalse();
     expect(component.showConnectedConnectAnother()).toBeTrue();
+    expect(
+      component.canReconnectPrimaryWallet(linkedWalletSession.wallets[0])
+    ).toBeFalse();
   });
 
-  it('hides the reconnect strip while a replacement wallet connect is in flight', () => {
+  it('hides inline reconnect while a replacement wallet connect is in flight', () => {
     sessionSubject.next(linkedWalletSession);
     lastConnectedSubject.next({
       account: linkedWalletSession.wallets[0].address,
@@ -955,6 +965,9 @@ describe('ProfileComponent', () => {
     component.walletConnecting = true;
 
     expect(component.showLastConnectedSection()).toBeFalse();
+    expect(
+      component.canReconnectPrimaryWallet(linkedWalletSession.wallets[0])
+    ).toBeFalse();
   });
 
   it('omits provider details from last connected copy', () => {
@@ -1004,7 +1017,10 @@ describe('ProfileComponent', () => {
       connectorId: 'metamask',
     });
 
-    expect(component.showLastConnectedSection()).toBeTrue();
+    expect(component.showLastConnectedSection()).toBeFalse();
+    expect(
+      component.canReconnectPrimaryWallet(externalWalletSession.wallets[0])
+    ).toBeTrue();
     expect(
       component.isEmbeddedWallet(component.resolveLastConnectedWallet())
     ).toBeFalse();
@@ -1013,8 +1029,8 @@ describe('ProfileComponent', () => {
     ).toBeTrue();
   });
 
-  it('shows last connected for a disconnected wallet not in the linked list', () => {
-    sessionSubject.next(linkedWalletSession);
+  it('keeps the last-connected strip only when no wallets are linked', () => {
+    sessionSubject.next({ ...linkedWalletSession, wallets: [] });
     lastConnectedSubject.next({
       account: '0xdifferent0000000000000000000000000000001',
       chainId: null,
@@ -1024,6 +1040,7 @@ describe('ProfileComponent', () => {
     });
 
     expect(component.showLastConnectedSection()).toBeTrue();
+    expect(component.showConnectedConnectAnother()).toBeFalse();
   });
 
   it('reconnects by syncing without opening the wallets MFE', async () => {
@@ -1089,7 +1106,7 @@ describe('ProfileComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalledOnceWith('connect');
   });
 
-  it('defers to the reconnect strip Connect another when disconnected', () => {
+  it('keeps Connect another in the header when linked wallets are disconnected', () => {
     sessionSubject.next(linkedWalletSession);
     lastConnectedSubject.next({
       account: linkedWalletSession.wallets[0].address,
@@ -1098,8 +1115,16 @@ describe('ProfileComponent', () => {
     });
 
     expect(component.isLiveConnected()).toBeFalse();
-    expect(component.showLastConnectedSection()).toBeTrue();
-    expect(component.showConnectedConnectAnother()).toBeFalse();
+    expect(component.showLastConnectedSection()).toBeFalse();
+    expect(component.showConnectedConnectAnother()).toBeTrue();
+    expect(
+      component.walletPrimaryStatus(linkedWalletSession.wallets[0])
+    ).toEqual({
+      label: 'Active · Disconnected',
+      active: 'Active',
+      detail: 'Disconnected',
+      detailTone: 'neutral',
+    });
   });
 
   it('blocks competing wallet mutations until activation finishes', async () => {
@@ -1136,10 +1161,13 @@ describe('ProfileComponent', () => {
       linkedWalletSession.wallets[0].address,
       '1'
     );
-    expect(component.showLastConnectedSection()).toBeTrue();
+    expect(component.showLastConnectedSection()).toBeFalse();
+    expect(
+      component.canReconnectPrimaryWallet(linkedWalletSession.wallets[0])
+    ).toBeTrue();
   });
 
-  it('shows connect when browser history does not belong to the account', () => {
+  it('prefers the orphan reconnect strip over empty connect when browser history exists', () => {
     expect(component.showEmptyConnectSection()).toBeTrue();
 
     lastConnectedSubject.next({
@@ -1148,7 +1176,8 @@ describe('ProfileComponent', () => {
       walletType: 'embedded',
     });
 
-    expect(component.showEmptyConnectSection()).toBeTrue();
+    expect(component.showLastConnectedSection()).toBeTrue();
+    expect(component.showEmptyConnectSection()).toBeFalse();
   });
 
   it('treats a live account as connected', () => {

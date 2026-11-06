@@ -120,9 +120,12 @@ test('desktop profile wallets match compact address and action layout', async ({
   await expect(
     primary.getByRole('button', { name: 'Copy address' })
   ).toBeVisible();
-  await expect(primary.locator('.profile-shell__wallet-badge')).toContainText(
-    'Active · Connected'
+  await expect(primary.locator('.profile-shell__wallet-role')).toHaveText(
+    'Active'
   );
+  await expect(
+    primary.locator('.profile-shell__wallet-connection span')
+  ).toHaveText('Connected');
   await expect(
     wallets.getByRole('button', { name: 'Connect another', exact: true })
   ).toBeVisible();
@@ -173,24 +176,138 @@ test('mobile profile wallets stack status and actions under details', async ({
     primary.getByRole('button', { name: 'Disconnect' })
   ).toBeVisible();
 
-  const stacked = await page.evaluate(() => {
+  const layout = await page.evaluate(() => {
     document
       .querySelector('.profile-shell__panel--wallets')
       ?.scrollIntoView({ block: 'center' });
+    const panel = document.querySelector('.profile-shell__panel--wallets');
+    const headerCta = panel?.querySelector(
+      '.profile-shell__connect-another-header'
+    );
     const row = document.querySelector('.profile-shell__wallet-row');
-    const address = row?.querySelector('.profile-shell__wallet-address-row');
-    const side = row?.querySelector('.profile-shell__wallet-side');
-    if (!(address instanceof HTMLElement) || !(side instanceof HTMLElement)) {
+    const role = row?.querySelector('.profile-shell__wallet-role');
+    const address = row?.querySelector('.profile-shell__wallet-address');
+    const copy = row?.querySelector('.profile-shell__wallet-copy');
+    const network = row?.querySelector('.profile-shell__wallet-network');
+    const connection = row?.querySelector('.profile-shell__wallet-connection');
+    const disconnect = row?.querySelector(
+      '.profile-shell__wallet-action--disconnect'
+    );
+    if (
+      !(panel instanceof HTMLElement) ||
+      !(headerCta instanceof HTMLElement) ||
+      !(role instanceof HTMLElement) ||
+      !(address instanceof HTMLElement) ||
+      !(copy instanceof HTMLElement) ||
+      !(network instanceof HTMLElement) ||
+      !(connection instanceof HTMLElement) ||
+      !(disconnect instanceof HTMLElement)
+    ) {
       return null;
     }
+    const panelRect = panel.getBoundingClientRect();
+    const panelPadRight = Number.parseFloat(
+      getComputedStyle(panel).paddingRight
+    );
+    const contentRight = panelRect.right - panelPadRight;
+    const headerCtaRect = headerCta.getBoundingClientRect();
+    const roleRect = role.getBoundingClientRect();
     const addressRect = address.getBoundingClientRect();
-    const sideRect = side.getBoundingClientRect();
-    return sideRect.y > addressRect.y + addressRect.height - 4;
+    const copyRect = copy.getBoundingClientRect();
+    const networkRect = network.getBoundingClientRect();
+    const connectionRect = connection.getBoundingClientRect();
+    const disconnectRect = disconnect.getBoundingClientRect();
+    const disconnectStyle = getComputedStyle(disconnect);
+    const addressSize = Number.parseFloat(getComputedStyle(address).fontSize);
+    const disconnectSize = Number.parseFloat(disconnectStyle.fontSize);
+    const outlineWidth = Number.parseFloat(disconnectStyle.borderTopWidth);
+    return {
+      connectFlushRight: Math.abs(contentRight - headerCtaRect.right) <= 2,
+      activeAboveAddress:
+        roleRect.bottom <= addressRect.top + 2 &&
+        Math.abs(roleRect.left - addressRect.left) < 4,
+      copyBesideAddress:
+        Math.abs(addressRect.top - copyRect.top) < 8 &&
+        copyRect.left - addressRect.right < 10,
+      metaUnderAddress:
+        networkRect.top > addressRect.bottom - 2 &&
+        Math.abs(networkRect.left - addressRect.left) < 4,
+      statusActionRow:
+        Math.abs(
+          connectionRect.top +
+            connectionRect.height / 2 -
+            (disconnectRect.top + disconnectRect.height / 2)
+        ) < 10 && disconnectRect.left > connectionRect.right - 2,
+      disconnectOutlined: outlineWidth > 0 && outlineWidth <= 2,
+      disconnectSecondary:
+        disconnectSize < addressSize &&
+        disconnectRect.height >= 26 &&
+        disconnectRect.height <= 40,
+      noHorizontalOverflow: disconnectRect.right <= contentRight + 1,
+    };
   });
-  expect(stacked).toBe(true);
+  expect(layout).not.toBeNull();
+  expect(layout?.connectFlushRight).toBe(true);
+  expect(layout?.activeAboveAddress).toBe(true);
+  expect(layout?.copyBesideAddress).toBe(true);
+  expect(layout?.metaUnderAddress).toBe(true);
+  expect(layout?.statusActionRow).toBe(true);
+  expect(layout?.disconnectOutlined).toBe(true);
+  expect(layout?.disconnectSecondary).toBe(true);
+  expect(layout?.noHorizontalOverflow).toBe(true);
 
   await screenshotWalletsPanel(
     page,
     'tmp/screenshots/profile-wallets-mobile.png'
   );
+});
+
+test('narrow mobile wallets wrap Disconnect under status', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await openProfileWithWallets(page);
+
+  const layout = await page.evaluate(() => {
+    document
+      .querySelector('.profile-shell__panel--wallets')
+      ?.scrollIntoView({ block: 'center' });
+    const panel = document.querySelector('.profile-shell__panel--wallets');
+    const row = document.querySelector('.profile-shell__wallet-row');
+    const connection = row?.querySelector('.profile-shell__wallet-connection');
+    const disconnect = row?.querySelector(
+      '.profile-shell__wallet-action--disconnect'
+    );
+    if (
+      !(panel instanceof HTMLElement) ||
+      !(connection instanceof HTMLElement) ||
+      !(disconnect instanceof HTMLElement)
+    ) {
+      return null;
+    }
+    const panelRect = panel.getBoundingClientRect();
+    const panelPadRight = Number.parseFloat(
+      getComputedStyle(panel).paddingRight
+    );
+    const contentRight = panelRect.right - panelPadRight;
+    const connectionRect = connection.getBoundingClientRect();
+    const disconnectRect = disconnect.getBoundingClientRect();
+    return {
+      wrappedOrRow:
+        disconnectRect.top > connectionRect.bottom - 4 ||
+        Math.abs(
+          connectionRect.top +
+            connectionRect.height / 2 -
+            (disconnectRect.top + disconnectRect.height / 2)
+        ) < 10,
+      disconnectRightAligned: contentRight - disconnectRect.right <= 2,
+      noOverlap:
+        disconnectRect.left >= connectionRect.right - 2 ||
+        disconnectRect.top >= connectionRect.bottom - 2,
+      noHorizontalOverflow: disconnectRect.right <= contentRight + 1,
+    };
+  });
+  expect(layout).not.toBeNull();
+  expect(layout?.wrappedOrRow).toBe(true);
+  expect(layout?.disconnectRightAligned).toBe(true);
+  expect(layout?.noOverlap).toBe(true);
+  expect(layout?.noHorizontalOverflow).toBe(true);
 });

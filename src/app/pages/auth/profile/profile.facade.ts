@@ -1,6 +1,6 @@
 import { DepositApiService } from '@shared/services/deposit-api.service';
 import type { DepositInstructions } from '@shared/components/add-funds-panel/deposit-instructions';
-import { map, Subscription } from 'rxjs';
+import { combineLatest, map, Subscription } from 'rxjs';
 import { ActiveWalletFacade } from '@domains/wallet/application/active-wallet.facade';
 import { Injectable, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
@@ -63,16 +63,23 @@ export class ProfileFacade implements OnDestroy {
   public readonly providerSnapshot$ = this.authSession.providerSnapshot$;
   public readonly activeWallet$ = this.activeWallet.state$;
   public readonly balances$ = this.activeWallet.balances$;
-  public readonly lastConnected$ = this.activeWallet.state$.pipe(
-    map(state => {
+  public readonly lastConnected$ = combineLatest([
+    this.activeWallet.state$,
+    this.walletsService.lastConnected,
+  ]).pipe(
+    map(([state, remembered]) => {
       const wallet = state.wallet;
-      if (!wallet) return undefined;
-      const remembered: LastConnectedWallet = {
-        account: wallet.address,
-        chainId: state.connected ? (state.snapshot?.chainId ?? null) : null,
-        walletType: wallet.walletType === 'embedded' ? 'embedded' : 'external',
-        source: wallet.source,
-      };
+      if (wallet) {
+        const fromSession: LastConnectedWallet = {
+          account: wallet.address,
+          chainId: state.connected ? (state.snapshot?.chainId ?? null) : null,
+          walletType:
+            wallet.walletType === 'embedded' ? 'embedded' : 'external',
+          source: wallet.source,
+        };
+        return fromSession;
+      }
+      // No linked wallet rows: keep browser history for the orphan reconnect strip.
       return remembered;
     })
   );

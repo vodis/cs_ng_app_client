@@ -156,9 +156,9 @@ for (const [chain, signer] of [
     await expect(page.locator('.profile-shell__balance')).toContainText(
       '$7.00'
     );
-    await expect(page.locator('.profile-shell__wallet-badge')).toContainText(
-      signer ? 'Active · Connected' : 'Active · Disconnected'
-    );
+    await expect(
+      page.locator('.profile-shell__wallet-connection span')
+    ).toHaveText(signer ? 'Connected' : 'Disconnected');
     await page.reload();
     await expect(holdings).toContainText(`2.5 ${symbol}`);
     await expect(page.locator('.profile-shell__balance')).toContainText(
