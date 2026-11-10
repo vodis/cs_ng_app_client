@@ -905,6 +905,7 @@ describe('ProfileComponent', () => {
       walletType: 'embedded',
       source: 'privy',
       connectorId: 'privy',
+      userId: 'account-1',
     });
 
     expect(component.showLastConnectedSection()).toBeTrue();
@@ -1037,6 +1038,7 @@ describe('ProfileComponent', () => {
       walletType: 'external',
       source: 'metamask',
       connectorId: 'metamask',
+      userId: 'account-1',
     });
 
     expect(component.showLastConnectedSection()).toBeTrue();
@@ -1174,10 +1176,25 @@ describe('ProfileComponent', () => {
       account: linkedWalletSession.wallets[0].address,
       chainId: null,
       walletType: 'embedded',
+      userId: 'account-1',
     });
 
     expect(component.showLastConnectedSection()).toBeTrue();
     expect(component.showEmptyConnectSection()).toBeFalse();
+  });
+
+  it('hides the orphan reconnect strip when remembered wallet belongs to another user', () => {
+    lastConnectedSubject.next({
+      account: linkedWalletSession.wallets[0].address,
+      chainId: null,
+      walletType: 'embedded',
+      source: 'privy',
+      connectorId: 'privy',
+      userId: 'account-other',
+    });
+
+    expect(component.showLastConnectedSection()).toBeFalse();
+    expect(component.showEmptyConnectSection()).toBeTrue();
   });
 
   it('treats a live account as connected', () => {
