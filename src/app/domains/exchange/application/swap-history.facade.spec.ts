@@ -25,7 +25,14 @@ describe('SwapHistoryFacade session isolation', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         SwapHistoryFacade,
-        { provide: AuthSessionService, useValue: { session$ } },
+        {
+          provide: AuthSessionService,
+          useValue: {
+            session$,
+            presence$: of('authenticated' as const),
+            presence: 'authenticated' as const,
+          },
+        },
         {
           provide: AuthProviderService,
           useValue: { getAccessToken: () => Promise.resolve('test-token') },
@@ -86,7 +93,11 @@ describe('SwapHistoryFacade session isolation', () => {
         SwapHistoryFacade,
         {
           provide: AuthSessionService,
-          useValue: { session$: of(sessionFor('alice')) },
+          useValue: {
+            session$: of(sessionFor('alice')),
+            presence$: of('authenticated' as const),
+            presence: 'authenticated' as const,
+          },
         },
         { provide: SwapApiClient, useValue: api },
       ],
@@ -120,7 +131,11 @@ describe('SwapHistoryFacade session isolation', () => {
           SwapHistoryFacade,
           {
             provide: AuthSessionService,
-            useValue: { session$: of(sessionFor('alice')) },
+            useValue: {
+              session$: of(sessionFor('alice')),
+              presence$: of('authenticated' as const),
+              presence: 'authenticated' as const,
+            },
           },
           {
             provide: SwapApiClient,
@@ -164,7 +179,14 @@ describe('SwapHistoryFacade session isolation', () => {
     TestBed.configureTestingModule({
       providers: [
         SwapHistoryFacade,
-        { provide: AuthSessionService, useValue: { session$ } },
+        {
+          provide: AuthSessionService,
+          useValue: {
+            session$,
+            presence$: of('authenticated' as const),
+            presence: 'authenticated' as const,
+          },
+        },
         { provide: SwapApiClient, useValue: { getHistory } },
       ],
     });
@@ -198,7 +220,11 @@ describe('SwapHistoryFacade session isolation', () => {
         SwapHistoryFacade,
         {
           provide: AuthSessionService,
-          useValue: { session$: of(sessionFor('alice')) },
+          useValue: {
+            session$: of(sessionFor('alice')),
+            presence$: of('authenticated' as const),
+            presence: 'authenticated' as const,
+          },
         },
         {
           provide: SwapApiClient,
