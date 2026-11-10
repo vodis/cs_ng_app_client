@@ -108,6 +108,8 @@ describe('AuthSessionService', () => {
     });
     walletsService = jasmine.createSpyObj<WalletsService>('WalletsService', [
       'setAccount',
+      'clearLastConnectedWallet',
+      'hydrateLastConnectedForUser',
     ]);
     productEvents = jasmine.createSpyObj<ProductEventsService>(
       'ProductEventsService',
@@ -229,6 +231,9 @@ describe('AuthSessionService', () => {
     service.login('email');
     flushMicrotasks();
     expect(service.session?.user.id).toBe('account-1');
+    expect(walletsService.hydrateLastConnectedForUser).toHaveBeenCalledWith(
+      'account-1'
+    );
 
     service.logout();
     flushMicrotasks();
@@ -236,8 +241,54 @@ describe('AuthSessionService', () => {
     expect(authProvider.logout).toHaveBeenCalledTimes(1);
     expect(walletGatewayBridge.disconnectWallet).toHaveBeenCalledTimes(1);
     expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
+    expect(walletsService.clearLastConnectedWallet).toHaveBeenCalledWith(
+      'account-1'
+    );
+    expect(walletsService.hydrateLastConnectedForUser).toHaveBeenCalledWith(
+      null
+    );
     expect(service.session).toBeNull();
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en');
+  }));
+
+  it('does not hydrate user A remembered wallet when user B signs in after logout', fakeAsync(() => {
+    service.login('email');
+    flushMicrotasks();
+    expect(walletsService.hydrateLastConnectedForUser).toHaveBeenCalledWith(
+      'account-1'
+    );
+
+    service.logout();
+    flushMicrotasks();
+    expect(walletsService.clearLastConnectedWallet).toHaveBeenCalledWith(
+      'account-1'
+    );
+    expect(walletsService.hydrateLastConnectedForUser).toHaveBeenCalledWith(
+      null
+    );
+
+    walletsService.hydrateLastConnectedForUser.calls.reset();
+    authProvider.login.and.resolveTo({
+      user: {
+        id: 'account-2',
+        providerUserId: 'provider-user-2',
+        sessionId: 'session-2',
+        email: 'user-b@example.com',
+        authMethod: 'email',
+      },
+      wallets: [],
+    });
+
+    service.login('email');
+    flushMicrotasks();
+
+    expect(service.session?.user.id).toBe('account-2');
+    expect(walletsService.hydrateLastConnectedForUser).toHaveBeenCalledOnceWith(
+      'account-2'
+    );
+    expect(walletsService.hydrateLastConnectedForUser).not.toHaveBeenCalledWith(
+      'account-1'
+    );
   }));
 
   it('clears credentials and wallet state after requesting account deletion', fakeAsync(() => {
@@ -262,6 +313,7 @@ describe('AuthSessionService', () => {
     expect(authProvider.logout).toHaveBeenCalledTimes(1);
     expect(walletGatewayBridge.disconnectWallet).toHaveBeenCalledTimes(1);
     expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
+    expect(walletsService.clearLastConnectedWallet).toHaveBeenCalled();
     expect(service.session).toBeNull();
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en');
     expect(deletionAvailableAt).toBe('2026-09-10T00:00:00.000Z');
@@ -656,7 +708,11 @@ describe('AuthSessionService provider restore', () => {
       );
     const walletsService = jasmine.createSpyObj<WalletsService>(
       'WalletsService',
-      ['setAccount']
+      [
+        'setAccount',
+        'clearLastConnectedWallet',
+        'hydrateLastConnectedForUser',
+      ]
     );
     const productEvents = jasmine.createSpyObj<ProductEventsService>(
       'ProductEventsService',

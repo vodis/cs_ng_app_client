@@ -105,7 +105,7 @@ export class AuthSessionService {
         walletVersion === this.walletRequestVersion &&
         !this.primaryPending
       ) {
-        this.sessionSubject.next(null);
+        this.publishSession(null);
       }
       return null;
     }
@@ -133,7 +133,7 @@ export class AuthSessionService {
       )
         return this.session;
       const session = { user: me.user, wallets: wallets.wallets };
-      this.sessionSubject.next(session);
+      this.publishSession(session);
       return session;
     } catch {
       if (
@@ -143,7 +143,7 @@ export class AuthSessionService {
         walletVersion === this.walletRequestVersion &&
         !this.primaryPending
       ) {
-        this.sessionSubject.next(null);
+        this.publishSession(null);
       }
       return null;
     }
@@ -163,7 +163,7 @@ export class AuthSessionService {
         throw new Error('Account provider access token is unavailable');
       }
       this.sessionRevision++;
-      this.sessionSubject.next(session);
+      this.publishSession(session);
       this.productEvents.record({
         eventName: 'auth.login',
         status: 'succeeded',
@@ -199,7 +199,7 @@ export class AuthSessionService {
         throw new Error('Account provider access token is unavailable');
       }
       this.sessionRevision++;
-      this.sessionSubject.next(session);
+      this.publishSession(session);
       return session;
     } finally {
       this.loadingSubject.next(false);
@@ -215,7 +215,7 @@ export class AuthSessionService {
         throw new Error('Account provider access token is unavailable');
       }
       this.sessionRevision++;
-      this.sessionSubject.next(session);
+      this.publishSession(session);
       return session;
     } finally {
       this.loadingSubject.next(false);
@@ -363,7 +363,7 @@ export class AuthSessionService {
     this.walletRequestVersion++;
     this.primaryRequestVersion++;
     this.primaryPending = false;
-    this.sessionSubject.next(null);
+    this.publishSession(null);
   }
 
   private restoreSessionWhenProviderReady(): void {
@@ -380,10 +380,21 @@ export class AuthSessionService {
   }
 
   private async clearAuthenticatedState(): Promise<void> {
+    const userId = this.sessionSubject.value?.user.id;
     await this.authProvider.logout().catch(() => undefined);
     this.walletGatewayBridge.disconnectWallet();
     this.walletsService.setAccount(undefined);
+    this.walletsService.clearLastConnectedWallet(userId);
     this.clear();
+  }
+
+  private publishSession(session: AuthSession | null): void {
+    const previousUserId = this.sessionSubject.value?.user.id;
+    this.sessionSubject.next(session);
+    const nextUserId = session?.user.id ?? null;
+    if (nextUserId !== previousUserId) {
+      this.walletsService.hydrateLastConnectedForUser(nextUserId);
+    }
   }
 
   private updateWallets(wallets: BackendWallet[]): void {

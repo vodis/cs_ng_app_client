@@ -126,16 +126,23 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
                   account: account.account,
                   chainId: this.walletsService.account.value?.chainId ?? null,
                 });
-                this.walletsService.rememberConnectedWallet({
-                  account: account.account,
-                  chainId: this.walletsService.account.value?.chainId ?? null,
-                  walletType:
-                    this.walletsService.lastConnected.value?.walletType ??
-                    'external',
-                  source: this.walletsService.lastConnected.value?.source,
-                  connectorId:
-                    this.walletsService.lastConnected.value?.connectorId,
-                });
+                const userId = this.authSession.session?.user.id;
+                if (userId) {
+                  this.walletsService.rememberConnectedWallet(
+                    {
+                      account: account.account,
+                      chainId:
+                        this.walletsService.account.value?.chainId ?? null,
+                      walletType:
+                        this.walletsService.lastConnected.value?.walletType ??
+                        'external',
+                      source: this.walletsService.lastConnected.value?.source,
+                      connectorId:
+                        this.walletsService.lastConnected.value?.connectorId,
+                    },
+                    userId
+                  );
+                }
                 this.refreshBackendWallets();
               });
             },
@@ -332,13 +339,19 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
         chainId: snapshot.chainId,
         identity: snapshot.identity,
       });
-      this.walletsService.rememberConnectedWallet({
-        account: snapshot.account,
-        chainId: snapshot.chainId,
-        walletType: snapshot.identity?.walletType ?? 'external',
-        source: snapshot.identity?.connectorId,
-        connectorId: snapshot.identity?.connectorId,
-      });
+      const userId = this.authSession.session?.user.id;
+      if (userId) {
+        this.walletsService.rememberConnectedWallet(
+          {
+            account: snapshot.account,
+            chainId: snapshot.chainId,
+            walletType: snapshot.identity?.walletType ?? 'external',
+            source: snapshot.identity?.connectorId,
+            connectorId: snapshot.identity?.connectorId,
+          },
+          userId
+        );
+      }
       this.refreshBackendWallets();
       return;
     }

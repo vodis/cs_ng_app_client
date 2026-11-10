@@ -68,6 +68,7 @@ export class ProfileFacade implements OnDestroy {
     this.walletsService.lastConnected,
   ]).pipe(
     map(([state, remembered]) => {
+      const userId = state.userId ?? state.session?.user.id;
       const wallet = state.wallet;
       if (wallet) {
         const fromSession: LastConnectedWallet = {
@@ -76,10 +77,14 @@ export class ProfileFacade implements OnDestroy {
           walletType:
             wallet.walletType === 'embedded' ? 'embedded' : 'external',
           source: wallet.source,
+          userId,
         };
         return fromSession;
       }
-      // No linked wallet rows: keep browser history for the orphan reconnect strip.
+      // Orphan reconnect strip: only the current user's remembered identity.
+      if (!remembered || !userId || remembered.userId !== userId) {
+        return undefined;
+      }
       return remembered;
     })
   );
@@ -350,7 +355,8 @@ export class ProfileFacade implements OnDestroy {
     account: string | null,
     connectedWallet: LastConnectedWallet | null
   ): void {
-    if (account) {
+    const userId = this.authSession.session?.user.id;
+    if (account && userId) {
       const matchesCurrentAccount =
         connectedWallet?.account.toLowerCase() === account.toLowerCase();
       this.walletsService.rememberConnectedWallet(
@@ -362,7 +368,8 @@ export class ProfileFacade implements OnDestroy {
               walletType: connectedWallet?.walletType ?? 'external',
               source: connectedWallet?.source,
               connectorId: connectedWallet?.connectorId,
-            }
+            },
+        userId
       );
     }
     this.walletGatewayBridge.disconnectWallet();
@@ -384,17 +391,23 @@ export class ProfileFacade implements OnDestroy {
         account: snapshot.account,
         chainId: snapshot.chainId,
       });
-      this.walletsService.rememberConnectedWallet({
-        account: snapshot.account,
-        chainId: snapshot.chainId,
-        walletType:
-          snapshot.identity?.walletType ??
-          previousWallet?.walletType ??
-          'external',
-        source: snapshot.identity?.connectorId ?? previousWallet?.source,
-        connectorId:
-          snapshot.identity?.connectorId ?? previousWallet?.connectorId,
-      });
+      const userId = this.authSession.session?.user.id;
+      if (userId) {
+        this.walletsService.rememberConnectedWallet(
+          {
+            account: snapshot.account,
+            chainId: snapshot.chainId,
+            walletType:
+              snapshot.identity?.walletType ??
+              previousWallet?.walletType ??
+              'external',
+            source: snapshot.identity?.connectorId ?? previousWallet?.source,
+            connectorId:
+              snapshot.identity?.connectorId ?? previousWallet?.connectorId,
+          },
+          userId
+        );
+      }
       return true;
     } catch (error) {
       this.walletsService.requestOpen('connect');
