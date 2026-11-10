@@ -25,6 +25,7 @@ describe('AuthSessionService', () => {
   let localizedRouting: jasmine.SpyObj<LocalizedRoutingService>;
 
   beforeEach(() => {
+    window.sessionStorage.clear();
     router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
     authProvider = jasmine.createSpyObj<AuthProviderService>(
       'AuthProviderService',
@@ -143,6 +144,7 @@ describe('AuthSessionService', () => {
 
   afterEach(() => {
     httpMock.verify();
+    window.sessionStorage.clear();
   });
 
   it('uses runtime auth config login methods', () => {
@@ -229,6 +231,7 @@ describe('AuthSessionService', () => {
     service.login('email');
     flushMicrotasks();
     expect(service.session?.user.id).toBe('account-1');
+    expect(service.presence).toBe('authenticated');
 
     service.logout();
     flushMicrotasks();
@@ -237,7 +240,60 @@ describe('AuthSessionService', () => {
     expect(walletGatewayBridge.disconnectWallet).toHaveBeenCalledTimes(1);
     expect(walletsService.setAccount).toHaveBeenCalledOnceWith(undefined);
     expect(service.session).toBeNull();
+    expect(service.presence).toBe('guest');
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/en');
+  }));
+
+  it('marks presence expired when a live session is cleared unexpectedly', fakeAsync(() => {
+    service.login('email');
+    flushMicrotasks();
+    expect(service.presence).toBe('authenticated');
+
+    service.clear();
+
+    expect(service.session).toBeNull();
+    expect(service.presence).toBe('expired');
+    expect(
+      window.sessionStorage.getItem('cs-host.auth-presence-expired.v1')
+    ).toBe('1');
+  }));
+
+  it('keeps expired presence after a tab reload when a prior login is known', fakeAsync(() => {
+    service.login('email');
+    flushMicrotasks();
+    expect(
+      window.sessionStorage.getItem('cs-host.auth-known-session.v1')
+    ).toBe('1');
+
+    TestBed.resetTestingModule();
+    authProvider.getAccessToken.and.resolveTo(null);
+    authProvider.whenSettled.and.resolveTo({
+      status: 'ready',
+      loginMethods: ['email', 'passkey'],
+      passkeyLoginEnabled: true,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: true,
+      embeddedWalletEnabled: true,
+    });
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        { provide: Router, useValue: router },
+        { provide: AuthProviderService, useValue: authProvider },
+        { provide: WalletGatewayBridgeService, useValue: walletGatewayBridge },
+        { provide: WalletsService, useValue: walletsService },
+        { provide: ProductEventsService, useValue: productEvents },
+        { provide: LocalizedRoutingService, useValue: localizedRouting },
+      ],
+    });
+    const reloaded = TestBed.inject(AuthSessionService);
+    flushMicrotasks();
+
+    expect(reloaded.session).toBeNull();
+    expect(reloaded.presence).toBe('expired');
+    expect(
+      window.sessionStorage.getItem('cs-host.auth-presence-expired.v1')
+    ).toBe('1');
   }));
 
   it('clears credentials and wallet state after requesting account deletion', fakeAsync(() => {
@@ -609,6 +665,14 @@ describe('AuthSessionService provider restore', () => {
   let service: AuthSessionService;
   let httpMock: HttpTestingController;
   let authProvider: jasmine.SpyObj<AuthProviderService>;
+
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    window.sessionStorage.clear();
+  });
 
   const readySnapshot: AuthProviderSnapshot = {
     status: 'ready',

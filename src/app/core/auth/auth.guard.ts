@@ -36,15 +36,13 @@ export class AuthGuard implements CanActivate {
     const provider = await this.authProvider.whenSettled();
     const session =
       provider.status === 'ready' ? await this.authSession.refresh() : null;
-    if (!session) {
-      // Prefer a localized `/login` URL so query params are not dropped by the
-      // unprefixed `/login` → `/en/login` redirect hop.
-      return this.router.parseUrl(
-        `${preferredLocalePath('/login')}?returnUrl=${encodeURIComponent(returnUrl)}`
-      );
+    if (session) {
+      return this.allowOrRequireTerms(session.user.id, returnUrl);
     }
 
-    return this.allowOrRequireTerms(session.user.id, returnUrl);
+    // Guests and expired sessions may open protected shells; user-data sections
+    // render empty states and CTAs guide them to sign in.
+    return true;
   }
 
   private allowOrRequireTerms(

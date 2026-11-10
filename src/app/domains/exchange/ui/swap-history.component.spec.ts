@@ -28,6 +28,7 @@ describe('SwapHistoryComponent recovery during outages', () => {
     nextCursor: 'older-page',
     error: '',
     signedIn: true,
+    presence: 'authenticated',
     loading: false,
   };
 

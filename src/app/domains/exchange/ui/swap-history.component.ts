@@ -6,6 +6,7 @@ import {
   SwapHistoryFacade,
   type SwapHistoryItem,
 } from '../application/swap-history.facade';
+import { inactiveAuthEmptyTitle } from '@core/auth/auth-presence';
 import {
   atomicToDecimal,
   formatSwapAmountDisplay,
@@ -63,7 +64,9 @@ import {
         }
 
         @if (!state.signedIn) {
-          <p class="swap-history__empty-title">Sign in to see your swaps.</p>
+          <p class="swap-history__empty-title">
+            {{ inactiveTitle(state.presence) }}
+          </p>
         } @else if (state.loading && !state.items.length) {
           <p class="swap-history__status" role="status">
             Loading swap history…
@@ -305,6 +308,12 @@ import {
 export class SwapHistoryComponent {
   @Input() compact = false;
   readonly history = inject(SwapHistoryFacade);
+
+  inactiveTitle(
+    presence: 'authenticated' | 'guest' | 'expired'
+  ): string {
+    return inactiveAuthEmptyTitle(presence, 'swaps');
+  }
 
   onRefresh(event: Event): void {
     event.preventDefault();

@@ -9,6 +9,10 @@ import {
 } from '@angular/core';
 import { CountUp } from 'countup.js';
 import { Subscription } from 'rxjs';
+import {
+  inactiveAuthEmptyHint,
+  inactiveAuthEmptyTitle,
+} from '@core/auth/auth-presence';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import type {
@@ -126,6 +130,18 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {
     this.activity = this.activitySource.snapshot();
     this.onboarding = this.buildOnboardingViewModel();
+  }
+
+  public inactiveProfileTitle(): string {
+    return inactiveAuthEmptyTitle(this.profile.presence, 'profile');
+  }
+
+  public inactiveProfileHint(): string {
+    return inactiveAuthEmptyHint(this.profile.presence);
+  }
+
+  public signIn(): void {
+    void this.profile.requestSignIn();
   }
 
   public ngOnInit(): void {

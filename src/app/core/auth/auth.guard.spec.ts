@@ -10,7 +10,6 @@ describe('AuthGuard', () => {
   let termsAcceptance: jasmine.SpyObj<TermsAcceptanceService>;
   let router: jasmine.SpyObj<Router>;
   let guard: AuthGuard;
-  let loginTree: UrlTree;
   let termsTree: UrlTree;
 
   beforeEach(() => {
@@ -29,7 +28,6 @@ describe('AuthGuard', () => {
     );
     termsAcceptance.hasAcceptedCurrent.and.returnValue(true);
     router = jasmine.createSpyObj<Router>('Router', ['parseUrl']);
-    loginTree = {} as UrlTree;
     termsTree = {} as UrlTree;
     router.parseUrl.and.returnValue(termsTree);
     guard = new AuthGuard(authSession, authProvider, termsAcceptance, router);
@@ -72,7 +70,7 @@ describe('AuthGuard', () => {
     expect(authSession.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('redirects without a session request when the provider is disabled', async () => {
+  it('allows guests to open protected shells without redirecting to login', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'disabled',
       loginMethods: [],
@@ -82,21 +80,17 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    router.parseUrl.and.returnValue(loginTree);
-
     const result = await guard.canActivate(
       {} as never,
       { url: '/profile' } as never
     );
 
     expect(authSession.refresh).not.toHaveBeenCalled();
-    expect(result).toBe(loginTree);
-    expect(router.parseUrl).toHaveBeenCalledOnceWith(
-      '/en/login?returnUrl=%2Fprofile'
-    );
+    expect(result).toBeTrue();
+    expect(router.parseUrl).not.toHaveBeenCalled();
   });
 
-  it('uses root as the return URL when the requested URL is unsafe', async () => {
+  it('allows expired sessions to stay on the requested shell', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'failed',
       loginMethods: [],
@@ -105,20 +99,17 @@ describe('AuthGuard', () => {
       passkeyLinkEnabled: false,
       embeddedWalletEnabled: false,
     });
-    router.parseUrl.and.returnValue(loginTree);
 
     const result = await guard.canActivate(
       {} as never,
       { url: '//example.test' } as never
     );
 
-    expect(result).toBe(loginTree);
-    expect(router.parseUrl).toHaveBeenCalledOnceWith('/en/login?returnUrl=%2F');
+    expect(result).toBeTrue();
   });
 
   it('redirects authenticated users without Terms acceptance to /terms', async () => {
     Object.defineProperty(authSession, 'session', {
-      configurable: true,
       get: () => ({
         user: {
           id: 'account-1',

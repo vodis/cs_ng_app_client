@@ -964,7 +964,11 @@ export class HomeComponent {
   }
 
   public primaryActionLabel(): string {
-    if (!this.activeWallet.wallet) return 'Connect wallet';
+    if (!this.activeWallet.wallet) {
+      return this.activeWallet.reason?.startsWith('Session expired')
+        ? this.activeWallet.reason
+        : 'Connect wallet';
+    }
     if (this.reviewBusy) return 'Checking balance…';
     if (this.isQuoteLoading()) return 'Updating quote…';
     if (this.reviewActionError) return this.reviewActionError;

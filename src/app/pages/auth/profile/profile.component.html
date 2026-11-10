@@ -1,3 +1,19 @@
+<section
+  class="profile-shell profile-shell--inactive"
+  *ngIf="!session"
+  aria-label="Profile signed out">
+  <div class="profile-shell__inactive">
+    <p class="profile-shell__empty-title">{{ inactiveProfileTitle() }}</p>
+    <p class="profile-shell__empty">{{ inactiveProfileHint() }}</p>
+    <button
+      type="button"
+      class="profile-shell__hero-action profile-shell__hero-action--primary"
+      (click)="signIn()">
+      Sign in
+    </button>
+  </div>
+</section>
+
 <section class="profile-shell" *ngIf="session as activeSession">
   <div class="profile-shell__top">
     <section class="profile-shell__hero" aria-label="Portfolio balance">
