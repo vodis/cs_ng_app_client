@@ -325,6 +325,22 @@ This uses the real remote and gateway actors with mocked provider I/O. Set
 `PLAYWRIGHT_CHANNEL=chrome` to use installed Chrome instead of bundled Chromium.
 The normal browser suite skips this integration when the MFE URL is absent.
 
+### TON / UniSat connection regression
+
+`e2e/wallets-connect.spec.ts` keeps a host-drawer fixture test (via profile
+Connect another) that only proves TON/UniSat tiles render in the mocked remote
+catalog. Connection coverage is the separate
+`TON and UniSat connection with the real wallet remote` describe:
+
+`WALLET_MFE_TEST_URL=http://localhost:5002 pnpm exec playwright test e2e/wallets-connect.spec.ts --workers=1`.
+
+That suite mounts the real wallet remote, mocks connector/provider I/O, and
+asserts a TON pairing modal plus host drawer auto-close / reopened account
+(and a UniSat mocked-provider connect with the same connected-state check).
+The host closes the connect drawer when the gateway reports `connected`, so
+tests must not look for the MFE "Connected wallet" heading inside an open
+connect modal.
+
 ## Wallet regression smoke
 
 `pnpm run e2e:smoke` covers email login, primary-wallet restoration, Profile
