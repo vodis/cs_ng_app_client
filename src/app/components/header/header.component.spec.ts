@@ -10,6 +10,7 @@ import { HeaderComponent } from './header.component';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import { MobileNavMenuService } from '@components/mobile-bottom-nav/mobile-nav-menu.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import {
   CsTranslationsModule,
@@ -20,6 +21,7 @@ describe('HeaderComponent', () => {
   let component: HeaderComponent;
   let fixture: ComponentFixture<HeaderComponent>;
   let walletsService: { requestOpen: jasmine.Spy };
+  let mobileNavMenu: MobileNavMenuService;
 
   const session: AuthSession = {
     user: {
@@ -41,6 +43,7 @@ describe('HeaderComponent', () => {
       imports: [RouterTestingModule, MatIconModule, CsTranslationsModule],
       declarations: [HeaderComponent],
       providers: [
+        MobileNavMenuService,
         {
           provide: AuthSessionService,
           useValue: {
@@ -68,6 +71,7 @@ describe('HeaderComponent', () => {
     });
     fixture = TestBed.createComponent(HeaderComponent);
     component = fixture.componentInstance;
+    mobileNavMenu = TestBed.inject(MobileNavMenuService);
     fixture.detectChanges();
   }
 
@@ -150,5 +154,36 @@ describe('HeaderComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.classList).toContain('header-host--mobile');
+  });
+
+  it('keeps the main menu button out of the desktop header', () => {
+    setup(session);
+    component.isMobileView = false;
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('.header__menu-button')
+    ).toBeNull();
+  });
+
+  it('opens the mobile nav menu from the header hamburger', () => {
+    setup(session);
+    component.isMobileView = true;
+    fixture.detectChanges();
+
+    const button = fixture.nativeElement.querySelector(
+      'button.header__menu-button'
+    ) as HTMLButtonElement;
+
+    expect(button).toBeTruthy();
+    expect(button.getAttribute('aria-controls')).toBe('floatingNav');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+
+    button.click();
+    fixture.detectChanges();
+
+    expect(mobileNavMenu.isOpen).toBeTrue();
+    expect(component.menuOpen).toBeTrue();
+    expect(button.getAttribute('aria-expanded')).toBe('true');
   });
 });

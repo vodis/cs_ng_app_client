@@ -73,11 +73,10 @@ describe('MobileBottomNavComponent', () => {
     ).toBe('profile');
   });
 
-  it('renders a persistent floating button instead of a bottom bar', () => {
-    expect(
-      fixture.nativeElement.querySelector('.floating-trigger')
-    ).toBeTruthy();
+  it('keeps the drawer panel without a floating trigger or bottom bar', () => {
+    expect(fixture.nativeElement.querySelector('.floating-trigger')).toBeNull();
     expect(fixture.nativeElement.querySelector('.bottom-bar')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#floatingNav')).toBeTruthy();
   });
 
   it('renders the three primary destinations', () => {

@@ -72,8 +72,8 @@
           min-width: 0;
           flex: 1 1 auto;
 
-          /* Clear floating nav FAB (58px + offset) and home-indicator safe area. */
-          padding-bottom: calc(8.25rem + env(safe-area-inset-bottom, 0px));
+          /* Clear home-indicator safe area now that the menu lives in the header. */
+          padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
           overflow-x: hidden;
         }
 

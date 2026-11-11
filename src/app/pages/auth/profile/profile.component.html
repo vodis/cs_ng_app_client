@@ -1,5 +1,18 @@
 <section class="profile-shell" *ngIf="session as activeSession">
   <div class="profile-shell__top">
+    <button
+      class="profile-shell__analyze-ai"
+      type="button"
+      aria-label="Analyze AI"
+      (click)="openActivityAnalyze()">
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <path
+          fill="currentColor"
+          d="M8 1.2 8.9 5.1 12.8 6 8.9 6.9 8 10.8 7.1 6.9 3.2 6 7.1 5.1 8 1.2Zm4.4 7.1.5 2.1 2.1.5-2.1.5-.5 2.1-.5-2.1-2.1-.5 2.1-.5.5-2.1Z" />
+      </svg>
+      Analyze AI
+    </button>
+
     <section class="profile-shell__hero" aria-label="Portfolio balance">
       <p class="profile-shell__balance" aria-live="polite">
         <span #usdBalanceValue>Loading…</span>

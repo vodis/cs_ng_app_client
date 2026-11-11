@@ -166,7 +166,11 @@ test.describe('Mobile floating navigation', () => {
   test('More panel stays scrollable on short landscape viewports', async ({
     page,
   }) => {
-    await page.getByRole('button', { name: 'Open navigation' }).click();
+    const menuButton = page.locator('app-header .header__menu-button');
+    await expect(menuButton).toBeVisible();
+    await expect(page.locator('.floating-trigger')).toHaveCount(0);
+
+    await menuButton.click();
     await page.getByRole('button', { name: 'More' }).click();
 
     const viewport = page.locator('.floating-nav__viewport');
@@ -188,7 +192,7 @@ test.describe('Mobile floating navigation', () => {
   test('inactive level is removed from keyboard tab order', async ({
     page,
   }) => {
-    await page.getByRole('button', { name: 'Open navigation' }).click();
+    await page.locator('app-header .header__menu-button').click();
 
     const moreLevel = page.locator('.floating-nav__level--more');
     await expect(moreLevel).toHaveAttribute('inert', '');

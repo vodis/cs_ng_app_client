@@ -35,13 +35,13 @@ This repo is the **DeFi dashboard** (`app.craftscript.com`). The marketing/landi
 | Element | Column |
 |---------|--------|
 | Logo | 1 |
-| Connect Wallet | 3 |
-| Bottom nav items | 4 equal columns |
+| Header actions (wallet / account / menu) | end of header row |
+| Main nav control | Header hamburger (no floating FAB) |
 
 ## Chrome heights
 
 - Header: **64px** (`4rem`) — `--shell-header-height`
-- Mobile bottom nav: same height as header
+- Mobile main nav: orange hamburger in the header
 - Scrollable content: `calc(100vh - var(--shell-header-height))`
 
 ## Color palette
