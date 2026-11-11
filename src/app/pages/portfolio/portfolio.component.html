@@ -26,9 +26,21 @@
     class="portfolio-page__nav"
     aria-label="Portfolio sections"
     *ngIf="!loading">
-    <a href="#portfolio-ai">AI agents</a>
-    <a href="#portfolio-security">Security</a>
-    <a href="#portfolio-account">Account</a>
+    <a
+      href="#portfolio-ai"
+      (click)="scrollToSection($event, 'portfolio-ai')"
+      >AI agents</a
+    >
+    <a
+      href="#portfolio-security"
+      (click)="scrollToSection($event, 'portfolio-security')"
+      >Security</a
+    >
+    <a
+      href="#portfolio-account"
+      (click)="scrollToSection($event, 'portfolio-account')"
+      >Account</a
+    >
   </nav>
 
   <p

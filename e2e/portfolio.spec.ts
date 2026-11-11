@@ -61,4 +61,24 @@ test.describe('Portfolio and agent access', () => {
       page.getByText(/CraftScript receives no OpenAI/i)
     ).toBeVisible();
   });
+
+  test('section nav scrolls within /en/portfolio instead of jumping to /#…', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/en/portfolio');
+
+    await expect(
+      page.getByRole('navigation', { name: 'Portfolio sections' })
+    ).toBeVisible();
+
+    await page
+      .getByRole('navigation', { name: 'Portfolio sections' })
+      .getByRole('link', { name: 'Security' })
+      .click();
+
+    await expect(page).toHaveURL(/\/en\/portfolio(?:\?[^#]*)?#portfolio-security$/);
+    await expect(page.locator('#portfolio-security')).toBeInViewport();
+    await expect(page).not.toHaveURL(/\/#portfolio-security/);
+  });
 });

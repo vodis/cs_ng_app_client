@@ -59,7 +59,16 @@ export class PortfolioComponent implements OnInit {
     if (this.route.snapshot.queryParamMap.get('connect') === 'device') {
       this.openAgent();
     }
-    void this.load();
+    void this.load().then(() => this.scrollToRouteFragment());
+  }
+
+  /**
+   * Keep in-page section jumps on /…/portfolio#id instead of resolving bare
+   * href="#id" against the app base (often /#id).
+   */
+  scrollToSection(event: Event, sectionId: string): void {
+    event.preventDefault();
+    this.scrollToId(sectionId, true);
   }
 
   async load(): Promise<void> {
@@ -76,6 +85,28 @@ export class PortfolioComponent implements OnInit {
       if (config.value.enabled) await this.reloadConnections();
     }
     this.loading = false;
+  }
+
+  private scrollToRouteFragment(): void {
+    const fragment = this.route.snapshot.fragment;
+    if (!fragment) {
+      return;
+    }
+    // Wait a tick so *ngIf sections exist after loading finishes.
+    queueMicrotask(() => this.scrollToId(fragment, false));
+  }
+
+  private scrollToId(sectionId: string, updateUrl: boolean): void {
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!updateUrl) {
+      return;
+    }
+    const next = `${window.location.pathname}${window.location.search}#${sectionId}`;
+    window.history.replaceState(null, '', next);
   }
 
   openProfile(): void {

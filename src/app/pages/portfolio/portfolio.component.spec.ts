@@ -41,6 +41,7 @@ describe('PortfolioComponent', () => {
         get queryParamMap(): ParamMap {
           return routeQueryParams;
         },
+        fragment: null,
       } as ActivatedRoute['snapshot'],
     } as unknown as ActivatedRoute;
     api.loadInvestmentProfile.and.resolveTo({
@@ -126,6 +127,29 @@ describe('PortfolioComponent', () => {
     component.ngOnInit();
 
     expect(component.agentOpen).toBeTrue();
+  });
+
+  it('scrolls to an in-page section without leaving the portfolio path', () => {
+    const target = document.createElement('section');
+    target.id = 'portfolio-security';
+    target.scrollIntoView = jasmine.createSpy('scrollIntoView');
+    document.body.appendChild(target);
+
+    const replaceState = spyOn(window.history, 'replaceState');
+    const event = {
+      preventDefault: jasmine.createSpy('preventDefault'),
+    } as unknown as Event;
+
+    component.scrollToSection(event, 'portfolio-security');
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(target.scrollIntoView).toHaveBeenCalled();
+    expect(replaceState).toHaveBeenCalled();
+    const nextUrl = String(replaceState.calls.mostRecent().args[2] ?? '');
+    expect(nextUrl).toContain('#portfolio-security');
+    expect(nextUrl.includes('/#portfolio-security')).toBeFalse();
+
+    target.remove();
   });
 
   it('routes logout and typed deletion through the account facade', async () => {
