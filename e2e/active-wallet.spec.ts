@@ -86,9 +86,9 @@ test('restores the backend active wallet and loads balances without Refresh afte
   const balances = page.locator('.profile-shell__balances');
   await expect(balances).toContainText('NEAR');
   await expect(balances).toContainText('2');
-  await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-    'Active · Connected'
-  );
+  await expect(
+    page.locator('.profile-shell__wallet-connection span')
+  ).toHaveText('Connected');
   expect(balanceRequests).toHaveLength(1);
   expect(JSON.parse(balanceRequests[0])).toEqual({
     walletAddress: address,
@@ -97,9 +97,9 @@ test('restores the backend active wallet and loads balances without Refresh afte
 
   await page.reload();
   await expect(balances).toContainText('NEAR');
-  await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-    'Active · Connected'
-  );
+  await expect(
+    page.locator('.profile-shell__wallet-connection span')
+  ).toHaveText('Connected');
   expect(balanceRequests).toHaveLength(2);
   await page
     .getByRole('button', { name: 'Refresh', exact: true })

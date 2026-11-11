@@ -151,10 +151,12 @@ test.describe('active-wallet persistence with the real gateway', () => {
       await page.goto('/en/profile');
       for (let reload = 0; reload < 3; reload++) {
         await expect(page.locator('.wallets-mfe')).toBeAttached();
-        await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
+        await expect(
+          page.locator('.profile-shell__wallet-connection span')
+        ).toHaveText(
           mode === 'embedded' || mode === 'connected'
-            ? 'Active · Connected'
-            : 'Active · Disconnected'
+            ? 'Connected'
+            : 'Disconnected'
         );
         await expect(
           page.locator('.wallets-mfe section[aria-label="Active wallet"]')
@@ -163,9 +165,9 @@ test.describe('active-wallet persistence with the real gateway', () => {
       }
       await expect(page.locator('.wallets-mfe')).toBeAttached();
       if (mode === 'embedded') {
-        await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-          'Active · Connected'
-        );
+        await expect(
+          page.locator('.profile-shell__wallet-connection span')
+        ).toHaveText('Connected');
         expect(writes.length).toBeGreaterThan(0);
         expect(browserErrors).toEqual([]);
         return;
@@ -173,9 +175,9 @@ test.describe('active-wallet persistence with the real gateway', () => {
       // Silent external restoration must never register or mutate a wallet.
       expect(writes).toEqual([]);
       if (mode === 'wrong' || mode === 'rejected') {
-        await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-          'Active · Disconnected'
-        );
+        await expect(
+          page.locator('.profile-shell__wallet-connection span')
+        ).toHaveText('Disconnected');
         await page
           .getByRole('button', { name: 'Reconnect', exact: true })
           .click();
@@ -188,9 +190,9 @@ test.describe('active-wallet persistence with the real gateway', () => {
         );
         await nearWallet.click();
       }
-      await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-        'Active · Connected'
-      );
+      await expect(
+        page.locator('.profile-shell__wallet-connection span')
+      ).toHaveText('Connected');
       expect(browserErrors).toEqual([]);
       if (providerDelay === 0 && mode === 'connected') {
         const cancellationResults = await page.evaluate(async url => {
@@ -350,16 +352,16 @@ test.describe('active-wallet persistence with the real gateway', () => {
         });
         await mockJsonApi(page, '/api/v1/wallets/near', { status: 'deleted' });
         await page.getByRole('button', { name: 'Remove', exact: true }).click();
-        await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-          'Active · Connected'
-        );
+        await expect(
+          page.locator('.profile-shell__wallet-connection span')
+        ).toHaveText('Connected');
         await expect(
           page.getByRole('button', { name: 'Remove', exact: true })
         ).toHaveCount(0);
         await page.reload();
-        await expect(page.locator('.profile-shell__wallet-badge')).toHaveText(
-          'Active · Connected'
-        );
+        await expect(
+          page.locator('.profile-shell__wallet-connection span')
+        ).toHaveText('Connected');
       }
     });
   }

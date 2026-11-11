@@ -400,16 +400,23 @@ export class AuthSessionService {
   }
 
   private async clearAuthenticatedState(): Promise<void> {
+    const userId = this.sessionSubject.value?.user.id;
     await this.authProvider.logout().catch(() => undefined);
     this.walletGatewayBridge.disconnectWallet();
     this.walletsService.setAccount(undefined);
+    this.walletsService.clearLastConnectedWallet(userId);
     this.dropSession('guest');
   }
 
   private publishSession(session: AuthSession): void {
+    const previousUserId = this.sessionSubject.value?.user.id;
     this.presenceSubject.next('authenticated');
     persistPresence('authenticated');
     this.sessionSubject.next(session);
+    const nextUserId = session.user.id;
+    if (nextUserId !== previousUserId) {
+      this.walletsService.hydrateLastConnectedForUser(nextUserId);
+    }
   }
 
   private clearInactiveSession(): void {
@@ -428,9 +435,13 @@ export class AuthSessionService {
     this.walletRequestVersion++;
     this.primaryRequestVersion++;
     this.primaryPending = false;
+    const previousUserId = this.sessionSubject.value?.user.id;
     this.presenceSubject.next(presence);
     persistPresence(presence);
     this.sessionSubject.next(null);
+    if (previousUserId !== undefined) {
+      this.walletsService.hydrateLastConnectedForUser(null);
+    }
   }
 
   private updateWallets(wallets: BackendWallet[]): void {

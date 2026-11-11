@@ -1,6 +1,6 @@
 import { DepositApiService } from '@shared/services/deposit-api.service';
 import type { DepositInstructions } from '@shared/components/add-funds-panel/deposit-instructions';
-import { map, Subscription } from 'rxjs';
+import { combineLatest, map, Subscription } from 'rxjs';
 import { ActiveWalletFacade } from '@domains/wallet/application/active-wallet.facade';
 import { Injectable, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
@@ -65,16 +65,28 @@ export class ProfileFacade implements OnDestroy {
   public readonly providerSnapshot$ = this.authSession.providerSnapshot$;
   public readonly activeWallet$ = this.activeWallet.state$;
   public readonly balances$ = this.activeWallet.balances$;
-  public readonly lastConnected$ = this.activeWallet.state$.pipe(
-    map(state => {
+  public readonly lastConnected$ = combineLatest([
+    this.activeWallet.state$,
+    this.walletsService.lastConnected,
+  ]).pipe(
+    map(([state, remembered]) => {
+      const userId = state.userId ?? state.session?.user.id;
       const wallet = state.wallet;
-      if (!wallet) return undefined;
-      const remembered: LastConnectedWallet = {
-        account: wallet.address,
-        chainId: state.connected ? (state.snapshot?.chainId ?? null) : null,
-        walletType: wallet.walletType === 'embedded' ? 'embedded' : 'external',
-        source: wallet.source,
-      };
+      if (wallet) {
+        const fromSession: LastConnectedWallet = {
+          account: wallet.address,
+          chainId: state.connected ? (state.snapshot?.chainId ?? null) : null,
+          walletType:
+            wallet.walletType === 'embedded' ? 'embedded' : 'external',
+          source: wallet.source,
+          userId,
+        };
+        return fromSession;
+      }
+      // Orphan reconnect strip: only the current user's remembered identity.
+      if (!remembered || !userId || remembered.userId !== userId) {
+        return undefined;
+      }
       return remembered;
     })
   );
@@ -345,7 +357,8 @@ export class ProfileFacade implements OnDestroy {
     account: string | null,
     connectedWallet: LastConnectedWallet | null
   ): void {
-    if (account) {
+    const userId = this.authSession.session?.user.id;
+    if (account && userId) {
       const matchesCurrentAccount =
         connectedWallet?.account.toLowerCase() === account.toLowerCase();
       this.walletsService.rememberConnectedWallet(
@@ -357,7 +370,8 @@ export class ProfileFacade implements OnDestroy {
               walletType: connectedWallet?.walletType ?? 'external',
               source: connectedWallet?.source,
               connectorId: connectedWallet?.connectorId,
-            }
+            },
+        userId
       );
     }
     this.walletGatewayBridge.disconnectWallet();
@@ -379,17 +393,23 @@ export class ProfileFacade implements OnDestroy {
         account: snapshot.account,
         chainId: snapshot.chainId,
       });
-      this.walletsService.rememberConnectedWallet({
-        account: snapshot.account,
-        chainId: snapshot.chainId,
-        walletType:
-          snapshot.identity?.walletType ??
-          previousWallet?.walletType ??
-          'external',
-        source: snapshot.identity?.connectorId ?? previousWallet?.source,
-        connectorId:
-          snapshot.identity?.connectorId ?? previousWallet?.connectorId,
-      });
+      const userId = this.authSession.session?.user.id;
+      if (userId) {
+        this.walletsService.rememberConnectedWallet(
+          {
+            account: snapshot.account,
+            chainId: snapshot.chainId,
+            walletType:
+              snapshot.identity?.walletType ??
+              previousWallet?.walletType ??
+              'external',
+            source: snapshot.identity?.connectorId ?? previousWallet?.source,
+            connectorId:
+              snapshot.identity?.connectorId ?? previousWallet?.connectorId,
+          },
+          userId
+        );
+      }
       return true;
     } catch (error) {
       this.walletsService.requestOpen('connect');

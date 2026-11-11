@@ -762,7 +762,7 @@ app-account-sessions .profile-shell {
     display: flex;
     min-width: 0;
     flex: 1;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.65rem;
   }
 
@@ -811,6 +811,17 @@ app-account-sessions .profile-shell {
   }
 
   &__wallet-side {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-self: center;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem 0.75rem;
+  }
+
+  &__wallet-side-actions {
     display: flex;
     min-width: 0;
     flex: 0 0 auto;
@@ -929,7 +940,15 @@ app-account-sessions .profile-shell {
     display: grid;
     min-width: 0;
     flex: 1;
-    gap: 0.4rem;
+    gap: 0.2rem;
+
+    .profile-shell__wallet-address-row {
+      margin-top: 0.05rem;
+    }
+
+    .profile-shell__wallet-reconnect-hint {
+      margin-top: 0.05rem;
+    }
   }
 
   &__wallet-address-row {
@@ -982,28 +1001,66 @@ app-account-sessions .profile-shell {
     }
   }
 
-  &__wallet-badge {
+  &__wallet-role {
+    margin: 0;
+    color: var(--secondary-text-color);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  &__wallet-connection {
     display: inline-flex;
     width: fit-content;
     flex-shrink: 0;
     align-items: center;
-    padding: 0.28rem 0.65rem;
-    border: 1px solid rgb(126 231 135 / 42%);
-    border-radius: 999px;
-    background: rgb(126 231 135 / 10%);
-    color: var(--success, #7ee787);
-    font-size: 0.72rem;
+    gap: 0.4rem;
+    font-size: 0.875rem;
     font-weight: 600;
-    gap: 0.35rem;
     line-height: 1.2;
     white-space: nowrap;
 
-    &::before {
-      width: 0.35rem;
-      height: 0.35rem;
-      border-radius: 999px;
-      background: currentcolor;
-      content: '';
+    .mat-icon {
+      width: 1.1rem;
+      height: 1.1rem;
+      font-size: 1.1rem;
+      color: inherit;
+    }
+
+    &--success {
+      color: var(--success, #7ee787);
+    }
+
+    &--neutral {
+      color: var(--secondary-text-color);
+      font-weight: 500;
+    }
+  }
+
+  &__wallet-reconnect-hint {
+    margin: 0;
+    color: var(--secondary-text-color);
+    font-size: 0.74rem;
+    font-weight: 400;
+    line-height: 1.25;
+  }
+
+  &__wallet-action--reconnect {
+    color: var(--primary-text-color) !important;
+    --mdc-outlined-button-label-text-color: var(--primary-text-color);
+    --mat-outlined-button-label-text-color: var(--primary-text-color);
+    --mat-mdc-button-persistent-ripple-color: var(--primary-text-color);
+    --mdc-outlined-button-outline-color: color-mix(
+      in srgb,
+      var(--primary-text-color) 45%,
+      transparent
+    );
+
+    .mdc-button__label,
+    .mat-mdc-button-touch-target + .mdc-button__label,
+    mat-icon,
+    .mat-icon {
+      color: var(--primary-text-color) !important;
     }
   }
 
@@ -1617,12 +1674,24 @@ app-account-sessions .profile-shell {
       gap: 0.1rem 0.25rem;
     }
 
+    &__connect-another-header {
+      min-height: 2rem;
+      margin-right: 0;
+      padding: 0.3rem 0 0.3rem 0.65rem;
+      font-size: 0.82rem;
+
+      &.mat-mdc-button {
+        min-height: 2rem;
+        padding: 0.3rem 0 0.3rem 0.65rem;
+      }
+    }
+
     &__wallet-session {
       flex-direction: column;
       align-items: stretch;
-      margin-bottom: 0.65rem;
-      padding: 0.55rem 0.65rem;
-      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem 0.6rem;
+      gap: 0.45rem;
     }
 
     &__wallet-session-actions {
@@ -1647,58 +1716,154 @@ app-account-sessions .profile-shell {
     }
 
     &__panel--wallets {
-      padding-bottom: 1.25rem;
+      padding-bottom: 0.85rem;
+
+      .profile-shell__panel-header {
+        margin-bottom: 0.3rem;
+      }
     }
 
     &__wallet-row {
       flex-direction: column;
       align-items: stretch;
-      padding: 1rem 0;
-      gap: 0.85rem;
+      padding: 0.65rem 0;
+      gap: 0.45rem;
     }
 
     &__wallet-identity {
       flex: 1 1 auto;
       min-width: 0;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    &__wallet-main {
+      gap: 0.2rem;
+    }
+
+    &__wallet-address-row {
+      gap: 0.3rem;
     }
 
     &__wallet-side {
+      display: flex;
       flex: none;
+      flex-flow: row wrap;
+      align-items: center;
+      justify-content: space-between;
       width: 100%;
-      justify-content: flex-start;
-      gap: 0.55rem 0.65rem;
+      min-width: 0;
+      padding-left: 0;
+      gap: 0.45rem 0.75rem;
+    }
+
+    &__wallet-side-actions {
+      display: flex;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      margin-left: auto;
+      max-width: 100%;
+      gap: 0.35rem 0.5rem;
+    }
+
+    &__wallet-connection {
+      min-height: 1.75rem;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+
+      .mat-icon {
+        width: 1rem;
+        height: 1rem;
+        font-size: 1rem;
+      }
     }
 
     &__wallet-action {
       min-width: 0;
-      flex: 1 1 auto;
-      min-height: 2.75rem;
-      height: 2.75rem;
-      --mdc-outlined-button-container-height: 2.75rem;
+      flex: 0 0 auto;
+      max-width: 100%;
+      min-height: 1.75rem;
+      height: 1.75rem;
+      padding: 0 0.55rem;
+      border-radius: 7px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      line-height: 1.2;
+      --mdc-outlined-button-container-height: 1.75rem;
+      --mdc-outlined-button-outline-color: rgb(255 255 255 / 20%);
+      --mdc-outlined-button-container-color: transparent;
 
       &.mat-mdc-outlined-button {
-        min-height: 2.75rem;
-        height: 2.75rem;
+        min-height: 1.75rem;
+        height: 1.75rem;
+        padding: 0 0.55rem;
+        border-radius: 7px;
+      }
+
+      .mat-icon {
+        display: none;
+      }
+
+      &--disconnect,
+      &--remove {
+        color: var(--gray-30) !important;
+        --mdc-outlined-button-label-text-color: var(--gray-30);
+        --mat-outlined-button-label-text-color: var(--gray-30);
+
+        .mdc-button__label,
+        .mat-mdc-button-touch-target + .mdc-button__label {
+          color: var(--gray-30) !important;
+          font-weight: 500;
+        }
+      }
+
+      &--reconnect,
+      &--make-active {
+        color: var(--primary-text-color) !important;
+        --mdc-outlined-button-label-text-color: var(--primary-text-color);
+        --mat-outlined-button-label-text-color: var(--primary-text-color);
+        --mdc-outlined-button-outline-color: color-mix(
+          in srgb,
+          var(--primary-text-color) 45%,
+          transparent
+        );
+
+        .mdc-button__label {
+          color: var(--primary-text-color) !important;
+          font-weight: 500;
+        }
+      }
+    }
+
+    // Narrow phones: keep Disconnect right-aligned under the status row.
+    @media (width <= 360px) {
+      &__wallet-side {
+        align-items: flex-start;
+      }
+
+      &__wallet-side-actions {
+        flex-basis: 100%;
+        justify-content: flex-end;
+        margin-left: 0;
       }
     }
 
     &__chain-logo {
-      width: 2.25rem;
-      height: 2.25rem;
+      width: 1.75rem;
+      height: 1.75rem;
     }
 
     &__wallet-address {
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
 
     &__wallet-network {
       font-size: 0.74rem;
-    }
-
-    &__wallet-badge {
-      margin-right: auto;
-      padding: 0.28rem 0.6rem;
-      font-size: 0.68rem;
     }
 
     &__panel--balances {

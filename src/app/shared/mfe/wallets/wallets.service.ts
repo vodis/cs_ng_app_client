@@ -8,7 +8,13 @@ import {
 export type WalletDrawerMode = 'wallet' | 'connect' | 'swap-review';
 import { ProductEventsService } from '@core/product-events/product-events.service';
 
-const LAST_CONNECTED_STORAGE_KEY = 'cs-host.last-connected-wallet.v1';
+/** Legacy unscoped key — removed on hydrate/clear so prior tabs cannot leak. */
+const LAST_CONNECTED_STORAGE_KEY_V1 = 'cs-host.last-connected-wallet.v1';
+const LAST_CONNECTED_STORAGE_KEY_PREFIX = 'cs-host.last-connected-wallet.v2:';
+
+function storageKeyForUser(userId: string): string {
+  return `${LAST_CONNECTED_STORAGE_KEY_PREFIX}${userId}`;
+}
 
 function isWalletType(
   value: unknown
@@ -17,7 +23,8 @@ function isWalletType(
 }
 
 function parseLastConnected(
-  raw: string | null
+  raw: string | null,
+  expectedUserId?: string
 ): LastConnectedWallet | undefined {
   if (!raw) {
     return undefined;
@@ -36,6 +43,12 @@ function parseLastConnected(
 
     const account = (parsed as { account: string }).account;
     if (!account) {
+      return undefined;
+    }
+
+    const userIdValue = (parsed as { userId?: unknown }).userId;
+    const userId = typeof userIdValue === 'string' ? userIdValue : undefined;
+    if (expectedUserId && userId !== expectedUserId) {
       return undefined;
     }
 
@@ -60,6 +73,7 @@ function parseLastConnected(
       source: typeof sourceValue === 'string' ? sourceValue : undefined,
       connectorId:
         typeof connectorIdValue === 'string' ? connectorIdValue : undefined,
+      userId,
     };
   } catch {
     return undefined;
@@ -72,12 +86,9 @@ function parseLastConnected(
 export class WalletsService {
   public provider = new BehaviorSubject<unknown | undefined>(undefined);
   public account = new BehaviorSubject<WalletAccount | undefined>(undefined);
+  /** Starts empty — hydrate only after the authenticated user id is known. */
   public lastConnected = new BehaviorSubject<LastConnectedWallet | undefined>(
-    parseLastConnected(
-      typeof window !== 'undefined'
-        ? window.sessionStorage.getItem(LAST_CONNECTED_STORAGE_KEY)
-        : null
-    )
+    undefined
   );
   public closeRequested = new BehaviorSubject<boolean>(false);
   public openRequested = new BehaviorSubject<boolean>(false);
@@ -90,18 +101,51 @@ export class WalletsService {
     undefined
   );
 
-  constructor(private readonly productEvents: ProductEventsService) {}
+  constructor(private readonly productEvents: ProductEventsService) {
+    this.removeLegacyUnscopedEntry();
+  }
+
+  /**
+   * Load the remembered wallet for `userId`, or clear in-memory state when
+   * logged out / switching accounts.
+   */
+  hydrateLastConnectedForUser(userId: string | null | undefined): void {
+    this.removeLegacyUnscopedEntry();
+    if (!userId) {
+      this.lastConnected.next(undefined);
+      return;
+    }
+
+    try {
+      this.lastConnected.next(
+        parseLastConnected(
+          window.sessionStorage.getItem(storageKeyForUser(userId)),
+          userId
+        )
+      );
+    } catch (error) {
+      this.lastConnected.next(undefined);
+      this.productEvents.recordFailure('wallet.last_connected.persist', error, {
+        metadata: {
+          action: 'hydrate',
+          storage: 'sessionStorage',
+        },
+      });
+    }
+  }
 
   setAccount(account: WalletAccount | undefined): void {
     this.account.next(account);
   }
 
-  rememberConnectedWallet(wallet: LastConnectedWallet): void {
-    this.lastConnected.next(wallet);
+  rememberConnectedWallet(wallet: LastConnectedWallet, userId: string): void {
+    const scoped: LastConnectedWallet = { ...wallet, userId };
+    this.lastConnected.next(scoped);
     try {
+      this.removeLegacyUnscopedEntry();
       window.sessionStorage.setItem(
-        LAST_CONNECTED_STORAGE_KEY,
-        JSON.stringify(wallet)
+        storageKeyForUser(userId),
+        JSON.stringify(scoped)
       );
     } catch (error) {
       this.productEvents.recordFailure('wallet.last_connected.persist', error, {
@@ -115,10 +159,13 @@ export class WalletsService {
     }
   }
 
-  clearLastConnectedWallet(): void {
+  clearLastConnectedWallet(userId?: string | null): void {
     this.lastConnected.next(undefined);
     try {
-      window.sessionStorage.removeItem(LAST_CONNECTED_STORAGE_KEY);
+      this.removeLegacyUnscopedEntry();
+      if (userId) {
+        window.sessionStorage.removeItem(storageKeyForUser(userId));
+      }
     } catch (error) {
       this.productEvents.recordFailure('wallet.last_connected.persist', error, {
         metadata: {
@@ -156,5 +203,13 @@ export class WalletsService {
 
   requestSwapPreviewRefresh(traceId: string): void {
     this.swapPreviewRefreshRequested.next(traceId);
+  }
+
+  private removeLegacyUnscopedEntry(): void {
+    try {
+      window.sessionStorage.removeItem(LAST_CONNECTED_STORAGE_KEY_V1);
+    } catch {
+      // Best-effort cleanup of the pre-v2 shared key.
+    }
   }
 }
