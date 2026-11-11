@@ -115,6 +115,8 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
+      # Skip --with-deps: GitHub runners already ship browser libs, and apt
+      # mirror DNS flakes (security.ubuntu.com) fail the job before E2E starts.
       - name: Install Playwright Chromium
         run: pnpm run e2e:install
 
