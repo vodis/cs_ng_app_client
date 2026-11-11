@@ -173,6 +173,7 @@ class ActiveWalletStub {
         sessionId: 'session',
         connected: Boolean(account),
         canRequestSwap: Boolean(account),
+        presence: account ? 'authenticated' : 'guest',
         reason: account ? '' : 'Connect wallet',
         wallet: account
           ? {

@@ -196,6 +196,7 @@ describe('ProfileComponent', () => {
           wallet: linkedWalletSession.wallets[0],
           connected: false,
           canRequestSwap: false,
+          presence: 'authenticated',
           reason: 'Reconnect',
         },
         state$: combineLatest([sessionSubject, accountSubject]).pipe(
@@ -213,6 +214,7 @@ describe('ProfileComponent', () => {
                     : undefined,
               connected: Boolean(account),
               canRequestSwap: Boolean(account),
+              presence: session ? 'authenticated' : 'guest',
               reason: '',
               snapshot: account
                 ? {

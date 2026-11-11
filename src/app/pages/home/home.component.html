@@ -271,7 +271,7 @@
 
             @if (!activeWallet.wallet) {
               <p class="exchange-notice">
-                @if (activeWallet.reason.startsWith('Session expired')) {
+                @if (activeWallet.presence === 'expired') {
                   Your session has expired. Sign in again to connect a wallet
                   and get a final quote.
                 } @else {

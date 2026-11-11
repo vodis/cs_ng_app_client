@@ -738,7 +738,10 @@ describe('AuthSessionService provider restore', () => {
     embeddedWalletEnabled: true,
   };
 
-  function configure(whenSettled: Promise<AuthProviderSnapshot>): void {
+  function configure(
+    whenSettled: Promise<AuthProviderSnapshot>,
+    accessToken: string | null = 'provider-token'
+  ): void {
     const router = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
     authProvider = jasmine.createSpyObj<AuthProviderService>(
       'AuthProviderService',
@@ -755,7 +758,7 @@ describe('AuthSessionService provider restore', () => {
       { snapshot: readySnapshot }
     );
     authProvider.whenSettled.and.returnValue(whenSettled);
-    authProvider.getAccessToken.and.resolveTo('provider-token');
+    authProvider.getAccessToken.and.resolveTo(accessToken);
     authProvider.login.and.resolveTo({
       user: {
         id: 'account-1',
@@ -921,5 +924,77 @@ describe('AuthSessionService provider restore', () => {
     httpMock.expectNone(`${environment.apiUrl}/api/v1/me`);
     httpMock.expectNone(`${environment.apiUrl}/api/v1/wallets`);
     expect(service.session).toBeNull();
+  }));
+
+  it('does not mark expired when provider restore fails with a known prior login', fakeAsync(() => {
+    window.sessionStorage.setItem('cs-host.auth-known-session.v1', '1');
+    configure(Promise.reject(new Error('provider init failed')));
+    flushMicrotasks();
+
+    expect(service.session).toBeNull();
+    expect(service.presence).toBe('guest');
+    expect(
+      window.sessionStorage.getItem('cs-host.auth-presence-expired.v1')
+    ).toBeNull();
+  }));
+
+  it('does not mark expired when the provider is not ready with a known prior login', fakeAsync(() => {
+    window.sessionStorage.setItem('cs-host.auth-known-session.v1', '1');
+    configure(
+      Promise.resolve({
+        status: 'failed',
+        loginMethods: [],
+        passkeyLoginEnabled: false,
+        passkeySignupEnabled: false,
+        passkeyLinkEnabled: false,
+        embeddedWalletEnabled: false,
+      })
+    );
+    flushMicrotasks();
+
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/me`);
+    expect(service.presence).toBe('guest');
+    expect(
+      window.sessionStorage.getItem('cs-host.auth-presence-expired.v1')
+    ).toBeNull();
+  }));
+
+  it('does not mark expired when restore refresh fails while a token remains', fakeAsync(() => {
+    window.sessionStorage.setItem('cs-host.auth-known-session.v1', '1');
+    configure(Promise.resolve(readySnapshot));
+    flushMicrotasks();
+
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/me`)
+      .flush(
+        { message: 'unavailable' },
+        { status: 503, statusText: 'Service Unavailable' }
+      );
+    httpMock
+      .expectOne(`${environment.apiUrl}/api/v1/wallets`)
+      .flush(
+        { message: 'unavailable' },
+        { status: 503, statusText: 'Service Unavailable' }
+      );
+    flushMicrotasks();
+
+    expect(service.session).toBeNull();
+    expect(service.presence).toBe('guest');
+    expect(
+      window.sessionStorage.getItem('cs-host.auth-presence-expired.v1')
+    ).toBeNull();
+  }));
+
+  it('marks expired when a known prior login has no access token after restore', fakeAsync(() => {
+    window.sessionStorage.setItem('cs-host.auth-known-session.v1', '1');
+    configure(Promise.resolve(readySnapshot), null);
+    flushMicrotasks();
+
+    httpMock.expectNone(`${environment.apiUrl}/api/v1/me`);
+    expect(service.session).toBeNull();
+    expect(service.presence).toBe('expired');
+    expect(
+      window.sessionStorage.getItem('cs-host.auth-presence-expired.v1')
+    ).toBe('1');
   }));
 });

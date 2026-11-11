@@ -291,6 +291,7 @@ export class HomeComponent {
   public activeWallet: ActiveWalletState = {
     connected: false,
     canRequestSwap: false,
+    presence: 'guest',
     reason: 'Sign in to use your wallet.',
   };
   private walletContextKey = '';
@@ -965,7 +966,7 @@ export class HomeComponent {
 
   public primaryActionLabel(): string {
     if (!this.activeWallet.wallet) {
-      return this.activeWallet.reason?.startsWith('Session expired')
+      return this.activeWallet.presence === 'expired'
         ? this.activeWallet.reason
         : 'Connect wallet';
     }

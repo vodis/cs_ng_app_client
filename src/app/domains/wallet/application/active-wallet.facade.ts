@@ -1,7 +1,10 @@
 import { DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { SESSION_EXPIRED_ACTION_LABEL } from '@core/auth/auth-presence';
+import {
+  SESSION_EXPIRED_ACTION_LABEL,
+  type AuthPresence,
+} from '@core/auth/auth-presence';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
@@ -38,6 +41,8 @@ export type ActiveWalletState = {
   connecting?: boolean;
   connected: boolean;
   canRequestSwap: boolean;
+  /** Host auth presence for empty-state CTAs (not derived from reason copy). */
+  presence: AuthPresence;
   reason: string;
 };
 
@@ -54,6 +59,7 @@ export class ActiveWalletFacade {
   private readonly stateSubject = new BehaviorSubject<ActiveWalletState>({
     connected: false,
     canRequestSwap: false,
+    presence: 'guest',
     reason: 'Sign in to use your wallet.',
   });
   private readonly destroyRef = inject(DestroyRef);
@@ -342,11 +348,13 @@ export class ActiveWalletFacade {
   ): void {
     if (!session) {
       this.selectedNetwork = undefined;
+      const presence = this.auth.presence;
       this.stateSubject.next({
         connected: false,
         canRequestSwap: false,
+        presence,
         reason:
-          this.auth.presence === 'expired'
+          presence === 'expired'
             ? SESSION_EXPIRED_ACTION_LABEL
             : 'Sign in to use your wallet.',
       });
@@ -404,6 +412,7 @@ export class ActiveWalletFacade {
       restoring,
       connecting: switching,
       canRequestSwap: !reason,
+      presence: this.auth.presence,
       reason,
     });
   }

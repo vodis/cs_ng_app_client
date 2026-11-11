@@ -383,18 +383,32 @@ export class AuthSessionService {
     void this.authProvider
       .whenSettled()
       .then(async snapshot => {
-        if (snapshot.status !== 'ready' || this.sessionSubject.value) {
+        if (this.sessionSubject.value) {
           return;
         }
+        // Provider not ready / init path failed earlier: keep guest, do not
+        // claim the session expired (outages are retryable).
+        if (snapshot.status !== 'ready') {
+          return;
+        }
+
+        // Avoid currentAccessToken() here — it clears on miss. We only want a
+        // confirmed missing token (e.g. Privy wipe) to mark expired.
+        const token = await this.authProvider.getAccessToken().catch(() => null);
+        if (!token) {
+          if (readPersistedKnownSession()) {
+            this.presenceSubject.next('expired');
+            persistPresence('expired');
+          }
+          return;
+        }
+
+        // Token still present: restore when possible. Backend blips must not
+        // flip presence to expired while clearOnFailure is false.
         await this.refresh({ clearOnFailure: false });
       })
       .catch(() => undefined)
       .finally(() => {
-        // Token wipe + reload: tab still remembers a prior login → expired UX.
-        if (!this.sessionSubject.value && readPersistedKnownSession()) {
-          this.presenceSubject.next('expired');
-          persistPresence('expired');
-        }
         this.restoredSubject.next(true);
       });
   }
