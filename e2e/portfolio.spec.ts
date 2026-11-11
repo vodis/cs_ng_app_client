@@ -27,12 +27,24 @@ test.describe('Portfolio and agent access', () => {
     await page.goto('/en/portfolio');
 
     await expect(
-      page.getByRole('heading', { name: 'Your portfolio' })
+      page.getByRole('heading', { name: 'Agents & security' })
     ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'Investment preferences' })
     ).toBeVisible();
     await expect(page.getByText('Agent context')).toBeVisible();
+
+    const preferencesCard = page.locator('.preferences-card');
+    await expect(preferencesCard.getByText('Objective', { exact: true })).toBeVisible();
+    await expect(preferencesCard.getByText('Growth', { exact: true })).toBeVisible();
+    await expect(preferencesCard.getByText('Risk', { exact: true })).toBeVisible();
+    await expect(preferencesCard.getByText('Balanced', { exact: true })).toBeVisible();
+    await expect(preferencesCard.getByText('Horizon', { exact: true })).toBeVisible();
+    await expect(preferencesCard.getByText('3–5 years')).toBeVisible();
+    await expect(
+      preferencesCard.getByRole('button', { name: 'Edit' })
+    ).toBeVisible();
+
     await expect(page.getByRole('heading', { name: 'Sessions' })).toBeVisible();
     await expect(page.getByText('$1,250.50')).toHaveCount(0);
     await expect(page.getByText('250.1 NEAR')).toHaveCount(0);

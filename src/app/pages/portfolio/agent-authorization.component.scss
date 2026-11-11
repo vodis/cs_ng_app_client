@@ -20,9 +20,9 @@
   width: min(520px, 100%);
   box-sizing: border-box;
   padding: clamp(1.5rem, 4vw, 2.5rem);
-  border: 1px solid var(--gray-80);
+  border: 1px solid rgb(255 255 255 / 14%);
   border-radius: 20px;
-  background: var(--card-background, #111);
+  background: rgb(255 255 255 / 3%);
 }
 
 .authorization-card__eyebrow {

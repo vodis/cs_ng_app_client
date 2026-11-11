@@ -12,9 +12,7 @@ import { PortfolioSecurityFacade } from './portfolio-security.facade';
 })
 export class PortfolioSecurityComponent implements OnInit, OnDestroy {
   public session: AuthSession | null = null;
-  public twoFactorEnabled = false;
   public passkeyLoading = false;
-  public twoFactorLoading = false;
   public message = '';
   public error = '';
 
@@ -55,10 +53,6 @@ export class PortfolioSecurityComponent implements OnInit, OnDestroy {
     return this.canEnablePasskey ? 'Not enabled' : 'Unavailable';
   }
 
-  public get twoFactorStatusLabel(): string {
-    return this.twoFactorEnabled ? 'Enabled' : 'Not enabled';
-  }
-
   public async enablePasskey(): Promise<void> {
     this.error = '';
     this.message = '';
@@ -84,26 +78,5 @@ export class PortfolioSecurityComponent implements OnInit, OnDestroy {
     this.error = '';
     this.message =
       'If you lose this passkey, sign in with Google, Apple, Telegram, or email, then enable a new passkey from this page.';
-  }
-
-  public async enableTwoFactor(): Promise<void> {
-    this.error = '';
-    this.message = '';
-    this.twoFactorLoading = true;
-    try {
-      // Provider MFA is not on the host auth-provider contract yet.
-      await Promise.resolve();
-      this.twoFactorEnabled = true;
-      this.message =
-        '2FA is marked enabled in this session. Full enrollment will complete when provider MFA support ships.';
-    } finally {
-      this.twoFactorLoading = false;
-    }
-  }
-
-  public disableTwoFactor(): void {
-    this.twoFactorEnabled = false;
-    this.error = '';
-    this.message = '2FA turned off for this session.';
   }
 }

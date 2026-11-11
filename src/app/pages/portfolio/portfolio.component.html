@@ -2,11 +2,14 @@
   <header class="portfolio-page__header">
     <div>
       <p class="portfolio-page__eyebrow">
-        {{ 'Texts.portfolio-eyebrow' | csTranslate: 'Portfolio intelligence' }}
+        {{ 'Texts.portfolio-eyebrow' | csTranslate: 'Agents & security' }}
       </p>
-      <h1>{{ 'Texts.portfolio-title' | csTranslate: 'Your portfolio' }}</h1>
+      <h1>
+        {{ 'Texts.portfolio-title' | csTranslate: 'Agents & security' }}
+      </h1>
       <p class="portfolio-page__subtitle">
-        A private, read-only view for you and the agents you choose.
+        Manage AI agent access, sign-in security, and this account. Holdings
+        stay on Profile.
       </p>
     </div>
     <button
@@ -18,6 +21,15 @@
       Connect AI agent
     </button>
   </header>
+
+  <nav
+    class="portfolio-page__nav"
+    aria-label="Portfolio sections"
+    *ngIf="!loading">
+    <a href="#portfolio-ai">AI agents</a>
+    <a href="#portfolio-security">Security</a>
+    <a href="#portfolio-account">Account</a>
+  </nav>
 
   <p
     class="portfolio-page__alert portfolio-page__alert--error"
@@ -33,7 +45,13 @@
   </section>
 
   <ng-container *ngIf="!loading">
-    <div class="portfolio-grid">
+    <section
+      id="portfolio-ai"
+      class="portfolio-section"
+      aria-labelledby="portfolio-ai-heading">
+      <h2 id="portfolio-ai-heading" class="portfolio-section__title">
+        AI agents
+      </h2>
       <app-portfolio-context
         [profile]="profile"
         [config]="config"
@@ -46,9 +64,91 @@
         (connectAgent)="openAgent()"
         (retryConnections)="reloadConnections()"
         (revokeAgent)="revoke($event)"></app-portfolio-context>
-      <app-portfolio-security></app-portfolio-security>
-      <app-account-sessions></app-account-sessions>
-    </div>
+    </section>
+
+    <section
+      id="portfolio-security"
+      class="portfolio-section"
+      aria-labelledby="portfolio-security-heading">
+      <h2 id="portfolio-security-heading" class="portfolio-section__title">
+        Security
+      </h2>
+      <div class="portfolio-section__stack">
+        <app-portfolio-security></app-portfolio-security>
+        <app-account-sessions></app-account-sessions>
+      </div>
+    </section>
+
+    <section
+      id="portfolio-account"
+      class="portfolio-section"
+      aria-labelledby="portfolio-account-heading">
+      <h2 id="portfolio-account-heading" class="portfolio-section__title">
+        Account
+      </h2>
+
+      <div class="portfolio-account">
+        <section class="portfolio-panel portfolio-account__session">
+          <div class="portfolio-panel__header">
+            <div>
+              <p class="portfolio-panel__eyebrow">This device</p>
+              <h3>Sign out</h3>
+            </div>
+          </div>
+          <div class="portfolio-account__body">
+            <p class="portfolio-account__copy">
+              End the session on this browser. Other devices stay signed in.
+            </p>
+            <button
+              type="button"
+              mat-stroked-button
+              [disabled]="accountLoading$ | async"
+              (click)="logout()">
+              Logout
+            </button>
+          </div>
+        </section>
+
+        <section class="portfolio-panel portfolio-account__danger">
+          <div class="portfolio-panel__header">
+            <div>
+              <p class="portfolio-panel__eyebrow">Danger zone</p>
+              <h3>Delete account</h3>
+            </div>
+          </div>
+          <div class="portfolio-account__body">
+            <p class="portfolio-account__copy">
+              Request permanent deletion. This cannot be undone after the
+              cooling-off window.
+            </p>
+            <label class="portfolio-account__confirm">
+              <span>Type DELETE to confirm</span>
+              <input
+                type="text"
+                [(ngModel)]="deleteConfirmText"
+                autocomplete="off"
+                placeholder="DELETE" />
+            </label>
+            <button
+              type="button"
+              class="portfolio-account__delete"
+              mat-flat-button
+              [disabled]="
+                deleteConfirmText !== 'DELETE' || (accountLoading$ | async)
+              "
+              (click)="requestDeletion()">
+              Delete account
+            </button>
+            <p class="portfolio-account__message" *ngIf="deletionMessage">
+              {{ deletionMessage }}
+            </p>
+            <p class="portfolio-account__error" *ngIf="accountError">
+              {{ accountError }}
+            </p>
+          </div>
+        </section>
+      </div>
+    </section>
   </ng-container>
 </main>
 

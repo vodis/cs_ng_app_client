@@ -6,9 +6,9 @@
 
 .portfolio-panel {
   overflow: hidden;
-  border: 1px solid var(--gray-80);
+  border: 1px solid rgb(255 255 255 / 14%);
   border-radius: 18px;
-  background: var(--card-background, #111);
+  background: rgb(255 255 255 / 3%);
 }
 
 .portfolio-panel__header {
@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.1rem 1.25rem;
-  border-bottom: 1px solid var(--gray-80);
+  border-bottom: 1px solid rgb(255 255 255 / 14%);
   gap: 1rem;
 }
 
@@ -71,7 +71,7 @@
 }
 
 .position-table__row {
-  border-top: 1px solid var(--gray-80);
+  border-top: 1px solid rgb(255 255 255 / 14%);
   font-size: 0.88rem;
 }
 

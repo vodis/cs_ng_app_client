@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ProductEventsService } from '@core/product-events/product-events.service';
+import { AccountSessionsFacade } from './account-sessions.facade';
 import { PortfolioApiService } from './portfolio-api.service';
 import {
   AgentAuthorizationRequest,
@@ -17,6 +18,7 @@ import {
   standalone: false,
   templateUrl: './portfolio.component.html',
   styleUrls: ['./portfolio.component.scss'],
+  providers: [AccountSessionsFacade],
 })
 export class PortfolioComponent implements OnInit {
   profile?: InvestmentProfile;
@@ -36,15 +38,21 @@ export class PortfolioComponent implements OnInit {
   deviceLoading = false;
   pendingAuthorization?: AgentAuthorizationRequest;
   authorizationLoading = false;
+  deleteConfirmText = '';
+  deletionMessage = '';
+  accountError = '';
 
   objective: InvestmentObjective = 'growth';
   riskTolerance: RiskTolerance = 'balanced';
   horizon: InvestmentHorizon = '3_5y';
 
+  public readonly accountLoading$ = this.account.loading$;
+
   constructor(
     private readonly api: PortfolioApiService,
     private readonly events: ProductEventsService,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly account: AccountSessionsFacade
   ) {}
 
   ngOnInit(): void {
@@ -193,6 +201,34 @@ export class PortfolioComponent implements OnInit {
         'Connected-agent status is temporarily unavailable.';
     } finally {
       this.connectionsLoading = false;
+    }
+  }
+
+  public async logout(): Promise<void> {
+    this.accountError = '';
+    this.deletionMessage = '';
+    try {
+      await this.account.logout();
+    } catch (error) {
+      this.accountError =
+        error instanceof Error ? error.message : 'Logout failed';
+    }
+  }
+
+  public async requestDeletion(): Promise<void> {
+    if (this.deleteConfirmText !== 'DELETE') {
+      return;
+    }
+
+    this.accountError = '';
+    this.deletionMessage = '';
+    try {
+      const deletionAvailableAt = await this.account.requestDeletion();
+      this.deletionMessage = `Deletion available ${new Date(deletionAvailableAt).toLocaleDateString()}`;
+      this.deleteConfirmText = '';
+    } catch (error) {
+      this.accountError =
+        error instanceof Error ? error.message : 'Account deletion failed';
     }
   }
 
