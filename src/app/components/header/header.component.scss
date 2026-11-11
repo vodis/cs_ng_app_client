@@ -17,6 +17,11 @@
   }
 
   &.header-host--mobile {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--main-bg-color);
+
     .header__line {
       background: #343b3d;
     }

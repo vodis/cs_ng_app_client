@@ -156,6 +156,17 @@ describe('HeaderComponent', () => {
     expect(fixture.nativeElement.classList).toContain('header-host--mobile');
   });
 
+  it('keeps the mobile header sticky so the menu trigger stays reachable', () => {
+    setup(null);
+    component.isMobileView = true;
+    fixture.detectChanges();
+
+    const hostStyles = getComputedStyle(fixture.nativeElement as HTMLElement);
+
+    expect(hostStyles.position).toBe('sticky');
+    expect(hostStyles.top).toBe('0px');
+  });
+
   it('keeps the main menu button out of the desktop header', () => {
     setup(session);
     component.isMobileView = false;
