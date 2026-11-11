@@ -205,4 +205,33 @@ test.describe('Mobile floating navigation', () => {
     );
     await expect(moreLevel).not.toHaveAttribute('inert');
   });
+
+  test('restores focus to the header menu trigger on Escape', async ({
+    page,
+  }) => {
+    const menuButton = page.locator('app-header .header__menu-button');
+    await menuButton.click();
+    await expect(page.locator('#floatingNav')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('#floatingNav')).toHaveAttribute('aria-hidden', 'true');
+    await expect(menuButton).toBeFocused();
+  });
+
+  test('restores focus to the header menu trigger on backdrop click', async ({
+    page,
+  }) => {
+    const menuButton = page.locator('app-header .header__menu-button');
+    await menuButton.click();
+    await expect(page.locator('#floatingNav')).toBeVisible();
+
+    await page.locator('app-mobile-bottom-nav .nav-overlay').click({
+      position: { x: 8, y: 8 },
+      force: true,
+    });
+
+    await expect(page.locator('#floatingNav')).toHaveAttribute('aria-hidden', 'true');
+    await expect(menuButton).toBeFocused();
+  });
 });
