@@ -226,12 +226,14 @@ test.describe('Mobile floating navigation', () => {
     await menuButton.click();
     await expect(page.locator('#floatingNav')).toBeVisible();
 
-    await page.locator('app-mobile-bottom-nav .nav-overlay').click({
-      position: { x: 8, y: 8 },
-      force: true,
-    });
+    // Click the dimmed area below the sticky header and away from the
+    // bottom-right floating panel (viewport is short landscape in this suite).
+    await page.mouse.click(24, SHELL_HEADER_HEIGHT_PX + 24);
 
-    await expect(page.locator('#floatingNav')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#floatingNav')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
     await expect(menuButton).toBeFocused();
   });
 });
