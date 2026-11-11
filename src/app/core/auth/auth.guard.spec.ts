@@ -10,6 +10,7 @@ describe('AuthGuard', () => {
   let termsAcceptance: jasmine.SpyObj<TermsAcceptanceService>;
   let router: jasmine.SpyObj<Router>;
   let guard: AuthGuard;
+  let loginTree: UrlTree;
   let termsTree: UrlTree;
 
   beforeEach(() => {
@@ -28,6 +29,7 @@ describe('AuthGuard', () => {
     );
     termsAcceptance.hasAcceptedCurrent.and.returnValue(true);
     router = jasmine.createSpyObj<Router>('Router', ['parseUrl']);
+    loginTree = {} as UrlTree;
     termsTree = {} as UrlTree;
     router.parseUrl.and.returnValue(termsTree);
     guard = new AuthGuard(authSession, authProvider, termsAcceptance, router);
@@ -58,7 +60,7 @@ describe('AuthGuard', () => {
     });
 
     const activation = guard.canActivate(
-      {} as never,
+      { data: { allowGuest: true } } as never,
       {
         url: '/profile',
       } as never
@@ -70,7 +72,7 @@ describe('AuthGuard', () => {
     expect(authSession.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('allows guests to open protected shells without redirecting to login', async () => {
+  it('allows guests only on routes that opt into empty-state shells', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'disabled',
       loginMethods: [],
@@ -81,8 +83,8 @@ describe('AuthGuard', () => {
     });
 
     const result = await guard.canActivate(
-      {} as never,
-      { url: '/profile' } as never
+      { data: { allowGuest: true } } as never,
+      { url: '/en/profile' } as never
     );
 
     expect(authSession.refresh).not.toHaveBeenCalled();
@@ -90,7 +92,32 @@ describe('AuthGuard', () => {
     expect(router.parseUrl).not.toHaveBeenCalled();
   });
 
-  it('allows expired sessions to stay on the requested shell', async () => {
+  it('redirects signed-out agent authorization to login with returnUrl', async () => {
+    authProvider.whenSettled.and.resolveTo({
+      status: 'ready',
+      loginMethods: ['email'],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
+      embeddedWalletEnabled: true,
+    });
+    authSession.refresh.and.resolveTo(null);
+    router.parseUrl.and.returnValue(loginTree);
+
+    const authorizeUrl =
+      '/en/portfolio/agent/authorize?transaction=11111111-1111-4111-8111-111111111111';
+    const result = await guard.canActivate(
+      { data: {} } as never,
+      { url: authorizeUrl } as never
+    );
+
+    expect(result).toBe(loginTree);
+    expect(router.parseUrl).toHaveBeenCalledOnceWith(
+      `/en/login?returnUrl=${encodeURIComponent(authorizeUrl)}`
+    );
+  });
+
+  it('redirects signed-out portfolio settings to login with returnUrl', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'failed',
       loginMethods: [],
@@ -99,13 +126,37 @@ describe('AuthGuard', () => {
       passkeyLinkEnabled: false,
       embeddedWalletEnabled: false,
     });
+    router.parseUrl.and.returnValue(loginTree);
 
     const result = await guard.canActivate(
-      {} as never,
+      { data: {} } as never,
+      { url: '/en/portfolio' } as never
+    );
+
+    expect(result).toBe(loginTree);
+    expect(router.parseUrl).toHaveBeenCalledOnceWith(
+      '/en/login?returnUrl=%2Fen%2Fportfolio'
+    );
+  });
+
+  it('uses root as the return URL when the requested URL is unsafe', async () => {
+    authProvider.whenSettled.and.resolveTo({
+      status: 'failed',
+      loginMethods: [],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
+      embeddedWalletEnabled: false,
+    });
+    router.parseUrl.and.returnValue(loginTree);
+
+    const result = await guard.canActivate(
+      { data: {} } as never,
       { url: '//example.test' } as never
     );
 
-    expect(result).toBeTrue();
+    expect(result).toBe(loginTree);
+    expect(router.parseUrl).toHaveBeenCalledOnceWith('/en/login?returnUrl=%2F');
   });
 
   it('redirects authenticated users without Terms acceptance to /terms', async () => {
@@ -122,7 +173,7 @@ describe('AuthGuard', () => {
     termsAcceptance.hasAcceptedCurrent.and.returnValue(false);
 
     const result = await guard.canActivate(
-      {} as never,
+      { data: {} } as never,
       { url: '/portfolio' } as never
     );
 

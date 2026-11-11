@@ -21,10 +21,11 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(
-    _route: ActivatedRouteSnapshot,
+    route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Promise<boolean | UrlTree> {
     const returnUrl = this.safeReturnUrl(state.url);
+    const allowGuest = route.data['allowGuest'] === true;
 
     if (this.authSession.session) {
       return this.allowOrRequireTerms(
@@ -40,9 +41,15 @@ export class AuthGuard implements CanActivate {
       return this.allowOrRequireTerms(session.user.id, returnUrl);
     }
 
-    // Guests and expired sessions may open protected shells; user-data sections
-    // render empty states and CTAs guide them to sign in.
-    return true;
+    // Only shells that implement guest/expired empty states may skip login.
+    // Authorization and portfolio settings must keep the login returnUrl hop.
+    if (allowGuest) {
+      return true;
+    }
+
+    return this.router.parseUrl(
+      `${preferredLocalePath('/login')}?returnUrl=${encodeURIComponent(returnUrl)}`
+    );
   }
 
   private allowOrRequireTerms(
