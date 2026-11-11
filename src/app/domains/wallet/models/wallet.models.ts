@@ -15,4 +15,6 @@ export type LastConnectedWallet = {
   walletType: 'embedded' | 'external';
   source?: string;
   connectorId?: string;
+  /** Host-scoped owner; required for sessionStorage fallback. */
+  userId?: string;
 };

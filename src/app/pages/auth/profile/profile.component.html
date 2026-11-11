@@ -371,9 +371,7 @@
         *ngIf="showLastConnectedSection()">
         <div
           class="profile-shell__wallet-session-identity"
-          *ngIf="
-            !hasLinkedWallets() && resolveLastConnectedWallet() as lastWallet
-          ">
+          *ngIf="resolveLastConnectedWallet() as lastWallet">
           <img
             *ngIf="lastConnectedChainIcon(lastWallet) as chainIcon"
             class="profile-shell__chain-logo"
@@ -386,11 +384,6 @@
             <small>{{ lastConnectedMeta(lastWallet) }}</small>
           </div>
         </div>
-        <p
-          class="profile-shell__wallet-session-hint"
-          *ngIf="hasLinkedWallets()">
-          Reconnect to sign with the active wallet.
-        </p>
         <div class="profile-shell__wallet-session-actions">
           <button
             type="button"
@@ -446,6 +439,9 @@
               [src]="chainIcon"
               alt="" />
             <div class="profile-shell__wallet-main">
+              <span class="profile-shell__wallet-role" *ngIf="wallet.isPrimary"
+                >Active</span
+              >
               <div class="profile-shell__wallet-address-row">
                 <span class="profile-shell__wallet-address">{{
                   shortAddress(wallet.address)
@@ -473,46 +469,71 @@
               <span class="profile-shell__wallet-network">{{
                 walletListMeta(wallet)
               }}</span>
+              <span
+                class="profile-shell__wallet-reconnect-hint"
+                *ngIf="showPrimaryReconnectHint(wallet)"
+                >Reconnect to sign transactions</span
+              >
             </div>
           </div>
           <div class="profile-shell__wallet-side">
             <span
-              class="profile-shell__wallet-badge"
-              *ngIf="
-                wallet.isPrimary && walletPrimaryStatusLabel(wallet) as status
+              class="profile-shell__wallet-connection"
+              *ngIf="wallet.isPrimary && walletPrimaryStatus(wallet) as status"
+              [class.profile-shell__wallet-connection--success]="
+                status.detailTone === 'success'
               "
-              >{{ status }}</span
+              [class.profile-shell__wallet-connection--neutral]="
+                status.detailTone === 'neutral'
+              "
+              [attr.aria-label]="status.label"
+              ><mat-icon aria-hidden="true">{{
+                walletConnectionIcon(status)
+              }}</mat-icon>
+              <span>{{ status.detail }}</span></span
             >
-            <button
-              type="button"
-              mat-stroked-button
-              class="profile-shell__wallet-action profile-shell__wallet-action--disconnect"
-              *ngIf="canDisconnectWallet(wallet)"
-              [disabled]="walletActionBusy"
-              (click)="disconnectWallet()">
-              <mat-icon aria-hidden="true">block</mat-icon>
-              <span>Disconnect</span>
-            </button>
-            <button
-              type="button"
-              mat-stroked-button
-              class="profile-shell__wallet-action profile-shell__wallet-action--make-active"
-              *ngIf="!wallet.isPrimary"
-              [disabled]="!!busyWalletId"
-              (click)="setPrimaryWallet(wallet)">
-              <mat-icon aria-hidden="true">sync</mat-icon>
-              <span>Make active</span>
-            </button>
-            <button
-              type="button"
-              mat-stroked-button
-              class="profile-shell__wallet-action profile-shell__wallet-action--remove"
-              *ngIf="canRemoveLinkedWallet(wallet)"
-              [disabled]="!!busyWalletId || walletActionBusy"
-              (click)="deleteWallet(wallet)">
-              <mat-icon aria-hidden="true">delete_outline</mat-icon>
-              <span>Remove</span>
-            </button>
+            <div class="profile-shell__wallet-side-actions">
+              <button
+                type="button"
+                mat-stroked-button
+                class="profile-shell__wallet-action profile-shell__wallet-action--disconnect"
+                *ngIf="canDisconnectWallet(wallet)"
+                [disabled]="walletActionBusy"
+                (click)="disconnectWallet()">
+                <mat-icon aria-hidden="true">block</mat-icon>
+                <span>Disconnect</span>
+              </button>
+              <button
+                type="button"
+                mat-stroked-button
+                class="profile-shell__wallet-action profile-shell__wallet-action--reconnect"
+                *ngIf="canReconnectPrimaryWallet(wallet)"
+                [disabled]="walletActionBusy"
+                (click)="reconnectWallet()">
+                <mat-icon aria-hidden="true">sync</mat-icon>
+                <span>Reconnect</span>
+              </button>
+              <button
+                type="button"
+                mat-stroked-button
+                class="profile-shell__wallet-action profile-shell__wallet-action--make-active"
+                *ngIf="!wallet.isPrimary"
+                [disabled]="!!busyWalletId"
+                (click)="setPrimaryWallet(wallet)">
+                <mat-icon aria-hidden="true">sync</mat-icon>
+                <span>Make active</span>
+              </button>
+              <button
+                type="button"
+                mat-stroked-button
+                class="profile-shell__wallet-action profile-shell__wallet-action--remove"
+                *ngIf="canRemoveLinkedWallet(wallet)"
+                [disabled]="!!busyWalletId || walletActionBusy"
+                (click)="deleteWallet(wallet)">
+                <mat-icon aria-hidden="true">delete_outline</mat-icon>
+                <span>Remove</span>
+              </button>
+            </div>
           </div>
         </li>
       </ul>

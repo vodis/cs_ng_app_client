@@ -49,6 +49,13 @@ const CHAIN_ICON_URLS: Record<string, string> = {
   ton: 'https://s2.coinmarketcap.com/static/img/coins/128x128/11419.png',
 };
 
+type WalletPrimaryStatusView = {
+  label: string;
+  active: string;
+  detail: string;
+  detailTone: 'success' | 'neutral';
+};
+
 const REQUIRED_SWAP_COUNT = 5;
 const ZERO_USD_LABEL = '$0.00';
 
@@ -221,19 +228,50 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return parts.filter(Boolean).join(' • ');
   }
 
-  public walletPrimaryStatusLabel(wallet: BackendWallet): string {
+  public walletPrimaryStatus(
+    wallet: BackendWallet
+  ): WalletPrimaryStatusView | null {
     if (!wallet.isPrimary) {
-      return '';
+      return null;
     }
     if (this.activeWalletId === wallet.id && this.isLiveConnected()) {
-      return this.walletConnecting
-        ? 'Active · Connecting'
-        : 'Active · Connected';
+      if (this.walletConnecting) {
+        return {
+          label: 'Active · Connecting',
+          active: 'Active',
+          detail: 'Connecting',
+          detailTone: 'neutral',
+        };
+      }
+      return {
+        label: 'Active · Connected',
+        active: 'Active',
+        detail: 'Connected',
+        detailTone: 'success',
+      };
     }
     if (this.walletRestoring) {
-      return 'Active · Restoring';
+      return {
+        label: 'Active · Restoring',
+        active: 'Active',
+        detail: 'Restoring',
+        detailTone: 'neutral',
+      };
     }
-    return 'Active · Disconnected';
+    return {
+      label: 'Active · Disconnected',
+      active: 'Active',
+      detail: 'Disconnected',
+      detailTone: 'neutral',
+    };
+  }
+
+  public walletPrimaryStatusLabel(wallet: BackendWallet): string {
+    return this.walletPrimaryStatus(wallet)?.label ?? '';
+  }
+
+  public walletConnectionIcon(status: WalletPrimaryStatusView): string {
+    return status.detailTone === 'success' ? 'link' : 'link_off';
   }
 
   public lastConnectedMeta(wallet: LastConnectedWallet): string {
@@ -606,11 +644,13 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public showLastConnectedSection(): boolean {
-    // Avoid flashing the Reconnect strip while restoring or switching wallets.
+    // Only for remembered browser wallets when the account has no linked rows.
+    // Linked wallets reconnect inline on the primary row instead of a banner.
     return (
       !this.walletRestoring &&
       !this.walletConnecting &&
       !this.isLiveConnected() &&
+      !this.hasLinkedWallets() &&
       Boolean(this.resolveLastConnectedWallet())
     );
   }
@@ -626,14 +666,25 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   /**
    * While a live browser session is connected, the header Wallets control opens
    * the balances board (wallet mode) with no connect-another path. Keep an
-   * explicit connect-mode entry on the profile wallets header whenever the
-   * reconnect strip is not already offering Connect another.
+   * explicit connect-mode entry on the profile wallets header for linked or
+   * live-connected accounts.
    */
   public showConnectedConnectAnother(): boolean {
-    if (this.showLastConnectedSection()) {
-      return false;
-    }
     return this.isLiveConnected() || this.hasLinkedWallets();
+  }
+
+  public canReconnectPrimaryWallet(wallet: BackendWallet): boolean {
+    return (
+      wallet.isPrimary &&
+      !this.isLiveConnected() &&
+      !this.walletRestoring &&
+      !this.walletConnecting &&
+      Boolean(this.resolveLastConnectedWallet())
+    );
+  }
+
+  public showPrimaryReconnectHint(wallet: BackendWallet): boolean {
+    return this.canReconnectPrimaryWallet(wallet);
   }
 
   public resolveLastConnectedWallet(): LastConnectedWallet | null {
