@@ -271,8 +271,13 @@
 
             @if (!activeWallet.wallet) {
               <p class="exchange-notice">
-                Indicative estimate before destination network fees. Connect a
-                wallet for a final quote.
+                @if (activeWallet.presence === 'expired') {
+                  Your session has expired. Sign in again to connect a wallet
+                  and get a final quote.
+                } @else {
+                  Indicative estimate before destination network fees. Connect a
+                  wallet for a final quote.
+                }
               </p>
             }
             @if (hasSwapAmountEntered()) {

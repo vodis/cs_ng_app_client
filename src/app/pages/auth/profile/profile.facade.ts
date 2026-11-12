@@ -4,6 +4,7 @@ import { combineLatest, map, Subscription } from 'rxjs';
 import { ActiveWalletFacade } from '@domains/wallet/application/active-wallet.facade';
 import { Injectable, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
+import type { AuthPresence } from '@core/auth/auth-presence';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
@@ -60,6 +61,7 @@ export class ProfileFacade implements OnDestroy {
   private contextKey = '';
 
   public readonly loading$ = this.authSession.loading$;
+  public readonly presence$ = this.authSession.presence$;
   public readonly providerSnapshot$ = this.authSession.providerSnapshot$;
   public readonly activeWallet$ = this.activeWallet.state$;
   public readonly balances$ = this.activeWallet.balances$;
@@ -474,6 +476,22 @@ export class ProfileFacade implements OnDestroy {
 
   public logout(): Promise<void> {
     return this.authSession.logout();
+  }
+
+  public get presence(): AuthPresence {
+    return this.authSession.presence;
+  }
+
+  public loginPath(): string {
+    const returnUrl =
+      this.router.url.startsWith('/') && !this.router.url.startsWith('//')
+        ? this.router.url
+        : '/';
+    return `${this.localizedRouting.path('/login')}?returnUrl=${encodeURIComponent(returnUrl)}`;
+  }
+
+  public requestSignIn(): Promise<boolean> {
+    return this.router.navigateByUrl(this.loginPath());
   }
 
   public navigateTo(path: '/' | '/portfolio'): Promise<boolean> {

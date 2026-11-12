@@ -60,7 +60,7 @@ describe('AuthGuard', () => {
     });
 
     const activation = guard.canActivate(
-      {} as never,
+      { data: { allowGuest: true } } as never,
       {
         url: '/profile',
       } as never
@@ -72,7 +72,7 @@ describe('AuthGuard', () => {
     expect(authSession.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('redirects without a session request when the provider is disabled', async () => {
+  it('allows guests only on routes that opt into empty-state shells', async () => {
     authProvider.whenSettled.and.resolveTo({
       status: 'disabled',
       loginMethods: [],
@@ -82,17 +82,60 @@ describe('AuthGuard', () => {
       embeddedWalletEnabled: false,
     });
 
-    router.parseUrl.and.returnValue(loginTree);
-
     const result = await guard.canActivate(
-      {} as never,
-      { url: '/profile' } as never
+      { data: { allowGuest: true } } as never,
+      { url: '/en/profile' } as never
     );
 
     expect(authSession.refresh).not.toHaveBeenCalled();
+    expect(result).toBeTrue();
+    expect(router.parseUrl).not.toHaveBeenCalled();
+  });
+
+  it('redirects signed-out agent authorization to login with returnUrl', async () => {
+    authProvider.whenSettled.and.resolveTo({
+      status: 'ready',
+      loginMethods: ['email'],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
+      embeddedWalletEnabled: true,
+    });
+    authSession.refresh.and.resolveTo(null);
+    router.parseUrl.and.returnValue(loginTree);
+
+    const authorizeUrl =
+      '/en/portfolio/agent/authorize?transaction=11111111-1111-4111-8111-111111111111';
+    const result = await guard.canActivate(
+      { data: {} } as never,
+      { url: authorizeUrl } as never
+    );
+
     expect(result).toBe(loginTree);
     expect(router.parseUrl).toHaveBeenCalledOnceWith(
-      '/en/login?returnUrl=%2Fprofile'
+      `/en/login?returnUrl=${encodeURIComponent(authorizeUrl)}`
+    );
+  });
+
+  it('redirects signed-out portfolio settings to login with returnUrl', async () => {
+    authProvider.whenSettled.and.resolveTo({
+      status: 'failed',
+      loginMethods: [],
+      passkeyLoginEnabled: false,
+      passkeySignupEnabled: false,
+      passkeyLinkEnabled: false,
+      embeddedWalletEnabled: false,
+    });
+    router.parseUrl.and.returnValue(loginTree);
+
+    const result = await guard.canActivate(
+      { data: {} } as never,
+      { url: '/en/portfolio' } as never
+    );
+
+    expect(result).toBe(loginTree);
+    expect(router.parseUrl).toHaveBeenCalledOnceWith(
+      '/en/login?returnUrl=%2Fen%2Fportfolio'
     );
   });
 
@@ -108,7 +151,7 @@ describe('AuthGuard', () => {
     router.parseUrl.and.returnValue(loginTree);
 
     const result = await guard.canActivate(
-      {} as never,
+      { data: {} } as never,
       { url: '//example.test' } as never
     );
 
@@ -118,7 +161,6 @@ describe('AuthGuard', () => {
 
   it('redirects authenticated users without Terms acceptance to /terms', async () => {
     Object.defineProperty(authSession, 'session', {
-      configurable: true,
       get: () => ({
         user: {
           id: 'account-1',
@@ -131,7 +173,7 @@ describe('AuthGuard', () => {
     termsAcceptance.hasAcceptedCurrent.and.returnValue(false);
 
     const result = await guard.canActivate(
-      {} as never,
+      { data: {} } as never,
       { url: '/portfolio' } as never
     );
 

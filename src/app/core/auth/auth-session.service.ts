@@ -14,6 +14,7 @@ import {
   BackendWallet,
   LoginMethod,
 } from './auth-session.types';
+import type { AuthPresence } from './auth-presence';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 
 type MeResponse = {
@@ -32,10 +33,17 @@ type BalancesResponse = {
   data: BackendBalance[];
 };
 
+/** Survives Local Storage wipes (Privy) and page reload within the same tab. */
+const AUTH_EXPIRED_STORAGE_KEY = 'cs-host.auth-presence-expired.v1';
+const AUTH_KNOWN_SESSION_STORAGE_KEY = 'cs-host.auth-known-session.v1';
+
 @Injectable({ providedIn: 'root' })
 export class AuthSessionService {
   private readonly sessionSubject = new BehaviorSubject<AuthSession | null>(
     null
+  );
+  private readonly presenceSubject = new BehaviorSubject<AuthPresence>(
+    readPersistedExpired() ? 'expired' : 'guest'
   );
   private readonly loadingSubject = new BehaviorSubject<boolean>(false);
   private sessionRevision = 0;
@@ -52,6 +60,7 @@ export class AuthSessionService {
   }
 
   readonly session$ = this.sessionSubject.asObservable();
+  readonly presence$ = this.presenceSubject.asObservable();
   readonly loading$ = this.loadingSubject.asObservable();
   readonly providerSnapshot$ = this.authProvider.snapshot$;
 
@@ -71,6 +80,10 @@ export class AuthSessionService {
 
   get session(): AuthSession | null {
     return this.sessionSubject.value;
+  }
+
+  get presence(): AuthPresence {
+    return this.presenceSubject.value;
   }
 
   get enabledLoginMethods(): LoginMethod[] {
@@ -105,7 +118,7 @@ export class AuthSessionService {
         walletVersion === this.walletRequestVersion &&
         !this.primaryPending
       ) {
-        this.publishSession(null);
+        this.clearInactiveSession();
       }
       return null;
     }
@@ -143,7 +156,7 @@ export class AuthSessionService {
         walletVersion === this.walletRequestVersion &&
         !this.primaryPending
       ) {
-        this.publishSession(null);
+        this.clearInactiveSession();
       }
       return null;
     }
@@ -358,25 +371,46 @@ export class AuthSessionService {
     return response.data ?? [];
   }
 
+  /**
+   * Drop an unexpected/invalid session (401, missing token). Marks presence as
+   * expired when a live session was lost so CTAs can guide the user to sign-in.
+   */
   clear(): void {
-    this.sessionRevision++;
-    this.walletRequestVersion++;
-    this.primaryRequestVersion++;
-    this.primaryPending = false;
-    this.publishSession(null);
+    this.clearInactiveSession();
   }
 
   private restoreSessionWhenProviderReady(): void {
     void this.authProvider
       .whenSettled()
       .then(async snapshot => {
-        if (snapshot.status !== 'ready' || this.sessionSubject.value) {
+        if (this.sessionSubject.value) {
           return;
         }
+        // Provider not ready / init path failed earlier: keep guest, do not
+        // claim the session expired (outages are retryable).
+        if (snapshot.status !== 'ready') {
+          return;
+        }
+
+        // Avoid currentAccessToken() here — it clears on miss. We only want a
+        // confirmed missing token (e.g. Privy wipe) to mark expired.
+        const token = await this.authProvider.getAccessToken().catch(() => null);
+        if (!token) {
+          if (readPersistedKnownSession()) {
+            this.presenceSubject.next('expired');
+            persistPresence('expired');
+          }
+          return;
+        }
+
+        // Token still present: restore when possible. Backend blips must not
+        // flip presence to expired while clearOnFailure is false.
         await this.refresh({ clearOnFailure: false });
       })
       .catch(() => undefined)
-      .finally(() => this.restoredSubject.next(true));
+      .finally(() => {
+        this.restoredSubject.next(true);
+      });
   }
 
   private async clearAuthenticatedState(): Promise<void> {
@@ -385,15 +419,42 @@ export class AuthSessionService {
     this.walletGatewayBridge.disconnectWallet();
     this.walletsService.setAccount(undefined);
     this.walletsService.clearLastConnectedWallet(userId);
-    this.clear();
+    this.dropSession('guest');
   }
 
-  private publishSession(session: AuthSession | null): void {
+  private publishSession(session: AuthSession): void {
     const previousUserId = this.sessionSubject.value?.user.id;
+    this.presenceSubject.next('authenticated');
+    persistPresence('authenticated');
     this.sessionSubject.next(session);
-    const nextUserId = session?.user.id ?? null;
+    const nextUserId = session.user.id;
     if (nextUserId !== previousUserId) {
       this.walletsService.hydrateLastConnectedForUser(nextUserId);
+    }
+  }
+
+  private clearInactiveSession(): void {
+    const lostLiveSession = Boolean(this.sessionSubject.value);
+    this.dropSession(
+      lostLiveSession ||
+        this.presenceSubject.value === 'expired' ||
+        readPersistedKnownSession()
+        ? 'expired'
+        : 'guest'
+    );
+  }
+
+  private dropSession(presence: 'guest' | 'expired'): void {
+    this.sessionRevision++;
+    this.walletRequestVersion++;
+    this.primaryRequestVersion++;
+    this.primaryPending = false;
+    const previousUserId = this.sessionSubject.value?.user.id;
+    this.presenceSubject.next(presence);
+    persistPresence(presence);
+    this.sessionSubject.next(null);
+    if (previousUserId !== undefined) {
+      this.walletsService.hydrateLastConnectedForUser(null);
     }
   }
 
@@ -415,5 +476,43 @@ export class AuthSessionService {
 
   private authHeaders(token: string): HttpHeaders {
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
+  }
+}
+
+function readPersistedExpired(): boolean {
+  try {
+    return window.sessionStorage.getItem(AUTH_EXPIRED_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function readPersistedKnownSession(): boolean {
+  try {
+    return (
+      window.sessionStorage.getItem(AUTH_KNOWN_SESSION_STORAGE_KEY) === '1' ||
+      readPersistedExpired()
+    );
+  } catch {
+    return false;
+  }
+}
+
+function persistPresence(presence: AuthPresence): void {
+  try {
+    if (presence === 'authenticated') {
+      window.sessionStorage.setItem(AUTH_KNOWN_SESSION_STORAGE_KEY, '1');
+      window.sessionStorage.removeItem(AUTH_EXPIRED_STORAGE_KEY);
+      return;
+    }
+    if (presence === 'expired') {
+      window.sessionStorage.setItem(AUTH_KNOWN_SESSION_STORAGE_KEY, '1');
+      window.sessionStorage.setItem(AUTH_EXPIRED_STORAGE_KEY, '1');
+      return;
+    }
+    window.sessionStorage.removeItem(AUTH_KNOWN_SESSION_STORAGE_KEY);
+    window.sessionStorage.removeItem(AUTH_EXPIRED_STORAGE_KEY);
+  } catch {
+    // Presence persistence is best-effort when storage is blocked.
   }
 }

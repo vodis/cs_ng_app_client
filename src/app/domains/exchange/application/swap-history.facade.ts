@@ -16,6 +16,7 @@ import {
   switchMap,
   timer,
 } from 'rxjs';
+import type { AuthPresence } from '@core/auth/auth-presence';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import { SwapApiClient } from '../data-access/swap-api.client';
 import type { SwapHistoryItem } from '../models/swap-history.models';
@@ -26,6 +27,7 @@ export type SwapHistoryState = {
   nextCursor: string | null;
   error: string;
   signedIn: boolean;
+  presence: AuthPresence;
   loading: boolean;
 };
 
@@ -39,12 +41,20 @@ export class SwapHistoryFacade {
   private reconciliationOffset = 0;
   /** User-initiated refresh should show loading without clearing retained rows. */
   private pendingUserRefresh = false;
-  readonly state$ = this.session.session$.pipe(
-    map(session =>
-      session ? `${session.user.id}:${session.user.sessionId}` : ''
+  readonly state$ = combineLatest([
+    this.session.session$,
+    this.session.presence$,
+  ]).pipe(
+    map(([session, presence]) => ({
+      identity: session
+        ? `${session.user.id}:${session.user.sessionId}`
+        : '',
+      presence,
+    })),
+    distinctUntilChanged(
+      (a, b) => a.identity === b.identity && a.presence === b.presence
     ),
-    distinctUntilChanged(),
-    switchMap(identity => {
+    switchMap(({ identity, presence }) => {
       this.cursor.next('');
       this.checkId.next('');
       this.reconciliationOffset = 0;
@@ -55,6 +65,7 @@ export class SwapHistoryFacade {
           nextCursor: null,
           error: '',
           signedIn: false,
+          presence,
           loading: false,
         });
       return combineLatest([
@@ -73,6 +84,7 @@ export class SwapHistoryFacade {
                   nextCursor: null,
                   error: '',
                   signedIn: true,
+                  presence: 'authenticated',
                   loading: true,
                 })
               : EMPTY,
@@ -132,6 +144,7 @@ export class SwapHistoryFacade {
                     })),
                     error: '',
                     signedIn: true,
+                    presence: 'authenticated' as const,
                     loading: false,
                   }))
                 );
@@ -143,6 +156,7 @@ export class SwapHistoryFacade {
                   error:
                     'Could not load swap history. Retry to check your exchanges.',
                   signedIn: true,
+                  presence: 'authenticated',
                   loading: false,
                 })
               )
@@ -158,6 +172,7 @@ export class SwapHistoryFacade {
               loading: true,
               error: '',
               signedIn: current.signedIn,
+              presence: current.presence,
             };
           }
           if (current.error) {
@@ -170,6 +185,7 @@ export class SwapHistoryFacade {
           nextCursor: null,
           error: '',
           signedIn: true,
+          presence: 'authenticated',
           loading: true,
         })
       );

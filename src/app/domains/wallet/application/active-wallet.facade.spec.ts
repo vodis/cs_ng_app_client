@@ -1,7 +1,10 @@
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { BehaviorSubject, Subject, startWith } from 'rxjs';
+import type { AuthPresence } from '@core/auth/auth-presence';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
@@ -52,18 +55,21 @@ function connected(address = 'alice.near'): WalletConnectionSnapshot {
 
 describe('backend-owned active wallet', () => {
   let sessions: BehaviorSubject<AuthSession | null>;
+  let presenceSubject: BehaviorSubject<AuthPresence>;
   let snapshots: BehaviorSubject<WalletConnectionSnapshot | undefined>;
   let settled: Subject<unknown>;
   let facade: ActiveWalletFacade;
   let verify: jasmine.Spy;
   let disconnect: jasmine.Spy;
   let open: jasmine.Spy;
+  let navigateByUrl: jasmine.Spy;
   let transport: jasmine.SpyObj<ConnectedWalletBalancesFacade>;
   let requests: Subject<ConnectedWalletBalancesState>[];
   let states: ActiveWalletBalances[];
 
   beforeEach(() => {
     sessions = new BehaviorSubject<AuthSession | null>(null);
+    presenceSubject = new BehaviorSubject<AuthPresence>('guest');
     snapshots = new BehaviorSubject<WalletConnectionSnapshot | undefined>(
       undefined
     );
@@ -71,6 +77,7 @@ describe('backend-owned active wallet', () => {
     verify = jasmine.createSpy('requestVerification');
     disconnect = jasmine.createSpy('disconnectWallet');
     open = jasmine.createSpy('requestOpen');
+    navigateByUrl = jasmine.createSpy('navigateByUrl').and.resolveTo(true);
     requests = [];
     states = [];
     transport = jasmine.createSpyObj('ConnectedWalletBalancesFacade', ['load']);
@@ -91,10 +98,17 @@ describe('backend-owned active wallet', () => {
           provide: AuthSessionService,
           useValue: {
             session$: sessions,
+            presence$: presenceSubject,
             get session() {
               return sessions.value;
             },
-            clear: () => sessions.next(null),
+            get presence() {
+              return presenceSubject.value;
+            },
+            clear: () => {
+              if (sessions.value) presenceSubject.next('expired');
+              sessions.next(null);
+            },
             setPrimaryWallet: async (id: string) => {
               const current = sessions.value;
               if (current)
@@ -121,6 +135,16 @@ describe('backend-owned active wallet', () => {
           useValue: { swapSettled: settled, requestOpen: open },
         },
         { provide: ConnectedWalletBalancesFacade, useValue: transport },
+        {
+          provide: Router,
+          useValue: { url: '/en', navigateByUrl },
+        },
+        {
+          provide: LocalizedRoutingService,
+          useValue: {
+            path: (path: string) => (path === '/' ? '/en' : `/en${path}`),
+          },
+        },
       ],
     });
     facade = TestBed.inject(ActiveWalletFacade);
@@ -601,6 +625,7 @@ describe('backend-owned active wallet', () => {
 
   it('clears an expired session and distinguishes connection from signing readiness', () => {
     const subscription = watch();
+    presenceSubject.next('authenticated');
     sessions.next(session);
     snapshots.next({ ...connected(), isVerified: false });
     expect(facade.state.connected).toBeTrue();
@@ -614,7 +639,29 @@ describe('backend-owned active wallet', () => {
       sessionExpired: true,
     });
     expect(last().status).toBe('idle');
-    expect(facade.state.reason).toContain('Sign in');
+    expect(facade.state.reason).toContain('Session expired');
     subscription.unsubscribe();
+  });
+
+  it('updates inactive reason when presence flips to expired without a new session', () => {
+    expect(facade.state.reason).toContain('Sign in');
+    presenceSubject.next('expired');
+    expect(facade.state.reason).toContain('Session expired');
+  });
+
+  it('routes expired sessions to login instead of opening the wallet drawer', () => {
+    presenceSubject.next('expired');
+    facade.requestConnection();
+    expect(open).not.toHaveBeenCalled();
+    expect(navigateByUrl).toHaveBeenCalledOnceWith(
+      '/en/login?returnUrl=%2Fen'
+    );
+  });
+
+  it('still opens the wallet drawer for guests without a session', () => {
+    presenceSubject.next('guest');
+    facade.requestConnection();
+    expect(navigateByUrl).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledOnceWith('connect');
   });
 });

@@ -133,6 +133,8 @@ describe('ProfileComponent', () => {
       ],
       {
         session$: sessionSubject.asObservable(),
+        presence$: of('guest' as const),
+        presence: 'guest',
         loading$: of(false),
         passkeyLinkEnabled: true,
         passkeyLoginEnabled: true,
@@ -163,7 +165,9 @@ describe('ProfileComponent', () => {
       isBypassed: false,
       executionState: 'operating.idle',
     });
-    router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
+    router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl'], {
+      url: '/en/profile',
+    });
     router.navigateByUrl.and.resolveTo(true);
     localizedRouting = jasmine.createSpyObj<LocalizedRoutingService>(
       'LocalizedRoutingService',
@@ -192,6 +196,7 @@ describe('ProfileComponent', () => {
           wallet: linkedWalletSession.wallets[0],
           connected: false,
           canRequestSwap: false,
+          presence: 'authenticated',
           reason: 'Reconnect',
         },
         state$: combineLatest([sessionSubject, accountSubject]).pipe(
@@ -209,6 +214,7 @@ describe('ProfileComponent', () => {
                     : undefined,
               connected: Boolean(account),
               canRequestSwap: Boolean(account),
+              presence: session ? 'authenticated' : 'guest',
               reason: '',
               snapshot: account
                 ? {
@@ -272,6 +278,20 @@ describe('ProfileComponent', () => {
 
     expect(authSession.enablePasskey).toHaveBeenCalledTimes(1);
     expect(component.passkeyMessage).toBe('Passkey authentication enabled');
+  });
+
+  it('shows an empty sign-in state when the session is missing', () => {
+    Object.defineProperty(authSession, 'presence', {
+      configurable: true,
+      get: () => 'expired' as const,
+    });
+    sessionSubject.next(null);
+    expect(component.session).toBeNull();
+    expect(component.inactiveProfileTitle()).toContain('Session expired');
+    component.signIn();
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith(
+      '/en/login?returnUrl=%2Fen%2Fprofile'
+    );
   });
 
   it('hides passkey enablement when linking is disabled', () => {

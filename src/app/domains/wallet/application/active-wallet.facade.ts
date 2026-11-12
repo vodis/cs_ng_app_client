@@ -1,7 +1,13 @@
 import { DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
+import {
+  SESSION_EXPIRED_ACTION_LABEL,
+  type AuthPresence,
+} from '@core/auth/auth-presence';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
+import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import type { WalletConnectionSnapshot } from '@mfe-contracts/wallet-mfe.types';
 import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.bridge.service';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
@@ -35,6 +41,8 @@ export type ActiveWalletState = {
   connecting?: boolean;
   connected: boolean;
   canRequestSwap: boolean;
+  /** Host auth presence for empty-state CTAs (not derived from reason copy). */
+  presence: AuthPresence;
   reason: string;
 };
 
@@ -51,6 +59,7 @@ export class ActiveWalletFacade {
   private readonly stateSubject = new BehaviorSubject<ActiveWalletState>({
     connected: false,
     canRequestSwap: false,
+    presence: 'guest',
     reason: 'Sign in to use your wallet.',
   });
   private readonly destroyRef = inject(DestroyRef);
@@ -78,11 +87,17 @@ export class ActiveWalletFacade {
     private readonly auth: AuthSessionService,
     private readonly gateway: WalletGatewayBridgeService,
     private readonly wallets: WalletsService,
-    private readonly balances: ConnectedWalletBalancesFacade
+    private readonly balances: ConnectedWalletBalancesFacade,
+    private readonly router: Router,
+    private readonly localizedRouting: LocalizedRoutingService
   ) {
-    combineLatest([this.auth.session$, this.gateway.snapshot$])
+    combineLatest([
+      this.auth.session$,
+      this.auth.presence$,
+      this.gateway.snapshot$,
+    ])
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(([session, snapshot]) => {
+      .subscribe(([session, , snapshot]) => {
         const wasConnected = this.state.connected;
         this.resolve(session, snapshot);
         if (!wasConnected && this.state.connected) this.revalidateBalances();
@@ -219,9 +234,20 @@ export class ActiveWalletFacade {
   }
 
   requestConnection(): void {
+    if (!this.auth.session && this.auth.presence === 'expired') {
+      const returnUrl = this.safeReturnUrl(this.router.url);
+      void this.router.navigateByUrl(
+        `${this.localizedRouting.path('/login')}?returnUrl=${encodeURIComponent(returnUrl)}`
+      );
+      return;
+    }
     if (this.state.snapshot?.account && !this.state.connected)
       this.gateway.disconnectWallet();
     this.wallets.requestOpen('connect');
+  }
+
+  private safeReturnUrl(url: string): string {
+    return url.startsWith('/') && !url.startsWith('//') ? url : '/';
   }
 
   revalidateBalances(): void {
@@ -322,10 +348,15 @@ export class ActiveWalletFacade {
   ): void {
     if (!session) {
       this.selectedNetwork = undefined;
+      const presence = this.auth.presence;
       this.stateSubject.next({
         connected: false,
         canRequestSwap: false,
-        reason: 'Sign in to use your wallet.',
+        presence,
+        reason:
+          presence === 'expired'
+            ? SESSION_EXPIRED_ACTION_LABEL
+            : 'Sign in to use your wallet.',
       });
       return;
     }
@@ -381,6 +412,7 @@ export class ActiveWalletFacade {
       restoring,
       connecting: switching,
       canRequestSwap: !reason,
+      presence: this.auth.presence,
       reason,
     });
   }

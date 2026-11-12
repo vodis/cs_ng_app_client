@@ -21,10 +21,11 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(
-    _route: ActivatedRouteSnapshot,
+    route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Promise<boolean | UrlTree> {
     const returnUrl = this.safeReturnUrl(state.url);
+    const allowGuest = route.data['allowGuest'] === true;
 
     if (this.authSession.session) {
       return this.allowOrRequireTerms(
@@ -36,15 +37,19 @@ export class AuthGuard implements CanActivate {
     const provider = await this.authProvider.whenSettled();
     const session =
       provider.status === 'ready' ? await this.authSession.refresh() : null;
-    if (!session) {
-      // Prefer a localized `/login` URL so query params are not dropped by the
-      // unprefixed `/login` → `/en/login` redirect hop.
-      return this.router.parseUrl(
-        `${preferredLocalePath('/login')}?returnUrl=${encodeURIComponent(returnUrl)}`
-      );
+    if (session) {
+      return this.allowOrRequireTerms(session.user.id, returnUrl);
     }
 
-    return this.allowOrRequireTerms(session.user.id, returnUrl);
+    // Only shells that implement guest/expired empty states may skip login.
+    // Authorization and portfolio settings must keep the login returnUrl hop.
+    if (allowGuest) {
+      return true;
+    }
+
+    return this.router.parseUrl(
+      `${preferredLocalePath('/login')}?returnUrl=${encodeURIComponent(returnUrl)}`
+    );
   }
 
   private allowOrRequireTerms(
