@@ -39,16 +39,21 @@ export function investmentHorizonLabel(
   return value ? HORIZON_LABELS[value] : 'Not set';
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export function daysUntil(isoDate: string, now = Date.now()): number {
   const target = new Date(isoDate).getTime();
   if (Number.isNaN(target)) {
     return Number.NaN;
   }
-  const diffMs = target - now;
-  if (diffMs < 0) {
-    return Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+  // Past (or exact now): never use Math.ceil on a negative fraction — it yields
+  // -0 for expiries within the last day, which then looks like "today".
+  if (target <= now) {
+    const daysPast = Math.floor((now - target) / DAY_MS);
+    // Expired earlier today / within the last 24h → treat as -1 (expired).
+    return daysPast === 0 ? -1 : -daysPast;
   }
-  return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+  return Math.floor((target - now) / DAY_MS);
 }
 
 export function relativeExpiryLabel(isoDate: string, now = Date.now()): string {

@@ -31,12 +31,24 @@ describe('portfolio-display.utils', () => {
     expect(relativeExpiryLabel('2026-11-11T18:00:00.000Z', now)).toBe(
       'Expires today'
     );
+    expect(relativeExpiryLabel('2026-11-11T11:00:00.000Z', now)).toBe(
+      'Expired'
+    );
     expect(relativeExpiryLabel('2026-11-10T12:00:00.000Z', now)).toBe(
+      'Expired'
+    );
+    expect(relativeExpiryLabel('2026-11-09T12:00:00.000Z', now)).toBe(
       'Expired'
     );
     expect(expiresWithinDays('2026-11-14T12:00:00.000Z', 7, now)).toBeTrue();
     expect(expiresWithinDays('2026-12-11T12:00:00.000Z', 7, now)).toBeFalse();
+    expect(
+      expiresWithinDays('2026-11-11T11:00:00.000Z', 7, now)
+    ).toBeFalse();
     expect(daysUntil('2026-11-18T12:00:00.000Z', now)).toBe(7);
     expect(daysUntil('2026-11-11T18:00:00.000Z', now)).toBe(0);
+    expect(daysUntil('2026-11-11T11:00:00.000Z', now)).toBe(-1);
+    expect(daysUntil('2026-11-10T12:00:00.000Z', now)).toBe(-1);
+    expect(daysUntil('2026-11-09T12:00:00.000Z', now)).toBe(-2);
   });
 });
