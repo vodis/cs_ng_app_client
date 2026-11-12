@@ -1,6 +1,10 @@
 /// <reference types="jasmine" />
 
-import { AccountSessionsComponent } from './account-sessions.component';
+import {
+  AccountSessionsComponent,
+  MOCK_LOGIN_SESSIONS,
+  normalizeAccountLoginSession,
+} from './account-sessions.component';
 
 describe('AccountSessionsComponent', () => {
   let component: AccountSessionsComponent;
@@ -53,10 +57,47 @@ describe('AccountSessionsComponent', () => {
     ).toBe('Revoked');
   });
 
-  it('normalizes past-dated Active sessions to Expired', () => {
+  it('keeps authoritative Expired status from session data', () => {
     const expired = component.loginSessions.find(
       session => session.id === 'session-expired'
     );
     expect(expired?.status).toBe('Expired');
+  });
+});
+
+describe('normalizeAccountLoginSession', () => {
+  const clock = Date.parse('2026-11-12T12:00:00.000Z');
+
+  it('keeps the current-device mock Active when the clock is before endDateIso', () => {
+    const current = MOCK_LOGIN_SESSIONS.find(
+      session => session.id === 'session-current'
+    )!;
+
+    const normalized = normalizeAccountLoginSession(current, clock);
+
+    expect(normalized.status).toBe('Active');
+    expect(normalized.currentDevice).toBeTrue();
+  });
+
+  it('marks past-dated Active sessions Expired against a controlled clock', () => {
+    const activePastEnd = {
+      ...MOCK_LOGIN_SESSIONS[0],
+      id: 'session-active-past',
+      endDateIso: '2026-11-11T11:00:00.000Z',
+      currentDevice: true,
+    };
+
+    const normalized = normalizeAccountLoginSession(activePastEnd, clock);
+
+    expect(normalized.status).toBe('Expired');
+    expect(normalized.currentDevice).toBeFalse();
+  });
+
+  it('does not rewrite non-Active authoritative status', () => {
+    const expired = MOCK_LOGIN_SESSIONS.find(
+      session => session.id === 'session-expired'
+    )!;
+
+    expect(normalizeAccountLoginSession(expired, clock)).toEqual(expired);
   });
 });

@@ -12,7 +12,8 @@ export type AccountLoginSession = {
   currentDevice: boolean;
 };
 
-const MOCK_LOGIN_SESSIONS: AccountLoginSession[] = [
+/** Demo rows — status/currentDevice are authoritative; do not re-derive from Date.now(). */
+export const MOCK_LOGIN_SESSIONS: AccountLoginSession[] = [
   {
     id: 'session-current',
     status: 'Active',
@@ -48,6 +49,26 @@ const MOCK_LOGIN_SESSIONS: AccountLoginSession[] = [
   },
 ];
 
+/**
+ * Optional client-side expiry check for Active rows. Callers must pass a
+ * controlled `now` in tests; production UI should prefer authoritative status.
+ */
+export function normalizeAccountLoginSession(
+  session: AccountLoginSession,
+  now: number
+): AccountLoginSession {
+  if (session.status !== 'Active') {
+    return session;
+  }
+
+  const end = Date.parse(session.endDateIso);
+  if (!Number.isNaN(end) && end < now) {
+    return { ...session, status: 'Expired', currentDevice: false };
+  }
+
+  return session;
+}
+
 @Component({
   selector: 'app-account-sessions',
   standalone: false,
@@ -57,9 +78,7 @@ const MOCK_LOGIN_SESSIONS: AccountLoginSession[] = [
 export class AccountSessionsComponent {
   public error = '';
   public showAllSessions = false;
-  public loginSessions = MOCK_LOGIN_SESSIONS.map(session =>
-    this.normalizeSession(session)
-  );
+  public loginSessions = MOCK_LOGIN_SESSIONS.map(session => ({ ...session }));
   public visibleLoginSessions = this.loginSessions.slice(0, 2);
 
   public toggleSessions(): void {
@@ -100,18 +119,5 @@ export class AccountSessionsComponent {
     this.visibleLoginSessions = this.showAllSessions
       ? this.loginSessions
       : this.loginSessions.slice(0, 2);
-  }
-
-  private normalizeSession(session: AccountLoginSession): AccountLoginSession {
-    if (session.status !== 'Active') {
-      return session;
-    }
-
-    const end = Date.parse(session.endDateIso);
-    if (!Number.isNaN(end) && end < Date.now()) {
-      return { ...session, status: 'Expired', currentDevice: false };
-    }
-
-    return session;
   }
 }
