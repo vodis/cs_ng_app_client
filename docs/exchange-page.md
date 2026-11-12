@@ -130,7 +130,7 @@ appear when present. Status labels stay one-to-one with history statuses
 processing, completed, refunded, failed, cancelled, unknown). Explorer links
 come from validated settlement receipts. Compact mode links to `/transactions`
 via the orange “View all swaps →” control. Mobile content clearance for the
-floating nav FAB is owned by the shell main content padding.
+home-indicator safe area is owned by the shell main content padding.
 
 ## API and asset ownership
 

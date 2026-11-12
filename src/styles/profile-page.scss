@@ -35,6 +35,28 @@ app-account-sessions .profile-shell {
     gap: 1.25rem;
   }
 
+  &__analyze-ai {
+    display: none;
+    min-height: 2.35rem;
+    align-items: center;
+    justify-self: end;
+    padding: 0 0.9rem;
+    border: 1px solid rgb(254 108 0 / 45%);
+    border-radius: 0.55rem;
+    background: rgb(254 108 0 / 12%);
+    color: var(--primary-text-color);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    gap: 0.4rem;
+
+    svg {
+      display: block;
+      width: 0.9rem;
+      height: 0.9rem;
+    }
+  }
+
   &__hero {
     display: grid;
     align-content: start;
@@ -1231,7 +1253,7 @@ app-account-sessions .profile-shell {
   }
 
   &__activity-actions {
-    display: flex;
+    display: none;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
@@ -1261,6 +1283,12 @@ app-account-sessions .profile-shell {
       display: block;
       width: 0.9rem;
       height: 0.9rem;
+    }
+  }
+
+  @media (width < 768px) {
+    &__analyze-ai {
+      display: inline-flex;
     }
   }
 
@@ -1408,6 +1436,7 @@ app-account-sessions .profile-shell {
     }
 
     &__activity-actions {
+      display: flex;
       grid-area: actions;
       justify-self: end;
     }

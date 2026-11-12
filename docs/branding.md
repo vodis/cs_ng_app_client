@@ -85,7 +85,7 @@ Grid gutters by breakpoint:
 Common shell measurements:
 
 - Header height: `4rem` (`64px`)
-- Mobile bottom nav height: `4rem` (`64px`)
+- Mobile main-nav control: hamburger in the header (right of account icons)
 - Scrollable shell area: `calc(100vh - 4rem)`
 
 ## Mobile Measurements
@@ -95,7 +95,7 @@ Mobile app shell applies below `768px`.
 - Mobile breakpoint: `< 768px`
 - Shell grid columns: `4`
 - Header height: `64px`
-- Bottom navigation height: `64px`
+- Main navigation opens from the header hamburger (no floating FAB)
 - Typical horizontal shell margin: `16px` on `xs`, `25.6px` on `sm`
 
 Recommended reference widths:

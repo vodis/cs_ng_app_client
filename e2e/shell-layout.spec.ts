@@ -166,7 +166,11 @@ test.describe('Mobile floating navigation', () => {
   test('More panel stays scrollable on short landscape viewports', async ({
     page,
   }) => {
-    await page.getByRole('button', { name: 'Open navigation' }).click();
+    const menuButton = page.locator('app-header .header__menu-button');
+    await expect(menuButton).toBeVisible();
+    await expect(page.locator('.floating-trigger')).toHaveCount(0);
+
+    await menuButton.click();
     await page.getByRole('button', { name: 'More' }).click();
 
     const viewport = page.locator('.floating-nav__viewport');
@@ -188,7 +192,7 @@ test.describe('Mobile floating navigation', () => {
   test('inactive level is removed from keyboard tab order', async ({
     page,
   }) => {
-    await page.getByRole('button', { name: 'Open navigation' }).click();
+    await page.locator('app-header .header__menu-button').click();
 
     const moreLevel = page.locator('.floating-nav__level--more');
     await expect(moreLevel).toHaveAttribute('inert', '');
@@ -200,5 +204,36 @@ test.describe('Mobile floating navigation', () => {
       ''
     );
     await expect(moreLevel).not.toHaveAttribute('inert');
+  });
+
+  test('restores focus to the header menu trigger on Escape', async ({
+    page,
+  }) => {
+    const menuButton = page.locator('app-header .header__menu-button');
+    await menuButton.click();
+    await expect(page.locator('#floatingNav')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('#floatingNav')).toHaveAttribute('aria-hidden', 'true');
+    await expect(menuButton).toBeFocused();
+  });
+
+  test('restores focus to the header menu trigger on backdrop click', async ({
+    page,
+  }) => {
+    const menuButton = page.locator('app-header .header__menu-button');
+    await menuButton.click();
+    await expect(page.locator('#floatingNav')).toBeVisible();
+
+    // Click the dimmed area below the sticky header and away from the
+    // bottom-right floating panel (viewport is short landscape in this suite).
+    await page.mouse.click(24, SHELL_HEADER_HEIGHT_PX + 24);
+
+    await expect(page.locator('#floatingNav')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
+    await expect(menuButton).toBeFocused();
   });
 });

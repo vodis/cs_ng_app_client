@@ -23,7 +23,7 @@ Full viewport width, no max-width container. Header, sidebar, and content share 
 ## Chrome
 
 - Header height: **64px** (`--shell-header-height: 4rem`)
-- Mobile bottom nav: same height
+- Mobile main nav: orange hamburger in the header (right of account icons)
 
 ## Colors
 

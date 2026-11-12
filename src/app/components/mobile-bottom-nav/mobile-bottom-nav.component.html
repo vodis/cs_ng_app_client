@@ -3,24 +3,6 @@
   (click)="closeMenu(true)"
   [attr.aria-hidden]="menuOpen ? null : 'true'"></div>
 
-<button
-  #menuTrigger
-  class="floating-trigger"
-  type="button"
-  [attr.aria-label]="menuOpen ? 'Close navigation' : 'Open navigation'"
-  [attr.aria-expanded]="menuOpen"
-  aria-controls="floatingNav"
-  (click)="toggleMenu()">
-  <span class="floating-menu-button" aria-hidden="true">
-    <span class="menu-dots">
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
-    </span>
-  </span>
-</button>
-
 <nav
   #floatingNav
   class="floating-nav"
