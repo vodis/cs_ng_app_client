@@ -18,6 +18,7 @@ import {
   NgxGoogleAnalyticsModule,
   provideGoogleAnalytics,
 } from '@hakimio/ngx-google-analytics';
+import { CsMenuButtonDirective } from '@vodis/cs-ui/angular';
 import { environment } from '../environments/environment';
 
 function initializeAuthProvider(authProvider: AuthProviderService) {
@@ -44,6 +45,7 @@ function initializeTranslations(translations: CsTranslationsService) {
     AppRoutingModule,
     SharedModule,
     NgxGoogleAnalyticsModule,
+    CsMenuButtonDirective,
     CsTranslationsModule.forRoot({
       apiBaseUrl: environment.apiUrl,
       defaultLanguage: 'EN',

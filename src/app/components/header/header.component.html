@@ -60,18 +60,14 @@
       <button
         *ngIf="isMobileView"
         #menuTrigger
-        type="button"
+        csMenuButton
         class="header__menu-button"
+        type="button"
+        [open]="menuOpen"
         [attr.aria-label]="menuOpen ? 'Close navigation' : 'Open navigation'"
         [attr.aria-expanded]="menuOpen"
         aria-controls="floatingNav"
-        (click)="toggleMobileMenu()">
-        <span class="header__menu-icon" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-        </span>
-      </button>
+        (pressed)="toggleMobileMenu()"></button>
     </div>
   </div>
 </header>
