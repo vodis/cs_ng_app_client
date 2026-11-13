@@ -1,6 +1,6 @@
 /// <reference types="jasmine" />
 
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -16,6 +16,14 @@ import {
   CsTranslationsModule,
   CsTranslationsService,
 } from '@vodis/cs-foundation/angular';
+import { CsMenuButtonDirective } from '@vodis/cs-ui/angular';
+
+@Component({
+  selector: 'app-animate-line',
+  standalone: true,
+  template: '',
+})
+class AnimateLineStubComponent {}
 
 describe('HeaderComponent', () => {
   let component: HeaderComponent;
@@ -40,7 +48,13 @@ describe('HeaderComponent', () => {
       requestOpen: jasmine.createSpy('requestOpen'),
     };
     TestBed.configureTestingModule({
-      imports: [RouterTestingModule, MatIconModule, CsTranslationsModule],
+      imports: [
+        RouterTestingModule,
+        MatIconModule,
+        CsTranslationsModule,
+        CsMenuButtonDirective,
+        AnimateLineStubComponent,
+      ],
       declarations: [HeaderComponent],
       providers: [
         MobileNavMenuService,
@@ -67,7 +81,6 @@ describe('HeaderComponent', () => {
           },
         },
       ],
-      schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
     fixture = TestBed.createComponent(HeaderComponent);
     component = fixture.componentInstance;
