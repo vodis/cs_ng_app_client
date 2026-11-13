@@ -1,0 +1,29 @@
+/* Compact header hamburger: keep under component style budget. */
+.header.mobile .header__menu-button {
+  .cs-menu-button__icon {
+    width: 1.125rem;
+  }
+
+  .cs-menu-button__line + .cs-menu-button__line {
+    margin-top: 0.3rem;
+  }
+
+  &:hover .cs-menu-button__line--first {
+    transform: translateY(-0.12rem);
+  }
+
+  &:hover .cs-menu-button__line--last {
+    transform: translateY(0.12rem);
+  }
+
+  &[aria-expanded='true'],
+  &.cs-menu-button--open {
+    .cs-menu-button__line--first {
+      transform: translateY(0.425rem) rotate(45deg);
+    }
+
+    .cs-menu-button__line--last {
+      transform: translateY(-0.425rem) rotate(-45deg);
+    }
+  }
+}
