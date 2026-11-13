@@ -357,18 +357,10 @@ describe('ProfileComponent', () => {
     expect(inRangeDays[inRangeDays.length - 1].isoDate).toBe('2025-12-31');
   });
 
-  it('routes Activity Pay and Analyze AI, and opens Add Funds for Receive', async () => {
-    await component.openActivityPay();
-    expect(localizedRouting.path).toHaveBeenCalledWith('/');
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/en');
-
-    await component.openActivityAnalyze();
+  it('routes Analyze AI to the portfolio page', async () => {
+    await component.openAnalyzeAi();
     expect(localizedRouting.path).toHaveBeenCalledWith('/portfolio');
     expect(router.navigateByUrl).toHaveBeenCalledWith('/en/portfolio');
-
-    await component.openActivityReceive();
-    expect(walletsService.requestOpen).not.toHaveBeenCalled();
-    expect(component.profile.addFundsOpen).toBeTrue();
   });
 
   it('does not claim a zero portfolio before a wallet is selected', () => {

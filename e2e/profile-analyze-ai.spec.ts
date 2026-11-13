@@ -63,7 +63,7 @@ test.describe('Profile Analyze AI placement', () => {
     const analyzeAi = page.getByRole('button', { name: 'Analyze AI' });
     await expect(analyzeAi).toHaveCount(1);
     await expect(page.locator('.profile-shell__analyze-ai')).toBeVisible();
-    await expect(page.locator('.profile-shell__activity-action--ai')).toBeHidden();
+    await expect(page.locator('.profile-shell__fund-action--ai')).toBeHidden();
 
     await analyzeAi.click();
     await expect(page).toHaveURL(/\/en\/portfolio/);
@@ -77,9 +77,7 @@ test.describe('Profile Analyze AI placement', () => {
 
     const analyzeAi = page.getByRole('button', { name: 'Analyze AI' });
     await expect(analyzeAi).toHaveCount(1);
-    await expect(
-      page.locator('.profile-shell__activity-action--ai')
-    ).toBeVisible();
+    await expect(page.locator('.profile-shell__fund-action--ai')).toBeVisible();
     await expect(page.locator('.profile-shell__analyze-ai')).toBeHidden();
 
     await analyzeAi.click();

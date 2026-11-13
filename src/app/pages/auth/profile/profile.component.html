@@ -20,7 +20,7 @@
       [class]="buttonClass"
       type="button"
       aria-label="Analyze AI"
-      (click)="openActivityAnalyze()">
+      (click)="openAnalyzeAi()">
       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path
           fill="currentColor"
@@ -214,6 +214,23 @@
       [class.profile-shell__fund-actions--toolbar]="toolbar"
       aria-label="Fund actions">
       <button
+        class="profile-shell__fund-action profile-shell__fund-action--ai"
+        type="button"
+        aria-label="Analyze AI"
+        (click)="openAnalyzeAi()">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path
+            fill="currentColor"
+            d="M8 1.2 8.9 5.1 12.8 6 8.9 6.9 8 10.8 7.1 6.9 3.2 6 7.1 5.1 8 1.2Zm4.4 7.1.5 2.1 2.1.5-2.1.5-.5 2.1-.5-2.1-2.1-.5 2.1-.5.5-2.1Z" />
+        </svg>
+        <span class="profile-shell__fund-label profile-shell__fund-label--long"
+          >Analyze AI</span
+        >
+        <span class="profile-shell__fund-label profile-shell__fund-label--short"
+          >AI</span
+        >
+      </button>
+      <button
         class="profile-shell__fund-action"
         type="button"
         [disabled]="
@@ -284,28 +301,6 @@
       aria-label="Activity">
       <div class="profile-shell__activity">
         <h2 class="profile-shell__activity-title">Activity</h2>
-        <div class="profile-shell__activity-actions">
-          <button
-            class="profile-shell__activity-action"
-            type="button"
-            (click)="openActivityPay()">
-            Pay
-          </button>
-          <button
-            class="profile-shell__activity-action"
-            type="button"
-            (click)="openActivityReceive()">
-            Receive
-          </button>
-          <ng-container
-            *ngTemplateOutlet="
-              analyzeAiButton;
-              context: {
-                buttonClass:
-                  'profile-shell__activity-action profile-shell__activity-action--ai'
-              }
-            " />
-        </div>
         <div class="profile-shell__activity-copy">
           <p class="profile-shell__activity-label">Est. swap volume</p>
           <p class="profile-shell__activity-value">

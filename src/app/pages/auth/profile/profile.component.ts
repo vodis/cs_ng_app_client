@@ -603,15 +603,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return day.isoDate;
   }
 
-  public async openActivityPay(): Promise<void> {
-    await this.profile.navigateTo('/');
-  }
-
-  public async openActivityReceive(): Promise<void> {
-    await this.openAddFunds();
-  }
-
-  public async openActivityAnalyze(): Promise<void> {
+  public async openAnalyzeAi(): Promise<void> {
     await this.profile.navigateTo('/portfolio');
   }
 
