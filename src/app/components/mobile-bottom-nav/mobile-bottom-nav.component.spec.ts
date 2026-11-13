@@ -6,30 +6,39 @@ import {
   tick,
 } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { MatIconModule } from '@angular/material/icon';
 import { RouterTestingModule } from '@angular/router/testing';
 import {
   CsTranslationsModule,
   CsTranslationsService,
 } from '@vodis/cs-foundation/angular';
+import { of } from 'rxjs';
 
-import { MobileBottomNavComponent } from './mobile-bottom-nav.component';
+import { AuthSessionService } from '@core/auth/auth-session.service';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import { MobileBottomNavComponent } from './mobile-bottom-nav.component';
 
 describe('MobileBottomNavComponent', () => {
   let component: MobileBottomNavComponent;
   let fixture: ComponentFixture<MobileBottomNavComponent>;
   let router: Router;
+  let authSession: jasmine.SpyObj<AuthSessionService>;
 
   beforeEach(() => {
+    authSession = jasmine.createSpyObj<AuthSessionService>(
+      'AuthSessionService',
+      ['logout']
+    );
+    authSession.logout.and.resolveTo();
+
     TestBed.configureTestingModule({
       imports: [
         RouterTestingModule.withRoutes([
           { path: 'home', redirectTo: '' },
+          { path: 'en', children: [{ path: '**', redirectTo: '' }] },
+          { path: 'ua', children: [{ path: '**', redirectTo: '' }] },
           { path: 'farm', redirectTo: '' },
         ]),
         CsTranslationsModule,
-        MatIconModule,
       ],
       declarations: [MobileBottomNavComponent],
       providers: [
@@ -37,14 +46,20 @@ describe('MobileBottomNavComponent', () => {
           provide: LocalizedRoutingService,
           useValue: {
             path: (path: string) => `/en${path === '/' ? '' : path}`,
+            currentLocale: () => 'en',
           },
         },
         {
           provide: CsTranslationsService,
           useValue: {
+            activeLanguage: 'EN',
+            loadLanguage: jasmine
+              .createSpy('loadLanguage')
+              .and.returnValue(of(undefined)),
             translate: (path: string, fallback?: string) => fallback ?? path,
           },
         },
+        { provide: AuthSessionService, useValue: authSession },
       ],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
@@ -58,35 +73,22 @@ describe('MobileBottomNavComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('keeps the first level to Exchange, Profile, and More', () => {
+  it('renders a flat slide-in list without the More submenu', () => {
     expect(component.links.map(link => link.fallback)).toEqual([
       'Exchange',
       'Profile',
-      'More',
+      'Transactions',
+      'Portfolio',
+      'Grow',
+      'Bots',
+      'Craftscript.com',
+      'Docs',
     ]);
-    expect(component.links.map(link => link.url)).not.toContain(
-      '/transactions'
-    );
-    expect(component.links.map(link => link.url)).not.toContain('/portfolio');
     expect(
-      component.links.find(link => link.fallback === 'Profile')?.icon
-    ).toBe('profile');
-  });
-
-  it('keeps the drawer panel without a floating trigger or bottom bar', () => {
-    expect(fixture.nativeElement.querySelector('.floating-trigger')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.bottom-bar')).toBeNull();
+      fixture.nativeElement.querySelector('.floating-nav__level--more')
+    ).toBeNull();
+    expect(fixture.nativeElement.querySelector('.slide-nav')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#floatingNav')).toBeTruthy();
-  });
-
-  it('renders the three primary destinations', () => {
-    const labels = Array.from(
-      fixture.nativeElement.querySelectorAll(
-        '.floating-nav__level--primary .nav-label'
-      ) as NodeListOf<HTMLElement>
-    ).map(el => el.textContent?.trim());
-
-    expect(labels).toEqual(['Exchange', 'Profile', 'More']);
   });
 
   it('keeps visible internal destinations unique', () => {
@@ -95,97 +97,59 @@ describe('MobileBottomNavComponent', () => {
     expect(destinations).toEqual([
       '/',
       '/profile',
-      '/farm',
-      '/proposals',
       '/transactions',
       '/portfolio',
+      '/farm',
+      '/proposals',
     ]);
     expect(new Set(destinations).size).toBe(destinations.length);
   });
 
-  it('opens More as a second level without leaving the current page', () => {
-    component.toggleMenu();
-    fixture.detectChanges();
-    component.openMore();
-    fixture.detectChanges();
-
-    expect(component.moreOpen).toBeTrue();
-    expect(fixture.nativeElement.classList).toContain('more-open');
-    expect(component.moreLinks.map(link => link.fallback)).toEqual([
-      'Grow',
-      'Bots',
-      'Transactions',
-      'Portfolio',
-      'Craftscript.com',
-      'Docs',
-    ]);
-
+  it('renders uppercase nav links and language controls', () => {
     const labels = Array.from(
       fixture.nativeElement.querySelectorAll(
-        '.floating-nav__level--more .nav-label'
+        '.slide-nav__label'
       ) as NodeListOf<HTMLElement>
     ).map(el => el.textContent?.trim());
 
-    expect(labels).toEqual([
-      'Back',
-      'Grow',
-      'Bots',
-      'Transactions',
-      'Portfolio',
-      'Craftscript.com',
-      'Docs',
-    ]);
+    expect(labels).toContain('Exchange');
+    expect(labels).toContain('Profile');
+    expect(labels).toContain('Docs');
+
+    const locales = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.slide-nav__locale'
+      ) as NodeListOf<HTMLElement>
+    ).map(el => el.textContent?.trim());
+    expect(locales).toEqual(['EN', 'UA', 'PT']);
+    expect(
+      fixture.nativeElement.querySelector('.slide-nav__logout')?.textContent
+    ).toContain('Logout');
   });
 
-  it('marks the inactive level as inert so it stays out of tab order', () => {
+  it('marks the panel inert when closed and focusable when open', () => {
+    const panel = fixture.nativeElement.querySelector(
+      '#floatingNav'
+    ) as HTMLElement;
+
+    expect(panel.hasAttribute('inert')).toBeTrue();
+
     component.toggleMenu();
     fixture.detectChanges();
 
-    const primary = fixture.nativeElement.querySelector(
-      '.floating-nav__level--primary'
-    ) as HTMLElement;
-    const more = fixture.nativeElement.querySelector(
-      '.floating-nav__level--more'
-    ) as HTMLElement;
-
-    expect(primary.hasAttribute('inert')).toBeFalse();
-    expect(more.hasAttribute('inert')).toBeTrue();
-
-    component.openMore();
-    fixture.detectChanges();
-
-    expect(primary.hasAttribute('inert')).toBeTrue();
-    expect(more.hasAttribute('inert')).toBeFalse();
+    expect(panel.hasAttribute('inert')).toBeFalse();
   });
 
-  it('keeps the floating panel scrollable for short viewports', () => {
+  it('keeps the panel scrollable for short viewports', () => {
     const viewport = fixture.nativeElement.querySelector(
-      '.floating-nav__viewport'
+      '.slide-nav__viewport'
     ) as HTMLElement;
     const styles = getComputedStyle(viewport);
 
     expect(styles.overflowY).toBe('auto');
   });
 
-  it('returns to the first level from Back and Escape', () => {
-    component.toggleMenu();
-    component.openMore();
-    fixture.detectChanges();
-
-    component.closeMore();
-    expect(component.moreOpen).toBeFalse();
-    expect(component.menuOpen).toBeTrue();
-
-    component.openMore();
-    component.onEscape();
-    expect(component.moreOpen).toBeFalse();
-    expect(component.menuOpen).toBeTrue();
-
-    component.onEscape();
-    expect(component.menuOpen).toBeFalse();
-  });
-
-  it('opens and closes the floating menu', () => {
+  it('opens and closes the slide-in menu', () => {
     expect(component.menuOpen).toBeFalse();
 
     component.toggleMenu();
@@ -193,12 +157,22 @@ describe('MobileBottomNavComponent', () => {
 
     expect(component.menuOpen).toBeTrue();
     expect(fixture.nativeElement.classList).toContain('menu-open');
+    expect(document.body.style.overflow).toBe('hidden');
 
     component.closeMenu();
     fixture.detectChanges();
 
     expect(component.menuOpen).toBeFalse();
-    expect(component.moreOpen).toBeFalse();
+    expect(document.body.style.overflow).not.toBe('hidden');
+  });
+
+  it('closes on Escape and restores trigger focus request path', () => {
+    component.toggleMenu();
+    fixture.detectChanges();
+    expect(component.menuOpen).toBeTrue();
+
+    component.onEscape();
+    expect(component.menuOpen).toBeFalse();
   });
 
   it('starts closed after being recreated like a mobile remount', () => {
@@ -215,21 +189,38 @@ describe('MobileBottomNavComponent', () => {
     remounted.destroy();
   });
 
-  it('moves focus into the active level when the menu opens', fakeAsync(() => {
+  it('moves focus into the panel when the menu opens', fakeAsync(() => {
     component.toggleMenu();
     fixture.detectChanges();
     tick();
 
     const active = document.activeElement as HTMLElement | null;
-    expect(active?.closest('.floating-nav__level--primary')).toBeTruthy();
+    expect(active?.closest('.slide-nav')).toBeTruthy();
   }));
 
   it('closes the menu after navigation', async () => {
     component.toggleMenu();
-    component.openMore();
     await router.navigateByUrl('/home');
 
     expect(component.menuOpen).toBeFalse();
-    expect(component.moreOpen).toBeFalse();
+  });
+
+  it('logs out through the auth session', async () => {
+    await component.logout();
+    expect(authSession.logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on a right swipe gesture', () => {
+    component.toggleMenu();
+    fixture.detectChanges();
+
+    component.onTouchStart({
+      touches: [{ clientX: 40, clientY: 200 }],
+    } as unknown as TouchEvent);
+    component.onTouchEnd({
+      changedTouches: [{ clientX: 160, clientY: 205 }],
+    } as unknown as TouchEvent);
+
+    expect(component.menuOpen).toBeFalse();
   });
 });
