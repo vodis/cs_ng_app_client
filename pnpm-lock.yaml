@@ -105,6 +105,9 @@ importers:
       '@vodis/cs-intents':
         specifier: 0.1.0
         version: 0.1.0
+      '@vodis/cs-ui':
+        specifier: 0.2.0
+        version: 0.2.0(@angular/core@20.3.31(@angular/compiler@20.3.31)(rxjs@7.8.2)(zone.js@0.15.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       countup.js:
         specifier: ^2.10.1
         version: 2.10.1
@@ -2910,6 +2913,13 @@ packages:
 
   '@vodis/cs-intents@0.1.0':
     resolution: {integrity: sha512-jpTAOHBAphSq6Cg3fsOUs5GKRmNNEk79uLneLEbdQv52uUGizmwzQopNxSm0G84uv4c0lfiVsyvxIRBwIv0JeA==, tarball: https://npm.pkg.github.com/download/@vodis/cs-intents/0.1.0/2f6f2931225837d6665f546473a4f0759f0a51c0}
+
+  '@vodis/cs-ui@0.2.0':
+    resolution: {integrity: sha512-YzvEM6k2LI1N89a3bxpn7BpMtZZM868gwrog7qmAN5xsnrYRviTCrW74zA3Bzg1SFo3Y2IWGmGZD9XtP4vc0fA==, tarball: https://npm.pkg.github.com/download/@vodis/cs-ui/0.2.0/97b55ac28d7c9f081fe81435ca6ab8c99e187e13}
+    peerDependencies:
+      '@angular/core': '>=20 <21'
+      react: '>=18'
+      react-dom: '>=18'
 
   '@webassemblyjs/ast@1.14.1':
     resolution: {integrity: sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ==}
@@ -10197,6 +10207,12 @@ snapshots:
       rxjs: 7.8.2
 
   '@vodis/cs-intents@0.1.0': {}
+
+  '@vodis/cs-ui@0.2.0(@angular/core@20.3.31(@angular/compiler@20.3.31)(rxjs@7.8.2)(zone.js@0.15.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      '@angular/core': 20.3.31(@angular/compiler@20.3.31)(rxjs@7.8.2)(zone.js@0.15.1)
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
 
   '@webassemblyjs/ast@1.14.1':
     dependencies:
