@@ -181,14 +181,20 @@ test.describe('Mobile slide-in navigation', () => {
     );
     expect(overflowY).toBe('auto');
 
-    await expect(page.getByRole('link', { name: 'Docs' })).toBeAttached();
+    const panel = page.locator('#floatingNav');
+    await expect(panel.getByRole('link', { name: 'Docs' })).toBeAttached();
 
-    await page.getByRole('link', { name: 'Docs' }).evaluate(el => {
+    await panel.getByRole('link', { name: 'Docs' }).evaluate(el => {
       (el as HTMLElement).scrollIntoView({ block: 'nearest' });
     });
-    await expect(page.getByRole('link', { name: 'Docs' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'EN' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible();
+    await expect(panel.getByRole('link', { name: 'Docs' })).toBeVisible();
+    // exact: 'EN' is a substring of other button names (e.g. "Swap tokens").
+    await expect(
+      panel.getByRole('button', { name: 'EN', exact: true })
+    ).toBeVisible();
+    await expect(
+      panel.getByRole('button', { name: 'Logout', exact: true })
+    ).toBeVisible();
   });
 
   test('keeps header actions visible while the menu is open', async ({
