@@ -197,9 +197,48 @@
 
     .header__menu-button {
       display: inline-flex;
+      width: 1.875rem;
+      min-width: 1.875rem;
+      height: 1.875rem;
       align-items: center;
       justify-content: center;
       line-height: 0;
+
+      /* Compact square glyph aligned with nearby 1.75rem mat-icons. */
+      .cs-menu-button__icon {
+        width: 1.125rem;
+      }
+
+      .cs-menu-button__line {
+        height: 0.125rem;
+      }
+
+      .cs-menu-button__line + .cs-menu-button__line {
+        margin-top: 0.3rem;
+      }
+
+      &:hover .cs-menu-button__line--first {
+        transform: translateY(-0.12rem);
+      }
+
+      &:hover .cs-menu-button__line--last {
+        transform: translateY(0.12rem);
+      }
+
+      /* Retuned X for the compact size (cs-ui defaults target 3.5rem). */
+      &[aria-expanded='true'] .cs-menu-button__line--first,
+      &.cs-menu-button--open .cs-menu-button__line--first,
+      &[aria-expanded='true']:hover .cs-menu-button__line--first,
+      &.cs-menu-button--open:hover .cs-menu-button__line--first {
+        transform: translateY(0.425rem) rotate(45deg);
+      }
+
+      &[aria-expanded='true'] .cs-menu-button__line--last,
+      &.cs-menu-button--open .cs-menu-button__line--last,
+      &[aria-expanded='true']:hover .cs-menu-button__line--last,
+      &.cs-menu-button--open:hover .cs-menu-button__line--last {
+        transform: translateY(-0.425rem) rotate(-45deg);
+      }
     }
   }
 }
