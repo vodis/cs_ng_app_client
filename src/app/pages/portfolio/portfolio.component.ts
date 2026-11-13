@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ProductEventsService } from '@core/product-events/product-events.service';
+import { AccountSessionsFacade } from './account-sessions.facade';
 import { PortfolioApiService } from './portfolio-api.service';
 import {
   AgentAuthorizationRequest,
@@ -17,6 +18,7 @@ import {
   standalone: false,
   templateUrl: './portfolio.component.html',
   styleUrls: ['./portfolio.component.scss'],
+  providers: [AccountSessionsFacade],
 })
 export class PortfolioComponent implements OnInit {
   profile?: InvestmentProfile;
@@ -36,22 +38,37 @@ export class PortfolioComponent implements OnInit {
   deviceLoading = false;
   pendingAuthorization?: AgentAuthorizationRequest;
   authorizationLoading = false;
+  deleteConfirmText = '';
+  deletionMessage = '';
+  accountError = '';
 
   objective: InvestmentObjective = 'growth';
   riskTolerance: RiskTolerance = 'balanced';
   horizon: InvestmentHorizon = '3_5y';
 
+  public readonly accountLoading$ = this.account.loading$;
+
   constructor(
     private readonly api: PortfolioApiService,
     private readonly events: ProductEventsService,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly account: AccountSessionsFacade
   ) {}
 
   ngOnInit(): void {
     if (this.route.snapshot.queryParamMap.get('connect') === 'device') {
       this.openAgent();
     }
-    void this.load();
+    void this.load().then(() => this.scrollToRouteFragment());
+  }
+
+  /**
+   * Keep in-page section jumps on /…/portfolio#id instead of resolving bare
+   * href="#id" against the app base (often /#id).
+   */
+  scrollToSection(event: Event, sectionId: string): void {
+    event.preventDefault();
+    this.scrollToId(sectionId, true);
   }
 
   async load(): Promise<void> {
@@ -68,6 +85,28 @@ export class PortfolioComponent implements OnInit {
       if (config.value.enabled) await this.reloadConnections();
     }
     this.loading = false;
+  }
+
+  private scrollToRouteFragment(): void {
+    const fragment = this.route.snapshot.fragment;
+    if (!fragment) {
+      return;
+    }
+    // Wait a tick so *ngIf sections exist after loading finishes.
+    queueMicrotask(() => this.scrollToId(fragment, false));
+  }
+
+  private scrollToId(sectionId: string, updateUrl: boolean): void {
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!updateUrl) {
+      return;
+    }
+    const next = `${window.location.pathname}${window.location.search}#${sectionId}`;
+    window.history.replaceState(null, '', next);
   }
 
   openProfile(): void {
@@ -193,6 +232,34 @@ export class PortfolioComponent implements OnInit {
         'Connected-agent status is temporarily unavailable.';
     } finally {
       this.connectionsLoading = false;
+    }
+  }
+
+  public async logout(): Promise<void> {
+    this.accountError = '';
+    this.deletionMessage = '';
+    try {
+      await this.account.logout();
+    } catch (error) {
+      this.accountError =
+        error instanceof Error ? error.message : 'Logout failed';
+    }
+  }
+
+  public async requestDeletion(): Promise<void> {
+    if (this.deleteConfirmText !== 'DELETE') {
+      return;
+    }
+
+    this.accountError = '';
+    this.deletionMessage = '';
+    try {
+      const deletionAvailableAt = await this.account.requestDeletion();
+      this.deletionMessage = `Deletion available ${new Date(deletionAvailableAt).toLocaleDateString()}`;
+      this.deleteConfirmText = '';
+    } catch (error) {
+      this.accountError =
+        error instanceof Error ? error.message : 'Account deletion failed';
     }
   }
 

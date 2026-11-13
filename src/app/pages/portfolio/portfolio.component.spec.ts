@@ -1,11 +1,14 @@
 import { ProductEventsService } from '@core/product-events/product-events.service';
 import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
+import { of } from 'rxjs';
+import { AccountSessionsFacade } from './account-sessions.facade';
 import { PortfolioApiService } from './portfolio-api.service';
 import { PortfolioComponent } from './portfolio.component';
 
 describe('PortfolioComponent', () => {
   let api: jasmine.SpyObj<PortfolioApiService>;
   let events: jasmine.SpyObj<ProductEventsService>;
+  let account: jasmine.SpyObj<AccountSessionsFacade>;
   let routeQueryParams: ParamMap;
   let route: ActivatedRoute;
   let component: PortfolioComponent;
@@ -25,12 +28,20 @@ describe('PortfolioComponent', () => {
       'ProductEventsService',
       ['record', 'recordFailure']
     );
+    account = jasmine.createSpyObj<AccountSessionsFacade>(
+      'AccountSessionsFacade',
+      ['logout', 'requestDeletion'],
+      {
+        loading$: of(false),
+      }
+    );
     routeQueryParams = convertToParamMap({});
     route = {
       snapshot: {
         get queryParamMap(): ParamMap {
           return routeQueryParams;
         },
+        fragment: null,
       } as ActivatedRoute['snapshot'],
     } as unknown as ActivatedRoute;
     api.loadInvestmentProfile.and.resolveTo({
@@ -46,7 +57,7 @@ describe('PortfolioComponent', () => {
       grantLifetimeDays: 30,
     });
     api.loadConnections.and.resolveTo([]);
-    component = new PortfolioComponent(api, events, route);
+    component = new PortfolioComponent(api, events, route, account);
   });
 
   it('loads preferences, capability, and connections without holdings', async () => {
@@ -116,6 +127,46 @@ describe('PortfolioComponent', () => {
     component.ngOnInit();
 
     expect(component.agentOpen).toBeTrue();
+  });
+
+  it('scrolls to an in-page section without leaving the portfolio path', () => {
+    const target = document.createElement('section');
+    target.id = 'portfolio-security';
+    target.scrollIntoView = jasmine.createSpy('scrollIntoView');
+    document.body.appendChild(target);
+
+    const replaceState = spyOn(window.history, 'replaceState');
+    const event = {
+      preventDefault: jasmine.createSpy('preventDefault'),
+    } as unknown as Event;
+
+    component.scrollToSection(event, 'portfolio-security');
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(target.scrollIntoView).toHaveBeenCalled();
+    expect(replaceState).toHaveBeenCalled();
+    const nextUrl = String(replaceState.calls.mostRecent().args[2] ?? '');
+    expect(nextUrl).toContain('#portfolio-security');
+    expect(nextUrl.includes('/#portfolio-security')).toBeFalse();
+
+    target.remove();
+  });
+
+  it('routes logout and typed deletion through the account facade', async () => {
+    account.logout.and.resolveTo();
+    account.requestDeletion.and.resolveTo('2026-10-01T00:00:00.000Z');
+
+    await component.logout();
+    expect(account.logout).toHaveBeenCalledTimes(1);
+
+    await component.requestDeletion();
+    expect(account.requestDeletion).not.toHaveBeenCalled();
+
+    component.deleteConfirmText = 'DELETE';
+    await component.requestDeletion();
+    expect(account.requestDeletion).toHaveBeenCalledTimes(1);
+    expect(component.deletionMessage).toContain('Deletion available');
+    expect(component.deleteConfirmText).toBe('');
   });
 
   function connection(status: 'active' | 'expired' | 'revoked', id: string) {

@@ -1,9 +1,14 @@
-<section class="profile-shell">
-  <section class="profile-shell__panel profile-shell__panel--wide">
-    <h2>Sessions</h2>
+<section class="portfolio-sessions" aria-label="Sessions">
+  <div class="portfolio-panel portfolio-sessions__panel">
+    <div class="portfolio-panel__header">
+      <div>
+        <p class="portfolio-panel__eyebrow">Access</p>
+        <h2>Sessions</h2>
+      </div>
+    </div>
 
-    <div class="profile-shell__sessions-wrap">
-      <table class="profile-shell__sessions-table">
+    <div class="portfolio-sessions__wrap">
+      <table class="portfolio-sessions__table">
         <thead>
           <tr>
             <th>Status</th>
@@ -12,7 +17,9 @@
             <th>Organization</th>
             <th>Authentication</th>
             <th>Application</th>
-            <th class="profile-shell__sessions-chevron" aria-hidden="true"></th>
+            <th>
+              <span class="visually-hidden">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -23,36 +30,40 @@
             ">
             <td data-label="Status">
               <span
-                class="profile-shell__session-status"
-                [class.profile-shell__session-status--active]="
+                class="portfolio-sessions__status"
+                [class.portfolio-sessions__status--active]="
                   login.status === 'Active'
                 "
-                [class.profile-shell__session-status--revoked]="
+                [class.portfolio-sessions__status--expired]="
+                  login.status === 'Expired'
+                "
+                [class.portfolio-sessions__status--revoked]="
                   login.status === 'Revoked'
                 ">
-                <span
-                  class="profile-shell__session-dot"
-                  aria-hidden="true"></span>
+                <span class="portfolio-sessions__dot" aria-hidden="true"></span>
                 {{ login.status }}
               </span>
+              <span
+                class="portfolio-sessions__device"
+                *ngIf="login.currentDevice"
+                >This device</span
+              >
             </td>
             <td data-label="Issued">{{ login.issued }}</td>
             <td data-label="End date">{{ login.endDate }}</td>
             <td data-label="Organization">{{ login.organization }}</td>
             <td data-label="Authentication">{{ login.authentication }}</td>
-            <td data-label="Application" class="profile-shell__sessions-app">
+            <td data-label="Application" class="portfolio-sessions__app">
               {{ login.application }}
             </td>
-            <td class="profile-shell__sessions-chevron" aria-hidden="true">
-              <svg viewBox="0 0 16 16" focusable="false">
-                <path
-                  d="M6 3.2 11 8 6 12.8"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.5" />
-              </svg>
+            <td data-label="Actions" class="portfolio-sessions__actions">
+              <button
+                type="button"
+                class="portfolio-sessions__revoke"
+                *ngIf="canRevoke(login)"
+                (click)="confirmRevoke(login)">
+                Revoke
+              </button>
             </td>
           </tr>
         </tbody>
@@ -63,35 +74,12 @@
       type="button"
       mat-button
       color="primary"
-      class="profile-shell__sessions-more"
+      class="portfolio-sessions__more"
       *ngIf="loginSessions.length > 2"
       (click)="toggleSessions()">
       {{ showAllSessions ? 'Show last 2' : 'See all past sessions' }}
     </button>
-  </section>
+  </div>
 
-  <p class="profile-shell__error" *ngIf="error">{{ error }}</p>
-
-  <footer class="profile-shell__account-footer">
-    <p class="profile-shell__account-footer-copy">Sign out of this device</p>
-    <div class="profile-shell__account-footer-actions">
-      <button
-        type="button"
-        mat-stroked-button
-        [disabled]="loading$ | async"
-        (click)="logout()">
-        Logout
-      </button>
-      <button
-        type="button"
-        mat-stroked-button
-        [disabled]="loading$ | async"
-        (click)="requestDeletion()">
-        Delete account
-      </button>
-    </div>
-    <p class="profile-shell__message" *ngIf="deletionMessage">
-      {{ deletionMessage }}
-    </p>
-  </footer>
+  <p class="portfolio-sessions__error" *ngIf="error">{{ error }}</p>
 </section>

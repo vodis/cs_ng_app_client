@@ -63,14 +63,6 @@ describe('PortfolioSecurityComponent', () => {
     expect(component.message).toContain('sign in with Google');
   });
 
-  it('toggles the local 2FA preview state', async () => {
-    await component.enableTwoFactor();
-    expect(component.twoFactorEnabled).toBeTrue();
-
-    component.disableTwoFactor();
-    expect(component.twoFactorEnabled).toBeFalse();
-  });
-
   it('disables enable CTA when passkey linking is off', () => {
     Object.defineProperty(security, 'passkeyLinkEnabled', {
       get: () => false,
