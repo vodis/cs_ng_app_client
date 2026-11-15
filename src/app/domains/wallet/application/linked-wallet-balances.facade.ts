@@ -4,7 +4,10 @@ import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { BackendWallet } from '@core/auth/auth-session.types';
 import type { ExchangeToken } from '@shared/models/exchange-token.model';
 import { WalletBalancesService } from '@shared/services/wallet-balances.service';
-import type { WalletBalance } from '@shared/services/wallet-balances.service';
+import type {
+  WalletBalance,
+  WalletBalancesResult,
+} from '@shared/services/wallet-balances.service';
 import {
   canonicalBalanceAssetId,
   tokenBalance,
@@ -38,6 +41,7 @@ export interface LinkedBalancesState {
   holdings: LinkedTokenHolding[];
   loading: boolean;
   incomplete: boolean;
+  errorMessage?: string;
 }
 
 /** Compatibility for display reads, not authorization to trade or sign. */
@@ -164,7 +168,10 @@ export class LinkedWalletBalancesFacade {
                       error.status === 401
                     )
                       this.auth.clear();
-                    return of({ balances: [], partial: true });
+                    return of<WalletBalancesResult>({
+                      balances: [],
+                      partial: true,
+                    });
                   })
                 )
             ),
@@ -174,6 +181,11 @@ export class LinkedWalletBalancesFacade {
               return {
                 target,
                 incomplete: results.some(result => result.partial),
+                errorMessages: [
+                  ...new Set(
+                    results.flatMap(result => result.errorMessages ?? [])
+                  ),
+                ],
                 holdings: target.tokens.map(token => ({
                   token,
                   wallet: target.wallet,
@@ -198,18 +210,23 @@ export class LinkedWalletBalancesFacade {
               state.incomplete ||
               result.incomplete ||
               result.holdings.some(holding => !holding.balance),
+            errorMessages: [
+              ...new Set([...state.errorMessages, ...result.errorMessages]),
+            ],
             remaining: state.remaining - 1,
           }),
           {
             holdings: pending,
             incomplete: false,
             remaining: targets.length,
+            errorMessages: new Array<string>(),
           }
         ),
         map(state => ({
           holdings: state.holdings,
           incomplete: state.incomplete,
           loading: state.remaining > 0,
+          errorMessage: state.errorMessages.join(' '),
         })),
         startWith({ holdings: pending, loading: true, incomplete: false })
       );

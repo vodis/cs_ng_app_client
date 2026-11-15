@@ -42,6 +42,29 @@ describe('WalletBalancesService', () => {
     httpMock.verify();
   });
 
+  it('explains rate limits using safe codes and ignores upstream text', fakeAsync(() => {
+    authProvider.getAccessToken.and.resolveTo('provider-token');
+    let message: string | undefined;
+    service
+      .loadBalancesWithMeta()
+      .subscribe(result => (message = result.errorMessages?.join(' ')));
+    tick();
+    httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`).flush({
+      data: [],
+      meta: {
+        partial: true,
+        issues: [
+          { code: 'RPC_RATE_LIMITED', message: 'secret upstream URL' },
+          { code: 'RPC_RATE_LIMITED' },
+          { code: 'constructor', message: 'untrusted text' },
+        ],
+      },
+    });
+    expect(message).toBe(
+      'The balance provider is rate limiting requests. Try again shortly.'
+    );
+  }));
+
   it('loads filtered balances using the provider access token', fakeAsync(() => {
     authProvider.getAccessToken.and.resolveTo('provider-token');
     let result: unknown;
@@ -126,7 +149,7 @@ describe('WalletBalancesService', () => {
     const request = httpMock.expectOne(`${environment.apiUrl}/api/v1/balances`);
     request.flush({ data: [], meta: { partial: true } });
 
-    expect(result).toEqual({ balances: [], partial: true });
+    expect(result).toEqual({ balances: [], partial: true, errorMessages: [] });
   }));
 
   it('loads the full asset catalog in batches of at most 20', fakeAsync(() => {

@@ -133,6 +133,40 @@ describe('linked wallet balances', () => {
     expect(state.incomplete).toBeTrue();
     expect(state.holdings[0].balance).toBeUndefined();
   });
+  it('passes balance diagnostics to token selection and clears them on close', () => {
+    balances.loadBalancesWithMeta.and.returnValue(
+      of({
+        balances: [],
+        partial: true,
+        errorMessages: [
+          'The balance provider is rate limiting requests. Try again shortly.',
+        ],
+      })
+    );
+    facade.refresh([token]);
+    expect(state.incomplete).toBeTrue();
+    expect(state.errorMessage).toContain('rate limiting');
+    facade.close();
+    expect(state.errorMessage).toBeUndefined();
+  });
+  it('deduplicates diagnostics across three networks', () => {
+    sessions.next({
+      ...session,
+      wallets: [{ ...wallet, chainType: 'ethereum', address: '0x123' }],
+    });
+    balances.loadBalancesWithMeta.and.returnValues(
+      of({ balances: [], partial: true, errorMessages: ['Rate limited.'] }),
+      of({ balances: [], partial: true, errorMessages: ['Timed out.'] }),
+      of({ balances: [], partial: true, errorMessages: ['Rate limited.'] })
+    );
+    facade.refresh(
+      ['eip155:1', 'eip155:56', 'eip155:8453'].map(sourceNetwork => ({
+        ...token,
+        sourceNetwork,
+      }))
+    );
+    expect(state.errorMessage).toBe('Rate limited. Timed out.');
+  });
   it('cancels outstanding reads and clears holdings on logout and close', () => {
     const response = new Subject<WalletBalancesResult>();
     balances.loadBalancesWithMeta.and.returnValue(response);

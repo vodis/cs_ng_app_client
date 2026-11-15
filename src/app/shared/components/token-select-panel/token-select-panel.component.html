@@ -43,7 +43,8 @@
           @if (walletTokensLoading) {
             Loading linked wallet balances…
           } @else if (balancesIncomplete) {
-            Some balances are unavailable. Totals may be incomplete.
+            {{ balanceErrorMessage || 'Some balances are unavailable.' }} Totals
+            may be incomplete.
           } @else {
             Balances across linked wallets
           }

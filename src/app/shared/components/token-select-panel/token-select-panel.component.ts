@@ -48,6 +48,7 @@ export class TokenSelectPanelComponent implements OnChanges {
   @Input() fundingSelection = false;
   @Input() selectionBusy = false;
   @Input() selectionError = '';
+  @Input() balanceErrorMessage?: string;
   @Input() balancesIncomplete = false;
   @Output() fundingSelected = new EventEmitter<LinkedTokenHolding>();
   @Output() retryRequested = new EventEmitter<void>();
