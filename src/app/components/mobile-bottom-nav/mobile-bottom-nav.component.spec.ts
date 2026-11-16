@@ -223,4 +223,53 @@ describe('MobileBottomNavComponent', () => {
 
     expect(component.menuOpen).toBeFalse();
   });
+
+  it('keeps visible header controls in the Tab focus cycle', fakeAsync(() => {
+    const header = document.createElement('app-header');
+    header.innerHTML = `
+      <div class="header__content_connect">
+        <button type="button" aria-label="Wallets">Wallets</button>
+        <a href="/en/portfolio" aria-label="Portfolio">Portfolio</a>
+        <button type="button" class="header__menu-button" aria-label="Close navigation">Menu</button>
+      </div>
+    `;
+    // Match app layout order: header before the drawer host.
+    document.body.insertBefore(header, fixture.nativeElement);
+
+    component.toggleMenu();
+    fixture.detectChanges();
+    tick();
+
+    const wallets = header.querySelector(
+      '[aria-label="Wallets"]'
+    ) as HTMLElement;
+    const logout = fixture.nativeElement.querySelector(
+      '.slide-nav__logout'
+    ) as HTMLElement;
+
+    // Scope is header actions + panel: wrap from first header control to Logout
+    // and from Logout back to Wallets (not Exchange ↔ Logout only).
+    wallets.focus();
+    component.onDocumentKeydown(
+      new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(document.activeElement).toBe(logout);
+
+    logout.focus();
+    component.onDocumentKeydown(
+      new KeyboardEvent('keydown', {
+        key: 'Tab',
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(document.activeElement).toBe(wallets);
+
+    header.remove();
+  }));
 });

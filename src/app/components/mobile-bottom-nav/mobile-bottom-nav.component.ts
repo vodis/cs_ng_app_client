@@ -228,12 +228,7 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const root = this.slideNav?.nativeElement;
-    if (!root) {
-      return;
-    }
-
-    const focusable = this.focusableElements(root);
+    const focusable = this.focusScopeElements();
     if (focusable.length === 0) {
       return;
     }
@@ -241,14 +236,22 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
     const active = this.document.activeElement as HTMLElement | null;
+    const index = active ? focusable.indexOf(active) : -1;
 
-    if (event.shiftKey && active === first) {
+    // Keep Tab inside panel + visible header controls (close / wallets / account).
+    if (index === -1) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+      return;
+    }
+
+    if (event.shiftKey && index === 0) {
       event.preventDefault();
       last.focus();
       return;
     }
 
-    if (!event.shiftKey && active === last) {
+    if (!event.shiftKey && index === focusable.length - 1) {
       event.preventDefault();
       first.focus();
     }
@@ -307,8 +310,38 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const focusable = this.focusableElements(root);
-      focusable[0]?.focus();
+      // Open into the panel; Shift+Tab still reaches header controls via focus scope.
+      this.focusableElements(root)[0]?.focus();
+    });
+  }
+
+  /**
+   * Visible mobile chrome while the drawer is open: header actions stay above
+   * the panel and must remain in the Tab cycle with the panel content.
+   */
+  private focusScopeElements(): HTMLElement[] {
+    const headerControls = this.document.querySelector(
+      'app-header .header__content_connect'
+    );
+    const panel = this.slideNav?.nativeElement;
+    const nodes: HTMLElement[] = [];
+
+    if (headerControls instanceof HTMLElement) {
+      nodes.push(...this.focusableElements(headerControls));
+    }
+    if (panel) {
+      nodes.push(...this.focusableElements(panel));
+    }
+
+    return Array.from(new Set(nodes)).sort((left, right) => {
+      const position = left.compareDocumentPosition(right);
+      if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
+        return -1;
+      }
+      if (position & Node.DOCUMENT_POSITION_PRECEDING) {
+        return 1;
+      }
+      return 0;
     });
   }
 
