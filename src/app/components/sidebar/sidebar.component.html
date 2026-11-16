@@ -1,29 +1,120 @@
-<div class="sidebar h-100">
-  <div class="sidebar__lines" aria-hidden="true">
-    <ng-container *ngFor="let play of [lineResetKey]">
-      <span
-        *ngFor="let index of lineIndexes; trackBy: trackById"
-        class="sidebar__line"
-        [class.sidebar__line--static]="menuReady"
-        [style.--line-to]="lineTo(index)"
-        [style.animation-duration.s]="lineDurationSeconds"
-        (animationend)="onLineAnimationEnd(index, play)"></span>
-    </ng-container>
+<aside
+  class="sidebar"
+  [class.sidebar--sweeping]="lineSweeping"
+  [class.sidebar--settled]="lineSettled"
+  [class.sidebar--ready]="iconsVisible"
+  [class.sidebar--pulse]="navPulse">
+  <div class="sidebar__rail">
+    <a
+      class="sidebar__logo"
+      [routerLink]="path('/')"
+      [style.transition-delay]="stagger(0)"
+      aria-label="CraftScript home">
+      <img
+        alt=""
+        height="28"
+        width="28"
+        loading="eager"
+        src="../../../assets/img/logo/logo.svg" />
+    </a>
+
+    <nav class="sidebar__nav" aria-label="Main">
+      <ul class="sidebar__menu">
+        <li
+          *ngFor="let item of menuItems; let i = index; trackBy: trackById"
+          class="sidebar__item">
+          <a
+            class="sidebar__link"
+            [class.sidebar__link--active]="isActive(item)"
+            [routerLink]="path(item.url)"
+            [attr.aria-label]="item.name | csTranslate: item.fallback"
+            [attr.aria-current]="isActive(item) ? 'page' : null"
+            [style.transition-delay]="stagger(i + 1)">
+            <mat-icon aria-hidden="true" fontSet="material-icons-outlined">{{
+              matIcon(item.icon)
+            }}</mat-icon>
+            <span class="sidebar__tooltip" aria-hidden="true">{{
+              item.name | csTranslate: item.fallback
+            }}</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar__actions">
+      <button
+        type="button"
+        class="sidebar__action"
+        aria-label="Notifications"
+        title="Notifications coming soon"
+        [style.transition-delay]="stagger(menuItems.length + 1)"
+        disabled>
+        <mat-icon aria-hidden="true" fontSet="material-icons-outlined"
+          >notifications</mat-icon
+        >
+      </button>
+
+      <button
+        type="button"
+        class="sidebar__action"
+        aria-label="Wallets"
+        title="Wallets"
+        [style.transition-delay]="stagger(menuItems.length + 2)"
+        (click)="openWallets()">
+        <mat-icon aria-hidden="true" fontSet="material-icons-outlined"
+          >account_balance_wallet</mat-icon
+        >
+        <span class="sidebar__tooltip" aria-hidden="true">Wallets</span>
+      </button>
+
+      <a
+        *ngIf="!session"
+        class="sidebar__action"
+        [routerLink]="path('/login')"
+        aria-label="Sign in"
+        title="Sign in"
+        [style.transition-delay]="stagger(menuItems.length + 3)">
+        <mat-icon aria-hidden="true" fontSet="material-icons-outlined"
+          >login</mat-icon
+        >
+        <span class="sidebar__tooltip" aria-hidden="true">Sign in</span>
+      </a>
+
+      <a
+        *ngIf="session as currentSession"
+        class="sidebar__action sidebar__action--avatar"
+        [class.sidebar__action--avatar-active]="isProfileRoute()"
+        [routerLink]="path('/profile')"
+        aria-label="Account"
+        [attr.title]="avatarTitle()"
+        [style.transition-delay]="stagger(menuItems.length + 3)">
+        <app-avatar
+          alt="Account"
+          [img]="currentSession.user.avatarUrl || null"
+          [label]="currentSession.user.email || 'Account'"
+          [seed]="currentSession.user.id || currentSession.user.email || null" />
+        <span
+          class="sidebar__tooltip sidebar__tooltip--plain"
+          aria-hidden="true"
+          >Account</span
+        >
+      </a>
+
+      <button
+        type="button"
+        class="sidebar__action"
+        aria-label="Settings"
+        title="Settings coming soon"
+        [style.transition-delay]="stagger(menuItems.length + 4)"
+        disabled>
+        <mat-icon aria-hidden="true" fontSet="material-icons-outlined"
+          >settings</mat-icon
+        >
+      </button>
+    </div>
   </div>
 
-  <nav class="sidebar__nav" *ngIf="menuReady">
-    <ul class="sidebar__menu">
-      <li
-        *ngFor="let item of menuItems; trackBy: trackById"
-        class="sidebar__slot">
-        <a
-          class="menu-link"
-          [routerLink]="localizedRouting.path(item.url)"
-          routerLinkActive="_is-active"
-          [routerLinkActiveOptions]="{ exact: item.url === '/' }"
-          >{{ item.name | csTranslate: item.fallback }}</a
-        >
-      </li>
-    </ul>
-  </nav>
-</div>
+  <div class="sidebar__edge" aria-hidden="true">
+    <span class="sidebar__sweep"></span>
+  </div>
+</aside>

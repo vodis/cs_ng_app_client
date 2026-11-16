@@ -29,6 +29,8 @@ export type AuthProviderUser = {
   providerUserId: string;
   sessionId: string;
   email?: string | null;
+  /** HTTPS profile image when the auth provider exposes one. */
+  avatarUrl?: string | null;
   authMethod?: string | null;
   passkeyEnabled?: boolean;
 };

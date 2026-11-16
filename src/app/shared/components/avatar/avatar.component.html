@@ -1,7 +1,9 @@
 <div class="card-wallet-avatar">
-  @if (img) {
-    <img [src]="img" [alt]="alt" />
+  @if (showImage && img) {
+    <img [src]="img" [alt]="alt" (error)="onImageError()" />
   } @else {
-    <div class="no-avatar" [style.background]="randomBackground"></div>
+    <div class="no-avatar" [style.background]="background" aria-hidden="true">
+      <span class="no-avatar__initials">{{ initials }}</span>
+    </div>
   }
 </div>

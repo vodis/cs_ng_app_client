@@ -1,138 +1,295 @@
-@use '@vodis/cs-foundation/styles/breakpoints' as *;
-
 :host {
   display: block;
+  overflow: visible;
+  width: var(--shell-rail-width, 4.5rem);
   height: 100%;
+}
 
-  .menu-link {
-    overflow: hidden;
-    min-width: 0;
-    color: inherit;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-align: center;
-    text-decoration: none;
-    text-overflow: ellipsis;
-    text-transform: uppercase;
-    white-space: nowrap;
+.sidebar {
+  --rail-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --rail-sweep-ms: 420ms;
+  --rail-icon-ms: 280ms;
+  --rail-edge-x: calc(var(--shell-rail-width, 4.5rem) - 1px);
 
-    @include media-breakpoint-down(sm) {
-      font-size: 0.75rem;
-      line-height: 1rem;
-    }
+  position: relative;
+  display: flex;
+  overflow: visible;
+  width: var(--shell-rail-width, 4.5rem);
+  height: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  background: var(--main-bg-color);
+}
 
-    @include media-breakpoint(sm) {
-      font-size: 0.75rem;
-      line-height: 1rem;
-    }
+.sidebar__rail {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  overflow: visible;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0 calc(1rem + env(safe-area-inset-bottom, 0px));
+  gap: 1.25rem;
+}
 
-    @include media-breakpoint(md) {
-      font-size: 1.125rem;
-      line-height: 1.35rem;
-    }
+.sidebar__logo,
+.sidebar__link,
+.sidebar__action {
+  position: relative;
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.65rem;
+  appearance: none;
+  background: transparent;
+  color: var(--main-text-color);
+  cursor: pointer;
+  opacity: 0;
+  text-decoration: none;
+  transform: translate3d(0, 0.4rem, 0);
+  transition:
+    opacity var(--rail-icon-ms) var(--rail-ease),
+    transform var(--rail-icon-ms) var(--rail-ease),
+    color 160ms ease,
+    background-color 160ms ease;
 
-    @include media-breakpoint(lg) {
-      font-size: 1.375rem;
-      line-height: 1.6rem;
-    }
-
-    &:hover,
-    &._is-active {
-      color: var(--primary-text-color);
-    }
+  mat-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+    font-size: 1.35rem;
+    line-height: 1.35rem;
   }
 
-  .sidebar {
-    position: relative;
+  &:focus-visible {
+    outline: 1px solid var(--primary-text-color);
+    outline-offset: 2px;
+  }
+}
+
+.sidebar__logo img {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.sidebar__nav {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.sidebar__menu {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  list-style: none;
+}
+
+.sidebar__item {
+  display: flex;
+}
+
+.sidebar__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sidebar__link--active,
+.sidebar__link:hover,
+.sidebar__action:hover:not(:disabled) {
+  color: var(--primary-text-color);
+}
+
+.sidebar__link--active {
+  background: rgb(254 108 0 / 18%);
+  box-shadow: inset 0 0 0 1px rgb(254 108 0 / 35%);
+}
+
+.sidebar__action:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.sidebar__action--avatar {
+  border-radius: 999px;
+
+  app-avatar {
     display: flex;
-    overflow: hidden;
+    width: 1.75rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  ::ng-deep .card-wallet-avatar {
     width: 100%;
     height: 100%;
-    flex-direction: column;
 
-    &__lines {
-      position: absolute;
-      z-index: 0;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    &__line {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 1px;
-      animation-fill-mode: forwards;
-      animation-name: sidebar-line-drop;
-      animation-timing-function: linear;
-      background: var(--main-border-color);
-
-      &--static {
-        top: var(--line-to);
-        animation: none;
-      }
-    }
-
-    &__nav {
-      position: relative;
-      z-index: 1;
+    img,
+    .no-avatar {
       width: 100%;
       height: 100%;
-      animation: sidebar-menu-appear 200ms ease forwards;
+      border: 1px solid rgb(255 255 255 / 28%);
+      border-radius: 999px;
     }
 
-    &__menu {
-      display: grid;
-      width: 100%;
-      height: 100%;
-      padding: 0;
-      margin: 0;
-      color: var(--main-text-color);
-      grid-template-rows: repeat(5, minmax(0, 1fr));
-      justify-items: center;
-      list-style: none;
+    .no-avatar__initials {
+      font-size: 0.72rem;
     }
+  }
 
-    &__slot {
-      display: flex;
-      min-height: 0;
-      align-items: center;
-      justify-content: center;
-      padding: 0 1rem;
-    }
+  &:hover,
+  &:focus-visible,
+  &.sidebar__action--avatar-active {
+    color: var(--main-text-color);
+    background: rgb(255 255 255 / 8%);
+  }
+
+  &.sidebar__action--avatar-active ::ng-deep .no-avatar,
+  &.sidebar__action--avatar-active ::ng-deep img {
+    border-color: rgb(254 108 0 / 55%);
   }
 }
 
-@keyframes sidebar-line-drop {
-  from {
-    top: 0;
-  }
+.sidebar__tooltip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 0.75rem);
+  z-index: 20;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 0.55rem;
+  background: #1c2225;
+  color: var(--main-text-color);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  text-transform: uppercase;
+  transform: translate3d(-0.25rem, -50%, 0);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  white-space: nowrap;
 
-  to {
-    top: var(--line-to);
+  &--plain {
+    letter-spacing: 0.01em;
+    text-transform: none;
   }
 }
 
-@keyframes sidebar-menu-appear {
-  from {
-    opacity: 0;
-  }
+.sidebar__link:hover .sidebar__tooltip,
+.sidebar__link:focus-visible .sidebar__tooltip,
+.sidebar__action:hover:not(:disabled) .sidebar__tooltip,
+.sidebar__action:focus-visible:not(:disabled) .sidebar__tooltip {
+  opacity: 1;
+  transform: translate3d(0, -50%, 0);
+}
 
-  to {
+.sidebar__edge {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sidebar__sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: var(--main-border-color);
+  opacity: 1;
+  /* Default: parked at the left until intro / settled class. */
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+}
+
+/* First load: sweep left → right edge (transform only). */
+.sidebar--sweeping .sidebar__sweep {
+  animation: rail-sweep var(--rail-sweep-ms) var(--rail-ease) forwards;
+}
+
+/* After intro: stay on the right edge forever — never re-run transform. */
+.sidebar--settled .sidebar__sweep {
+  animation: none;
+  transform: translate3d(var(--rail-edge-x), 0, 0);
+}
+
+.sidebar--ready {
+  .sidebar__logo,
+  .sidebar__link,
+  .sidebar__action {
     opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Page change: opacity pulse only — transform stays at the edge. */
+.sidebar--pulse.sidebar--settled .sidebar__sweep {
+  animation: rail-pulse 220ms var(--rail-ease);
+}
+
+@keyframes rail-sweep {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(var(--rail-edge-x), 0, 0);
+  }
+}
+
+@keyframes rail-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.28;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :host {
-    .sidebar__line {
-      top: var(--line-to);
-      animation: none;
-    }
+  .sidebar {
+    --rail-sweep-ms: 1ms;
+    --rail-icon-ms: 1ms;
+  }
 
-    .sidebar__nav {
-      animation: none;
-    }
+  .sidebar__logo,
+  .sidebar__link,
+  .sidebar__action {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .sidebar__sweep {
+    animation: none;
+    transform: translate3d(var(--rail-edge-x), 0, 0);
+  }
+
+  .sidebar__tooltip {
+    transition: none;
   }
 }

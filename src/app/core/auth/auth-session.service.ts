@@ -36,6 +36,8 @@ type BalancesResponse = {
 /** Survives Local Storage wipes (Privy) and page reload within the same tab. */
 const AUTH_EXPIRED_STORAGE_KEY = 'cs-host.auth-presence-expired.v1';
 const AUTH_KNOWN_SESSION_STORAGE_KEY = 'cs-host.auth-known-session.v1';
+/** Provider avatar URLs are not always on /me — keep per-user for the tab. */
+const AUTH_AVATAR_STORAGE_KEY_PREFIX = 'cs-host.user-avatar.v1:';
 
 @Injectable({ providedIn: 'root' })
 export class AuthSessionService {
@@ -394,7 +396,9 @@ export class AuthSessionService {
 
         // Avoid currentAccessToken() here — it clears on miss. We only want a
         // confirmed missing token (e.g. Privy wipe) to mark expired.
-        const token = await this.authProvider.getAccessToken().catch(() => null);
+        const token = await this.authProvider
+          .getAccessToken()
+          .catch(() => null);
         if (!token) {
           if (readPersistedKnownSession()) {
             this.presenceSubject.next('expired');
@@ -424,10 +428,11 @@ export class AuthSessionService {
 
   private publishSession(session: AuthSession): void {
     const previousUserId = this.sessionSubject.value?.user.id;
+    const nextSession = withCachedAvatar(session);
     this.presenceSubject.next('authenticated');
     persistPresence('authenticated');
-    this.sessionSubject.next(session);
-    const nextUserId = session.user.id;
+    this.sessionSubject.next(nextSession);
+    const nextUserId = nextSession.user.id;
     if (nextUserId !== previousUserId) {
       this.walletsService.hydrateLastConnectedForUser(nextUserId);
     }
@@ -454,6 +459,7 @@ export class AuthSessionService {
     persistPresence(presence);
     this.sessionSubject.next(null);
     if (previousUserId !== undefined) {
+      clearCachedAvatar(previousUserId);
       this.walletsService.hydrateLastConnectedForUser(null);
     }
   }
@@ -514,5 +520,66 @@ function persistPresence(presence: AuthPresence): void {
     window.sessionStorage.removeItem(AUTH_EXPIRED_STORAGE_KEY);
   } catch {
     // Presence persistence is best-effort when storage is blocked.
+  }
+}
+
+function withCachedAvatar(session: AuthSession): AuthSession {
+  const fromSession = normalizeAvatarUrl(session.user.avatarUrl);
+  if (fromSession) {
+    persistCachedAvatar(session.user.id, fromSession);
+    if (fromSession === session.user.avatarUrl) {
+      return session;
+    }
+    return {
+      ...session,
+      user: { ...session.user, avatarUrl: fromSession },
+    };
+  }
+
+  const cached = readCachedAvatar(session.user.id);
+  if (!cached) {
+    return session;
+  }
+  return {
+    ...session,
+    user: { ...session.user, avatarUrl: cached },
+  };
+}
+
+function normalizeAvatarUrl(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : null;
+}
+
+function avatarStorageKey(userId: string): string {
+  return `${AUTH_AVATAR_STORAGE_KEY_PREFIX}${userId}`;
+}
+
+function readCachedAvatar(userId: string): string | null {
+  try {
+    return normalizeAvatarUrl(
+      window.sessionStorage.getItem(avatarStorageKey(userId))
+    );
+  } catch {
+    return null;
+  }
+}
+
+function persistCachedAvatar(userId: string, avatarUrl: string): void {
+  try {
+    window.sessionStorage.setItem(avatarStorageKey(userId), avatarUrl);
+  } catch {
+    // Avatar cache is best-effort when storage is blocked.
+  }
+}
+
+function clearCachedAvatar(userId: string): void {
+  try {
+    window.sessionStorage.removeItem(avatarStorageKey(userId));
+  } catch {
+    // Avatar cache is best-effort when storage is blocked.
   }
 }

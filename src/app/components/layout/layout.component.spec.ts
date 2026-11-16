@@ -45,13 +45,14 @@ describe('LayoutComponent', () => {
     expect(component.hideShell).toBeFalse();
   });
 
-  it('does not restart the vertical divider animation on in-app navigation', () => {
-    component.onVerticalLineAnimationComplete();
+  it('uses the desktop rail shell without a top header on wide viewports', () => {
+    component.isMobileView = false;
+    fixture.detectChanges();
 
-    expect(component.verticalLineAnimating).toBeFalse();
-
-    routerEvents.next(new NavigationEnd(4, '/en/portfolio', '/en/portfolio'));
-
-    expect(component.verticalLineAnimating).toBeFalse();
+    expect(fixture.nativeElement.querySelector('app-header')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-sidebar')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('.main-layout--desktop-rail')
+    ).not.toBeNull();
   });
 });

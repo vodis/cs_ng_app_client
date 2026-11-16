@@ -17,18 +17,18 @@ This repo is the **DeFi dashboard** (`app.craftscript.com`). The marketing/landi
 ### Rules
 
 - Grids are **full viewport width** — no `max-width` container.
-- Header, sidebar, and main content share the same **7-column** desktop grid.
+- Desktop shell is a **slim icon rail** (`--shell-rail-width: 4.5rem` / 72px) plus fluid main content — not the old wide text sidebar.
 - Grid lines / dividers use `--main-border-color` (`#d4d4d3`).
 
-### Desktop column map
+### Desktop map
 
-| Element | Column |
-|---------|--------|
-| Logo (header) | 1 |
-| Sidebar | 1 |
-| Vertical divider | border on sidebar col 1, or col 2 |
-| Main content (router) | 2–7 |
-| Connect Wallet (header) | 6–7 |
+| Element | Placement |
+|---------|-----------|
+| Slim icon rail | Fixed left, `64–72px` |
+| Logo + section icons + utilities | Inside the rail |
+| Rail edge / vertical line | Right edge of the rail |
+| Main content (router) | Remaining width beside the rail |
+| Top header | None on desktop |
 
 ### Mobile column map
 
@@ -40,9 +40,11 @@ This repo is the **DeFi dashboard** (`app.craftscript.com`). The marketing/landi
 
 ## Chrome heights
 
-- Header: **64px** (`4rem`) — `--shell-header-height`
+- Mobile header: **64px** (`4rem`) — `--shell-header-height`
+- Desktop rail width: **72px** (`4.5rem`) — `--shell-rail-width`
 - Mobile main nav: orange hamburger in the header
-- Scrollable content: `calc(100vh - var(--shell-header-height))`
+- Mobile scrollable content: `calc(100vh - var(--shell-header-height))`
+- Desktop scrollable content: full viewport height beside the rail
 
 ## Color palette
 
@@ -85,8 +87,8 @@ Exchange page panel borders (`--exchange-line`) may be darker than shell grid li
 
 ## Agent checklist for layout/styling changes
 
-1. Keep header at exactly `4rem` including bottom border — no overflow from separate line elements.
-2. Sidebar width must equal header column 1 (`1/7` viewport on desktop).
+1. Mobile header stays exactly `4rem` including bottom border — no overflow from separate line elements.
+2. Desktop slim rail width must stay `--shell-rail-width` (`4.5rem` / 72px).
 3. Use CSS variables for orange and background — never hardcode `#ff6900` or `#111719`.
 4. Preserve wallet MFE integration and exchange page class structure.
 5. Run `pnpm run lint` and `pnpm run build` before finishing.

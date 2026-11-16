@@ -9,7 +9,6 @@ import {
   ViewChild,
 } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
-import { Direction } from '@shared/components/animate-line/animate-line.component';
 import { filter, Subscription } from 'rxjs';
 import { isAuthShellRoute } from '@core/routing/auth-shell.routes';
 
@@ -25,9 +24,6 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public currentWidth = window.innerWidth;
   public isMobileView = false;
-  public DirectionType = Direction;
-  public verticalLineAnimating = true;
-  public contentHeight: number | null = null;
   public hideShell = isAuthShellRoute(window.location.pathname);
 
   private resizeObserver?: ResizeObserver;
@@ -45,7 +41,6 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(event => {
         this.updateShellVisibility(event.urlAfterRedirects);
-        this.updateContentHeight();
       });
   }
 
@@ -55,10 +50,9 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.resizeObserver = new ResizeObserver(() => {
-      this.ngZone.run(() => this.updateContentHeight());
+      this.ngZone.run(() => undefined);
     });
     this.resizeObserver.observe(this.contentRouter.nativeElement);
-    this.updateContentHeight();
   }
 
   public ngOnDestroy(): void {
@@ -72,31 +66,6 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
       event as unknown as { target: Window }
     ).target.innerWidth;
     this.isMobileView = this.currentWidth <= 768;
-
-    this.updateContentHeight();
-  }
-
-  public onVerticalLineAnimationComplete(): void {
-    this.verticalLineAnimating = false;
-    this.updateContentHeight();
-  }
-
-  public get verticalLineHeight(): string {
-    if (this.verticalLineAnimating) {
-      return 'calc(100vh - var(--shell-header-height))';
-    }
-
-    return this.contentHeight
-      ? `${this.contentHeight}px`
-      : 'calc(100vh - var(--shell-header-height))';
-  }
-
-  private updateContentHeight(): void {
-    if (!this.contentRouter) {
-      return;
-    }
-
-    this.contentHeight = this.contentRouter.nativeElement.offsetHeight;
   }
 
   private updateShellVisibility(url: string): void {
