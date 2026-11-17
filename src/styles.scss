@@ -10,6 +10,7 @@
 @use './styles/profile-page';
 @use './styles/portfolio-page';
 @use './styles/add-funds-panel';
+@use './styles/header-menu-button';
 
 @include mat.elevation-classes();
 @include mat.app-background();

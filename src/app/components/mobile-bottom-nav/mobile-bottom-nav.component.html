@@ -4,171 +4,64 @@
   [attr.aria-hidden]="menuOpen ? null : 'true'"></div>
 
 <nav
-  #floatingNav
-  class="floating-nav"
+  #slideNav
+  class="slide-nav"
   id="floatingNav"
   aria-label="Main navigation"
   [attr.aria-hidden]="menuOpen ? null : 'true'"
-  [attr.inert]="menuOpen ? null : ''">
-  <div class="floating-nav__viewport">
-    <div class="floating-nav__track">
-      <div
-        class="floating-nav__level floating-nav__level--primary"
-        [attr.aria-hidden]="moreOpen ? 'true' : null"
-        [attr.inert]="moreOpen ? '' : null">
-        <ng-container
-          *ngFor="let item of links; let i = index; trackBy: trackById">
-          <button
-            *ngIf="item.icon === 'more'"
-            class="nav-item nav-item--branch"
-            type="button"
-            [class.active]="isMoreActive()"
-            [style.transition-delay]="stagger(i)"
-            [attr.aria-expanded]="moreOpen"
-            aria-controls="floatingNavMore"
-            (click)="openMore()">
-            <ng-container
-              *ngTemplateOutlet="navIcon; context: { icon: item.icon }" />
-            <span class="nav-label">{{
-              item.name | csTranslate: item.fallback
-            }}</span>
-          </button>
-
-          <a
-            *ngIf="item.url"
-            class="nav-item"
-            [routerLink]="path(item.url)"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: item.exact !== false }"
-            [style.transition-delay]="stagger(i)"
-            (click)="closeMenu()">
-            <ng-container
-              *ngTemplateOutlet="navIcon; context: { icon: item.icon }" />
-            <span class="nav-label">{{
-              item.name | csTranslate: item.fallback
-            }}</span>
-          </a>
-        </ng-container>
-      </div>
-
-      <div
-        class="floating-nav__level floating-nav__level--more"
-        id="floatingNavMore"
-        [attr.aria-hidden]="moreOpen ? null : 'true'"
-        [attr.inert]="moreOpen ? null : ''">
-        <button
-          class="nav-item nav-item--back"
-          type="button"
-          [style.transition-delay]="stagger(0)"
-          (click)="closeMore()">
-          <ng-container
-            *ngTemplateOutlet="navIcon; context: { icon: 'back' }" />
-          <span class="nav-label">{{
-            'Texts.sidebar-back' | csTranslate: 'Back'
+  [attr.inert]="menuOpen ? null : ''"
+  (touchstart)="onTouchStart($event)"
+  (touchend)="onTouchEnd($event)">
+  <div class="slide-nav__viewport">
+    <ul class="slide-nav__links">
+      <li *ngFor="let item of links; let i = index; trackBy: trackById">
+        <a
+          *ngIf="item.url"
+          class="slide-nav__link"
+          [class.active]="isActiveLink(item)"
+          [routerLink]="path(item.url)"
+          [style.transition-delay]="stagger(i)"
+          (click)="closeMenu()">
+          <span class="slide-nav__label">{{
+            item.name | csTranslate: item.fallback
           }}</span>
-        </button>
+        </a>
 
-        <ng-container
-          *ngFor="let item of moreLinks; let i = index; trackBy: trackById">
-          <a
-            *ngIf="item.url"
-            class="nav-item"
-            [routerLink]="path(item.url)"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: item.exact !== false }"
-            [style.transition-delay]="stagger(i + 1)"
-            (click)="closeMenu()">
-            <ng-container
-              *ngTemplateOutlet="navIcon; context: { icon: item.icon }" />
-            <span class="nav-label">{{
-              item.name | csTranslate: item.fallback
-            }}</span>
-          </a>
-
-          <a
-            *ngIf="item.href"
-            class="nav-item nav-item--external"
-            [href]="item.href"
-            target="_blank"
-            rel="noopener noreferrer"
-            [style.transition-delay]="stagger(i + 1)"
-            (click)="closeMenu()">
-            <ng-container
-              *ngTemplateOutlet="navIcon; context: { icon: item.icon }" />
-            <span class="nav-label">{{
-              item.name | csTranslate: item.fallback
-            }}</span>
-            <span class="nav-arrow" aria-hidden="true">↗</span>
-          </a>
-        </ng-container>
-      </div>
-    </div>
+        <a
+          *ngIf="item.href"
+          class="slide-nav__link slide-nav__link--external"
+          [href]="item.href"
+          target="_blank"
+          rel="noopener noreferrer"
+          [style.transition-delay]="stagger(i)"
+          (click)="closeMenu()">
+          <span class="slide-nav__label">{{
+            item.name | csTranslate: item.fallback
+          }}</span>
+        </a>
+      </li>
+    </ul>
   </div>
 
-  <button
-    class="floating-nav__rail"
-    type="button"
-    aria-label="Close navigation"
-    (click)="onRailClick()">
-    <span class="floating-nav__chevron" aria-hidden="true">‹</span>
-  </button>
-</nav>
+  <div class="slide-nav__footer">
+    <div class="slide-nav__languages" role="group" aria-label="Language">
+      <button
+        *ngFor="let locale of locales; let i = index; trackBy: trackById"
+        type="button"
+        class="slide-nav__locale"
+        [class.active]="currentLocale() === locale"
+        [style.transition-delay]="stagger(links.length + i)"
+        (click)="selectLocale(locale)">
+        {{ localeLabel(locale) }}
+      </button>
+    </div>
 
-<ng-template #navIcon let-icon="icon">
-  <span class="nav-icon" aria-hidden="true">
-    <svg *ngIf="icon === 'exchange'" viewBox="0 0 24 24">
-      <path d="M4 8h15" />
-      <path d="m16 5 3 3-3 3" />
-      <path d="M20 16H5" />
-      <path d="m8 13-3 3 3 3" />
-    </svg>
-    <svg *ngIf="icon === 'portfolio'" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 4v8h8" />
-    </svg>
-    <svg *ngIf="icon === 'profile'" viewBox="0 0 24 24">
-      <circle cx="12" cy="8" r="3.25" />
-      <path d="M5.5 19.5c1.8-3.2 4-4.75 6.5-4.75s4.7 1.55 6.5 4.75" />
-    </svg>
-    <svg *ngIf="icon === 'more'" viewBox="0 0 24 24">
-      <circle cx="5" cy="12" r="1.15" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none" />
-      <circle cx="19" cy="12" r="1.15" fill="currentColor" stroke="none" />
-    </svg>
-    <svg *ngIf="icon === 'back'" viewBox="0 0 24 24">
-      <path d="M15 5 8 12l7 7" />
-    </svg>
-    <svg *ngIf="icon === 'grow'" viewBox="0 0 24 24">
-      <path d="M12 21V10" />
-      <path d="M12 17c-4 0-7-3-7-7 4 0 7 3 7 7Z" />
-      <path d="M12 14c3.5-1 6-4 6-8-4 0-6 3-6 8Z" />
-    </svg>
-    <svg *ngIf="icon === 'bots'" viewBox="0 0 24 24">
-      <rect x="5" y="8" width="14" height="11" rx="2" />
-      <path d="M12 8V5" />
-      <circle cx="9" cy="13" r="1" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="13" r="1" fill="currentColor" stroke="none" />
-      <path d="M9 17h6" />
-    </svg>
-    <svg *ngIf="icon === 'history'" viewBox="0 0 24 24">
-      <circle cx="12" cy="13" r="8" />
-      <path d="M12 9v4l2.5 1.5" />
-      <path d="M8 4.5 6 7" />
-    </svg>
-    <svg *ngIf="icon === 'settings'" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="3" />
-      <path
-        d="M19.4 13a7.7 7.7 0 0 0 .1-2l2-1.5-2-3.5-2.4 1a7.4 7.4 0 0 0-1.7-1L13 3h-2l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.7 7.7 0 0 0 .1 2l-2 1.5 2 3.5 2.4-1a7.4 7.4 0 0 0 1.7 1L11 21h2l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.5Z" />
-    </svg>
-    <svg *ngIf="icon === 'external'" viewBox="0 0 24 24">
-      <path d="M14 5h5v5" />
-      <path d="M19 5 10 14" />
-      <path d="M17 13v5H5V7h5" />
-    </svg>
-    <svg *ngIf="icon === 'docs'" viewBox="0 0 24 24">
-      <path d="M7 4h7l4 4v12H7Z" />
-      <path d="M14 4v4h4" />
-      <path d="M10 12h6M10 16h6" />
-    </svg>
-  </span>
-</ng-template>
+    <button
+      type="button"
+      class="slide-nav__logout"
+      [style.transition-delay]="stagger(links.length + locales.length)"
+      (click)="logout()">
+      {{ 'Texts.sidebar-logout' | csTranslate: 'Logout' }}
+    </button>
+  </div>
+</nav>

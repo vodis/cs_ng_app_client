@@ -156,24 +156,24 @@ test.describe('Shell layout (desktop)', () => {
   });
 });
 
-test.describe('Mobile floating navigation', () => {
+test.describe('Mobile slide-in navigation', () => {
   test.use({ viewport: { width: 390, height: 360 } });
 
   test.beforeEach(async ({ page }) => {
     await gotoExchangePage(page);
   });
 
-  test('More panel stays scrollable on short landscape viewports', async ({
+  test('slide-in panel stays scrollable on short landscape viewports', async ({
     page,
   }) => {
     const menuButton = page.locator('app-header .header__menu-button');
     await expect(menuButton).toBeVisible();
     await expect(page.locator('.floating-trigger')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'More' })).toHaveCount(0);
 
     await menuButton.click();
-    await page.getByRole('button', { name: 'More' }).click();
 
-    const viewport = page.locator('.floating-nav__viewport');
+    const viewport = page.locator('.slide-nav__viewport');
     await expect(viewport).toBeVisible();
 
     const overflowY = await viewport.evaluate(
@@ -181,29 +181,34 @@ test.describe('Mobile floating navigation', () => {
     );
     expect(overflowY).toBe('auto');
 
-    await expect(page.getByRole('link', { name: 'Docs' })).toBeAttached();
+    const panel = page.locator('#floatingNav');
+    await expect(panel.getByRole('link', { name: 'Docs' })).toBeAttached();
 
-    await page.getByRole('link', { name: 'Docs' }).evaluate(el => {
+    await panel.getByRole('link', { name: 'Docs' }).evaluate(el => {
       (el as HTMLElement).scrollIntoView({ block: 'nearest' });
     });
-    await expect(page.getByRole('link', { name: 'Docs' })).toBeVisible();
+    await expect(panel.getByRole('link', { name: 'Docs' })).toBeVisible();
+    // exact: 'EN' is a substring of other button names (e.g. "Swap tokens").
+    await expect(
+      panel.getByRole('button', { name: 'EN', exact: true })
+    ).toBeVisible();
+    await expect(
+      panel.getByRole('button', { name: 'Logout', exact: true })
+    ).toBeVisible();
   });
 
-  test('inactive level is removed from keyboard tab order', async ({
+  test('keeps header actions visible while the menu is open', async ({
     page,
   }) => {
     await page.locator('app-header .header__menu-button').click();
+    await expect(page.locator('#floatingNav')).toBeVisible();
 
-    const moreLevel = page.locator('.floating-nav__level--more');
-    await expect(moreLevel).toHaveAttribute('inert', '');
-
-    await page.getByRole('button', { name: 'More' }).click();
-
-    await expect(page.locator('.floating-nav__level--primary')).toHaveAttribute(
-      'inert',
-      ''
-    );
-    await expect(moreLevel).not.toHaveAttribute('inert');
+    await expect(
+      page.locator('app-header').getByRole('button', { name: 'Notifications' })
+    ).toBeVisible();
+    await expect(
+      page.locator('app-header').getByRole('button', { name: 'Wallets' })
+    ).toBeVisible();
   });
 
   test('restores focus to the header menu trigger on Escape', async ({
@@ -215,7 +220,10 @@ test.describe('Mobile floating navigation', () => {
 
     await page.keyboard.press('Escape');
 
-    await expect(page.locator('#floatingNav')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#floatingNav')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
     await expect(menuButton).toBeFocused();
   });
 
@@ -226,8 +234,7 @@ test.describe('Mobile floating navigation', () => {
     await menuButton.click();
     await expect(page.locator('#floatingNav')).toBeVisible();
 
-    // Click the dimmed area below the sticky header and away from the
-    // bottom-right floating panel (viewport is short landscape in this suite).
+    // Click the dimmed scrim below the sticky header (panel is ~85% from right).
     await page.mouse.click(24, SHELL_HEADER_HEIGHT_PX + 24);
 
     await expect(page.locator('#floatingNav')).toHaveAttribute(
