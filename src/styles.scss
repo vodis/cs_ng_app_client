@@ -11,6 +11,7 @@
 @use './styles/portfolio-page';
 @use './styles/add-funds-panel';
 @use './styles/header-menu-button';
+@use './styles/sidebar-rail';
 
 @include mat.elevation-classes();
 @include mat.app-background();
@@ -48,6 +49,7 @@
 
 :root {
   --shell-header-height: 4rem;
+  --shell-rail-width: 4.5rem;
   --shell-grid-columns: 7;
   --shell-grid-columns-mobile: 4;
 }

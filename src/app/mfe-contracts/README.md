@@ -40,6 +40,10 @@ Passkey enablement is consumed through the provider-neutral `linkPasskey()`
 contract method and the normalized `passkeyEnabled` user field. Angular must
 not inspect provider linked-account payloads or passkey credential IDs.
 
+Optional additive user field `avatarUrl` carries an HTTPS profile image when
+the wallet MFE (or BFF `/me`) exposes one. The host may cache it per user for
+the tab; it must not read Privy/Google account payloads directly.
+
 The NestJS `GET /api/v1/public/auth-config` response is the single source of
 truth for enabled login methods and public provider configuration. `mfe-wallets`
 loads that configuration, owns browser provider lifecycle, registers normalized

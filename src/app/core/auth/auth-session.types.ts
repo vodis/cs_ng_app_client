@@ -3,6 +3,8 @@ export type BackendUser = {
   providerUserId: string;
   sessionId: string;
   email?: string | null;
+  /** HTTPS profile image when the auth provider or BFF exposes one. */
+  avatarUrl?: string | null;
   authMethod?: string | null;
   passkeyEnabled?: boolean;
 };

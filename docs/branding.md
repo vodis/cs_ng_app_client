@@ -84,9 +84,11 @@ Grid gutters by breakpoint:
 
 Common shell measurements:
 
-- Header height: `4rem` (`64px`)
+- Header height: `4rem` (`64px`) — mobile shell only
+- Desktop slim rail width: `4.5rem` (`72px`) — `--shell-rail-width`
 - Mobile main-nav control: hamburger in the header (right of account icons)
-- Scrollable shell area: `calc(100vh - 4rem)`
+- Mobile scrollable shell area: `calc(100vh - 4rem)`
+- Desktop scrollable shell area: full viewport beside the rail (`100vh`)
 
 ## Mobile Measurements
 
@@ -157,32 +159,30 @@ Shell grid:
 
 Desktop placement:
 
-- Logo: column `1`
-- Sidebar: column `1`
-- Divider: end of column `1`
-- Main content: columns `2-7`
+- Slim icon rail: fixed `72px` (`--shell-rail-width`) on the far left
+- Logo, section icons, and utility actions live in the rail (no desktop top header)
+- Vertical rail edge: 1px `--main-border-color` line on the rail’s right
+- Main content: remaining viewport width beside the rail
 
 Rules:
 
 - Full viewport width
 - No max-width page container
 - Use `--main-border-color` for shell lines
-- Keep shell chrome aligned across header, sidebar, and content
+- Keep shell chrome aligned across rail and content
 
 Protected shell layout requirements:
 
-- Header height must remain `64px`
-- Main content must start directly below the header
-- Sidebar width must match the first column of the `7`-column desktop grid
-- Vertical divider must stay aligned with the sidebar right edge
-- Sidebar, divider, and router content must share the same grid row
-- Desktop sidebar height is `calc(100vh - var(--shell-header-height))` and
-  does not scroll with routed content
-- Desktop routed content scrolls inside columns `2-7`
-- Desktop sidebar draws 4 interior horizontal grid lines from the top of the
-  column toward the bottom (no edge lines at the header or footer), then
-  reveals the nav menu. Replay that sequence on each route navigation. Use
-  `--main-border-color` for those lines.
+- Mobile header height must remain `64px`
+- Desktop has no top header; content shares the top edge with the rail
+- Desktop rail width stays `64–72px` (`--shell-rail-width: 4.5rem`)
+- Rail edge line stays aligned with the rail’s right edge
+- Rail and router content share the same grid row
+- Desktop rail height is `100vh` and does not scroll with routed content
+- Desktop routed content scrolls beside the rail
+- On first load the rail edge sweeps into place (transform only), then icons
+  fade/slide in. On route changes use a short line pulse. Respect
+  `prefers-reduced-motion`. Nav links stay in the DOM from first paint.
 
 E2E coverage:
 

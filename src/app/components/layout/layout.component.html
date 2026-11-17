@@ -1,24 +1,15 @@
-<div class="main-layout">
+<div class="main-layout" [class.main-layout--desktop-rail]="!isMobileView">
   <ng-template #content><ng-content></ng-content></ng-template>
 
   <ng-container *ngIf="!hideShell; else authLayout">
-    <app-header></app-header>
+    <app-header *ngIf="isMobileView"></app-header>
 
     <div
       class="main-layout__content"
       (window:resize)="onResize($event)"
       *ngIf="!isMobileView">
       <app-sidebar></app-sidebar>
-      <app-animate-line
-        *ngIf="verticalLineAnimating"
-        [direction]="DirectionType.Row"
-        size="100%"
-        (animationComplete)="onVerticalLineAnimationComplete()" />
-      <div
-        *ngIf="!verticalLineAnimating"
-        class="main-layout__divider"
-        aria-hidden="true"></div>
-      <div #contentRouter class="main-layout__content_router">
+      <div class="main-layout__content_router">
         <ng-container *ngTemplateOutlet="content"></ng-container>
       </div>
     </div>
