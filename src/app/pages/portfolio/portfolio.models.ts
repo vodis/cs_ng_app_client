@@ -47,9 +47,23 @@ export type AgentIntegrationConfig = {
   grantLifetimeDays: number;
 };
 
+/** How the authorization client identity was verified by the BFF. */
+export type AgentClientVerification =
+  | 'metadata_document'
+  | 'first_party'
+  | 'unverified';
+
 export type AgentAuthorizationRequest = {
   id: string;
   clientName: string;
   scopes: string[];
   expiresAt: string;
+  /** Display name from the client metadata document (sanitized, max 80). */
+  clientHost?: string | null;
+  clientUri?: string | null;
+  logoUri?: string | null;
+  redirectHost?: string | null;
+  clientVerification?: AgentClientVerification | null;
+  /** True when the redirect is a loopback CLI agent on this computer. */
+  loopbackRedirect?: boolean | null;
 };

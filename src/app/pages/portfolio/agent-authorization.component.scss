@@ -5,13 +5,15 @@
 
 .authorization-page {
   display: grid;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - var(--shell-header-height, 4rem));
   padding: 1.25rem;
-  background: radial-gradient(
-    circle at 50% 0,
-    rgb(67 230 160 / 10%),
-    transparent 45%
-  );
+  background:
+    radial-gradient(
+      circle at 18% 0,
+      rgb(254 108 0 / 12%),
+      transparent 42%
+    ),
+    var(--main-bg-color);
   color: var(--main-text-color);
   place-items: center;
 }
@@ -26,18 +28,127 @@
 }
 
 .authorization-card__eyebrow {
-  margin: 0 0 0.5rem;
-  color: #43e6a0;
+  margin: 0 0 1rem;
+  color: var(--primary-text-color);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
+.authorization-card__identity {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  gap: 0.9rem;
+}
+
+.authorization-card__logo-wrap {
+  flex: 0 0 auto;
+}
+
+.authorization-card__logo,
+.authorization-card__logo-fallback {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 0.75rem;
+  background: rgb(255 255 255 / 4%);
+  overflow: hidden;
+}
+
+.authorization-card__logo {
+  object-fit: cover;
+}
+
+.authorization-card__logo-fallback mat-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--primary-text-color);
+  font-size: 1.35rem;
+  line-height: 1.35rem;
+}
+
+.authorization-card__identity-copy {
+  min-width: 0;
+}
+
+.authorization-card__name-link {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover h1,
+  &:focus-visible h1 {
+    color: var(--primary-text-color);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--primary-text-color);
+    outline-offset: 2px;
+  }
+}
+
 .authorization-card h1 {
   margin: 0;
-  font-size: clamp(1.65rem, 4vw, 2.25rem);
+  font-size: clamp(1.45rem, 3.6vw, 1.9rem);
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.authorization-card__host {
+  display: inline-flex;
+  align-items: center;
+  margin: 0.35rem 0 0;
+  color: var(--gray-30);
+  font-size: 0.88rem;
+  gap: 0.3rem;
+  line-height: 1.3;
+}
+
+.authorization-card__verified-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--primary-text-color);
+  font-size: 1rem;
+  line-height: 1rem;
+}
+
+.authorization-card__prompt {
+  margin: 0 0 0.85rem;
+  font-size: clamp(1.15rem, 3vw, 1.35rem);
   font-weight: 500;
+  line-height: 1.3;
+}
+
+.authorization-card__warning,
+.authorization-card__loopback {
+  margin: 0 0 0.85rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.authorization-card__warning {
+  border: 1px solid rgb(254 108 0 / 35%);
+  background: rgb(254 108 0 / 10%);
+  color: var(--main-text-color);
+}
+
+.authorization-card__loopback {
+  border: 1px solid rgb(255 255 255 / 12%);
+  background: rgb(255 255 255 / 4%);
+  color: var(--gray-30);
+}
+
+.authorization-card__redirect {
+  margin: 0 0 0.85rem;
+  color: var(--gray-30);
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .authorization-card > p,
@@ -53,13 +164,31 @@
 .authorization-card__note {
   padding: 0.85rem;
   border-radius: 10px;
-  background: rgb(67 230 160 / 7%);
+  background: rgb(254 108 0 / 8%);
+  color: var(--gray-30);
   font-size: 0.82rem;
 }
 
 .authorization-card__actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   margin-top: 1.5rem;
   gap: 0.75rem;
+}
+
+@media (width < 768px) {
+  .authorization-page {
+    min-height: calc(100vh - var(--shell-header-height, 4rem));
+    padding: 1rem;
+    align-items: start;
+  }
+
+  .authorization-card__actions {
+    flex-direction: column-reverse;
+
+    button {
+      width: 100%;
+    }
+  }
 }

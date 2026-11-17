@@ -30,9 +30,11 @@ export default defineConfig({
     },
   ],
   webServer: {
+    // Local e2e must serve `environment.ts` (development), not `pnpm start` /
+    // `environment.local.ts`, so API/MFE mocks in e2e/utils/auth-fixtures.ts match.
     command: process.env.CI
       ? `pnpm exec ng build --configuration development && pnpm exec serve -s dist/cs_ng_app_client -l ${PORT}`
-      : `pnpm run start`,
+      : `pnpm exec ng serve --configuration=development --port=${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
