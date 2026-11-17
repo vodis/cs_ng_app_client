@@ -1,0 +1,124 @@
+<main class="authorization-page">
+  <section class="authorization-card">
+    <p class="authorization-card__eyebrow">AI agent access</p>
+
+    @if (loading) {
+      <h1>Checking request…</h1>
+    } @else if (request) {
+      <div class="authorization-card__identity">
+        <div class="authorization-card__logo-wrap" aria-hidden="true">
+          @if (logoUrl && !logoFailed) {
+            <img
+              class="authorization-card__logo"
+              [src]="logoUrl"
+              alt=""
+              width="40"
+              height="40"
+              referrerpolicy="no-referrer"
+              (error)="onLogoError()" />
+          } @else {
+            <span class="authorization-card__logo-fallback">
+              <mat-icon>smart_toy</mat-icon>
+            </span>
+          }
+        </div>
+
+        <div class="authorization-card__identity-copy">
+          @if (clientLink) {
+            <a
+              class="authorization-card__name-link"
+              [href]="clientLink"
+              target="_blank"
+              rel="noopener noreferrer">
+              <h1>{{ displayName }}</h1>
+            </a>
+          } @else {
+            <h1>{{ displayName }}</h1>
+          }
+
+          @if (verifiedHostLabel) {
+            <p class="authorization-card__host">
+              @if (verified) {
+                <mat-icon class="authorization-card__verified-icon"
+                  >verified</mat-icon
+                >
+                verified as {{ verifiedHostLabel }}
+              } @else {
+                {{ verifiedHostLabel }}
+              }
+            </p>
+          } @else if (verified) {
+            <p class="authorization-card__host">
+              <mat-icon class="authorization-card__verified-icon"
+                >verified</mat-icon
+              >
+              Verified client
+            </p>
+          }
+        </div>
+      </div>
+
+      <h2 class="authorization-card__prompt">
+        Allow this agent to view your portfolio?
+      </h2>
+
+      @if (!verified) {
+        <p class="authorization-card__warning" role="status">
+          This client is not verified. Approve only if you started this request
+          yourself from your own terminal or app just now.
+        </p>
+      }
+
+      @if (loopback) {
+        <p class="authorization-card__loopback" role="status">
+          This app runs on this computer (a CLI agent). You will be sent back to
+          @if (redirectHost) {
+            <strong>{{ redirectHost }}</strong>
+          } @else {
+            a local address
+          }
+          .
+        </p>
+      } @else if (redirectHost) {
+        <p class="authorization-card__redirect">
+          After you decide, you will return to
+          <strong>{{ redirectHost }}</strong
+          >.
+        </p>
+      }
+
+      <p>
+        This agent runs using your provider account. CraftScript does not
+        receive its login or model-provider credentials.
+      </p>
+
+      <ul>
+        @for (scope of request.scopes; track scope) {
+          <li>{{ scopeLabel(scope) }}</li>
+        }
+      </ul>
+
+      <p class="authorization-card__note">
+        Read-only access lasts for up to {{ grantLifetimeDays }} days unless you
+        revoke it. The agent cannot trade, move funds, or view your account
+        login details.
+      </p>
+
+      <div class="authorization-card__actions">
+        <button mat-stroked-button [disabled]="busy" (click)="decide('deny')">
+          Deny
+        </button>
+        <button
+          mat-flat-button
+          color="primary"
+          [disabled]="busy"
+          (click)="decide('approve')">
+          Allow access
+        </button>
+      </div>
+    } @else {
+      <h1>This authorization request is unavailable</h1>
+      <p>{{ error }}</p>
+    }
+  </section>
+</main>

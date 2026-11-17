@@ -2,6 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ProductEventsService } from '@core/product-events/product-events.service';
 import { AccountSessionsFacade } from './account-sessions.facade';
+import {
+  agentDisplayName,
+  isHttpsUri,
+  isVerifiedAgentClient,
+} from './agent-authorization-display.utils';
 import { PortfolioApiService } from './portfolio-api.service';
 import {
   AgentAuthorizationRequest,
@@ -38,6 +43,7 @@ export class PortfolioComponent implements OnInit {
   deviceLoading = false;
   pendingAuthorization?: AgentAuthorizationRequest;
   authorizationLoading = false;
+  agentLogoFailed = false;
   deleteConfirmText = '';
   deletionMessage = '';
   accountError = '';
@@ -138,7 +144,27 @@ export class PortfolioComponent implements OnInit {
     this.actionError = '';
     this.deviceCode = '';
     this.pendingAuthorization = undefined;
+    this.agentLogoFailed = false;
     this.agentOpen = true;
+  }
+
+  agentName(request: AgentAuthorizationRequest): string {
+    return agentDisplayName(request);
+  }
+
+  isAgentVerified(request: AgentAuthorizationRequest): boolean {
+    return isVerifiedAgentClient(request);
+  }
+
+  agentLogoUrl(request: AgentAuthorizationRequest): string | null {
+    if (this.agentLogoFailed || !isHttpsUri(request.logoUri)) {
+      return null;
+    }
+    return request.logoUri.trim();
+  }
+
+  onAgentLogoError(): void {
+    this.agentLogoFailed = true;
   }
 
   async copyMcpUrl(): Promise<void> {
@@ -161,6 +187,7 @@ export class PortfolioComponent implements OnInit {
     this.actionError = '';
     try {
       this.pendingAuthorization = await this.api.resolveDeviceCode(code);
+      this.agentLogoFailed = false;
     } catch (error) {
       this.actionError = this.message(error, 'The code is invalid or expired.');
     } finally {

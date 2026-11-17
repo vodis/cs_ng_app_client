@@ -26,9 +26,7 @@
     class="portfolio-page__nav"
     aria-label="Portfolio sections"
     *ngIf="!loading">
-    <a
-      href="#portfolio-ai"
-      (click)="scrollToSection($event, 'portfolio-ai')"
+    <a href="#portfolio-ai" (click)="scrollToSection($event, 'portfolio-ai')"
       >AI agents</a
     >
     <a
@@ -223,15 +221,46 @@
     <ng-container
       *ngIf="pendingAuthorization as authorization; else connectInstructions">
       <div class="agent-connect__request">
-        <span class="agent-connect__request-icon"
-          ><mat-icon aria-hidden="true">smart_toy</mat-icon></span
-        >
+        <span class="agent-connect__request-icon" aria-hidden="true">
+          <img
+            *ngIf="agentLogoUrl(authorization) as logo; else agentIcon"
+            class="agent-connect__request-logo"
+            [src]="logo"
+            alt=""
+            width="28"
+            height="28"
+            referrerpolicy="no-referrer"
+            (error)="onAgentLogoError()" />
+          <ng-template #agentIcon>
+            <mat-icon>smart_toy</mat-icon>
+          </ng-template>
+        </span>
         <div class="agent-connect__request-copy">
-          <small>Requesting access</small
-          ><strong>{{ authorization.clientName }}</strong>
+          <small>Requesting access</small>
+          <strong>{{ agentName(authorization) }}</strong>
+          <span
+            class="agent-connect__request-host"
+            *ngIf="authorization.clientHost as host"
+            >{{
+              isAgentVerified(authorization) ? 'verified as ' + host : host
+            }}</span
+          >
         </div>
       </div>
       <h3>Allow read-only access?</h3>
+      <p
+        class="agent-connect__warning"
+        *ngIf="!isAgentVerified(authorization)"
+        role="status">
+        This client is not verified. Approve only if you started this request
+        yourself from your own terminal or app just now.
+      </p>
+      <p
+        class="agent-connect__loopback"
+        *ngIf="authorization.loopbackRedirect"
+        role="status">
+        This app runs on this computer (a CLI agent).
+      </p>
       <ul class="agent-connect__permissions">
         <li *ngFor="let scope of authorization.scopes">
           <mat-icon>check</mat-icon>{{ scope }}

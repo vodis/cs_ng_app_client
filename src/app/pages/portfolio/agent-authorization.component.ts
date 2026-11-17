@@ -1,56 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ProductEventsService } from '@core/product-events/product-events.service';
+import {
+  agentDisplayName,
+  isHttpsUri,
+  isVerifiedAgentClient,
+} from './agent-authorization-display.utils';
 import { PortfolioApiService } from './portfolio-api.service';
 import { AgentAuthorizationRequest } from './portfolio.models';
 
 @Component({
   selector: 'app-agent-authorization',
   standalone: false,
-  template: `
-    <main class="authorization-page">
-      <section class="authorization-card">
-        <p class="authorization-card__eyebrow">AI agent access</p>
-        @if (loading) {
-          <h1>Checking request…</h1>
-        } @else if (request) {
-          <h1>Allow {{ request.clientName }} to view your portfolio?</h1>
-          <p>
-            This agent runs using your provider account. CraftScript does not
-            receive its login or model-provider credentials.
-          </p>
-          <ul>
-            @for (scope of request.scopes; track scope) {
-              <li>{{ scopeLabel(scope) }}</li>
-            }
-          </ul>
-          <p class="authorization-card__note">
-            Read-only access lasts for up to {{ grantLifetimeDays }} days unless
-            you revoke it. The agent cannot trade, move funds, or view your
-            account login details.
-          </p>
-          <div class="authorization-card__actions">
-            <button
-              mat-stroked-button
-              [disabled]="busy"
-              (click)="decide('deny')">
-              Deny
-            </button>
-            <button
-              mat-flat-button
-              color="primary"
-              [disabled]="busy"
-              (click)="decide('approve')">
-              Allow access
-            </button>
-          </div>
-        } @else {
-          <h1>This authorization request is unavailable</h1>
-          <p>{{ error }}</p>
-        }
-      </section>
-    </main>
-  `,
+  templateUrl: './agent-authorization.component.html',
   styleUrls: ['./agent-authorization.component.scss'],
 })
 export class AgentAuthorizationComponent implements OnInit {
@@ -58,6 +20,7 @@ export class AgentAuthorizationComponent implements OnInit {
   grantLifetimeDays?: number;
   loading = true;
   busy = false;
+  logoFailed = false;
   error = 'It may have expired or already been used.';
 
   constructor(
@@ -65,6 +28,38 @@ export class AgentAuthorizationComponent implements OnInit {
     private readonly api: PortfolioApiService,
     private readonly events: ProductEventsService
   ) {}
+
+  get displayName(): string {
+    return this.request ? agentDisplayName(this.request) : 'Unknown client';
+  }
+
+  get verified(): boolean {
+    return this.request ? isVerifiedAgentClient(this.request) : false;
+  }
+
+  get verifiedHostLabel(): string | null {
+    const host = this.request?.clientHost?.trim();
+    return host || null;
+  }
+
+  get logoUrl(): string | null {
+    const value = this.request?.logoUri;
+    return isHttpsUri(value) ? value.trim() : null;
+  }
+
+  get clientLink(): string | null {
+    const value = this.request?.clientUri;
+    return isHttpsUri(value) ? value.trim() : null;
+  }
+
+  get loopback(): boolean {
+    return this.request?.loopbackRedirect === true;
+  }
+
+  get redirectHost(): string | null {
+    const host = this.request?.redirectHost?.trim();
+    return host || null;
+  }
 
   async ngOnInit(): Promise<void> {
     const id = this.route.snapshot.queryParamMap.get('transaction');
@@ -87,12 +82,17 @@ export class AgentAuthorizationComponent implements OnInit {
       }
       this.request = request;
       this.grantLifetimeDays = config.grantLifetimeDays;
+      this.logoFailed = false;
     } catch {
       this.request = undefined;
       this.grantLifetimeDays = undefined;
     } finally {
       this.loading = false;
     }
+  }
+
+  onLogoError(): void {
+    this.logoFailed = true;
   }
 
   scopeLabel(scope: string): string {
