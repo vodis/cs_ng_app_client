@@ -9,7 +9,7 @@
       (window:resize)="onResize($event)"
       *ngIf="!isMobileView">
       <app-sidebar></app-sidebar>
-      <div #contentRouter class="main-layout__content_router">
+      <div class="main-layout__content_router">
         <ng-container *ngTemplateOutlet="content"></ng-container>
       </div>
     </div>

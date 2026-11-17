@@ -1,13 +1,4 @@
-import {
-  AfterViewInit,
-  Component,
-  ElementRef,
-  HostListener,
-  NgZone,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-} from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { isAuthShellRoute } from '@core/routing/auth-shell.routes';
@@ -18,21 +9,14 @@ import { isAuthShellRoute } from '@core/routing/auth-shell.routes';
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss'],
 })
-export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('contentRouter', { read: ElementRef })
-  private contentRouter?: ElementRef<HTMLElement>;
-
+export class LayoutComponent implements OnInit, OnDestroy {
   public currentWidth = window.innerWidth;
   public isMobileView = false;
   public hideShell = isAuthShellRoute(window.location.pathname);
 
-  private resizeObserver?: ResizeObserver;
   private routerSubscription?: Subscription;
 
-  constructor(
-    private readonly router: Router,
-    private readonly ngZone: NgZone
-  ) {}
+  constructor(private readonly router: Router) {}
 
   public ngOnInit(): void {
     this.isMobileView = this.currentWidth <= 768;
@@ -44,19 +28,7 @@ export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
       });
   }
 
-  public ngAfterViewInit(): void {
-    if (!this.contentRouter || typeof ResizeObserver === 'undefined') {
-      return;
-    }
-
-    this.resizeObserver = new ResizeObserver(() => {
-      this.ngZone.run(() => undefined);
-    });
-    this.resizeObserver.observe(this.contentRouter.nativeElement);
-  }
-
   public ngOnDestroy(): void {
-    this.resizeObserver?.disconnect();
     this.routerSubscription?.unsubscribe();
   }
 
