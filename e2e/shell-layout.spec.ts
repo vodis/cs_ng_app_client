@@ -8,7 +8,6 @@ import {
   SHELL_RAIL_WIDTH_PX,
   waitForStaticVerticalDivider,
 } from './helpers/shell-layout';
-import { useGuestSession } from './utils/auth-fixtures';
 
 test.describe('Shell layout (desktop)', () => {
   test.beforeEach(async ({ page }) => {
@@ -141,9 +140,7 @@ test.describe('Mobile shell header', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test.beforeEach(async ({ page }) => {
-    await useGuestSession(page);
-    await page.goto('/');
-    await expect(page.locator('app-header')).toBeVisible({ timeout: 30_000 });
+    await gotoExchangePage(page);
   });
 
   test('header height matches design system (64px)', async ({ page }) => {
@@ -151,5 +148,90 @@ test.describe('Mobile shell header', () => {
 
     expect(header.height).toBeGreaterThanOrEqual(SHELL_HEADER_HEIGHT_PX - 1);
     expect(header.height).toBeLessThanOrEqual(SHELL_HEADER_HEIGHT_PX + 1);
+  });
+});
+
+test.describe('Mobile floating navigation', () => {
+  test.use({ viewport: { width: 390, height: 360 } });
+
+  test.beforeEach(async ({ page }) => {
+    await gotoExchangePage(page);
+  });
+
+  test('More panel stays scrollable on short landscape viewports', async ({
+    page,
+  }) => {
+    const menuButton = page.locator('app-header .header__menu-button');
+    await expect(menuButton).toBeVisible();
+    await expect(page.locator('.floating-trigger')).toHaveCount(0);
+
+    await menuButton.click();
+    await page.getByRole('button', { name: 'More' }).click();
+
+    const viewport = page.locator('.floating-nav__viewport');
+    await expect(viewport).toBeVisible();
+
+    const overflowY = await viewport.evaluate(
+      el => getComputedStyle(el).overflowY
+    );
+    expect(overflowY).toBe('auto');
+
+    await expect(page.getByRole('link', { name: 'Docs' })).toBeAttached();
+
+    await page.getByRole('link', { name: 'Docs' }).evaluate(el => {
+      (el as HTMLElement).scrollIntoView({ block: 'nearest' });
+    });
+    await expect(page.getByRole('link', { name: 'Docs' })).toBeVisible();
+  });
+
+  test('inactive level is removed from keyboard tab order', async ({
+    page,
+  }) => {
+    await page.locator('app-header .header__menu-button').click();
+
+    const moreLevel = page.locator('.floating-nav__level--more');
+    await expect(moreLevel).toHaveAttribute('inert', '');
+
+    await page.getByRole('button', { name: 'More' }).click();
+
+    await expect(page.locator('.floating-nav__level--primary')).toHaveAttribute(
+      'inert',
+      ''
+    );
+    await expect(moreLevel).not.toHaveAttribute('inert');
+  });
+
+  test('restores focus to the header menu trigger on Escape', async ({
+    page,
+  }) => {
+    const menuButton = page.locator('app-header .header__menu-button');
+    await menuButton.click();
+    await expect(page.locator('#floatingNav')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('#floatingNav')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
+    await expect(menuButton).toBeFocused();
+  });
+
+  test('restores focus to the header menu trigger on backdrop click', async ({
+    page,
+  }) => {
+    const menuButton = page.locator('app-header .header__menu-button');
+    await menuButton.click();
+    await expect(page.locator('#floatingNav')).toBeVisible();
+
+    // Click the dimmed area below the sticky header and away from the
+    // bottom-right floating panel (viewport is short landscape in this suite).
+    await page.mouse.click(24, SHELL_HEADER_HEIGHT_PX + 24);
+
+    await expect(page.locator('#floatingNav')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
+    await expect(menuButton).toBeFocused();
   });
 });
