@@ -145,7 +145,11 @@ describe('ConnectedWalletBalancesFacade', () => {
   it('keeps returned rows while reporting a partial response', async () => {
     assets.loadAssets.and.returnValue(of([]));
     balances.loadBalancesWithMeta.and.returnValue(
-      of({ balances: [nativeBalance], partial: true })
+      of({
+        balances: [nativeBalance],
+        partial: true,
+        errorMessages: ['The balance provider timed out. Try again shortly.'],
+      })
     );
 
     const result = await firstValueFrom(
@@ -154,6 +158,9 @@ describe('ConnectedWalletBalancesFacade', () => {
 
     expect(result.status).toBe('partial');
     expect(result.rows).toEqual([nativeBalance]);
+    expect(result.errorMessage).toBe(
+      'The balance provider timed out. Try again shortly.'
+    );
   });
 
   it('rejects a balance returned for another network', async () => {

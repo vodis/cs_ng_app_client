@@ -38,6 +38,7 @@ export type WalletBalancesRequest = {
 export type WalletBalancesResult = {
   balances: WalletBalance[];
   partial: boolean;
+  errorMessages?: string[];
 };
 
 type WalletBalancesResponse = {
@@ -95,8 +96,30 @@ export class WalletBalancesService {
       map(response => ({
         balances: this.parseBalances(response.data),
         partial: this.parsePartial(response.meta),
+        errorMessages: this.parseIssueMessages(response.meta),
       }))
     );
+  }
+
+  private parseIssueMessages(value: unknown): string[] {
+    if (!this.isRecord(value) || !Array.isArray(value['issues'])) return [];
+    const messages: Record<string, string> = {
+      RPC_RATE_LIMITED:
+        'The balance provider is rate limiting requests. Try again shortly.',
+      RPC_TIMEOUT: 'The balance provider timed out. Try again shortly.',
+      RPC_NOT_CONFIGURED:
+        'Balance access is not configured for one or more networks.',
+      RPC_UNAVAILABLE: 'The balance provider is temporarily unavailable.',
+      BALANCE_READ_FAILED:
+        'Some token balances could not be read from the provider.',
+    };
+    const details = value['issues'].flatMap((issue: unknown) => {
+      if (!this.isRecord(issue) || typeof issue['code'] !== 'string') return [];
+      return Object.prototype.hasOwnProperty.call(messages, issue['code'])
+        ? [messages[issue['code']]]
+        : [];
+    });
+    return [...new Set(details)];
   }
 
   private parsePartial(value: unknown): boolean {

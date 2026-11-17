@@ -146,7 +146,11 @@ export class ConnectedWalletBalancesFacade {
           network: request.network,
           rows: [...byAsset.values()],
           errorMessage: partial
-            ? 'Some balances could not be loaded.'
+            ? [
+                ...new Set(
+                  resultSets.flatMap(result => result.errorMessages ?? [])
+                ),
+              ].join(' ') || 'Some balances could not be loaded.'
             : undefined,
         };
       }),
