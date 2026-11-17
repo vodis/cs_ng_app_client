@@ -15,6 +15,8 @@ import { of } from 'rxjs';
 
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
+import { BehaviorSubject } from 'rxjs';
 import { MobileBottomNavComponent } from './mobile-bottom-nav.component';
 
 describe('MobileBottomNavComponent', () => {
@@ -22,6 +24,7 @@ describe('MobileBottomNavComponent', () => {
   let fixture: ComponentFixture<MobileBottomNavComponent>;
   let router: Router;
   let authSession: jasmine.SpyObj<AuthSessionService>;
+  let walletsOpenRequested: BehaviorSubject<boolean>;
 
   beforeEach(() => {
     authSession = jasmine.createSpyObj<AuthSessionService>(
@@ -29,6 +32,7 @@ describe('MobileBottomNavComponent', () => {
       ['logout']
     );
     authSession.logout.and.resolveTo();
+    walletsOpenRequested = new BehaviorSubject(false);
 
     TestBed.configureTestingModule({
       imports: [
@@ -60,6 +64,12 @@ describe('MobileBottomNavComponent', () => {
           },
         },
         { provide: AuthSessionService, useValue: authSession },
+        {
+          provide: WalletsService,
+          useValue: {
+            openRequested: walletsOpenRequested,
+          },
+        },
       ],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
@@ -222,6 +232,44 @@ describe('MobileBottomNavComponent', () => {
     } as unknown as TouchEvent);
 
     expect(component.menuOpen).toBeFalse();
+  });
+
+  it('closes navigation when the wallet dialog is requested', () => {
+    component.toggleMenu();
+    fixture.detectChanges();
+    expect(component.menuOpen).toBeTrue();
+
+    walletsOpenRequested.next(true);
+    fixture.detectChanges();
+
+    expect(component.menuOpen).toBeFalse();
+  });
+
+  it('suspends Tab trapping while focus is inside a foreground dialog', () => {
+    component.toggleMenu();
+    fixture.detectChanges();
+
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    const dialogButton = document.createElement('button');
+    dialogButton.type = 'button';
+    dialogButton.textContent = 'Dialog action';
+    dialog.appendChild(dialogButton);
+    document.body.appendChild(dialog);
+    dialogButton.focus();
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      bubbles: true,
+      cancelable: true,
+    });
+    const preventDefault = spyOn(event, 'preventDefault');
+    component.onDocumentKeydown(event);
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(dialogButton);
+
+    dialog.remove();
   });
 
   it('keeps visible header controls in the Tab focus cycle', fakeAsync(() => {

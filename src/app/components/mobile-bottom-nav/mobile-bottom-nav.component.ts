@@ -24,6 +24,7 @@ import {
   localizedPath,
   stripLocalePrefix,
 } from '@core/routing/localized-routing.service';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { environment } from '../../../environments/environment';
 import { MobileNavMenuService } from './mobile-nav-menu.service';
 
@@ -105,6 +106,7 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
 
   private routerSubscription?: Subscription;
   private menuSubscription?: Subscription;
+  private walletsOpenSubscription?: Subscription;
   private previousBodyOverflow = '';
   private touchStartX: number | null = null;
   private touchStartY: number | null = null;
@@ -115,7 +117,8 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
     private readonly localizedRouting: LocalizedRoutingService,
     private readonly mobileNavMenu: MobileNavMenuService,
     private readonly router: Router,
-    private readonly translations: CsTranslationsService
+    private readonly translations: CsTranslationsService,
+    private readonly walletsService: WalletsService
   ) {}
 
   public ngOnInit(): void {
@@ -129,6 +132,16 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Wallet dialog is a foreground layer; close nav so its document Tab trap
+    // cannot yank focus back to header controls behind the dialog.
+    this.walletsOpenSubscription = this.walletsService.openRequested
+      .pipe(filter(openRequested => openRequested))
+      .subscribe(() => {
+        if (this.menuOpen) {
+          this.closeMenu();
+        }
+      });
+
     this.routerSubscription = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => this.closeMenu());
@@ -137,6 +150,7 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
   public ngOnDestroy(): void {
     this.routerSubscription?.unsubscribe();
     this.menuSubscription?.unsubscribe();
+    this.walletsOpenSubscription?.unsubscribe();
     this.syncBodyScrollLock(false);
     this.mobileNavMenu.close();
   }
@@ -228,6 +242,12 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const active = this.document.activeElement as HTMLElement | null;
+    // Suspend while a foreground dialog (wallet drawer, side modal) owns focus.
+    if (active && this.isForegroundDialogFocus(active)) {
+      return;
+    }
+
     const focusable = this.focusScopeElements();
     if (focusable.length === 0) {
       return;
@@ -235,7 +255,6 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
 
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
-    const active = this.document.activeElement as HTMLElement | null;
     const index = active ? focusable.indexOf(active) : -1;
 
     // Keep Tab inside panel + visible header controls (close / wallets / account).
@@ -313,6 +332,29 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
       // Open into the panel; Shift+Tab still reaches header controls via focus scope.
       this.focusableElements(root)[0]?.focus();
     });
+  }
+
+  private isForegroundDialogFocus(active: HTMLElement): boolean {
+    const dialog = active.closest('[role="dialog"], [aria-modal="true"]');
+    if (!(dialog instanceof HTMLElement)) {
+      return false;
+    }
+
+    const panel = this.slideNav?.nativeElement;
+    const headerControls = this.document.querySelector(
+      'app-header .header__content_connect'
+    );
+    if (panel?.contains(dialog)) {
+      return false;
+    }
+    if (
+      headerControls instanceof HTMLElement &&
+      headerControls.contains(dialog)
+    ) {
+      return false;
+    }
+
+    return true;
   }
 
   /**
