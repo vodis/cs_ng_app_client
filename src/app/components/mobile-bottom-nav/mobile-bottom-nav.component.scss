@@ -1,11 +1,11 @@
 :host {
-  --fn-bg: #111617;
-  --fn-border: #343b3d;
-  --fn-text: #f4f4f4;
-  --fn-muted: #9ba1a3;
-  --fn-accent: var(--primary-text-color);
-  --fn-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --fn-duration: 230ms;
+  --sn-bg: var(--main-bg-color, #171c1f);
+  --sn-text: var(--main-text-color, #fff);
+  --sn-muted: var(--secondary-text-color, #767676);
+  --sn-accent: var(--primary-text-color, #fe6c00);
+  --sn-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --sn-duration: 300ms;
+  --sn-width: min(85vw, 24rem);
 
   display: block;
   pointer-events: none;
@@ -14,12 +14,31 @@
 .nav-overlay {
   position: fixed;
   z-index: 90;
-  background: rgb(0 0 0 / 58%);
   inset: 0;
+  background: rgb(0 0 0 / 55%);
   opacity: 0;
   pointer-events: none;
   transition:
-    opacity var(--fn-duration) var(--fn-ease),
-    visibility var(--fn-duration) var(--fn-ease);
+    opacity var(--sn-duration) var(--sn-ease),
+    visibility var(--sn-duration) var(--sn-ease);
   visibility: hidden;
+}
+
+:host.menu-open {
+  .nav-overlay {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    --sn-duration: 1ms;
+    --sn-ease: linear;
+  }
+
+  .nav-overlay {
+    transition: opacity 120ms linear, visibility 120ms linear;
+  }
 }

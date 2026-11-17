@@ -69,6 +69,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   public openWallets(): void {
+    // Close slide-in nav first so its document Tab trap cannot fight the
+    // wallet dialog for focus.
+    this.mobileNavMenu.close();
     this.walletsService.requestOpen();
   }
 

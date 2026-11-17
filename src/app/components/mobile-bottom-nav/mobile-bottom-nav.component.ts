@@ -3,36 +3,34 @@ import {
   ElementRef,
   HostBinding,
   HostListener,
+  Inject,
   OnDestroy,
   OnInit,
   ViewChild,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { NavigationEnd, Router } from '@angular/router';
-import { filter, Subscription } from 'rxjs';
+import { filter, firstValueFrom, Subscription } from 'rxjs';
 import {
+  CsTranslationsService,
+  type CsLanguageCode,
+} from '@vodis/cs-foundation/angular';
+import { AuthSessionService } from '@core/auth/auth-session.service';
+import {
+  LOCALE_SLUGS,
+  LocaleSlug,
   LocalizedRoutingService,
+  localeSlugToLanguage,
+  localizedPath,
   stripLocalePrefix,
 } from '@core/routing/localized-routing.service';
+import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { environment } from '../../../environments/environment';
 import { MobileNavMenuService } from './mobile-nav-menu.service';
-
-export type MobileNavIcon =
-  | 'exchange'
-  | 'portfolio'
-  | 'profile'
-  | 'more'
-  | 'back'
-  | 'grow'
-  | 'bots'
-  | 'history'
-  | 'settings'
-  | 'external'
-  | 'docs';
 
 export type MobileNavItem = {
   name: string;
   fallback: string;
-  icon: MobileNavIcon;
   url?: string;
   href?: string;
   exact?: boolean;
@@ -49,113 +47,100 @@ export type MobileNavItem = {
 })
 export class MobileBottomNavComponent implements OnInit, OnDestroy {
   public menuOpen = false;
-  public moreOpen = false;
 
-  @ViewChild('floatingNav')
-  private floatingNav?: ElementRef<HTMLElement>;
+  public readonly locales = LOCALE_SLUGS;
 
-  @HostBinding('class.menu-open')
-  get hostMenuOpen(): boolean {
-    return this.menuOpen;
-  }
-
-  @HostBinding('class.more-open')
-  get hostMoreOpen(): boolean {
-    return this.moreOpen;
-  }
-
+  /** Flat destinations — replaces the old Exchange / Profile / More popup. */
   public readonly links: MobileNavItem[] = [
     {
       name: 'Texts.sidebar-swap',
       fallback: 'Exchange',
       url: '/',
-      icon: 'exchange',
       exact: true,
     },
     {
       name: 'Texts.sidebar-profile',
       fallback: 'Profile',
       url: '/profile',
-      icon: 'profile',
       exact: true,
-    },
-    {
-      name: 'Texts.sidebar-more',
-      fallback: 'More',
-      icon: 'more',
-    },
-  ];
-
-  public readonly moreLinks: MobileNavItem[] = [
-    {
-      name: 'Texts.sidebar-farm',
-      fallback: 'Grow',
-      url: '/farm',
-      icon: 'grow',
-    },
-    {
-      name: 'Texts.sidebar-proposals',
-      fallback: 'Bots',
-      url: '/proposals',
-      icon: 'bots',
     },
     {
       name: 'Texts.sidebar-transactions',
       fallback: 'Transactions',
       url: '/transactions',
-      icon: 'history',
     },
     {
       name: 'Texts.sidebar-portfolio',
       fallback: 'Portfolio',
       url: '/portfolio',
-      icon: 'portfolio',
+    },
+    {
+      name: 'Texts.sidebar-farm',
+      fallback: 'Grow',
+      url: '/farm',
+    },
+    {
+      name: 'Texts.sidebar-proposals',
+      fallback: 'Bots',
+      url: '/proposals',
     },
     {
       name: 'Texts.sidebar-website',
       fallback: 'Craftscript.com',
       href: environment.origin,
-      icon: 'external',
     },
     {
       name: 'Texts.sidebar-docs',
       fallback: 'Docs',
       href: 'https://docs.craftscript.com/',
-      icon: 'docs',
     },
   ];
 
-  private readonly moreSectionUrls = [
-    '/farm',
-    '/proposals',
-    '/transactions',
-    '/portfolio',
-  ];
+  @ViewChild('slideNav')
+  private slideNav?: ElementRef<HTMLElement>;
+
+  @HostBinding('class.menu-open')
+  get hostMenuOpen(): boolean {
+    return this.menuOpen;
+  }
 
   private routerSubscription?: Subscription;
   private menuSubscription?: Subscription;
+  private walletsOpenSubscription?: Subscription;
+  private previousBodyOverflow = '';
+  private touchStartX: number | null = null;
+  private touchStartY: number | null = null;
 
   constructor(
+    @Inject(DOCUMENT) private readonly document: Document,
+    private readonly authSession: AuthSessionService,
     private readonly localizedRouting: LocalizedRoutingService,
     private readonly mobileNavMenu: MobileNavMenuService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly translations: CsTranslationsService,
+    private readonly walletsService: WalletsService
   ) {}
 
   public ngOnInit(): void {
     this.menuSubscription = this.mobileNavMenu.open$.subscribe(open => {
       const wasOpen = this.menuOpen;
       this.menuOpen = open;
+      this.syncBodyScrollLock(open);
 
-      if (!open) {
-        this.moreOpen = false;
-        return;
-      }
-
-      if (!wasOpen) {
-        this.moreOpen = false;
-        this.focusActiveLevel();
+      if (open && !wasOpen) {
+        this.focusFirstItem();
       }
     });
+
+    // Wallet dialog is a foreground layer; close nav so its document Tab trap
+    // cannot yank focus back to header controls behind the dialog.
+    this.walletsOpenSubscription = this.walletsService.openRequested
+      .pipe(filter(openRequested => openRequested))
+      .subscribe(() => {
+        if (this.menuOpen) {
+          this.closeMenu();
+        }
+      });
 
     this.routerSubscription = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
@@ -165,6 +150,8 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
   public ngOnDestroy(): void {
     this.routerSubscription?.unsubscribe();
     this.menuSubscription?.unsubscribe();
+    this.walletsOpenSubscription?.unsubscribe();
+    this.syncBodyScrollLock(false);
     this.mobileNavMenu.close();
   }
 
@@ -173,11 +160,32 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
   }
 
   public stagger(index: number): string {
-    return `${index * 30}ms`;
+    return `${40 + index * 35}ms`;
   }
 
   public path(url: string): string {
     return this.localizedRouting.path(url);
+  }
+
+  public currentLocale(): LocaleSlug {
+    return this.localizedRouting.currentLocale();
+  }
+
+  public localeLabel(locale: LocaleSlug): string {
+    return locale.toUpperCase();
+  }
+
+  public isActiveLink(item: MobileNavItem): boolean {
+    if (!item.url) {
+      return false;
+    }
+
+    const path = stripLocalePrefix(this.router.url).split(/[?#]/)[0] || '/';
+    if (item.exact) {
+      return path === item.url;
+    }
+
+    return path === item.url || path.startsWith(`${item.url}/`);
   }
 
   public toggleMenu(): void {
@@ -188,37 +196,33 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
     this.mobileNavMenu.close(restoreTriggerFocus);
   }
 
-  public openMore(): void {
-    this.mobileNavMenu.open();
-    this.moreOpen = true;
-    this.focusActiveLevel();
-  }
-
-  public closeMore(): void {
-    this.moreOpen = false;
-    this.focusActiveLevel();
-  }
-
-  public onRailClick(): void {
-    if (this.moreOpen) {
-      this.closeMore();
+  public async selectLocale(locale: LocaleSlug): Promise<void> {
+    if (locale === this.currentLocale()) {
       return;
     }
 
-    this.closeMenu(true);
-  }
+    const language = localeSlugToLanguage(locale) as CsLanguageCode;
+    await firstValueFrom(this.translations.loadLanguage(language)).catch(
+      () => undefined
+    );
 
-  public isMoreActive(): boolean {
-    if (this.moreOpen) {
-      return true;
+    try {
+      window.localStorage.setItem('active-language', language);
+    } catch {
+      // Ignore storage failures (private mode).
     }
 
-    const path = stripLocalePrefix(this.router.url).split(/[?#]/)[0];
-    return this.moreSectionUrls.includes(path);
+    const unprefixed = stripLocalePrefix(this.router.url);
+    await this.router.navigateByUrl(localizedPath(unprefixed, locale));
+  }
+
+  public async logout(): Promise<void> {
+    this.closeMenu();
+    await this.authSession.logout();
   }
 
   public internalDestinations(): string[] {
-    return [...this.links, ...this.moreLinks]
+    return this.links
       .map(item => item.url)
       .filter((url): url is string => !!url);
   }
@@ -229,28 +233,165 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.moreOpen) {
-      this.closeMore();
-      return;
-    }
-
     this.closeMenu(true);
   }
 
-  private focusActiveLevel(): void {
+  @HostListener('document:keydown', ['$event'])
+  public onDocumentKeydown(event: KeyboardEvent): void {
+    if (!this.menuOpen || event.key !== 'Tab') {
+      return;
+    }
+
+    const active = this.document.activeElement as HTMLElement | null;
+    // Suspend while a foreground dialog (wallet drawer, side modal) owns focus.
+    if (active && this.isForegroundDialogFocus(active)) {
+      return;
+    }
+
+    const focusable = this.focusScopeElements();
+    if (focusable.length === 0) {
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const index = active ? focusable.indexOf(active) : -1;
+
+    // Keep Tab inside panel + visible header controls (close / wallets / account).
+    if (index === -1) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+      return;
+    }
+
+    if (event.shiftKey && index === 0) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+
+    if (!event.shiftKey && index === focusable.length - 1) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  public onTouchStart(event: TouchEvent): void {
+    if (!this.menuOpen || event.touches.length !== 1) {
+      return;
+    }
+
+    this.touchStartX = event.touches[0].clientX;
+    this.touchStartY = event.touches[0].clientY;
+  }
+
+  public onTouchEnd(event: TouchEvent): void {
+    if (
+      !this.menuOpen ||
+      this.touchStartX === null ||
+      this.touchStartY === null ||
+      event.changedTouches.length !== 1
+    ) {
+      this.touchStartX = null;
+      this.touchStartY = null;
+      return;
+    }
+
+    const endX = event.changedTouches[0].clientX;
+    const endY = event.changedTouches[0].clientY;
+    const deltaX = endX - this.touchStartX;
+    const deltaY = Math.abs(endY - this.touchStartY);
+    this.touchStartX = null;
+    this.touchStartY = null;
+
+    // Swipe right to close (panel exits to the right).
+    if (deltaX > 72 && deltaX > deltaY * 1.4) {
+      this.closeMenu(true);
+    }
+  }
+
+  private syncBodyScrollLock(locked: boolean): void {
+    const body = this.document.body;
+    if (locked) {
+      this.previousBodyOverflow = body.style.overflow;
+      body.style.overflow = 'hidden';
+      return;
+    }
+
+    body.style.overflow = this.previousBodyOverflow;
+    this.previousBodyOverflow = '';
+  }
+
+  private focusFirstItem(): void {
     queueMicrotask(() => {
-      const root = this.floatingNav?.nativeElement;
+      const root = this.slideNav?.nativeElement;
       if (!root) {
         return;
       }
 
-      const level = this.moreOpen
-        ? '.floating-nav__level--more'
-        : '.floating-nav__level--primary';
-      const target = root.querySelector(
-        `${level} a, ${level} button`
-      ) as HTMLElement | null;
-      target?.focus();
+      // Open into the panel; Shift+Tab still reaches header controls via focus scope.
+      this.focusableElements(root)[0]?.focus();
     });
+  }
+
+  private isForegroundDialogFocus(active: HTMLElement): boolean {
+    const dialog = active.closest('[role="dialog"], [aria-modal="true"]');
+    if (!(dialog instanceof HTMLElement)) {
+      return false;
+    }
+
+    const panel = this.slideNav?.nativeElement;
+    const headerControls = this.document.querySelector(
+      'app-header .header__content_connect'
+    );
+    if (panel?.contains(dialog)) {
+      return false;
+    }
+    if (
+      headerControls instanceof HTMLElement &&
+      headerControls.contains(dialog)
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Visible mobile chrome while the drawer is open: header actions stay above
+   * the panel and must remain in the Tab cycle with the panel content.
+   */
+  private focusScopeElements(): HTMLElement[] {
+    const headerControls = this.document.querySelector(
+      'app-header .header__content_connect'
+    );
+    const panel = this.slideNav?.nativeElement;
+    const nodes: HTMLElement[] = [];
+
+    if (headerControls instanceof HTMLElement) {
+      nodes.push(...this.focusableElements(headerControls));
+    }
+    if (panel) {
+      nodes.push(...this.focusableElements(panel));
+    }
+
+    return Array.from(new Set(nodes)).sort((left, right) => {
+      const position = left.compareDocumentPosition(right);
+      if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
+        return -1;
+      }
+      if (position & Node.DOCUMENT_POSITION_PRECEDING) {
+        return 1;
+      }
+      return 0;
+    });
+  }
+
+  private focusableElements(root: HTMLElement): HTMLElement[] {
+    return Array.from(
+      root.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter(el => !el.hasAttribute('disabled') && el.tabIndex !== -1);
   }
 }

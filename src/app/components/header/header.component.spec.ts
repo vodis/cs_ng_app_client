@@ -135,6 +135,17 @@ describe('HeaderComponent', () => {
     expect(walletsService.requestOpen).toHaveBeenCalledOnceWith();
   });
 
+  it('closes mobile navigation before opening wallets', () => {
+    setup(session);
+    mobileNavMenu.open();
+    expect(mobileNavMenu.isOpen).toBeTrue();
+
+    component.openWallets();
+
+    expect(mobileNavMenu.isOpen).toBeFalse();
+    expect(walletsService.requestOpen).toHaveBeenCalledOnceWith();
+  });
+
   it('shows account icon when logged in', () => {
     setup(session);
 

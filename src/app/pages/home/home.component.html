@@ -711,6 +711,7 @@
       [selectionBusy]="tokenSelectionBusy"
       [selectionError]="tokenSelectionError"
       [balancesIncomplete]="linkedBalances.incomplete"
+      [balanceErrorMessage]="linkedBalances.errorMessage"
       (fundingSelected)="handleFundingSelected($event)"
       (retryRequested)="refreshSelectorBalances()"
       [walletTokensLoading]="linkedBalances.loading"

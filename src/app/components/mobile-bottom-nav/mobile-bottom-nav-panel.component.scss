@@ -1,188 +1,188 @@
-.floating-nav__chevron {
-  color: #6a7072;
-  font-size: 1.85rem;
-  font-weight: 300;
-  line-height: 1;
-}
+/* Full-height slide-in panel (craftscript.com pattern, dark app chrome).
+ * Optional pale site look: add .slide-nav--pale (confirm with design). */
 
-.floating-nav {
+.slide-nav {
   position: fixed;
-  z-index: 105;
-  right: 8px;
-  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
-  display: grid;
-  overflow: hidden;
-  width: min(17.5rem, calc(100vw - 16px));
-  max-height: calc(100dvh - 8.5rem - env(safe-area-inset-bottom, 0px));
-  border: 1px solid var(--fn-border);
-  border-radius: 20px;
-  background: var(--fn-bg);
-  box-shadow: none;
-  grid-template-columns: minmax(0, 1fr) 1.75rem;
-  grid-template-rows: minmax(0, 1fr);
+  z-index: 95;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  width: var(--sn-width);
+  max-width: 100vw;
+  box-sizing: border-box;
+  flex-direction: column;
+  padding:
+    calc(var(--shell-header-height, 4rem) + 1.25rem)
+    1.5rem
+    calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  background: var(--sn-bg);
+  color: var(--sn-text);
   opacity: 0;
   pointer-events: none;
-  transform: translateX(20px);
-  transform-origin: right bottom;
+  transform: translateX(100%);
   transition:
-    transform var(--fn-duration) var(--fn-ease),
-    opacity var(--fn-duration) var(--fn-ease),
-    visibility var(--fn-duration) var(--fn-ease);
+    transform var(--sn-duration) var(--sn-ease),
+    opacity var(--sn-duration) var(--sn-ease),
+    visibility var(--sn-duration) var(--sn-ease);
   visibility: hidden;
+  will-change: transform;
 }
 
-.floating-nav__viewport {
-  overflow: hidden auto;
-  min-width: 0;
+/* Design alternative from craftscript.com — not default for the dark app. */
+.slide-nav--pale {
+  background: linear-gradient(to right, var(--gray-30, #cfcbd2), #fff);
+  color: var(--gray-100, #080708);
+}
+
+.slide-nav__viewport {
+  flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
 
-.floating-nav__rail {
-  display: grid;
-  padding: 0;
-  border: 0;
-  border-left: 1px solid rgb(255 255 255 / 12%);
-  appearance: none;
-  background: none;
-  cursor: pointer;
-  place-items: center;
-}
-
-.floating-nav__track {
+.slide-nav__links {
   display: flex;
-  width: 200%;
-  align-items: flex-start;
-  transform: translateX(0);
-  transition: transform var(--fn-duration) var(--fn-ease);
-}
-
-.floating-nav__level {
-  width: 50%;
-  flex: 0 0 50%;
-  padding: 8px 0;
-}
-
-.floating-nav__level--more {
-  overflow: hidden;
-  max-height: 0;
+  margin: 0;
   padding: 0;
+  flex-direction: column;
+  gap: 0.85rem;
+  list-style: none;
 }
 
-.nav-item {
+.slide-nav__link {
   position: relative;
-  display: grid;
-  width: 100%;
-  min-height: 52px;
-  align-items: center;
-  padding: 0 12px 0 16px;
-  border: 0;
-  background: transparent;
-  color: var(--fn-text);
-  cursor: pointer;
-  font: inherit;
-  gap: 8px;
-  grid-template-columns: 24px 1fr;
+  display: block;
+  padding: 0.35rem 0 0.35rem 0.85rem;
+  color: inherit;
+  font-size: clamp(1.15rem, 4.2vw, 1.35rem);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
   opacity: 0;
-  text-align: left;
   text-decoration: none;
-  transform: translateX(16px);
+  text-transform: uppercase;
+  transform: translateX(1rem);
   transition:
-    opacity 200ms var(--fn-ease),
-    transform var(--fn-duration) var(--fn-ease),
+    opacity 220ms var(--sn-ease),
+    transform var(--sn-duration) var(--sn-ease),
     color 160ms ease;
 
   &:focus-visible {
-    outline: 2px solid var(--fn-accent);
-    outline-offset: -2px;
+    outline: 2px solid var(--sn-accent);
+    outline-offset: 2px;
   }
 
   &.active {
-    color: var(--fn-accent);
+    color: var(--sn-accent);
 
     &::before {
       position: absolute;
-      top: 10px;
-      bottom: 10px;
+      top: 0.2rem;
+      bottom: 0.2rem;
       left: 0;
       width: 2px;
-      background: var(--fn-accent);
+      background: var(--sn-accent);
       content: '';
     }
   }
 }
 
-.nav-item--external {
-  grid-template-columns: 24px 1fr 16px;
+.slide-nav__label {
+  display: inline-block;
 }
 
-.nav-item--back {
-  color: var(--fn-muted);
+.slide-nav__footer {
+  display: flex;
+  margin-top: 1.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
 }
 
-.nav-icon {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
+.slide-nav__languages {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
 
-  svg {
-    width: 20px;
-    height: 20px;
-    fill: none;
-    stroke: currentcolor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 1.7;
+.slide-nav__locale,
+.slide-nav__logout {
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  opacity: 0;
+  text-transform: uppercase;
+  transform: translateX(1rem);
+  transition:
+    opacity 220ms var(--sn-ease),
+    transform var(--sn-duration) var(--sn-ease),
+    color 160ms ease;
+
+  &:focus-visible {
+    outline: 2px solid var(--sn-accent);
+    outline-offset: 2px;
   }
 }
 
-.nav-label {
-  font-size: 15px;
+.slide-nav__locale {
+  font-size: 0.95rem;
+  font-weight: 500;
+
+  &.active {
+    color: var(--sn-accent);
+  }
 }
 
-.nav-arrow {
-  color: var(--fn-muted);
-  font-size: 14px;
+.slide-nav__logout {
+  color: var(--sn-muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0.02em;
 }
 
 :host.menu-open {
-  .nav-overlay,
-  .floating-nav {
+  .slide-nav {
     opacity: 1;
     pointer-events: auto;
+    transform: translateX(0);
     visibility: visible;
   }
 
-  .floating-nav {
-    transform: translateX(0);
-  }
-
-  .floating-nav__level--primary .nav-item {
+  .slide-nav__link,
+  .slide-nav__locale,
+  .slide-nav__logout {
     opacity: 1;
     transform: translateX(0);
   }
+}
 
-  &.more-open {
-    .floating-nav__track {
-      transform: translateX(-50%);
-    }
+@media (prefers-reduced-motion: reduce) {
+  .slide-nav {
+    transform: none;
+    transition:
+      opacity 120ms linear,
+      visibility 120ms linear;
+  }
 
-    .floating-nav__level--primary {
-      overflow: hidden;
-      max-height: 0;
-      padding: 0;
-    }
+  .slide-nav__link,
+  .slide-nav__locale,
+  .slide-nav__logout {
+    transform: none;
+    transition: opacity 120ms linear, color 120ms linear;
+  }
 
-    .floating-nav__level--more {
-      max-height: none;
-      padding: 8px 0;
-    }
-
-    .floating-nav__level--more .nav-item {
-      opacity: 1;
-      transform: translateX(0);
-    }
+  :host.menu-open .slide-nav {
+    transform: none;
   }
 }
