@@ -20,9 +20,19 @@ import type {
   PortfolioSnapshot,
 } from '../../portfolio/portfolio.models';
 import {
+  ACTIVITY_MONTH_WEEKDAY_LABELS,
+  activityMonthBounds,
+  activityYearMonthFromIso,
+  buildActivityHeatmapForMonth,
+  clampActivityYearMonth,
+  compareActivityYearMonth,
+  formatActivityDayDetail,
   formatActivityDayTooltip,
+  formatActivityMonthTitle,
+  shiftActivityYearMonth,
   type ActivityHeatmapDay,
   type ActivityHeatmapWeek,
+  type ActivityYearMonth,
 } from '@shared/utils/activity-heatmap.utils';
 import { EXCHANGE_TOKEN_ICON_URLS } from '@shared/utils/token-avatar.utils';
 import { isNearWalletAddress } from '@shared/utils/network.utils';
@@ -119,8 +129,16 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   private addFundsTrigger: HTMLElement | null = null;
 
   public readonly requiredSwapCount = REQUIRED_SWAP_COUNT;
+  public readonly monthWeekdayLabels = ACTIVITY_MONTH_WEEKDAY_LABELS;
+  /** How many years the desktop vertical carousel shows at once. */
+  public readonly heatmapYearWindowSize = 3;
   public activity: ProfileActivitySnapshot;
+  public activityMonth: ActivityYearMonth;
+  public monthWeeks: readonly ActivityHeatmapWeek[] = [];
+  public selectedActivityDay: ActivityHeatmapDay | null = null;
   public onboarding: ProfileOnboardingViewModel;
+  /** Newest-first index of the first visible year in the carousel. */
+  public heatmapYearWindowStart = 0;
 
   private subscription?: Subscription;
   private copiedWalletClearTimer: ReturnType<typeof setTimeout> | null = null;
@@ -136,6 +154,8 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly activitySource: ProfileActivitySource
   ) {
     this.activity = this.activitySource.snapshot();
+    this.activityMonth = activityYearMonthFromIso(this.activity.latestIsoDate);
+    this.refreshMonthHeatmap();
     this.onboarding = this.buildOnboardingViewModel();
   }
 
@@ -586,13 +606,129 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return formatActivityDayTooltip(day);
   }
 
+  public heatmapDayDetail(day: ActivityHeatmapDay): string {
+    return formatActivityDayDetail(day);
+  }
+
+  public activityMonthTitle(): string {
+    return formatActivityMonthTitle(this.activityMonth);
+  }
+
+  public canGoPrevActivityMonth(): boolean {
+    return (
+      compareActivityYearMonth(this.activityMonth, this.activityMonthMin()) > 0
+    );
+  }
+
+  public canGoNextActivityMonth(): boolean {
+    return (
+      compareActivityYearMonth(this.activityMonth, this.activityMonthMax()) < 0
+    );
+  }
+
+  public shiftActivityMonth(delta: number): void {
+    if (delta < 0 && !this.canGoPrevActivityMonth()) {
+      return;
+    }
+    if (delta > 0 && !this.canGoNextActivityMonth()) {
+      return;
+    }
+    this.setActivityMonth(shiftActivityYearMonth(this.activityMonth, delta));
+  }
+
   public selectHeatmapYear(year: number): void {
     this.activity = this.activitySource.snapshot(year);
+    const bounds = activityMonthBounds(
+      this.activity.earliestIsoDate,
+      this.activity.latestIsoDate
+    );
+    const preferred: ActivityYearMonth = {
+      year,
+      month:
+        year === bounds.max.year
+          ? bounds.max.month
+          : year === bounds.min.year
+            ? bounds.min.month
+            : 0,
+    };
+    this.setActivityMonth(
+      clampActivityYearMonth(preferred, bounds.min, bounds.max)
+    );
+    this.ensureHeatmapYearVisible(year);
     this.refreshOnboarding();
+  }
+
+  public visibleHeatmapYears(): readonly number[] {
+    return this.activity.years.slice(
+      this.heatmapYearWindowStart,
+      this.heatmapYearWindowStart + this.heatmapYearWindowSize
+    );
+  }
+
+  public canScrollHeatmapYearsNewer(): boolean {
+    return this.heatmapYearWindowStart > 0;
+  }
+
+  public canScrollHeatmapYearsOlder(): boolean {
+    return (
+      this.heatmapYearWindowStart + this.heatmapYearWindowSize <
+      this.activity.years.length
+    );
+  }
+
+  /** direction -1 = newer years, +1 = older years. */
+  public scrollHeatmapYears(direction: -1 | 1): void {
+    const maxStart = Math.max(
+      0,
+      this.activity.years.length - this.heatmapYearWindowSize
+    );
+    this.heatmapYearWindowStart = Math.min(
+      maxStart,
+      Math.max(0, this.heatmapYearWindowStart + direction)
+    );
+  }
+
+  public isHeatmapMonthStart(weekIndex: number): boolean {
+    if (weekIndex <= 0) {
+      return false;
+    }
+    return this.activity.months.some(
+      month => month.weekIndex - 1 === weekIndex
+    );
+  }
+
+  public monthLabelAtWeek(weekIndex: number): string {
+    const month = this.activity.months.find(
+      item => item.weekIndex - 1 === weekIndex
+    );
+    return month?.label ?? '';
+  }
+
+  public selectActivityDay(day: ActivityHeatmapDay): void {
+    if (!day.inRange) {
+      return;
+    }
+    this.selectedActivityDay =
+      this.selectedActivityDay?.isoDate === day.isoDate ? null : day;
   }
 
   public trackByHeatmapYear(_index: number, year: number): number {
     return year;
+  }
+
+  private ensureHeatmapYearVisible(year: number): void {
+    const index = this.activity.years.indexOf(year);
+    if (index < 0) {
+      return;
+    }
+    if (index < this.heatmapYearWindowStart) {
+      this.heatmapYearWindowStart = index;
+      return;
+    }
+    const windowEnd = this.heatmapYearWindowStart + this.heatmapYearWindowSize;
+    if (index >= windowEnd) {
+      this.heatmapYearWindowStart = index - this.heatmapYearWindowSize + 1;
+    }
   }
 
   public trackByHeatmapWeek(index: number, week: ActivityHeatmapWeek): string {
@@ -601,6 +737,75 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public trackByHeatmapDay(_index: number, day: ActivityHeatmapDay): string {
     return day.isoDate;
+  }
+
+  private activityMonthMin(): ActivityYearMonth {
+    return activityMonthBounds(
+      this.activity.earliestIsoDate,
+      this.activity.latestIsoDate
+    ).min;
+  }
+
+  private activityMonthMax(): ActivityYearMonth {
+    return activityMonthBounds(
+      this.activity.earliestIsoDate,
+      this.activity.latestIsoDate
+    ).max;
+  }
+
+  private setActivityMonth(next: ActivityYearMonth): void {
+    const clamped = clampActivityYearMonth(
+      next,
+      this.activityMonthMin(),
+      this.activityMonthMax()
+    );
+    this.activityMonth = clamped;
+    if (clamped.year !== this.activity.selectedYear) {
+      this.activity = this.activitySource.snapshot(clamped.year);
+      this.refreshOnboarding();
+    }
+    this.refreshMonthHeatmap();
+  }
+
+  private refreshMonthHeatmap(): void {
+    const yearSnapshot =
+      this.activityMonth.year === this.activity.selectedYear
+        ? this.activity
+        : this.activitySource.snapshot(this.activityMonth.year);
+    const daysByIso = new Map(
+      yearSnapshot.weeks
+        .flatMap(week => week.days)
+        .filter(day => day.inRange)
+        .map(day => [day.isoDate, day] as const)
+    );
+
+    this.monthWeeks = buildActivityHeatmapForMonth(
+      this.activityMonth,
+      this.activity.earliestIsoDate,
+      this.activity.latestIsoDate,
+      isoDate => {
+        const day = daysByIso.get(isoDate);
+        return day
+          ? {
+              swaps: day.swaps,
+              deposits: day.deposits,
+              volumeUsd: day.volumeUsd,
+            }
+          : { swaps: 0, deposits: 0, volumeUsd: 0 };
+      }
+    );
+
+    if (
+      this.selectedActivityDay &&
+      !this.monthWeeks.some(week =>
+        week.days.some(
+          day =>
+            day.inRange && day.isoDate === this.selectedActivityDay?.isoDate
+        )
+      )
+    ) {
+      this.selectedActivityDay = null;
+    }
   }
 
   public async openAnalyzeAi(): Promise<void> {
