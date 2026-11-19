@@ -46,9 +46,7 @@ export class SwapHistoryFacade {
     this.session.presence$,
   ]).pipe(
     map(([session, presence]) => ({
-      identity: session
-        ? `${session.user.id}:${session.user.sessionId}`
-        : '',
+      identity: session ? `${session.user.id}:${session.user.sessionId}` : '',
       presence,
     })),
     distinctUntilChanged(

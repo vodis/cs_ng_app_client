@@ -166,8 +166,8 @@ describe('SwapHistoryComponent recovery during outages', () => {
     expect(element.textContent).toContain('Settled');
     expect(element.textContent).toContain('Quoted');
     expect(element.textContent).toContain('WETH.e');
-    expect(element.textContent).toContain('1,999999');
-    expect(element.textContent).toContain('0,000000000000000000000001');
+    expect(element.textContent).toContain('1.999999');
+    expect(element.textContent).toContain('0.000000000000000000000001');
     expect(element.querySelector('.swap-history__view-all')).toBeNull();
   });
 
@@ -219,10 +219,10 @@ describe('SwapHistoryComponent recovery during outages', () => {
   it('shortens long dense amount strings for mobile rows', async () => {
     const { fixture } = await setup(loaded, true);
     expect(
-      fixture.componentInstance.denseAmount('0,002130874410066736', 12)
-    ).toBe('0,002130874…');
-    expect(fixture.componentInstance.denseAmount('1,05449', 12)).toBe(
-      '1,05449'
+      fixture.componentInstance.denseAmount('0.002130874410066736', 12)
+    ).toBe('0.002130874…');
+    expect(fixture.componentInstance.denseAmount('1.05449', 12)).toBe(
+      '1.05449'
     );
   });
 
@@ -265,10 +265,10 @@ describe('SwapHistoryComponent recovery during outages', () => {
     const denseSwap = element.querySelector(
       '.swap-history__list--dense .swap-history__dense-swap'
     );
-    expect(details?.textContent).toMatch(/Refunded\s+0,25/);
+    expect(details?.textContent).toMatch(/Refunded\s+0\.25/);
     expect(details?.textContent).toMatch(/Paid[\s\S]*Settled/);
     expect(details?.textContent).toMatch(/Received[\s\S]*Quoted/);
     expect(denseSwap?.textContent).not.toMatch(/Refunded/);
-    expect(denseSwap?.textContent).not.toContain('0,25');
+    expect(denseSwap?.textContent).not.toContain('0.25');
   });
 });

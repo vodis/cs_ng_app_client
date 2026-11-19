@@ -269,14 +269,22 @@ address and starts the executable (`dry: false`) preparation at the same time.
 If that balance check fails, the host cancels the preparation and replaces the
 button label with the failure, for example `Insufficient NEAR balance`. A
 confirmed balance opens the wallet MFE in the existing right-side drawer with a
-versioned immutable swap intent. The dialog adopts the executable quote already
-in flight and renders its result, or an error with a requote action when
-preparation fails. The MFE owns final amount disclosure, expiry/retry state,
-reconfirmation within slippage policy, wallet signing, single-flight
-submission, and the success callback. Authenticated BFF calls remain host
-transport services so the MFE does not duplicate session or API-client logic.
-The dialog receives the v2 product input and current preview. Dry quote
-configuration stays with the MFE; Review starts the executable preparation in
+versioned immutable swap intent. The confirm panel (`SwapReviewPanel` in
+`cs_mfe-wallets`) uses the Confirm swap layout: header (`REVIEW TRANSACTION` /
+`Confirm swap`), You pay / You receive summary card, bordered Swap details and
+Wallet & recipient lists, collapsed Advanced details, a live `mm:ss` quote
+countdown, and a pinned footer with **Confirm in wallet**. Amounts use en-US
+grouping (`10,691.0948`) in both the Trade form and the panel. Missing optional
+values are omitted or shown as `Unavailable` (never raw `—`). When the quote
+expires, Confirm is disabled and the panel offers Refresh quote. The dialog
+adopts the executable quote already in flight and renders its result, or an
+error with a requote action when preparation fails. The MFE owns final amount
+disclosure, expiry/retry state, reconfirmation within slippage policy, wallet
+signing, single-flight submission, and the success callback. Authenticated BFF
+calls remain host transport services so the MFE does not duplicate session or
+API-client logic. The dialog receives the v2 product input and current preview.
+Dry quote configuration stays with the MFE; Review starts the executable
+preparation in
 parallel with the balance check and cancels it when the balance cannot fund
 the swap.
 

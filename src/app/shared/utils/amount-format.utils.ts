@@ -1,5 +1,6 @@
-export const AMOUNT_DECIMAL_SEPARATOR = ',';
-export const AMOUNT_THOUSAND_SEPARATOR = '.';
+/** Display/edit locale matches Trade + Confirm swap (en-US): 10,691.0948 */
+export const AMOUNT_DECIMAL_SEPARATOR = '.';
+export const AMOUNT_THOUSAND_SEPARATOR = ',';
 
 const AMOUNT_INPUT_CONTROL_KEYS = [
   'Backspace',
@@ -100,6 +101,7 @@ export function parseDisplayedAmount(
   const lastDot = cleaned.lastIndexOf('.');
 
   if (lastComma !== -1 && lastDot !== -1) {
+    // Last separator wins (en-US 10,691.09 or EU paste 10.691,09).
     if (lastComma > lastDot) {
       return parseWithDecimalSeparator(cleaned, lastComma, ',');
     }
@@ -107,30 +109,29 @@ export function parseDisplayedAmount(
     return parseWithDecimalSeparator(cleaned, lastDot, '.');
   }
 
-  if (lastComma !== -1) {
-    return parseWithDecimalSeparator(cleaned, lastComma, ',');
+  if (lastDot !== -1) {
+    // Dot is the primary decimal separator.
+    return parseWithDecimalSeparator(cleaned, lastDot, '.');
   }
 
-  if (lastDot !== -1) {
-    const tail = cleaned
-      .slice(lastDot + 1)
-      .replace(/\./g, '')
-      .replace(/\D/g, '');
-    const head = cleaned.slice(0, lastDot);
-    const tailIsDecimal =
+  if (lastComma !== -1) {
+    const commaCount = (cleaned.match(/,/g) ?? []).length;
+    const tail = cleaned.slice(lastComma + 1).replace(/\D/g, '');
+    // Multiple commas or a 3-digit group → thousands (1,000 / 10,000,000).
+    // Other single-comma tails → European decimal paste (0,1 / 0,25).
+    if (
+      commaCount === 1 &&
       tail.length > 0 &&
-      tail.length <= maxFractionDigits &&
-      !head.includes('.') &&
-      (tail.length !== 3 || /^0*$/.test(head));
-
-    if (tailIsDecimal) {
-      return {
-        whole: stripLeadingZeros(
-          stripThousands(head, AMOUNT_THOUSAND_SEPARATOR)
-        ),
-        fraction: tail,
-      };
+      tail.length !== 3 &&
+      tail.length <= maxFractionDigits
+    ) {
+      return parseWithDecimalSeparator(cleaned, lastComma, ',');
     }
+
+    return {
+      whole: stripLeadingZeros(stripThousands(cleaned, ',')),
+      fraction: '',
+    };
   }
 
   return {
@@ -143,7 +144,7 @@ export function displayHasDecimalSeparator(
   value: string,
   maxFractionDigits: number
 ): boolean {
-  if (value.includes(',')) {
+  if (value.includes(AMOUNT_DECIMAL_SEPARATOR)) {
     return true;
   }
 

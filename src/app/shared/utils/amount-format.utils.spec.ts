@@ -27,8 +27,9 @@ describe('amount-format.utils', () => {
       expect(decimalToAtomic(canonical, 6)).toBe('146146');
     }
     expect(normalizeAmountStorage('0.123', 6)).toBe('0.123');
-    expect(normalizeAmountStorage('1.234', 6)).toBe('1234');
+    expect(normalizeAmountStorage('1.234', 6)).toBe('1.234');
     expect(normalizeAmountStorage('1.234,56', 6)).toBe('1234.56');
+    expect(normalizeAmountStorage('10,691.0948', 6)).toBe('10691.0948');
   });
 
   describe('atomicToDecimal / decimalToAtomic', () => {
@@ -120,36 +121,37 @@ describe('amount-format.utils', () => {
       expect(normalizeAmountInputChars('0б,1')).toBe('0,1');
     });
 
-    it('normalizes unicode comma variants', () => {
-      expect(normalizeAmountInputChars('1\uFF0C5')).toBe('1,5');
+    it('normalizes unicode comma variants to the decimal separator', () => {
+      expect(normalizeAmountInputChars('1\uFF0C5')).toBe('1.5');
     });
   });
 
   describe('formatWholeWithDots', () => {
-    it('groups thousands with dots', () => {
-      expect(formatWholeWithDots('10000000000')).toBe('10.000.000.000');
-      expect(formatWholeWithDots('1250')).toBe('1.250');
+    it('groups thousands with commas', () => {
+      expect(formatWholeWithDots('10000000000')).toBe('10,000,000,000');
+      expect(formatWholeWithDots('1250')).toBe('1,250');
     });
   });
 
   describe('formatSwapAmountDisplay', () => {
-    it('formats large values with dot thousands and comma decimals', () => {
+    it('formats large values with comma thousands and dot decimals', () => {
       expect(
         formatSwapAmountDisplay('10000000000.1000', maxFractionDigits)
-      ).toBe('10.000.000.000,1000');
+      ).toBe('10,000,000,000.1000');
+      expect(formatSwapAmountDisplay('10691.0948', 4)).toBe('10,691.0948');
     });
 
     it('formats smaller fractional values', () => {
       expect(formatSwapAmountDisplay('1250.5', maxFractionDigits)).toBe(
-        '1.250,5'
+        '1,250.5'
       );
-      expect(formatSwapAmountDisplay('42.5000', 4)).toBe('42,5000');
+      expect(formatSwapAmountDisplay('42.5000', 4)).toBe('42.5000');
     });
 
     it('keeps trailing decimal separator while typing', () => {
-      expect(formatSwapAmountDisplay('0.', maxFractionDigits, true)).toBe('0,');
+      expect(formatSwapAmountDisplay('0.', maxFractionDigits, true)).toBe('0.');
       expect(formatSwapAmountDisplay('1000.', maxFractionDigits, true)).toBe(
-        '1.000,'
+        '1,000.'
       );
     });
 
@@ -158,27 +160,27 @@ describe('amount-format.utils', () => {
     });
 
     it('returns default zero display when empty is not allowed', () => {
-      expect(formatSwapAmountDisplay('', maxFractionDigits)).toBe('0,00');
+      expect(formatSwapAmountDisplay('', maxFractionDigits)).toBe('0.00');
     });
 
     it('supports long fractional precision for input display', () => {
       expect(
         formatSwapAmountDisplay('0.886767123456789', maxFractionDigits)
-      ).toBe('0,886767123456789');
+      ).toBe('0.886767123456789');
     });
   });
 
   describe('displayHasDecimalSeparator', () => {
-    it('detects comma as an active decimal separator', () => {
-      expect(displayHasDecimalSeparator('0,', maxFractionDigits)).toBe(true);
-      expect(displayHasDecimalSeparator('0,1', maxFractionDigits)).toBe(true);
+    it('detects dot as an active decimal separator', () => {
+      expect(displayHasDecimalSeparator('0.', maxFractionDigits)).toBe(true);
+      expect(displayHasDecimalSeparator('0.1', maxFractionDigits)).toBe(true);
     });
 
-    it('treats dot-only thousands grouping as not having a decimal separator', () => {
-      expect(displayHasDecimalSeparator('1.000', maxFractionDigits)).toBe(
+    it('treats comma-only thousands grouping as not having a decimal separator', () => {
+      expect(displayHasDecimalSeparator('1,000', maxFractionDigits)).toBe(
         false
       );
-      expect(displayHasDecimalSeparator('10.000.000', maxFractionDigits)).toBe(
+      expect(displayHasDecimalSeparator('10,000,000', maxFractionDigits)).toBe(
         false
       );
     });
@@ -187,39 +189,40 @@ describe('amount-format.utils', () => {
   describe('normalizeAmountStorage', () => {
     it('parses grouped display format into dot-decimal storage', () => {
       expect(
-        normalizeAmountStorage('10.000.000.000,1000', maxFractionDigits)
+        normalizeAmountStorage('10,000,000,000.1000', maxFractionDigits)
       ).toBe('10000000000.1000');
     });
 
-    it('parses comma decimal while typing', () => {
-      expect(normalizeAmountStorage('0,', maxFractionDigits)).toBe('0.');
-      expect(normalizeAmountStorage('0,1', maxFractionDigits)).toBe('0.1');
-      expect(normalizeAmountStorage('1.250,', maxFractionDigits)).toBe('1250.');
+    it('parses dot decimal while typing', () => {
+      expect(normalizeAmountStorage('0.', maxFractionDigits)).toBe('0.');
+      expect(normalizeAmountStorage('0.1', maxFractionDigits)).toBe('0.1');
+      expect(normalizeAmountStorage('1,250.', maxFractionDigits)).toBe('1250.');
     });
 
-    it('accepts dot decimal input', () => {
-      expect(normalizeAmountStorage('1250.5', maxFractionDigits)).toBe(
+    it('accepts European comma decimal paste', () => {
+      expect(normalizeAmountStorage('0,1', maxFractionDigits)).toBe('0.1');
+      expect(normalizeAmountStorage('1.250,5', maxFractionDigits)).toBe(
         '1250.5'
       );
     });
 
     it('caps fractional digits at max precision', () => {
-      expect(normalizeAmountStorage('5,567891', 6)).toBe('5.567891');
-      expect(normalizeAmountStorage('5,567891', 4)).toBe('5.5678');
+      expect(normalizeAmountStorage('5.567891', 6)).toBe('5.567891');
+      expect(normalizeAmountStorage('5.567891', 4)).toBe('5.5678');
     });
 
     it('round-trips storage through display format', () => {
       const storage = '886767.1234';
       const display = formatSwapAmountDisplay(storage, maxFractionDigits);
-      expect(display).toBe('886.767,1234');
+      expect(display).toBe('886,767.1234');
       expect(normalizeAmountStorage(display, maxFractionDigits)).toBe(storage);
     });
   });
 
   describe('parseDisplayedAmount', () => {
-    it('treats dots as thousand separators when comma is present', () => {
+    it('treats commas as thousand separators when dot is present', () => {
       expect(
-        parseDisplayedAmount('10.000.000.000,1000', maxFractionDigits)
+        parseDisplayedAmount('10,000,000,000.1000', maxFractionDigits)
       ).toEqual({
         whole: '10000000000',
         fraction: '1000',
@@ -233,8 +236,8 @@ describe('amount-format.utils', () => {
       });
     });
 
-    it('parses integer input with thousand dots', () => {
-      expect(parseDisplayedAmount('1.250', maxFractionDigits)).toEqual({
+    it('parses integer input with thousand commas', () => {
+      expect(parseDisplayedAmount('1,250', maxFractionDigits)).toEqual({
         whole: '1250',
         fraction: '',
       });
@@ -243,28 +246,28 @@ describe('amount-format.utils', () => {
 
   describe('formatNumberForAmountDisplay', () => {
     it('formats numeric values using amount display separators', () => {
-      expect(formatNumberForAmountDisplay(886.71, 2)).toBe('886,71');
-      expect(formatNumberForAmountDisplay(1_250, 0)).toBe('1.250');
+      expect(formatNumberForAmountDisplay(886.71, 2)).toBe('886.71');
+      expect(formatNumberForAmountDisplay(1_250, 0)).toBe('1,250');
     });
   });
 
   describe('typing flow', () => {
-    it('supports entering 0,1 step by step', () => {
+    it('supports entering 0.1 step by step', () => {
       let storage = normalizeAmountStorage('0', maxFractionDigits);
       expect(formatSwapAmountDisplay(storage, maxFractionDigits, true)).toBe(
         '0'
       );
 
-      storage = normalizeAmountStorage('0,', maxFractionDigits);
+      storage = normalizeAmountStorage('0.', maxFractionDigits);
       expect(storage).toBe('0.');
       expect(formatSwapAmountDisplay(storage, maxFractionDigits, true)).toBe(
         `0${AMOUNT_DECIMAL_SEPARATOR}`
       );
 
-      storage = normalizeAmountStorage('0,1', maxFractionDigits);
+      storage = normalizeAmountStorage('0.1', maxFractionDigits);
       expect(storage).toBe('0.1');
       expect(formatSwapAmountDisplay(storage, maxFractionDigits, true)).toBe(
-        '0,1'
+        '0.1'
       );
     });
   });

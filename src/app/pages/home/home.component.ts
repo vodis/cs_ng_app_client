@@ -102,6 +102,15 @@ type TokenSelectorSide = 'from' | 'to';
 type ComparisonTimeframe = '1H' | '1D' | '1W';
 type MarketChartMode = 'price' | 'relative';
 
+/** Omit placeholder dashes so Confirm swap never shows raw "—". */
+function optionalFiatField(value: string): { fiatValue: string } | Record<string, never> {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '—' || trimmed === '-' || trimmed === '–') {
+    return {};
+  }
+  return { fiatValue: trimmed };
+}
+
 interface MarketComparisonToken {
   symbol: string;
   name?: string;
@@ -649,16 +658,18 @@ export class HomeComponent {
       traceId,
       input,
       sourceDisplay: {
-        amountDisplay: this.amount,
-        fiatValue: this.fromFiatEstimate(),
+        amountDisplay: this.formatSwapAmount(this.amount, 8),
+        ...optionalFiatField(this.fromFiatEstimate()),
       },
       preview: {
         amountInAtomic: preview.amountInAtomic,
         amountOutAtomic: preview.amountOutAtomic,
-        amountOutDisplay: this.quotedToAmountDisplay(),
-        fiatValue: this.fiatEstimate(
-          this.toToken,
-          this.quotedToAmountDisplay()
+        amountOutDisplay: this.formatSwapAmount(
+          this.quotedToAmountDisplay(),
+          this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken))
+        ),
+        ...optionalFiatField(
+          this.fiatEstimate(this.toToken, this.quotedToAmountDisplay())
         ),
         expiresAt: preview.expiresAt,
         rate: this.swapRateLabel(),
@@ -834,7 +845,7 @@ export class HomeComponent {
   public toAmountFormatted(): string {
     const raw = this.toAmountUi();
     if (!raw.trim() || this.isZeroAmountValue(raw)) {
-      return '0,00';
+      return '0.00';
     }
 
     return this.formatSwapAmount(
@@ -1616,6 +1627,7 @@ export class HomeComponent {
 
   private receiveFractionDigits(): number {
     return Math.min(
+      this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken)),
       this.tokenDecimals(this.toToken.decimals),
       this.maxAmountFractionDigits
     );
@@ -1753,7 +1765,8 @@ export class HomeComponent {
       return 4;
     }
 
-    return this.maxAmountFractionDigits;
+    // Quoted/received amounts stay readable (~4 decimals) like Confirm swap.
+    return 4;
   }
 
   private restoreCaretAfterDigits(
