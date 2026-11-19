@@ -301,79 +301,203 @@
       aria-label="Activity">
       <div class="profile-shell__activity">
         <h2 class="profile-shell__activity-title">Activity</h2>
-        <div class="profile-shell__activity-copy">
-          <p class="profile-shell__activity-label">Est. swap volume</p>
-          <p class="profile-shell__activity-value">
-            {{ activityVolumeLabel() }}
-            <span class="profile-shell__activity-unit">USD</span>
-          </p>
-          <p class="profile-shell__activity-fiat">
-            {{ activityFiatLabel() }}
-          </p>
-          <p
-            class="profile-shell__activity-today"
-            [class.profile-shell__activity-today--up]="isActivityTodayUp()">
-            Today's volume {{ activityTodayLabel() }}
-          </p>
-          <p class="profile-shell__activity-count">
-            {{ activitySwapCountLabel() }}
-          </p>
-        </div>
-        <div class="profile-shell__heatmap">
-          <div
-            class="profile-shell__heatmap-chart"
-            [style.--heatmap-weeks]="activity.weeks.length"
-            aria-label="Yearly activity">
-            <div class="profile-shell__heatmap-months" aria-hidden="true">
+
+        <div class="profile-shell__activity-stats">
+          <div class="profile-shell__activity-copy">
+            <p class="profile-shell__activity-label">Est. swap volume</p>
+            <p class="profile-shell__activity-value">
+              {{ activityVolumeLabel() }}
+              <span class="profile-shell__activity-unit">USD</span>
+            </p>
+            <div class="profile-shell__activity-meta">
+              <span class="profile-shell__activity-chip">{{
+                activityFiatLabel()
+              }}</span>
               <span
-                *ngFor="let month of activity.months"
-                [style.grid-column]="month.weekIndex"
-                >{{ month.label }}</span
-              >
-            </div>
-            <div class="profile-shell__heatmap-weekdays" aria-hidden="true">
-              <span *ngFor="let label of activity.weekdays">{{ label }}</span>
-            </div>
-            <div class="profile-shell__heatmap-grid">
-              <div
-                class="profile-shell__heatmap-week"
-                *ngFor="
-                  let week of activity.weeks;
-                  trackBy: trackByHeatmapWeek
-                ">
-                <button
-                  type="button"
-                  class="profile-shell__heatmap-day"
-                  *ngFor="let day of week.days; trackBy: trackByHeatmapDay"
-                  [attr.data-level]="day.level"
-                  [attr.aria-label]="heatmapDayTooltip(day)"
-                  [attr.title]="heatmapDayTooltip(day)"
-                  [disabled]="!day.inRange"></button>
-              </div>
-            </div>
-            <div class="profile-shell__heatmap-legend">
-              <span>Less</span>
-              <span class="profile-shell__heatmap-day" data-level="0"></span>
-              <span class="profile-shell__heatmap-day" data-level="1"></span>
-              <span class="profile-shell__heatmap-day" data-level="2"></span>
-              <span class="profile-shell__heatmap-day" data-level="3"></span>
-              <span class="profile-shell__heatmap-day" data-level="4"></span>
-              <span>More</span>
+                class="profile-shell__activity-chip profile-shell__activity-chip--today"
+                [class.profile-shell__activity-chip--up]="isActivityTodayUp()">
+                Today {{ activityTodayLabel() }}
+              </span>
+              <span class="profile-shell__activity-chip">{{
+                activitySwapCountLabel()
+              }}</span>
             </div>
           </div>
-          <nav class="profile-shell__heatmap-years" aria-label="Activity year">
+        </div>
+
+        <!-- Desktop: full-year heatmap -->
+        <div class="profile-shell__heatmap profile-shell__heatmap--year">
+          <div class="profile-shell__heatmap-block">
+            <p class="profile-shell__heatmap-heading">Swap activity</p>
+            <div
+              class="profile-shell__heatmap-chart"
+              aria-label="Yearly activity">
+              <div class="profile-shell__heatmap-months" aria-hidden="true">
+                <span
+                  class="profile-shell__heatmap-month-slot"
+                  *ngFor="
+                    let week of activity.weeks;
+                    let weekIndex = index;
+                    trackBy: trackByHeatmapWeek
+                  "
+                  [class.profile-shell__heatmap-month-slot--gap]="
+                    isHeatmapMonthStart(weekIndex)
+                  "
+                  >{{ monthLabelAtWeek(weekIndex) }}</span
+                >
+              </div>
+              <div class="profile-shell__heatmap-grid">
+                <div
+                  class="profile-shell__heatmap-week"
+                  *ngFor="
+                    let week of activity.weeks;
+                    let weekIndex = index;
+                    trackBy: trackByHeatmapWeek
+                  "
+                  [class.profile-shell__heatmap-week--month-start]="
+                    isHeatmapMonthStart(weekIndex)
+                  ">
+                  <button
+                    type="button"
+                    class="profile-shell__heatmap-day"
+                    *ngFor="let day of week.days; trackBy: trackByHeatmapDay"
+                    [attr.data-level]="day.level"
+                    [attr.aria-label]="heatmapDayTooltip(day)"
+                    [attr.title]="heatmapDayTooltip(day)"
+                    [disabled]="
+                      !day.inRange || day.isoDate > activity.latestIsoDate
+                    "></button>
+                </div>
+              </div>
+              <div class="profile-shell__heatmap-legend">
+                <span>Less</span>
+                <span class="profile-shell__heatmap-day" data-level="0"></span>
+                <span class="profile-shell__heatmap-day" data-level="1"></span>
+                <span class="profile-shell__heatmap-day" data-level="2"></span>
+                <span class="profile-shell__heatmap-day" data-level="3"></span>
+                <span class="profile-shell__heatmap-day" data-level="4"></span>
+                <span>More</span>
+              </div>
+            </div>
+          </div>
+          <nav
+            class="profile-shell__heatmap-years"
+            aria-label="Activity year">
             <button
               type="button"
-              class="profile-shell__heatmap-year"
+              class="profile-shell__heatmap-year-nav"
+              aria-label="Newer years"
+              [disabled]="!canScrollHeatmapYearsNewer()"
+              (click)="scrollHeatmapYears(-1)">
+              ˄
+            </button>
+            <div class="profile-shell__heatmap-years-viewport">
+              <button
+                type="button"
+                class="profile-shell__heatmap-year"
+                *ngFor="
+                  let year of visibleHeatmapYears();
+                  trackBy: trackByHeatmapYear
+                "
+                [class.profile-shell__heatmap-year--active]="
+                  year === activity.selectedYear
+                "
+                [attr.aria-pressed]="year === activity.selectedYear"
+                (click)="selectHeatmapYear(year)">
+                {{ year }}
+              </button>
+            </div>
+            <button
+              type="button"
+              class="profile-shell__heatmap-year-nav"
+              aria-label="Older years"
+              [disabled]="!canScrollHeatmapYearsOlder()"
+              (click)="scrollHeatmapYears(1)">
+              ˅
+            </button>
+          </nav>
+        </div>
+
+        <!-- Mobile: single-month calendar -->
+        <div class="profile-shell__heatmap profile-shell__heatmap--month">
+          <div class="profile-shell__month-nav">
+            <button
+              type="button"
+              class="profile-shell__month-nav-btn"
+              aria-label="Previous month"
+              [disabled]="!canGoPrevActivityMonth()"
+              (click)="shiftActivityMonth(-1)">
+              ‹
+            </button>
+            <p class="profile-shell__month-nav-title">
+              {{ activityMonthTitle() }}
+            </p>
+            <button
+              type="button"
+              class="profile-shell__month-nav-btn"
+              aria-label="Next month"
+              [disabled]="!canGoNextActivityMonth()"
+              (click)="shiftActivityMonth(1)">
+              ›
+            </button>
+          </div>
+
+          <nav
+            class="profile-shell__month-years"
+            aria-label="Jump to activity year">
+            <button
+              type="button"
+              class="profile-shell__month-year"
               *ngFor="let year of activity.years; trackBy: trackByHeatmapYear"
-              [class.profile-shell__heatmap-year--active]="
-                year === activity.selectedYear
+              [class.profile-shell__month-year--active]="
+                year === activityMonth.year
               "
-              [attr.aria-pressed]="year === activity.selectedYear"
+              [attr.aria-pressed]="year === activityMonth.year"
               (click)="selectHeatmapYear(year)">
               {{ year }}
             </button>
           </nav>
+
+          <div class="profile-shell__month-chart" aria-label="Monthly activity">
+            <div class="profile-shell__month-weekdays" aria-hidden="true">
+              <span *ngFor="let label of monthWeekdayLabels">{{ label }}</span>
+            </div>
+            <div class="profile-shell__month-grid">
+              <div
+                class="profile-shell__month-week"
+                *ngFor="let week of monthWeeks; trackBy: trackByHeatmapWeek">
+                <button
+                  type="button"
+                  class="profile-shell__heatmap-day profile-shell__month-day"
+                  *ngFor="let day of week.days; trackBy: trackByHeatmapDay"
+                  [attr.data-level]="day.level"
+                  [class.profile-shell__month-day--selected]="
+                    selectedActivityDay?.isoDate === day.isoDate
+                  "
+                  [attr.aria-label]="heatmapDayTooltip(day)"
+                  [disabled]="!day.inRange"
+                  (click)="selectActivityDay(day)"></button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="profile-shell__heatmap-legend profile-shell__month-legend">
+            <span>Less</span>
+            <span class="profile-shell__heatmap-day" data-level="0"></span>
+            <span class="profile-shell__heatmap-day" data-level="1"></span>
+            <span class="profile-shell__heatmap-day" data-level="2"></span>
+            <span class="profile-shell__heatmap-day" data-level="3"></span>
+            <span class="profile-shell__heatmap-day" data-level="4"></span>
+            <span>More</span>
+          </div>
+
+          <p
+            class="profile-shell__month-detail"
+            *ngIf="selectedActivityDay as day"
+            role="status">
+            {{ heatmapDayDetail(day) }}
+          </p>
         </div>
       </div>
     </section>

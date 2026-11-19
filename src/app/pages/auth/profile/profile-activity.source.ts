@@ -19,6 +19,8 @@ export type ProfileActivitySnapshot = {
   years: readonly number[];
   weekdays: typeof ACTIVITY_HEATMAP_WEEKDAY_LABELS;
   selectedYear: number;
+  latestIsoDate: string;
+  earliestIsoDate: string;
   weeks: readonly ActivityHeatmapWeek[];
   months: readonly ActivityMonthLabel[];
 };
@@ -31,7 +33,7 @@ export const PROFILE_ACTIVITY_EXAMPLE_DATE = '2026-04-23';
 
 @Injectable()
 export class MockProfileActivitySource extends ProfileActivitySource {
-  private static readonly latestIsoDate = '2026-08-25';
+  private static readonly latestIsoDate = '2026-11-15';
   private static readonly volumeUsd = 978.51;
   private static readonly fiatUsd = 978.66;
   private static readonly todayDeltaUsd = 17.98;
@@ -39,7 +41,7 @@ export class MockProfileActivitySource extends ProfileActivitySource {
 
   private countsForDate(isoDate: string): ActivityCounts {
     if (isoDate === PROFILE_ACTIVITY_EXAMPLE_DATE) {
-      return { swaps: 5, deposits: 1 };
+      return { swaps: 5, deposits: 1, volumeUsd: 72.85 };
     }
 
     let hash = 2166136261;
@@ -49,21 +51,23 @@ export class MockProfileActivitySource extends ProfileActivitySource {
     const normalizedHash = hash >>> 0;
     const roll = normalizedHash % 100;
     if (roll < 48) {
-      return { swaps: 0, deposits: 0 };
+      return { swaps: 0, deposits: 0, volumeUsd: 0 };
     }
 
-    return {
-      swaps: (normalizedHash % 6) + 1,
-      deposits: roll > 82 ? (normalizedHash % 3) + 1 : roll > 70 ? 1 : 0,
-    };
+    const swaps = (normalizedHash % 6) + 1;
+    const deposits = roll > 82 ? (normalizedHash % 3) + 1 : roll > 70 ? 1 : 0;
+    const volumeUsd = Number((swaps * 14.37 + deposits * 4.1).toFixed(2));
+    return { swaps, deposits, volumeUsd };
   }
 
   public snapshot(year?: number): ProfileActivitySnapshot {
-    const years = activityHeatmapYears(MockProfileActivitySource.latestIsoDate);
+    const latestIsoDate = MockProfileActivitySource.latestIsoDate;
+    const years = activityHeatmapYears(latestIsoDate);
     const selectedYear = year ?? years[0];
+    const earliestIsoDate = `${years[years.length - 1]}-01-01`;
     const weeks = buildActivityHeatmapForYear(
       selectedYear,
-      MockProfileActivitySource.latestIsoDate,
+      latestIsoDate,
       isoDate => this.countsForDate(isoDate)
     );
 
@@ -76,8 +80,10 @@ export class MockProfileActivitySource extends ProfileActivitySource {
       years,
       weekdays: ACTIVITY_HEATMAP_WEEKDAY_LABELS,
       selectedYear,
+      latestIsoDate,
+      earliestIsoDate,
       weeks,
-      months: activityMonthLabels(weeks),
+      months: activityMonthLabels(weeks, 1),
     };
   }
 }

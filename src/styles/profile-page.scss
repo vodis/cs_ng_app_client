@@ -634,6 +634,10 @@ app-account-sessions .profile-shell {
     &--activity {
       h2 {
         margin: 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.25;
       }
     }
   }
@@ -1204,8 +1208,16 @@ app-account-sessions .profile-shell {
 
   &__activity {
     display: grid;
+    width: 100%;
     align-items: start;
     gap: 1.25rem;
+  }
+
+  &__activity-stats {
+    display: grid;
+    min-width: 0;
+    align-content: start;
+    gap: 0.55rem;
   }
 
   &__activity-title {
@@ -1219,7 +1231,8 @@ app-account-sessions .profile-shell {
   &__activity-copy {
     display: grid;
     min-width: 0;
-    gap: 0.35rem;
+    justify-items: start;
+    gap: 0.45rem;
   }
 
   &__activity-label {
@@ -1227,20 +1240,23 @@ app-account-sessions .profile-shell {
     color: var(--secondary-text-color);
     font-size: 0.85rem;
     line-height: 1.3;
+    text-align: left;
   }
 
   &__activity-value {
     display: flex;
     min-width: 0;
     align-items: baseline;
+    justify-content: flex-start;
     margin: 0;
     color: var(--main-text-color);
     font-family: 'Aeonik Fono', monospace;
     font-size: clamp(1.75rem, 6vw, 2.35rem);
     font-weight: 500;
-    gap: 0.5rem;
+    gap: 0.45rem;
     letter-spacing: -0.03em;
     line-height: 1.1;
+    text-align: left;
   }
 
   &__activity-unit {
@@ -1252,23 +1268,42 @@ app-account-sessions .profile-shell {
     line-height: 1.2;
   }
 
+  &__activity-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  &__activity-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.55rem;
+    padding: 0.15rem 0.55rem;
+    border: 1px solid rgb(212 212 211 / 28%);
+    border-radius: 999px;
+    color: var(--secondary-text-color);
+    font-size: 0.78rem;
+    line-height: 1.2;
+    white-space: nowrap;
+
+    &--today {
+      color: var(--gray-30);
+    }
+
+    &--up {
+      border-color: rgb(126 231 135 / 35%);
+      color: var(--success, #7ee787);
+    }
+  }
+
   &__activity-fiat,
-  &__activity-count {
+  &__activity-count,
+  &__activity-today {
     margin: 0;
     color: var(--secondary-text-color);
     font-size: 0.85rem;
     line-height: 1.3;
-  }
-
-  &__activity-today {
-    margin: 0;
-    color: var(--gray-30);
-    font-size: 0.85rem;
-    line-height: 1.3;
-
-    &--up {
-      color: var(--success, #7ee787);
-    }
   }
 
   @media (width < 768px) {
@@ -1283,60 +1318,108 @@ app-account-sessions .profile-shell {
   }
 
   &__heatmap {
+    // Square cells; week gap + extra space between months.
+    --heatmap-gap: 3px;
+    --heatmap-month-gap: 0.32rem;
+
     display: flex;
     min-width: 0;
     align-items: flex-start;
     gap: 0.75rem;
   }
 
-  &__heatmap-chart {
-    display: grid;
+  &__heatmap--year {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    width: 100%;
     min-width: 0;
+    gap: 0.75rem;
+  }
+
+  // Chart stretches to the year carousel.
+  &__heatmap-block {
+    display: flex;
     flex: 1 1 auto;
-    gap: 0.4rem 0.55rem;
-    grid-template:
-      '. months' auto
-      'weekdays grid' 1fr
-      '. legend' auto / 1.7rem minmax(0, 1fr);
-    overflow-x: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: auto;
+    min-width: 0;
+  }
+
+  &__heatmap--month {
+    display: none;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__heatmap-heading {
+    margin: 0;
+    color: var(--secondary-text-color);
+    font-size: 0.82rem;
+    font-weight: 500;
+    line-height: 1.3;
+    text-transform: none;
+  }
+
+  &__heatmap-chart {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: 0.35rem;
+  }
+
+  &__heatmap-months,
+  &__heatmap-grid {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    gap: var(--heatmap-gap);
   }
 
   &__heatmap-months {
-    display: grid;
     color: var(--secondary-text-color);
-    font-size: 0.68rem;
-    gap: 3px;
-    grid-area: months;
-    grid-template-columns: repeat(var(--heatmap-weeks, 53), 0.7rem);
+    font-size: 0.64rem;
+    letter-spacing: -0.01em;
     line-height: 1;
   }
 
-  &__heatmap-weekdays {
-    display: grid;
-    align-content: stretch;
-    color: var(--secondary-text-color);
-    font-size: 0.68rem;
-    gap: 3px;
-    grid-area: weekdays;
-    grid-template-rows: repeat(7, 0.7rem);
-    line-height: 0.7rem;
+  &__heatmap-month-slot {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: visible;
+    white-space: nowrap;
+
+    &--gap {
+      // Calendar-style pause between months.
+      margin-left: var(--heatmap-month-gap);
+    }
   }
 
-  &__heatmap-grid {
-    display: flex;
-    gap: 3px;
-    grid-area: grid;
+  &__heatmap-weekdays {
+    display: none;
   }
 
   &__heatmap-week {
-    display: grid;
-    gap: 3px;
-    grid-template-rows: repeat(7, 0.7rem);
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: var(--heatmap-gap);
+    min-width: 0;
+
+    &--month-start {
+      margin-left: var(--heatmap-month-gap);
+    }
   }
 
   &__heatmap-day {
-    width: 0.7rem;
-    height: 0.7rem;
+    box-sizing: border-box;
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    min-width: 0;
+    height: auto;
     padding: 0;
     border: 0;
     border-radius: 2px;
@@ -1360,7 +1443,6 @@ app-account-sessions .profile-shell {
 
     &:disabled {
       cursor: default;
-      opacity: 0.35;
     }
 
     &:not(:disabled) {
@@ -1372,14 +1454,16 @@ app-account-sessions .profile-shell {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    width: 100%;
     color: var(--secondary-text-color);
     font-size: 0.68rem;
     gap: 0.25rem;
-    grid-area: legend;
     line-height: 1;
 
     .profile-shell__heatmap-day {
       display: block;
+      width: 0.65rem;
+      height: 0.65rem;
       flex-shrink: 0;
     }
   }
@@ -1389,49 +1473,292 @@ app-account-sessions .profile-shell {
     flex: 0 0 auto;
     flex-direction: column;
     align-items: stretch;
-    padding-top: 0.85rem;
-    gap: 0.2rem;
+    width: 4.25rem;
+    // Skip the "Swap activity" heading so years line up with the month row.
+    padding-top: 1.35rem;
+    gap: 0.3rem;
+  }
+
+  &__heatmap-years-viewport {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__heatmap-year-nav {
+    box-sizing: border-box;
+    display: grid;
+    width: 100%;
+    height: 1.55rem;
+    place-items: center;
+    border: 1px solid rgb(254 108 0 / 40%);
+    border-radius: 0.35rem;
+    background: transparent;
+    color: var(--primary-text-color);
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1;
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.35;
+    }
   }
 
   &__heatmap-year {
-    min-width: 3.4rem;
-    padding: 0.4rem 0.55rem;
-    border: 0;
+    box-sizing: border-box;
+    display: grid;
+    width: 100%;
+    height: 1.85rem;
+    min-height: 1.85rem;
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
     border-radius: 0.4rem;
     background: transparent;
-    color: var(--secondary-text-color);
+    color: var(--gray-30);
     cursor: pointer;
     font-size: 0.78rem;
     font-weight: 600;
     line-height: 1.2;
-    text-align: left;
+    text-align: center;
+
+    &--active {
+      border-color: rgb(254 108 0 / 35%);
+      background: rgb(254 108 0 / 16%);
+      color: var(--primary-text-color);
+    }
+  }
+
+  &__month-nav {
+    display: grid;
+    align-items: center;
+    gap: 0.5rem;
+    grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem;
+  }
+
+  &__month-nav-btn {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    border: 1px solid rgb(254 108 0 / 45%);
+    border-radius: 0.45rem;
+    background: transparent;
+    color: var(--primary-text-color);
+    cursor: pointer;
+    font-size: 1.35rem;
+    line-height: 1;
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.35;
+    }
+  }
+
+  &__month-nav-title {
+    margin: 0;
+    color: var(--main-text-color);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    text-transform: none;
+  }
+
+  &__month-years {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  &__month-year {
+    min-width: 3.5rem;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid rgb(254 108 0 / 40%);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--primary-text-color);
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
 
     &--active {
       background: var(--primary-text-color);
+      border-color: var(--primary-text-color);
       color: var(--main-text-color);
     }
   }
 
+  &__month-chart {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  &__month-weekdays {
+    display: grid;
+    color: var(--secondary-text-color);
+    font-size: 0.72rem;
+    gap: 0.35rem;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    line-height: 1;
+    text-align: center;
+  }
+
+  &__month-grid {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  &__month-week {
+    display: grid;
+    gap: 0.35rem;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  &__month-day {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 1;
+    border-radius: 0.3rem;
+
+    &--selected {
+      outline: 1px solid var(--primary-text-color);
+      outline-offset: 1px;
+    }
+  }
+
+  &__month-legend {
+    justify-content: center;
+    grid-area: auto;
+  }
+
+  &__month-detail {
+    margin: 0;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid rgb(212 212 211 / 22%);
+    border-radius: 0.5rem;
+    color: var(--gray-30);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  @media (width < 768px) {
+    &__heatmap--year {
+      display: none;
+    }
+
+    &__heatmap--month {
+      display: flex;
+    }
+
+    &__activity-value {
+      font-size: clamp(2rem, 9vw, 2.5rem);
+    }
+  }
+
   @media (width >= 768px) {
+    &__panel--activity {
+      // Full dashboard width — edges match the shared shell container.
+      width: 100%;
+      max-width: none;
+      padding: 2rem 2.5rem 2.25rem;
+
+      h2 {
+        font-size: 1.4rem;
+      }
+    }
+
     &__activity {
-      gap: 1.25rem 1.5rem;
+      align-items: start;
+      width: 100%;
+      // Title on its own row; roomier stats, heatmap keeps readable squares.
+      gap: 1.5rem 1.75rem;
+      grid-template-columns: minmax(16rem, 0.3fr) minmax(0, 0.7fr);
       grid-template-areas:
         'title title'
-        'copy heatmap';
-      grid-template-columns: minmax(12rem, 2fr) minmax(0, 3fr);
+        'stats heatmap';
     }
 
     &__activity-title {
       grid-area: title;
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    &__activity-stats {
+      grid-area: stats;
+      width: 100%;
+      align-self: start;
+      // Align "Est. swap volume" with "Swap activity"; keep off the left edge.
+      padding-top: 0;
+      padding-left: 1rem;
+      padding-right: 0.75rem;
     }
 
     &__activity-copy {
-      grid-area: copy;
+      gap: 0.55rem;
+      justify-items: start;
     }
 
-    &__heatmap {
-      align-self: end;
+    &__activity-label {
+      // Match heatmap heading size/line-height for vertical alignment.
+      font-size: 0.82rem;
+      line-height: 1.3;
+    }
+
+    &__activity-value {
+      // Primary amount; USD sits on the same baseline.
+      font-size: clamp(2.15rem, 2.5vw, 2.55rem);
+      font-weight: 500;
+      align-items: baseline;
+      gap: 0.4rem;
+    }
+
+    &__activity-unit {
+      position: relative;
+      top: -0.06em;
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    // Reference desktop: plain stacked lines, chips stay mobile-only.
+    &__activity-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.3rem;
+      margin-top: 0.15rem;
+    }
+
+    &__activity-chip {
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    &__heatmap--year {
+      --heatmap-gap: 3px;
       grid-area: heatmap;
+      align-self: start;
+      justify-self: stretch;
+      width: 100%;
+      min-width: 0;
+    }
+
+    &__heatmap-block {
+      flex: 1 1 auto;
+      min-width: 0;
     }
   }
 

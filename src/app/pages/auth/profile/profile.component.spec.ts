@@ -334,6 +334,10 @@ describe('ProfileComponent', () => {
     expect(component.activity.weeks.length).toBe(53);
     expect(component.activity.years).toEqual([2026, 2025, 2024]);
     expect(component.activity.selectedYear).toBe(2026);
+    expect(component.activityMonth).toEqual({ year: 2026, month: 10 });
+    expect(component.activityMonthTitle()).toBe('November 2026');
+    expect(component.activity.months.map(month => month.label)).toContain('Jan');
+    expect(component.activity.months.map(month => month.label)).toContain('Dec');
     expect(example).toBeDefined();
     if (!example) {
       fail('example heatmap day was missing');
@@ -353,8 +357,87 @@ describe('ProfileComponent', () => {
       .filter(day => day.inRange);
 
     expect(component.activity.selectedYear).toBe(2025);
+    expect(component.activityMonth).toEqual({ year: 2025, month: 0 });
     expect(inRangeDays[0].isoDate).toBe('2025-01-01');
     expect(inRangeDays[inRangeDays.length - 1].isoDate).toBe('2025-12-31');
+  });
+
+  it('marks month-start weeks for calendar-style gaps', () => {
+    const monthStartIndexes = component.activity.months
+      .map(month => month.weekIndex - 1)
+      .filter(index => index > 0);
+
+    expect(monthStartIndexes.length).toBeGreaterThan(0);
+    expect(component.isHeatmapMonthStart(monthStartIndexes[0])).toBeTrue();
+    expect(component.isHeatmapMonthStart(0)).toBeFalse();
+    expect(component.monthLabelAtWeek(0)).toBe('Jan');
+  });
+
+  it('scrolls the desktop year carousel when more than three years exist', () => {
+    expect(component.visibleHeatmapYears()).toEqual([2026, 2025, 2024]);
+    expect(component.canScrollHeatmapYearsNewer()).toBeFalse();
+    expect(component.canScrollHeatmapYearsOlder()).toBeFalse();
+
+    component.activity = {
+      ...component.activity,
+      years: [2030, 2029, 2028, 2027, 2026, 2025],
+      selectedYear: 2030,
+    };
+    component.heatmapYearWindowStart = 0;
+    expect(component.visibleHeatmapYears()).toEqual([2030, 2029, 2028]);
+    expect(component.canScrollHeatmapYearsOlder()).toBeTrue();
+
+    component.scrollHeatmapYears(1);
+    expect(component.visibleHeatmapYears()).toEqual([2029, 2028, 2027]);
+    expect(component.canScrollHeatmapYearsNewer()).toBeTrue();
+
+    component.scrollHeatmapYears(1);
+    component.scrollHeatmapYears(1);
+    expect(component.visibleHeatmapYears()).toEqual([2027, 2026, 2025]);
+    expect(component.canScrollHeatmapYearsOlder()).toBeFalse();
+  });
+
+  it('navigates the mobile month heatmap without crossing data bounds', () => {
+    expect(component.canGoNextActivityMonth()).toBeFalse();
+    component.shiftActivityMonth(1);
+    expect(component.activityMonth).toEqual({ year: 2026, month: 10 });
+
+    component.shiftActivityMonth(-1);
+    expect(component.activityMonth).toEqual({ year: 2026, month: 9 });
+    expect(component.activityMonthTitle()).toBe('October 2026');
+
+    const octoberDays = component.monthWeeks
+      .flatMap(week => week.days)
+      .filter(day => day.inRange);
+    expect(octoberDays[0].isoDate).toBe('2026-10-01');
+    expect(octoberDays[octoberDays.length - 1].isoDate).toBe('2026-10-31');
+
+    component.selectHeatmapYear(2024);
+    expect(component.activityMonth).toEqual({ year: 2024, month: 0 });
+    expect(component.canGoPrevActivityMonth()).toBeFalse();
+  });
+
+  it('selects a month day to show volume and swap count', () => {
+    component.selectHeatmapYear(2026);
+    component.shiftActivityMonth(-7); // April 2026
+    expect(component.activityMonthTitle()).toBe('April 2026');
+
+    const example = component.monthWeeks
+      .flatMap(week => week.days)
+      .find(day => day.isoDate === PROFILE_ACTIVITY_EXAMPLE_DATE);
+    expect(example).toBeDefined();
+    if (!example) {
+      fail('example month day was missing');
+      return;
+    }
+
+    component.selectActivityDay(example);
+    expect(component.selectedActivityDay?.isoDate).toBe(
+      PROFILE_ACTIVITY_EXAMPLE_DATE
+    );
+    expect(component.heatmapDayDetail(example)).toBe(
+      'Apr 23, 2026 · $72.85 · 5 swaps'
+    );
   });
 
   it('routes Analyze AI to the portfolio page', async () => {
