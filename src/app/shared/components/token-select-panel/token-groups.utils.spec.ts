@@ -61,7 +61,7 @@ describe('token group balances', () => {
         ],
         0
       ).label
-    ).toBe('9.007.199.254.740.993,000000000000000002');
+    ).toBe('9,007,199,254,740,993.000000000000000002');
   });
   it('deduplicates aliased balance identities but includes different wallets', () => {
     const first = holding('near:mainnet', '100', 2);
