@@ -336,8 +336,12 @@ describe('ProfileComponent', () => {
     expect(component.activity.selectedYear).toBe(2026);
     expect(component.activityMonth).toEqual({ year: 2026, month: 10 });
     expect(component.activityMonthTitle()).toBe('November 2026');
-    expect(component.activity.months.map(month => month.label)).toContain('Jan');
-    expect(component.activity.months.map(month => month.label)).toContain('Dec');
+    expect(component.activity.months.map(month => month.label)).toContain(
+      'Jan'
+    );
+    expect(component.activity.months.map(month => month.label)).toContain(
+      'Dec'
+    );
     expect(example).toBeDefined();
     if (!example) {
       fail('example heatmap day was missing');
@@ -357,7 +361,9 @@ describe('ProfileComponent', () => {
       .filter(day => day.inRange);
 
     expect(component.activity.selectedYear).toBe(2025);
-    expect(component.activityMonth).toEqual({ year: 2025, month: 0 });
+    // Preserve November when jumping years.
+    expect(component.activityMonth).toEqual({ year: 2025, month: 10 });
+    expect(component.activityMonthName()).toBe('November');
     expect(inRangeDays[0].isoDate).toBe('2025-01-01');
     expect(inRangeDays[inRangeDays.length - 1].isoDate).toBe('2025-12-31');
   });
@@ -413,8 +419,24 @@ describe('ProfileComponent', () => {
     expect(octoberDays[octoberDays.length - 1].isoDate).toBe('2026-10-31');
 
     component.selectHeatmapYear(2024);
-    expect(component.activityMonth).toEqual({ year: 2024, month: 0 });
-    expect(component.canGoPrevActivityMonth()).toBeFalse();
+    expect(component.activityMonth).toEqual({ year: 2024, month: 9 });
+    expect(component.canGoPrevActivityMonth()).toBeTrue();
+
+    // October 2025 → November → December, then cross into January 2026.
+    component.selectHeatmapYear(2025);
+    expect(component.activityMonth).toEqual({ year: 2025, month: 9 });
+    component.shiftActivityMonth(1);
+    component.shiftActivityMonth(1);
+    expect(component.activityMonth).toEqual({ year: 2025, month: 11 });
+    component.shiftActivityMonth(1);
+    expect(component.activityMonth).toEqual({ year: 2026, month: 0 });
+    component.shiftActivityMonth(-1);
+    expect(component.activityMonth).toEqual({ year: 2025, month: 11 });
+
+    // December is past the latest month in 2026 — clamp when jumping years.
+    component.selectHeatmapYear(2026);
+    expect(component.activityMonth).toEqual({ year: 2026, month: 10 });
+    expect(component.canGoNextActivityMonth()).toBeFalse();
   });
 
   it('selects a month day to show volume and swap count', () => {

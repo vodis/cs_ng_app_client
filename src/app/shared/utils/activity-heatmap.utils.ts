@@ -300,8 +300,12 @@ export function clampActivityYearMonth(
   return value;
 }
 
+export function formatActivityMonthName(value: ActivityYearMonth): string {
+  return MONTH_TITLES[value.month];
+}
+
 export function formatActivityMonthTitle(value: ActivityYearMonth): string {
-  return `${MONTH_TITLES[value.month]} ${value.year}`;
+  return `${formatActivityMonthName(value)} ${value.year}`;
 }
 
 export function activityMonthBounds(

@@ -380,9 +380,7 @@
               </div>
             </div>
           </div>
-          <nav
-            class="profile-shell__heatmap-years"
-            aria-label="Activity year">
+          <nav class="profile-shell__heatmap-years" aria-label="Activity year">
             <button
               type="button"
               class="profile-shell__heatmap-year-nav"
@@ -429,9 +427,51 @@
               (click)="shiftActivityMonth(-1)">
               ‹
             </button>
-            <p class="profile-shell__month-nav-title">
-              {{ activityMonthTitle() }}
-            </p>
+            <div class="profile-shell__month-nav-center">
+              <span class="profile-shell__month-nav-month">{{
+                activityMonthName()
+              }}</span>
+              <div
+                class="profile-shell__month-year"
+                [class.profile-shell__month-year--open]="activityYearMenuOpen">
+                <button
+                  type="button"
+                  class="profile-shell__month-year-trigger"
+                  aria-label="Jump to activity year"
+                  aria-haspopup="listbox"
+                  [attr.aria-expanded]="activityYearMenuOpen"
+                  (click)="toggleActivityYearMenu($event)">
+                  <span>{{ activityMonth.year }}</span>
+                  <span class="profile-shell__month-year-chevron" aria-hidden="true"
+                    >▾</span
+                  >
+                </button>
+                <ul
+                  class="profile-shell__month-year-menu"
+                  *ngIf="activityYearMenuOpen"
+                  role="listbox"
+                  aria-label="Activity years">
+                  <li
+                    *ngFor="
+                      let year of activity.years;
+                      trackBy: trackByHeatmapYear
+                    "
+                    role="presentation">
+                    <button
+                      type="button"
+                      class="profile-shell__month-year-option"
+                      role="option"
+                      [attr.aria-selected]="year === activityMonth.year"
+                      [class.profile-shell__month-year-option--active]="
+                        year === activityMonth.year
+                      "
+                      (click)="selectActivityYearFromMenu(year)">
+                      {{ year }}
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
             <button
               type="button"
               class="profile-shell__month-nav-btn"
@@ -441,22 +481,6 @@
               ›
             </button>
           </div>
-
-          <nav
-            class="profile-shell__month-years"
-            aria-label="Jump to activity year">
-            <button
-              type="button"
-              class="profile-shell__month-year"
-              *ngFor="let year of activity.years; trackBy: trackByHeatmapYear"
-              [class.profile-shell__month-year--active]="
-                year === activityMonth.year
-              "
-              [attr.aria-pressed]="year === activityMonth.year"
-              (click)="selectHeatmapYear(year)">
-              {{ year }}
-            </button>
-          </nav>
 
           <div class="profile-shell__month-chart" aria-label="Monthly activity">
             <div class="profile-shell__month-weekdays" aria-hidden="true">
@@ -470,26 +494,32 @@
                   type="button"
                   class="profile-shell__heatmap-day profile-shell__month-day"
                   *ngFor="let day of week.days; trackBy: trackByHeatmapDay"
-                  [attr.data-level]="day.level"
+                  [attr.data-level]="day.inRange ? day.level : 0"
+                  [class.profile-shell__month-day--outside]="
+                    isOutsideSelectedMonth(day)
+                  "
                   [class.profile-shell__month-day--selected]="
                     selectedActivityDay?.isoDate === day.isoDate
                   "
                   [attr.aria-label]="heatmapDayTooltip(day)"
-                  [disabled]="!day.inRange"
+                  [disabled]="
+                    !day.inRange ||
+                    day.isoDate > activity.latestIsoDate ||
+                    isOutsideSelectedMonth(day)
+                  "
                   (click)="selectActivityDay(day)"></button>
               </div>
             </div>
-          </div>
-
-          <div
-            class="profile-shell__heatmap-legend profile-shell__month-legend">
-            <span>Less</span>
-            <span class="profile-shell__heatmap-day" data-level="0"></span>
-            <span class="profile-shell__heatmap-day" data-level="1"></span>
-            <span class="profile-shell__heatmap-day" data-level="2"></span>
-            <span class="profile-shell__heatmap-day" data-level="3"></span>
-            <span class="profile-shell__heatmap-day" data-level="4"></span>
-            <span>More</span>
+            <div
+              class="profile-shell__heatmap-legend profile-shell__month-legend">
+              <span>Less</span>
+              <span class="profile-shell__heatmap-day" data-level="0"></span>
+              <span class="profile-shell__heatmap-day" data-level="1"></span>
+              <span class="profile-shell__heatmap-day" data-level="2"></span>
+              <span class="profile-shell__heatmap-day" data-level="3"></span>
+              <span class="profile-shell__heatmap-day" data-level="4"></span>
+              <span>More</span>
+            </div>
           </div>
 
           <p
