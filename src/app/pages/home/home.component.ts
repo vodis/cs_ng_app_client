@@ -636,6 +636,9 @@ export class HomeComponent {
         id: this.balanceNetwork() ?? '',
         label: this.tokenNetworkLabel(this.fromToken),
       },
+      ...(this.toToken.blockchain
+        ? { destinationNetwork: { label: this.tokenNetworkLabel(this.toToken) } }
+        : {}),
       slippageToleranceBps: this.slippageToleranceBps,
       confidential: this.confidentialSwap,
     };

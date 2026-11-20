@@ -1202,6 +1202,17 @@ describe('HomeComponent market overview', () => {
         slippageToleranceBps: 50,
       })
     );
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'BTC',
+      blockchain: 'btc',
+    };
+    expect(component['buildSwapInput'](amount)).toEqual(
+      jasmine.objectContaining({
+        network: jasmine.objectContaining({ label: 'NEAR' }),
+        destinationNetwork: { label: 'Bitcoin' },
+      })
+    );
     const input = component['buildSwapInput'](amount);
     expect(Object.keys(input)).not.toContain('depositType');
     expect(Object.keys(input)).not.toContain('authMethod');
