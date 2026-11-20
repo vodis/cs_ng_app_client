@@ -116,22 +116,40 @@ export function parseDisplayedAmount(
 
   if (lastComma !== -1) {
     const commaCount = (cleaned.match(/,/g) ?? []).length;
+    const headDigits = cleaned.slice(0, lastComma).replace(/\D/g, '');
     const tail = cleaned.slice(lastComma + 1).replace(/\D/g, '');
-    // Multiple commas or a 3-digit group → thousands (1,000 / 10,000,000).
-    // Other single-comma tails → European decimal paste (0,1 / 0,25).
-    if (
-      commaCount === 1 &&
-      tail.length > 0 &&
-      tail.length !== 3 &&
-      tail.length <= maxFractionDigits
-    ) {
-      return parseWithDecimalSeparator(cleaned, lastComma, ',');
+    const zeroWhole = headDigits === '' || /^0+$/.test(headDigits);
+
+    if (commaCount === 1 && tail.length > 0) {
+      // Leading-zero integer part is an unambiguous decimal paste (0,123),
+      // including fractions longer than maxFractionDigits (capped later).
+      if (zeroWhole) {
+        return parseWithDecimalSeparator(cleaned, lastComma, ',');
+      }
+
+      // Short non-grouping tails → European decimal paste (1,5 / 12,34).
+      if (tail.length !== 3 && tail.length <= maxFractionDigits) {
+        return parseWithDecimalSeparator(cleaned, lastComma, ',');
+      }
+
+      // Classic en-US thousands grouping (1,250 / 10,000).
+      if (tail.length === 3) {
+        return {
+          whole: stripLeadingZeros(stripThousands(cleaned, ',')),
+          fraction: '',
+        };
+      }
+
+      // Ambiguous / oversized comma fraction: reject instead of inflating.
+      return { whole: '', fraction: '' };
     }
 
-    return {
-      whole: stripLeadingZeros(stripThousands(cleaned, ',')),
-      fraction: '',
-    };
+    if (commaCount > 1) {
+      return {
+        whole: stripLeadingZeros(stripThousands(cleaned, ',')),
+        fraction: '',
+      };
+    }
   }
 
   return {
@@ -174,7 +192,11 @@ export function normalizeAmountStorage(
   }
 
   const cappedFraction = fraction.slice(0, maxFractionDigits);
-  return cappedFraction ? `${whole}.${cappedFraction}` : whole;
+  if (!cappedFraction) {
+    return whole;
+  }
+
+  return `${whole || '0'}.${cappedFraction}`;
 }
 
 export function formatSwapAmountDisplay(

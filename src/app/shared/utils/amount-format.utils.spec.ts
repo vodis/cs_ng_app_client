@@ -32,6 +32,22 @@ describe('amount-format.utils', () => {
     expect(normalizeAmountStorage('10,691.0948', 6)).toBe('10691.0948');
   });
 
+  it('preserves unambiguous zero-whole comma decimals instead of inflating', () => {
+    expect(normalizeAmountStorage('0,123', 6)).toBe('0.123');
+    expect(normalizeAmountStorage('0,123456', 4)).toBe('0.1234');
+    expect(decimalToAtomic(normalizeAmountStorage('0,123', 6), 6)).toBe(
+      '123000'
+    );
+  });
+
+  it('rejects oversized non-zero comma fractions instead of stripping separators', () => {
+    expect(normalizeAmountStorage('1,23456', 4)).toBe('');
+    expect(parseDisplayedAmount('1,23456', 4)).toEqual({
+      whole: '',
+      fraction: '',
+    });
+  });
+
   describe('atomicToDecimal / decimalToAtomic', () => {
     it('round-trips 6-decimal tokens', () => {
       expect(atomicToDecimal('1000000', 6)).toBe('1');
@@ -201,6 +217,7 @@ describe('amount-format.utils', () => {
 
     it('accepts European comma decimal paste', () => {
       expect(normalizeAmountStorage('0,1', maxFractionDigits)).toBe('0.1');
+      expect(normalizeAmountStorage('0,123', maxFractionDigits)).toBe('0.123');
       expect(normalizeAmountStorage('1.250,5', maxFractionDigits)).toBe(
         '1250.5'
       );
