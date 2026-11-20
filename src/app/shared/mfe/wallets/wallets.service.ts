@@ -100,6 +100,8 @@ export class WalletsService {
   public swapPreviewRefreshRequested = new BehaviorSubject<string | undefined>(
     undefined
   );
+  /** Confirm → Select recipient (cross-network back control). */
+  public swapReviewBackRequested = new Subject<string>();
 
   constructor(private readonly productEvents: ProductEventsService) {
     this.removeLegacyUnscopedEntry();
@@ -203,6 +205,10 @@ export class WalletsService {
 
   requestSwapPreviewRefresh(traceId: string): void {
     this.swapPreviewRefreshRequested.next(traceId);
+  }
+
+  requestSwapReviewBack(traceId: string): void {
+    this.swapReviewBackRequested.next(traceId);
   }
 
   private removeLegacyUnscopedEntry(): void {

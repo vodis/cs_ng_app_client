@@ -176,6 +176,11 @@ export type WalletSwapReview = {
   input: WalletSwapInput;
   sourceDisplay: { amountDisplay: string; fiatValue?: string };
   preview: SwapReviewIntent['preview'];
+  /**
+   * When true, Confirm shows a Back control that returns to the host
+   * Select recipient step (cross-network only). Additive; older remotes ignore it.
+   */
+  showRecipientBack?: boolean;
 };
 
 export type WalletSwapQuoteOptions = { traceId: string; signal: AbortSignal };

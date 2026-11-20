@@ -205,23 +205,6 @@
                   </div>
                 </div>
               </div>
-
-              @if (
-                isForeignDestination() && crossNetworkRecipientIntentSignEnabled
-              ) {
-                <button
-                  type="button"
-                  class="recipient-row"
-                  (click)="openRecipientPanel()">
-                  <span>
-                    <small>RECIPIENT · {{ tokenNetworkLabel(toToken) }}</small>
-                    <strong>{{ recipientAddressLabel() }}</strong>
-                  </span>
-                  <mat-icon>{{
-                    recipientAddress ? 'edit' : 'arrow_forward'
-                  }}</mat-icon>
-                </button>
-              }
             </div>
 
             @if (hasSwapAmountEntered()) {
