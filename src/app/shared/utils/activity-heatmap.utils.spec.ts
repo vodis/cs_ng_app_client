@@ -118,14 +118,14 @@ describe('activity-heatmap.utils', () => {
       .flatMap(week => week.days)
       .filter(day => day.inRange);
     const months = activityMonthLabels(weeks, 1);
-    const afterLatest = inRangeDays.filter(
-      day => day.isoDate > latestIsoDate
-    );
+    const afterLatest = inRangeDays.filter(day => day.isoDate > latestIsoDate);
 
     expect(inRangeDays[0].isoDate).toBe('2026-01-01');
     expect(inRangeDays[inRangeDays.length - 1].isoDate).toBe('2026-12-31');
     expect(afterLatest.length).toBeGreaterThan(0);
-    expect(afterLatest.every(day => day.swaps === 0 && day.level === 0)).toBeTrue();
+    expect(
+      afterLatest.every(day => day.swaps === 0 && day.level === 0)
+    ).toBeTrue();
     expect(months.map(month => month.label)).toEqual([
       'Jan',
       'Feb',

@@ -3,6 +3,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  HostListener,
   OnDestroy,
   OnInit,
   ViewChild,
@@ -28,6 +29,7 @@ import {
   compareActivityYearMonth,
   formatActivityDayDetail,
   formatActivityDayTooltip,
+  formatActivityMonthName,
   formatActivityMonthTitle,
   shiftActivityYearMonth,
   type ActivityHeatmapDay,
@@ -136,6 +138,7 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   public activityMonth: ActivityYearMonth;
   public monthWeeks: readonly ActivityHeatmapWeek[] = [];
   public selectedActivityDay: ActivityHeatmapDay | null = null;
+  public activityYearMenuOpen = false;
   public onboarding: ProfileOnboardingViewModel;
   /** Newest-first index of the first visible year in the carousel. */
   public heatmapYearWindowStart = 0;
@@ -614,6 +617,17 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     return formatActivityMonthTitle(this.activityMonth);
   }
 
+  public activityMonthName(): string {
+    return formatActivityMonthName(this.activityMonth);
+  }
+
+  public isOutsideSelectedMonth(day: ActivityHeatmapDay): boolean {
+    const [year, month] = day.isoDate.split('-').map(Number);
+    return (
+      year !== this.activityMonth.year || month - 1 !== this.activityMonth.month
+    );
+  }
+
   public canGoPrevActivityMonth(): boolean {
     return (
       compareActivityYearMonth(this.activityMonth, this.activityMonthMin()) > 0
@@ -633,7 +647,32 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     if (delta > 0 && !this.canGoNextActivityMonth()) {
       return;
     }
+    this.activityYearMenuOpen = false;
     this.setActivityMonth(shiftActivityYearMonth(this.activityMonth, delta));
+  }
+
+  public toggleActivityYearMenu(event: Event): void {
+    event.stopPropagation();
+    this.activityYearMenuOpen = !this.activityYearMenuOpen;
+  }
+
+  public selectActivityYearFromMenu(year: number): void {
+    this.activityYearMenuOpen = false;
+    this.selectHeatmapYear(year);
+  }
+
+  @HostListener('document:click')
+  public closeActivityYearMenuOnOutsideClick(): void {
+    if (this.activityYearMenuOpen) {
+      this.activityYearMenuOpen = false;
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  public closeActivityYearMenuOnEscape(): void {
+    if (this.activityYearMenuOpen) {
+      this.activityYearMenuOpen = false;
+    }
   }
 
   public selectHeatmapYear(year: number): void {
@@ -642,14 +681,10 @@ export class ProfileComponent implements OnInit, AfterViewInit, OnDestroy {
       this.activity.earliestIsoDate,
       this.activity.latestIsoDate
     );
+    // Keep the current calendar month when jumping years; clamp to data range.
     const preferred: ActivityYearMonth = {
       year,
-      month:
-        year === bounds.max.year
-          ? bounds.max.month
-          : year === bounds.min.year
-            ? bounds.min.month
-            : 0,
+      month: this.activityMonth.month,
     };
     this.setActivityMonth(
       clampActivityYearMonth(preferred, bounds.min, bounds.max)

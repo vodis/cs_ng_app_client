@@ -123,7 +123,9 @@ test.describe('Profile Activity layout', () => {
           document.querySelectorAll(
             '.profile-shell__heatmap--year .profile-shell__heatmap-month-slot'
           )
-        ).filter(el => (el.textContent ?? '').trim().length > 0) as HTMLElement[];
+        ).filter(
+          el => (el.textContent ?? '').trim().length > 0
+        ) as HTMLElement[];
         const monthGapWeek = document.querySelector(
           '.profile-shell__heatmap--year .profile-shell__heatmap-week--month-start'
         ) as HTMLElement | null;
@@ -224,8 +226,7 @@ test.describe('Profile Activity layout', () => {
               }
               const prev = yearButtonBoxes[index - 1];
               return (
-                box.top >= prev.bottom - 1 &&
-                Math.abs(box.left - prev.left) < 8
+                box.top >= prev.bottom - 1 && Math.abs(box.left - prev.left) < 8
               );
             }),
           yearButtonsUniform:
@@ -238,18 +239,12 @@ test.describe('Profile Activity layout', () => {
           dayWidth: dayBox.width,
           dayHeight: dayBox.height,
           gridHeight: gridBox.height,
-          valueFontSize: Number.parseFloat(
-            getComputedStyle(valueEl).fontSize
-          ),
-          titleFontSize: Number.parseFloat(
-            getComputedStyle(titleEl).fontSize
-          ),
+          valueFontSize: Number.parseFloat(getComputedStyle(valueEl).fontSize),
+          titleFontSize: Number.parseFloat(getComputedStyle(titleEl).fontSize),
           statsPadLeft: Number.parseFloat(
             getComputedStyle(statsEl).paddingLeft
           ),
-          panelPadLeft: Number.parseFloat(
-            getComputedStyle(panel).paddingLeft
-          ),
+          panelPadLeft: Number.parseFloat(getComputedStyle(panel).paddingLeft),
           gutter: sectionBox.left - statsBox.right,
           panelWidth: panelBox.width,
           shellInnerWidth: shellBox.width - shellPadX,
@@ -278,8 +273,7 @@ test.describe('Profile Activity layout', () => {
           unitBesideAmount: unitBox.left > valueBox.left + 24,
           activeYearColor: activeYearStyle.color,
           activeYearBackground: activeYearStyle.backgroundColor,
-          augSepGap:
-            augBox && sepBox ? sepBox.left - augBox.right : Number.NaN,
+          augSepGap: augBox && sepBox ? sepBox.left - augBox.right : Number.NaN,
           monthOverlapCount: monthTextBoxes.reduce((count, box, index) => {
             const next = monthTextBoxes[index + 1];
             if (!next) {
@@ -310,7 +304,9 @@ test.describe('Profile Activity layout', () => {
       expect(metrics.dayWidth).toBeLessThanOrEqual(22);
       expect(metrics.weekColumnGap).toBeGreaterThanOrEqual(2);
       expect(metrics.weekColumnGap).toBeLessThanOrEqual(5);
-      expect(metrics.monthBoundaryGap).toBeGreaterThan(metrics.weekColumnGap + 2);
+      expect(metrics.monthBoundaryGap).toBeGreaterThan(
+        metrics.weekColumnGap + 2
+      );
 
       // Roomier stats; heatmap fills its column to the year carousel.
       expect(metrics.sectionFillsRemainder).toBe(true);
@@ -339,7 +335,9 @@ test.describe('Profile Activity layout', () => {
       expect(metrics.yearsLeft - metrics.gridRight).toBeGreaterThan(4);
       expect(metrics.yearsLeft - metrics.gridRight).toBeLessThan(28);
       expect(Math.abs(metrics.legendRight - metrics.gridRight)).toBeLessThan(8);
-      expect(Math.abs(metrics.lastWeekRight - metrics.gridRight)).toBeLessThan(8);
+      expect(Math.abs(metrics.lastWeekRight - metrics.gridRight)).toBeLessThan(
+        8
+      );
       expect(metrics.activeYearColor).toMatch(/254,\s*108,\s*0|fe6c00/i);
       expect(metrics.activeYearBackground).not.toMatch(
         /^rgb\(\s*254,\s*108,\s*0\s*\)$/i
@@ -367,35 +365,195 @@ test.describe('Profile Activity layout', () => {
 });
 
 test.describe('Profile Activity layout (mobile)', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
+  const MOBILE_WIDTHS = [360, 390, 430] as const;
 
   test('mobile shows month navigation and grouped stats', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     await openProfileActivity(page);
 
     const activity = page.getByRole('region', { name: 'Activity' });
-    await expect(activity.locator('.profile-shell__heatmap--year')).toBeHidden();
-    await expect(activity.locator('.profile-shell__heatmap--month')).toBeVisible();
-    await expect(activity.getByText('November 2026')).toBeVisible();
+    const meta = activity.locator('.profile-shell__activity-meta');
+    const monthName = activity.locator('.profile-shell__month-nav-month');
+    const yearJump = activity.getByRole('button', {
+      name: 'Jump to activity year',
+    });
+    const yearMenu = activity.getByRole('listbox', { name: 'Activity years' });
+
+    await expect(
+      activity.locator('.profile-shell__heatmap--year')
+    ).toBeHidden();
+    await expect(
+      activity.locator('.profile-shell__heatmap--month')
+    ).toBeVisible();
+    await expect(monthName).toHaveText('November');
     await expect(
       activity.getByRole('button', { name: 'Next month' })
     ).toBeDisabled();
     await expect(
       activity.getByRole('button', { name: 'Previous month' })
     ).toBeEnabled();
-    await expect(
-      activity.locator('.profile-shell__activity-meta')
-    ).toBeVisible();
+    await expect(meta).toBeVisible();
+    await expect(meta.locator('.profile-shell__activity-chip')).toHaveCount(3);
+    await expect(yearJump).toContainText('2026');
 
     await activity.getByRole('button', { name: 'Previous month' }).click();
-    await expect(activity.getByText('October 2026')).toBeVisible();
+    await expect(monthName).toHaveText('October');
+    await expect(yearJump).toContainText('2026');
 
-    await activity
-      .locator('.profile-shell__month-year', { hasText: '2025' })
-      .click();
-    await expect(activity.getByText('January 2025')).toBeVisible();
+    await yearJump.click();
+    await expect(yearMenu).toBeVisible();
+    await yearMenu.getByRole('option', { name: '2025' }).click();
+    await expect(monthName).toHaveText('October');
+    await expect(yearJump).toContainText('2025');
+
+    // December ↔ January crosses the year boundary in both directions.
+    await activity.getByRole('button', { name: 'Next month' }).click();
+    await expect(monthName).toHaveText('November');
+    await activity.getByRole('button', { name: 'Next month' }).click();
+    await expect(monthName).toHaveText('December');
+    await expect(yearJump).toContainText('2025');
+    await activity.getByRole('button', { name: 'Next month' }).click();
+    await expect(monthName).toHaveText('January');
+    await expect(yearJump).toContainText('2026');
+    await activity.getByRole('button', { name: 'Previous month' }).click();
+    await expect(monthName).toHaveText('December');
+    await expect(yearJump).toContainText('2025');
+
+    const day = activity
+      .locator('.profile-shell__month-day:not([disabled])')
+      .first();
+    await day.click();
+    await expect(
+      activity.locator('.profile-shell__month-detail')
+    ).toBeVisible();
 
     await activity.screenshot({
       path: `${SCREENSHOT_DIR}/profile-activity-mobile.png`,
     });
   });
+
+  for (const width of MOBILE_WIDTHS) {
+    test(`mobile calendar fills card width at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await openProfileActivity(page);
+
+      const activity = page.getByRole('region', { name: 'Activity' });
+      const monthHeatmap = activity.locator('.profile-shell__heatmap--month');
+      const nav = monthHeatmap.locator('.profile-shell__month-nav');
+      const chart = monthHeatmap.locator('.profile-shell__month-chart');
+      const grid = monthHeatmap.locator('.profile-shell__month-grid');
+      const weekdays = monthHeatmap.locator('.profile-shell__month-weekdays');
+      const legend = monthHeatmap.locator('.profile-shell__month-legend');
+      const monthName = monthHeatmap.locator('.profile-shell__month-nav-month');
+
+      // Long month name stress case.
+      await activity.getByRole('button', { name: 'Previous month' }).click();
+      await activity.getByRole('button', { name: 'Previous month' }).click();
+      await expect(monthName).toHaveText('September');
+
+      const metrics = await page.evaluate(() => {
+        const root = document.querySelector(
+          '.profile-shell__heatmap--month'
+        ) as HTMLElement | null;
+        const navEl = root?.querySelector(
+          '.profile-shell__month-nav'
+        ) as HTMLElement | null;
+        const chartEl = root?.querySelector(
+          '.profile-shell__month-chart'
+        ) as HTMLElement | null;
+        const gridEl = root?.querySelector(
+          '.profile-shell__month-grid'
+        ) as HTMLElement | null;
+        const weekdaysEl = root?.querySelector(
+          '.profile-shell__month-weekdays'
+        ) as HTMLElement | null;
+        const legendEl = root?.querySelector(
+          '.profile-shell__month-legend'
+        ) as HTMLElement | null;
+        const dayEl = root?.querySelector(
+          '.profile-shell__month-day:not(.profile-shell__month-day--outside)'
+        ) as HTMLElement | null;
+        const monthEl = root?.querySelector(
+          '.profile-shell__month-nav-month'
+        ) as HTMLElement | null;
+        const yearEl = root?.querySelector(
+          '.profile-shell__month-year-trigger'
+        ) as HTMLElement | null;
+
+        if (
+          !root ||
+          !navEl ||
+          !chartEl ||
+          !gridEl ||
+          !weekdaysEl ||
+          !legendEl ||
+          !dayEl ||
+          !monthEl ||
+          !yearEl
+        ) {
+          return null;
+        }
+
+        const rootBox = root.getBoundingClientRect();
+        const navBox = navEl.getBoundingClientRect();
+        const chartBox = chartEl.getBoundingClientRect();
+        const gridBox = gridEl.getBoundingClientRect();
+        const weekdaysBox = weekdaysEl.getBoundingClientRect();
+        const legendBox = legendEl.getBoundingClientRect();
+        const dayBox = dayEl.getBoundingClientRect();
+        const monthBox = monthEl.getBoundingClientRect();
+        const yearBox = yearEl.getBoundingClientRect();
+
+        return {
+          rootWidth: rootBox.width,
+          navWidth: navBox.width,
+          chartWidth: chartBox.width,
+          gridWidth: gridBox.width,
+          weekdaysWidth: weekdaysBox.width,
+          legendWidth: legendBox.width,
+          dayWidth: dayBox.width,
+          dayHeight: dayBox.height,
+          legendCentered:
+            Math.abs(
+              legendBox.left +
+                legendBox.width / 2 -
+                (gridBox.left + gridBox.width / 2)
+            ) < 4,
+          headerFits:
+            monthBox.right <= yearBox.left + 1 &&
+            yearBox.right <= navBox.right - 36 &&
+            monthBox.left >= navBox.left + 36,
+          noHorizontalClip: root.scrollWidth <= root.clientWidth + 1,
+        };
+      });
+
+      expect(metrics).not.toBeNull();
+      if (!metrics) {
+        return;
+      }
+
+      await expect(nav).toBeVisible();
+      await expect(chart).toBeVisible();
+      await expect(grid).toBeVisible();
+      await expect(weekdays).toBeVisible();
+      await expect(legend).toBeVisible();
+
+      expect(Math.abs(metrics.navWidth - metrics.chartWidth)).toBeLessThan(2);
+      expect(Math.abs(metrics.chartWidth - metrics.gridWidth)).toBeLessThan(2);
+      expect(Math.abs(metrics.weekdaysWidth - metrics.gridWidth)).toBeLessThan(
+        2
+      );
+      expect(metrics.gridWidth / metrics.rootWidth).toBeGreaterThan(0.92);
+      expect(metrics.dayWidth).toBeGreaterThanOrEqual(34);
+      expect(metrics.dayHeight).toBeGreaterThanOrEqual(34);
+      expect(Math.abs(metrics.dayWidth - metrics.dayHeight)).toBeLessThan(2);
+      expect(metrics.legendCentered).toBe(true);
+      expect(metrics.headerFits).toBe(true);
+      expect(metrics.noHorizontalClip).toBe(true);
+
+      await activity.screenshot({
+        path: `${SCREENSHOT_DIR}/profile-activity-mobile-${width}.png`,
+      });
+    });
+  }
 });
