@@ -54,7 +54,9 @@ class WalletsServiceStub {
   public swapPreviewRefreshRequested = new BehaviorSubject<string | undefined>(
     undefined
   );
+  public swapReviewBackRequested = new Subject<string>();
   public requestOpen = jasmine.createSpy('requestOpen');
+  public requestClose = jasmine.createSpy('requestClose');
 }
 
 class SwapFlowFacadeStub {
@@ -2620,6 +2622,131 @@ describe('HomeComponent market overview', () => {
         network: 'near:testnet',
       },
     ]);
+  });
+
+  it('opens Select recipient from the main CTA on cross-network swaps', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    component.crossNetworkRecipientIntentSignEnabled = true;
+    walletsService.account.next({
+      account: '0x0000000000000000000000000000000000000001',
+      chainId: 1,
+    });
+    component.fromToken = {
+      ...component.fromToken,
+      blockchain: 'eth',
+      sourceNetwork: 'eip155:1',
+    };
+    component.toToken = {
+      assetId: 'nep141:sol-usdc.omft.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+      blockchain: 'sol',
+      sourceNetwork: 'solana:mainnet',
+    };
+    component.amount = '1';
+    component.recipientAddress = '';
+
+    expect(component.needsCrossNetworkRecipientStep()).toBeTrue();
+    expect(component.primaryActionLabel()).toBe('Enter a recipient address');
+    expect(component.isPrimaryActionDisabled()).toBeFalse();
+    expect(component.primaryActionShowsError()).toBeFalse();
+
+    component.submitQuote();
+    expect(component.isRecipientPanelOpen).toBeTrue();
+  });
+
+  it('advances from Save recipient to confirm without another main-button click', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+    const walletsService = TestBed.inject(
+      WalletsService
+    ) as unknown as WalletsServiceStub;
+    const balancesService = TestBed.inject(
+      WalletBalancesService
+    ) as unknown as WalletBalancesServiceStub;
+    const swapFlowFacade = TestBed.inject(
+      SwapFlowFacade
+    ) as unknown as SwapFlowFacadeStub;
+    const openReview = spyOn(
+      TestBed.inject(WalletGatewayBridgeService),
+      'openSwapReview'
+    );
+    component.crossNetworkRecipientIntentSignEnabled = true;
+    walletsService.account.next({
+      account: '0x0000000000000000000000000000000000000001',
+      chainId: 1,
+    });
+    component.fromToken = {
+      ...component.fromToken,
+      assetId:
+        'nep141:eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near',
+      symbol: 'USDC',
+      blockchain: 'eth',
+      sourceNetwork: 'eip155:1',
+      decimals: 6,
+    };
+    component.toToken = {
+      assetId: 'nep141:sol-usdc.omft.near',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      color: '#2f8cff',
+      decimals: 6,
+      blockchain: 'sol',
+      sourceNetwork: 'solana:mainnet',
+    };
+    component.amount = '1';
+    component.isRecipientPanelOpen = true;
+    balancesService.balances = [
+      {
+        walletId: 'wallet-1',
+        walletAddress: '0x0000000000000000000000000000000000000001',
+        chainType: 'ethereum',
+        network: 'eip155:1',
+        assetId: component.fromToken.assetId,
+        symbol: 'USDC',
+        decimals: 6,
+        balanceRaw: '100000000',
+        balanceDecimal: '100',
+        source: 'evm_rpc',
+        fetchedAt: '2026-08-12T12:00:00.000Z',
+        expiresAt: '2099-08-12T12:00:15.000Z',
+        stale: false,
+      },
+    ];
+
+    component.saveRecipientAddress(
+      'BYPsjxa3YuZESQz1dKuBw1QSFCSpecsm8nCQhY5xbU1Z'
+    );
+    expect(component.isRecipientPanelOpen).toBeTrue();
+
+    swapFlowFacade.emitQuote({
+      amountOut: '1000000',
+      amountOutAtomic: '1000000',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      traceId: 'trace-recipient-advance',
+      raw: { amountOut: '1000000' },
+      action: {
+        supported: true,
+        label: 'Review wallet transfer',
+        description: '',
+      },
+    });
+
+    expect(component.isRecipientPanelOpen).toBeFalse();
+    expect(openReview).toHaveBeenCalled();
+    expect(openReview.calls.mostRecent().args[0].showRecipientBack).toBeTrue();
   });
 
   it('uses a confirmed foreign-network recipient in quote previews', () => {

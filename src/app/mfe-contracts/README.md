@@ -252,6 +252,11 @@ explicit confirmation. Both routes use the backend's stored preparation ID for
 settlement tracking. It reports submission through `onSwapSubmitted` and requests a new host preview through
 `onSwapPreviewRefreshRequested` when the executable change is outside policy.
 
+Optional `showRecipientBack` on `WalletSwapReview` shows a Confirm Back control.
+The MFE emits `onSwapReviewBackRequested({ traceId })` so the host can reopen the
+Select recipient step for cross-network swaps without discarding the address.
+Older remotes ignore the flag.
+
 The host remains responsible for the Trade form, shared balance source, dry
 quote cancellation/versioning, and opening/closing the drawer. The MFE orchestrates
 quote requests through the host transport; it does not own prices or token catalogs.

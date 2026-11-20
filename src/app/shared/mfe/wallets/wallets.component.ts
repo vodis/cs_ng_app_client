@@ -182,6 +182,11 @@ export class WalletsComponent implements AfterViewInit, OnDestroy {
                 this.walletsService.requestClose();
               });
             },
+            onSwapReviewBackRequested: payload => {
+              this.ngZone.run(() => {
+                this.walletsService.requestSwapReviewBack(payload.traceId);
+              });
+            },
           },
           services: {
             walletFundingVersion: '1.0.0',

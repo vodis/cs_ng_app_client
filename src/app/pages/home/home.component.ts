@@ -220,6 +220,8 @@ export class HomeComponent {
   public confidentialSwap = false;
   public slippageDraftBps = DEFAULT_SLIPPAGE_TOLERANCE_BPS;
   public recipientAddress = '';
+  /** After Save recipient, advance into confirm once the quote is ready. */
+  private advanceToReviewAfterRecipient = false;
   private removedCatalogAssets = new Set<string>();
   public destinationMemo = '';
   public crossNetworkRecipientIntentSignEnabled =
@@ -477,6 +479,15 @@ export class HomeComponent {
         }
         this.syncAmountFieldsFromQuote();
         this.queueMobileSwapMarketHeightSync();
+        this.maybeAdvanceFromRecipientToReview();
+      });
+
+    this.walletsService.swapReviewBackRequested
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(traceId => {
+        if (!traceId || traceId !== this.activeReviewTraceId) return;
+        this.activeReviewTraceId = '';
+        this.returnToRecipientFromReview();
       });
 
     this.swapFlowFacade.error$
@@ -538,17 +549,24 @@ export class HomeComponent {
       return;
     }
 
-    const recipientError = this.recipientValidationError();
-    if (recipientError) {
-      this.quoteError = recipientError;
-      if (this.isForeignDestination()) this.openRecipientPanel();
-      return;
-    }
-
     const amount = this.requestedAmount();
 
     if (!amount || /^0+$/.test(amount)) {
       this.quoteError = `Enter a valid ${this.fromToken.symbol} amount.`;
+      return;
+    }
+
+    // Cross-network: collect recipient in the side dialog before confirm.
+    if (this.needsCrossNetworkRecipientStep()) {
+      this.quoteError = '';
+      this.openRecipientPanel();
+      return;
+    }
+
+    const recipientError = this.recipientValidationError();
+    if (recipientError) {
+      this.quoteError = recipientError;
+      if (this.isForeignDestination()) this.openRecipientPanel();
       return;
     }
 
@@ -611,14 +629,18 @@ export class HomeComponent {
   }
 
   public isPrimaryActionDisabled(): boolean {
-    return (
-      this.reviewBusy ||
-      Boolean(
-        this.activeWallet.wallet &&
-        !this.canReviewSwap() &&
-        !this.canRetryQuote()
-      )
-    );
+    if (this.reviewBusy) {
+      return true;
+    }
+    if (!this.activeWallet.wallet) {
+      return false;
+    }
+    // Missing cross-network recipient is an actionable CTA, not a disabled error.
+    if (this.needsCrossNetworkRecipientStep()) {
+      const amount = this.requestedAmount();
+      return !amount || /^0+$/.test(amount) || this.isQuoteLoading();
+    }
+    return !this.canReviewSwap() && !this.canRetryQuote();
   }
 
   private buildSwapInput(amount: string): SwapFormInput {
@@ -687,6 +709,10 @@ export class HomeComponent {
           ? { quoteReference: preview.quoteReference }
           : {}),
       },
+      ...(this.isForeignDestination() &&
+      this.crossNetworkRecipientIntentSignEnabled
+        ? { showRecipientBack: true }
+        : {}),
     };
 
     try {
@@ -993,6 +1019,13 @@ export class HomeComponent {
       return action.label;
     }
 
+    if (this.needsCrossNetworkRecipientStep()) {
+      const amount = this.requestedAmount();
+      if (amount && !/^0+$/.test(amount)) {
+        return 'Enter a recipient address';
+      }
+    }
+
     const blocking = this.primaryActionBlockingMessage();
     if (blocking) return blocking;
 
@@ -1005,6 +1038,9 @@ export class HomeComponent {
       return false;
     }
     if (this.reviewActionError) return true;
+    if (this.needsCrossNetworkRecipientStep()) {
+      return false;
+    }
     return Boolean(this.primaryActionBlockingMessage());
   }
 
@@ -2101,19 +2137,54 @@ export class HomeComponent {
     return Boolean(walletNetwork && this.toToken.blockchain !== walletNetwork);
   }
 
+  /** Cross-network swap with no recipient yet — Select recipient is required. */
+  public needsCrossNetworkRecipientStep(): boolean {
+    return (
+      this.isForeignDestination() &&
+      this.crossNetworkRecipientIntentSignEnabled &&
+      !this.recipientAddress.trim()
+    );
+  }
+
   public openRecipientPanel(): void {
     this.isRecipientPanelOpen = true;
   }
 
   public closeRecipientPanel(): void {
     this.isRecipientPanelOpen = false;
+    this.advanceToReviewAfterRecipient = false;
   }
 
   public saveRecipientAddress(address: string): void {
     this.recipientAddress = address;
-    this.isRecipientPanelOpen = false;
     this.quoteError = '';
+    // Keep the dialog open and advance to confirm once the quote is ready.
+    this.advanceToReviewAfterRecipient = true;
     this.refreshSwapQuotePreview();
+    this.maybeAdvanceFromRecipientToReview();
+  }
+
+  /** Back from confirm (cross-network) → edit recipient in the same flow. */
+  public returnToRecipientFromReview(): void {
+    this.cancelPendingReview();
+    this.walletsService.requestClose();
+    this.advanceToReviewAfterRecipient = false;
+    this.openRecipientPanel();
+  }
+
+  private maybeAdvanceFromRecipientToReview(): void {
+    if (!this.advanceToReviewAfterRecipient) return;
+    if (this.recipientValidationError()) {
+      this.advanceToReviewAfterRecipient = false;
+      return;
+    }
+    const amount = this.requestedAmount();
+    if (!amount || /^0+$/.test(amount)) return;
+    if (!this.canReviewSwap()) return;
+
+    this.advanceToReviewAfterRecipient = false;
+    this.isRecipientPanelOpen = false;
+    this.beginSwapReview(amount);
   }
 
   public recipientAddressLabel(): string {

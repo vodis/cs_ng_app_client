@@ -130,6 +130,8 @@ export type WalletsMfeCallbacks = {
   onSwapSettled?: (result: SwapSettlementResult) => void;
   onSwapSubmitted?: (payload: { traceId: string; intentHash: string }) => void;
   onSwapPreviewRefreshRequested?: (payload: { traceId: string }) => void;
+  /** Confirm back → host Select recipient (cross-network). Additive. */
+  onSwapReviewBackRequested?: (payload: { traceId: string }) => void;
 };
 
 export type WalletsMfeMountApi = {
