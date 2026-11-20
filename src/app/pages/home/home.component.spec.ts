@@ -2243,6 +2243,52 @@ describe('HomeComponent market overview', () => {
     expect(component.receiveAmount).toBe('4.5');
   });
 
+  it('keeps exact-output token precision in storage while display stays shorter', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'BTC',
+      displaySymbol: 'BTC',
+      decimals: 8,
+    };
+    const btcInput = document.createElement('input');
+    btcInput.value = '0.00005';
+    btcInput.addEventListener('input', event =>
+      component.onReceiveAmountInput(event)
+    );
+    btcInput.dispatchEvent(new Event('input'));
+    expect(component.receiveAmount).toBe('0.00005');
+    expect(btcInput.value).toBe('0.00005');
+
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'USDC',
+      displaySymbol: 'USDC',
+      decimals: 6,
+    };
+    const usdcInput = document.createElement('input');
+    usdcInput.value = '1.234567';
+    usdcInput.addEventListener('input', event =>
+      component.onReceiveAmountInput(event)
+    );
+    usdcInput.dispatchEvent(new Event('input'));
+    expect(component.receiveAmount).toBe('1.234567');
+    expect(usdcInput.value).toBe('1.234567');
+    // Read-only surfaces still use the shorter USDC display cap (2).
+    expect(
+      (
+        component as unknown as {
+          receiveDisplayFractionDigits(): number;
+        }
+      ).receiveDisplayFractionDigits()
+    ).toBe(2);
+  });
+
   it('moves a cross-chain pair onto one network from swap settings', () => {
     expectComparisonRequest({
       base: 'USDC',

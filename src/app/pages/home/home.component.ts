@@ -666,7 +666,7 @@ export class HomeComponent {
         amountOutAtomic: preview.amountOutAtomic,
         amountOutDisplay: this.formatSwapAmount(
           this.quotedToAmountDisplay(),
-          this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken))
+          this.receiveDisplayFractionDigits()
         ),
         ...optionalFiatField(
           this.fiatEstimate(this.toToken, this.quotedToAmountDisplay())
@@ -678,7 +678,7 @@ export class HomeComponent {
             minimumAtomic,
             this.tokenDecimals(this.toToken.decimals)
           ),
-          this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken))
+          this.receiveDisplayFractionDigits()
         )} ${this.tokenSymbolLabel(this.toToken)}`,
         ...(preview.quoteReference
           ? { quoteReference: preview.quoteReference }
@@ -850,7 +850,7 @@ export class HomeComponent {
 
     return this.formatSwapAmount(
       this.canonicalAmountStorage(raw),
-      this.swapAmountFractionDigits(this.toToken.symbol)
+      this.receiveDisplayFractionDigits()
     );
   }
 
@@ -1166,7 +1166,7 @@ export class HomeComponent {
 
     const formatted = this.formatSwapAmount(
       this.fromBaseUnits(minimum, this.tokenDecimals(this.toToken.decimals)),
-      this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken))
+      this.receiveDisplayFractionDigits()
     );
     return `${formatted} ${this.tokenSymbolLabel(this.toToken)}`;
   }
@@ -1190,7 +1190,7 @@ export class HomeComponent {
         minimumAtomic,
         this.tokenDecimals(this.toToken.decimals)
       ),
-      this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken))
+      this.receiveDisplayFractionDigits()
     );
     return `${formatted} ${this.tokenSymbolLabel(this.toToken)}`;
   }
@@ -1625,11 +1625,19 @@ export class HomeComponent {
     );
   }
 
+  /** Token precision for exact-output input, storage, and quote requests. */
   private receiveFractionDigits(): number {
     return Math.min(
-      this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken)),
       this.tokenDecimals(this.toToken.decimals),
       this.maxAmountFractionDigits
+    );
+  }
+
+  /** Shorter formatting for read-only receive surfaces (labels / confirm). */
+  private receiveDisplayFractionDigits(): number {
+    return Math.min(
+      this.swapAmountFractionDigits(this.tokenSymbolLabel(this.toToken)),
+      this.receiveFractionDigits()
     );
   }
 
