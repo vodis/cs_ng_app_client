@@ -486,7 +486,7 @@ describe('HomeComponent market overview', () => {
     };
     component.amount = '0.146146';
     expect(component.fromFiatEstimate()).toBe('$0.15');
-    expect(component.fromAmountDisplay()).toBe('0,146146');
+    expect(component.fromAmountDisplay()).toBe('0.146146');
     component.fromToken = { ...component.fromToken, priceUsd: undefined };
     expect(component.fromFiatEstimate()).toBe('—');
   });
@@ -970,7 +970,7 @@ describe('HomeComponent market overview', () => {
     };
 
     expect(component.toAmountDisplay()).toBe('0.450318543814579873646208');
-    expect(component.toAmountFormatted()).toBe('0,4503');
+    expect(component.toAmountFormatted()).toBe('0.4503');
   });
 
   it('shows Enter a valid amount in the CTA after the amount field is edited', () => {
@@ -1202,6 +1202,17 @@ describe('HomeComponent market overview', () => {
         slippageToleranceBps: 50,
       })
     );
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'BTC',
+      blockchain: 'btc',
+    };
+    expect(component['buildSwapInput'](amount)).toEqual(
+      jasmine.objectContaining({
+        network: jasmine.objectContaining({ label: 'NEAR' }),
+        destinationNetwork: { label: 'Bitcoin' },
+      })
+    );
     const input = component['buildSwapInput'](amount);
     expect(Object.keys(input)).not.toContain('depositType');
     expect(Object.keys(input)).not.toContain('authMethod');
@@ -1326,7 +1337,7 @@ describe('HomeComponent market overview', () => {
     walletsService.account.next({ account: 'alice.near', chainId: null });
 
     expect(component.balanceLabel(component.toToken)).toBe(
-      'Balance: 1,25 NEAR'
+      'Balance: 1.25 NEAR'
     );
   });
 
@@ -2243,6 +2254,52 @@ describe('HomeComponent market overview', () => {
     expect(component.receiveAmount).toBe('4.5');
   });
 
+  it('keeps exact-output token precision in storage while display stays shorter', () => {
+    expectComparisonRequest({
+      base: 'USDC',
+      quote: 'NEAR',
+      timeframe: '1H',
+    }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
+
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'BTC',
+      displaySymbol: 'BTC',
+      decimals: 8,
+    };
+    const btcInput = document.createElement('input');
+    btcInput.value = '0.00005';
+    btcInput.addEventListener('input', event =>
+      component.onReceiveAmountInput(event)
+    );
+    btcInput.dispatchEvent(new Event('input'));
+    expect(component.receiveAmount).toBe('0.00005');
+    expect(btcInput.value).toBe('0.00005');
+
+    component.toToken = {
+      ...component.toToken,
+      symbol: 'USDC',
+      displaySymbol: 'USDC',
+      decimals: 6,
+    };
+    const usdcInput = document.createElement('input');
+    usdcInput.value = '1.234567';
+    usdcInput.addEventListener('input', event =>
+      component.onReceiveAmountInput(event)
+    );
+    usdcInput.dispatchEvent(new Event('input'));
+    expect(component.receiveAmount).toBe('1.234567');
+    expect(usdcInput.value).toBe('1.234567');
+    // Read-only surfaces still use the shorter USDC display cap (2).
+    expect(
+      (
+        component as unknown as {
+          receiveDisplayFractionDigits(): number;
+        }
+      ).receiveDisplayFractionDigits()
+    ).toBe(2);
+  });
+
   it('moves a cross-chain pair onto one network from swap settings', () => {
     expectComparisonRequest({
       base: 'USDC',
@@ -2321,14 +2378,14 @@ describe('HomeComponent market overview', () => {
       preventDefault,
       clipboardData: {
         getData: (type: string) =>
-          type === 'text/plain' || type === 'text' ? '0,09' : '',
+          type === 'text/plain' || type === 'text' ? '0.09' : '',
       },
       target: input,
     } as unknown as ClipboardEvent);
 
     expect(preventDefault).toHaveBeenCalled();
     expect(component.amount).toBe('0.09');
-    expect(input.value).toBe('0,09');
+    expect(input.value).toBe('0.09');
     expect(swapFlowFacade.watchQuotePreview).toHaveBeenCalledWith(
       jasmine.objectContaining({
         source: jasmine.objectContaining({
@@ -3083,7 +3140,7 @@ describe('HomeComponent market overview', () => {
     };
 
     expect(component.toAmountDisplay()).toBe('0.450318543814579873646208');
-    expect(component.swapRateLabel()).toBe('1 USDC ≈ 0,0045 NEAR');
+    expect(component.swapRateLabel()).toBe('1 USDC ≈ 0.0045 NEAR');
   });
 
   describe('amount input formatting', () => {
@@ -3095,29 +3152,29 @@ describe('HomeComponent market overview', () => {
       }).flush(comparisonResponse('USDC', 'NEAR', '1H'));
     });
 
-    it('formats stored amount for display with comma decimals', () => {
+    it('formats stored amount for display with dot decimals', () => {
       component.amount = '0.886767';
-      expect(component.fromAmountDisplay()).toBe('0,886767');
+      expect(component.fromAmountDisplay()).toBe('0.886767');
     });
 
-    it('formats large stored amounts with thousand dots', () => {
+    it('formats large stored amounts with thousand commas', () => {
       component.amount = '10000000000.1000';
-      expect(component.fromAmountDisplay()).toBe('10.000.000.000,1000');
+      expect(component.fromAmountDisplay()).toBe('10,000,000,000.1000');
     });
 
     it('sanitizes grouped display input into dot-decimal storage', () => {
       const input = document.createElement('input');
-      input.value = '1.250,5';
+      input.value = '1,250.5';
 
       component.onAmountInput({ target: input } as unknown as Event);
 
       expect(component.amount).toBe('1250.5');
-      expect(input.value).toBe('1.250,5');
+      expect(input.value).toBe('1,250.5');
     });
 
     it('supports entering fractional digits beyond six places', () => {
       component.amount = '0.8867671234';
-      expect(component.fromAmountDisplay()).toBe('0,8867671234');
+      expect(component.fromAmountDisplay()).toBe('0.8867671234');
     });
 
     it('keeps the current amount when the input is focused', () => {
@@ -3127,10 +3184,10 @@ describe('HomeComponent market overview', () => {
       component.onAmountFocus({ target: input } as unknown as FocusEvent);
 
       expect(component.amount).toBe('0.886767');
-      expect(input.value).toBe('0,886767');
+      expect(input.value).toBe('0.886767');
     });
 
-    it('inserts comma from physical Comma key regardless of keyboard layout', () => {
+    it('inserts decimal from physical Comma key regardless of keyboard layout', () => {
       const input = document.createElement('input');
       input.value = '0';
       input.setSelectionRange(1, 1);
@@ -3145,11 +3202,11 @@ describe('HomeComponent market overview', () => {
 
       expect(preventDefault).toHaveBeenCalled();
       expect(component.amount).toBe('0.');
-      expect(input.value).toBe('0,');
+      expect(input.value).toBe('0.');
       expect(input.selectionStart).toBe(2);
     });
 
-    it('places caret after comma so 0,1 can be entered', () => {
+    it('places caret after decimal so 0.1 can be entered', () => {
       const input = document.createElement('input');
       input.value = '0';
       input.setSelectionRange(1, 1);
@@ -3161,11 +3218,11 @@ describe('HomeComponent market overview', () => {
         target: input,
       } as unknown as KeyboardEvent);
 
-      input.value = '0,1';
+      input.value = '0.1';
       component.onAmountInput({ target: input } as unknown as Event);
 
       expect(component.amount).toBe('0.1');
-      expect(input.value).toBe('0,1');
+      expect(input.value).toBe('0.1');
     });
   });
 

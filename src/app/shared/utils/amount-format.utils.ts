@@ -1,5 +1,6 @@
-export const AMOUNT_DECIMAL_SEPARATOR = ',';
-export const AMOUNT_THOUSAND_SEPARATOR = '.';
+/** Display/edit locale matches Trade + Confirm swap (en-US): 10,691.0948 */
+export const AMOUNT_DECIMAL_SEPARATOR = '.';
+export const AMOUNT_THOUSAND_SEPARATOR = ',';
 
 const AMOUNT_INPUT_CONTROL_KEYS = [
   'Backspace',
@@ -100,6 +101,7 @@ export function parseDisplayedAmount(
   const lastDot = cleaned.lastIndexOf('.');
 
   if (lastComma !== -1 && lastDot !== -1) {
+    // Last separator wins (en-US 10,691.09 or EU paste 10.691,09).
     if (lastComma > lastDot) {
       return parseWithDecimalSeparator(cleaned, lastComma, ',');
     }
@@ -107,28 +109,45 @@ export function parseDisplayedAmount(
     return parseWithDecimalSeparator(cleaned, lastDot, '.');
   }
 
-  if (lastComma !== -1) {
-    return parseWithDecimalSeparator(cleaned, lastComma, ',');
+  if (lastDot !== -1) {
+    // Dot is the primary decimal separator.
+    return parseWithDecimalSeparator(cleaned, lastDot, '.');
   }
 
-  if (lastDot !== -1) {
-    const tail = cleaned
-      .slice(lastDot + 1)
-      .replace(/\./g, '')
-      .replace(/\D/g, '');
-    const head = cleaned.slice(0, lastDot);
-    const tailIsDecimal =
-      tail.length > 0 &&
-      tail.length <= maxFractionDigits &&
-      !head.includes('.') &&
-      (tail.length !== 3 || /^0*$/.test(head));
+  if (lastComma !== -1) {
+    const commaCount = (cleaned.match(/,/g) ?? []).length;
+    const headDigits = cleaned.slice(0, lastComma).replace(/\D/g, '');
+    const tail = cleaned.slice(lastComma + 1).replace(/\D/g, '');
+    const zeroWhole = headDigits === '' || /^0+$/.test(headDigits);
 
-    if (tailIsDecimal) {
+    if (commaCount === 1 && tail.length > 0) {
+      // Leading-zero integer part is an unambiguous decimal paste (0,123),
+      // including fractions longer than maxFractionDigits (capped later).
+      if (zeroWhole) {
+        return parseWithDecimalSeparator(cleaned, lastComma, ',');
+      }
+
+      // Short non-grouping tails → European decimal paste (1,5 / 12,34).
+      if (tail.length !== 3 && tail.length <= maxFractionDigits) {
+        return parseWithDecimalSeparator(cleaned, lastComma, ',');
+      }
+
+      // Classic en-US thousands grouping (1,250 / 10,000).
+      if (tail.length === 3) {
+        return {
+          whole: stripLeadingZeros(stripThousands(cleaned, ',')),
+          fraction: '',
+        };
+      }
+
+      // Ambiguous / oversized comma fraction: reject instead of inflating.
+      return { whole: '', fraction: '' };
+    }
+
+    if (commaCount > 1) {
       return {
-        whole: stripLeadingZeros(
-          stripThousands(head, AMOUNT_THOUSAND_SEPARATOR)
-        ),
-        fraction: tail,
+        whole: stripLeadingZeros(stripThousands(cleaned, ',')),
+        fraction: '',
       };
     }
   }
@@ -143,7 +162,7 @@ export function displayHasDecimalSeparator(
   value: string,
   maxFractionDigits: number
 ): boolean {
-  if (value.includes(',')) {
+  if (value.includes(AMOUNT_DECIMAL_SEPARATOR)) {
     return true;
   }
 
@@ -173,7 +192,11 @@ export function normalizeAmountStorage(
   }
 
   const cappedFraction = fraction.slice(0, maxFractionDigits);
-  return cappedFraction ? `${whole}.${cappedFraction}` : whole;
+  if (!cappedFraction) {
+    return whole;
+  }
+
+  return `${whole || '0'}.${cappedFraction}`;
 }
 
 export function formatSwapAmountDisplay(

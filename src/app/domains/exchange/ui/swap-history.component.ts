@@ -9,6 +9,7 @@ import {
 import { inactiveAuthEmptyTitle } from '@core/auth/auth-presence';
 import {
   atomicToDecimal,
+  AMOUNT_DECIMAL_SEPARATOR,
   formatSwapAmountDisplay,
 } from '@shared/utils/amount-format.utils';
 
@@ -309,9 +310,7 @@ export class SwapHistoryComponent {
   @Input() compact = false;
   readonly history = inject(SwapHistoryFacade);
 
-  inactiveTitle(
-    presence: 'authenticated' | 'guest' | 'expired'
-  ): string {
+  inactiveTitle(presence: 'authenticated' | 'guest' | 'expired'): string {
     return inactiveAuthEmptyTitle(presence, 'swaps');
   }
 
@@ -336,9 +335,7 @@ export class SwapHistoryComponent {
     if (trimmed.length <= maxChars) {
       return trimmed;
     }
-    const comma = trimmed.indexOf(',');
-    const dot = trimmed.indexOf('.');
-    const sep = comma >= 0 ? comma : dot;
+    const sep = trimmed.indexOf(AMOUNT_DECIMAL_SEPARATOR);
     if (sep < 0) {
       return `${trimmed.slice(0, maxChars - 1)}…`;
     }

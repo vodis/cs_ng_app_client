@@ -40,6 +40,8 @@ export type SwapReviewIntent = {
     chainType: 'ethereum' | 'near' | 'ton' | 'solana' | 'bitcoin';
   };
   network: { id: string; label: string };
+  /** Where the received funds arrive. Absent until the host supplies it. */
+  destinationNetwork?: { label: string };
   recipient: string;
   destinationMemo?: string;
   recipientType: 'DESTINATION_CHAIN' | 'INTENTS' | 'CONFIDENTIAL_INTENTS';
@@ -155,6 +157,8 @@ export type WalletSwapInput = {
   recipient: string;
   destinationMemo?: string;
   network: { id: string; label: string };
+  /** Where the received funds arrive. The funding `network` must not be reused. */
+  destinationNetwork?: { label: string };
   slippageToleranceBps: number;
   confidential: boolean;
 };
