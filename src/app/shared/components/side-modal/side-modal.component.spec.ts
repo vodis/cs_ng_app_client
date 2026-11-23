@@ -1,9 +1,60 @@
 /// <reference types="jasmine" />
 
 import { A11yModule } from '@angular/cdk/a11y';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Component } from '@angular/core';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  flushMicrotasks,
+} from '@angular/core/testing';
 import { MatIconModule } from '@angular/material/icon';
 import { SideModalComponent } from './side-modal.component';
+
+@Component({
+  standalone: false,
+  template: `
+    <button
+      type="button"
+      aria-label="Open swap settings"
+      (click)="openSettings()">
+      Settings
+    </button>
+    <app-side-modal
+      [isOpen]="settingsOpen"
+      [showCloseButton]="false"
+      (closeRequested)="closeSettings()">
+      <button
+        type="button"
+        class="cs-swap-settings__close"
+        aria-label="Close swap settings"
+        (click)="closeSettings()">
+        Close
+      </button>
+      <button
+        type="button"
+        class="cs-swap-settings__done"
+        (click)="saveSettings()">
+        Done
+      </button>
+    </app-side-modal>
+  `,
+})
+class SwapSettingsDrawerHostComponent {
+  public settingsOpen = false;
+
+  public openSettings(): void {
+    this.settingsOpen = true;
+  }
+
+  public closeSettings(): void {
+    this.settingsOpen = false;
+  }
+
+  public saveSettings(): void {
+    this.settingsOpen = false;
+  }
+}
 
 describe('SideModalComponent', () => {
   let fixture: ComponentFixture<SideModalComponent>;
@@ -207,4 +258,89 @@ describe('SideModalComponent', () => {
     expect(panel().classList.contains('side-modal--compact')).toBeTrue();
     expect(panel().classList.contains('side-modal--left')).toBeFalse();
   });
+});
+
+describe('Swap settings drawer host focus', () => {
+  let fixture: ComponentFixture<SwapSettingsDrawerHostComponent>;
+  let host: SwapSettingsDrawerHostComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [SideModalComponent, SwapSettingsDrawerHostComponent],
+      imports: [A11yModule, MatIconModule],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SwapSettingsDrawerHostComponent);
+    host = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  function opener(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector(
+      'button[aria-label="Open swap settings"]'
+    ) as HTMLButtonElement;
+  }
+
+  function settingsClose(): HTMLButtonElement {
+    return document.querySelector(
+      '.cs-swap-settings__close'
+    ) as HTMLButtonElement;
+  }
+
+  function doneButton(): HTMLButtonElement {
+    return document.querySelector(
+      '.cs-swap-settings__done'
+    ) as HTMLButtonElement;
+  }
+
+  function sideModal(): SideModalComponent {
+    const match = fixture.debugElement.query(
+      node => node.componentInstance instanceof SideModalComponent
+    );
+    expect(match).toBeTruthy();
+    return match!.componentInstance as SideModalComponent;
+  }
+
+  it('restores focus to the settings opener after header close', fakeAsync(() => {
+    opener().focus();
+    opener().click();
+    fixture.detectChanges();
+    expect(host.settingsOpen).toBeTrue();
+
+    settingsClose().focus();
+    settingsClose().click();
+    fixture.detectChanges();
+    flushMicrotasks();
+
+    expect(host.settingsOpen).toBeFalse();
+    expect(document.activeElement).toBe(opener());
+  }));
+
+  it('restores focus to the settings opener after Done', fakeAsync(() => {
+    opener().focus();
+    opener().click();
+    fixture.detectChanges();
+
+    doneButton().focus();
+    doneButton().click();
+    fixture.detectChanges();
+    flushMicrotasks();
+
+    expect(host.settingsOpen).toBeFalse();
+    expect(document.activeElement).toBe(opener());
+  }));
+
+  it('restores focus to the settings opener after Escape', fakeAsync(() => {
+    opener().focus();
+    opener().click();
+    fixture.detectChanges();
+
+    settingsClose().focus();
+    sideModal().handleEscape();
+    fixture.detectChanges();
+    flushMicrotasks();
+
+    expect(host.settingsOpen).toBeFalse();
+    expect(document.activeElement).toBe(opener());
+  }));
 });

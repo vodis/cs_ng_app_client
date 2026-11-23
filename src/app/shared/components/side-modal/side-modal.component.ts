@@ -6,9 +6,11 @@ import {
   HostListener,
   inject,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
 } from '@angular/core';
 
 @Component({
@@ -17,9 +19,10 @@ import {
   templateUrl: 'side-modal.component.html',
   styleUrls: ['side-modal.component.scss'],
 })
-export class SideModalComponent implements OnInit, OnDestroy {
+export class SideModalComponent implements OnInit, OnChanges, OnDestroy {
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   private readonly document = inject(DOCUMENT);
+  private previouslyFocused: HTMLElement | null = null;
 
   @Input() isOpen = false;
   @Input() placement: 'left' | 'right' = 'right';
@@ -36,8 +39,22 @@ export class SideModalComponent implements OnInit, OnDestroy {
     this.document.body.appendChild(this.elementRef.nativeElement);
   }
 
+  public ngOnChanges(changes: SimpleChanges): void {
+    if (!changes['isOpen']) {
+      return;
+    }
+    if (this.isOpen) {
+      this.rememberOpenerFocus();
+      return;
+    }
+    if (changes['isOpen'].previousValue === true) {
+      this.restoreOpenerFocus();
+    }
+  }
+
   public ngOnDestroy(): void {
     this.elementRef.nativeElement.remove();
+    this.previouslyFocused = null;
   }
 
   public handleHostClose(event: Event): void {
@@ -65,5 +82,21 @@ export class SideModalComponent implements OnInit, OnDestroy {
       return;
     }
     this.closeRequested.emit();
+  }
+
+  private rememberOpenerFocus(): void {
+    const active = this.document.activeElement;
+    this.previouslyFocused = active instanceof HTMLElement ? active : null;
+  }
+
+  private restoreOpenerFocus(): void {
+    const target = this.previouslyFocused;
+    this.previouslyFocused = null;
+    if (!target || !this.document.contains(target)) {
+      return;
+    }
+    queueMicrotask(() => {
+      target.focus({ preventScroll: true });
+    });
   }
 }
