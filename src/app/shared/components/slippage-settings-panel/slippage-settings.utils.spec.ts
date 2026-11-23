@@ -50,14 +50,20 @@ describe('slippage-settings utils', () => {
     expect(sanitizeSlippagePercentInput('0.5,2')).toBe('0.52');
     expect(sanitizeSlippagePercentInput('1..2')).toBe('1.2');
     expect(sanitizeSlippagePercentInput('1,,2')).toBe('1,2');
-    expect(parseSlippagePercentInput('0,5.2')).toBe(52);
-    expect(parseSlippagePercentInput('0.5,2')).toBe(52);
+    // parse uses normalize only; dual separators stay invalid until sanitize
+    expect(parseSlippagePercentInput('0,5.2')).toBeNull();
+    expect(parseSlippagePercentInput('0.5,2')).toBeNull();
+    expect(parseSlippagePercentInput('0,52')).toBe(52);
+    expect(parseSlippagePercentInput('0.52')).toBe(52);
   });
 
-  it('strips letters from custom input', () => {
-    expect(sanitizeSlippagePercentInput('0,епм')).toBe('0,');
-    expect(sanitizeSlippagePercentInput('12abc.3.4')).toBe('12.34');
-    expect(sanitizeSlippagePercentInput('1a,2b')).toBe('1,2');
+  it('leaves letters in place so parsing can reject malformed input', () => {
+    expect(sanitizeSlippagePercentInput('0,епм')).toBe('0,епм');
+    expect(sanitizeSlippagePercentInput('12abc.3.4')).toBe('12abc.3.4');
+    expect(sanitizeSlippagePercentInput('1a,2b')).toBe('1a,2b');
+    expect(parseSlippagePercentInput('0,епм')).toBeNull();
+    expect(parseSlippagePercentInput('12abc.3.4')).toBeNull();
+    expect(parseSlippagePercentInput('1a,2b')).toBeNull();
   });
 
   it('round-trips custom inputs for non-preset values', () => {

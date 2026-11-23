@@ -3,7 +3,6 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { A11yModule } from '@angular/cdk/a11y';
-import { OverlayModule } from '@angular/cdk/overlay';
 import { AnimateLineComponent } from './components/animate-line/animate-line.component';
 import { AnimateTitleComponent } from './components/animate-title/animate-title.component';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,8 +22,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
 import { RecipientAddressPanelComponent } from '@shared/components/recipient-address-panel/recipient-address-panel.component';
-import { SlippageSettingsPanelComponent } from './components/slippage-settings-panel/slippage-settings-panel.component';
 import { AddFundsPanelComponent } from './components/add-funds-panel/add-funds-panel.component';
+import { CsSwapSettingsComponent } from '@vodis/cs-ui/angular';
 
 const AngularMaterial = [
   MatExpansionModule,
@@ -37,7 +36,6 @@ const AngularMaterial = [
   imports: [
     ...AngularMaterial,
     A11yModule,
-    OverlayModule,
     CommonModule,
     FormsModule,
     HttpClientModule,
@@ -45,6 +43,7 @@ const AngularMaterial = [
     WalletMenuComponent,
     WalletAccountComponent,
     AvatarComponent,
+    CsSwapSettingsComponent,
   ],
   declarations: [
     AnimateLineComponent,
@@ -56,7 +55,6 @@ const AngularMaterial = [
     SideModalComponent,
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
-    SlippageSettingsPanelComponent,
     AddFundsPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
@@ -74,7 +72,7 @@ const AngularMaterial = [
     SideModalComponent,
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
-    SlippageSettingsPanelComponent,
+    CsSwapSettingsComponent,
     AddFundsPanelComponent,
     LiveChartComponent,
     MarketOverviewChartComponent,
