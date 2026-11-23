@@ -66,15 +66,17 @@ read-only. Both amount fields stay editable. Typing a sell amount uses
 amount fixed, and requests its input cost. Clearing the receive amount returns
 to exact input. The quote mode participates in cancellation and preparation
 identity.
-The swap-panel settings button and the Slippage row open
-`app-slippage-settings-panel` as a mobile bottom sheet (centered dialog from
-768px). It sets the route (`direct` or `cross-chain`), privacy (`public` or
+The swap-panel settings button and the Slippage row open the shared
+`cs-swap-settings` form (`@vodis/cs-ui`) inside the same right-hand
+`app-side-modal` slide dialog used for token selection (full-height sheet on
+mobile). It sets the route (`direct` or `cross-chain`), privacy (`public` or
 `confidential`), and slippage presets (`0.1%`, `0.25%`, `0.5%`, `1%`, `3%`)
-plus custom input. Choosing a route selects a destination token on a matching
-network when one exists. The token selector still lists every destination
-network; picking a token makes the route follow that pair. The host stores
-slippage as basis points (default `50` = `0.5%`) and includes slippage and the
-privacy choice in dry quote and review intent payloads.
+plus custom input. Done applies the draft; × / backdrop / Esc discard it.
+Choosing a route selects a destination token on a matching network when one
+exists. The token selector still lists every destination network; picking a
+token makes the route follow that pair. The host stores slippage as basis
+points (default `50` = `0.5%`) and includes slippage and the privacy choice in
+dry quote and review intent payloads.
 
 ### Market panel
 

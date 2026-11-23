@@ -77,11 +77,9 @@ import {
   DEFAULT_SLIPPAGE_TOLERANCE_BPS,
   formatSlippagePercentLabel,
   minimumReceivedAtomic,
-} from '@shared/components/slippage-settings-panel/slippage-settings.utils';
-import type {
-  SwapRouteMode,
-  SwapSettingsSelection,
-} from '@shared/components/slippage-settings-panel/slippage-settings-panel.component';
+  type SwapRouteMode,
+  type SwapSettingsSelection,
+} from '@vodis/cs-ui';
 import {
   networkLabel,
   recipientAddressError,
@@ -103,7 +101,9 @@ type ComparisonTimeframe = '1H' | '1D' | '1W';
 type MarketChartMode = 'price' | 'relative';
 
 /** Omit placeholder dashes so Confirm swap never shows raw "—". */
-function optionalFiatField(value: string): { fiatValue: string } | Record<string, never> {
+function optionalFiatField(
+  value: string
+): { fiatValue: string } | Record<string, never> {
   const trimmed = value.trim();
   if (!trimmed || trimmed === '—' || trimmed === '-' || trimmed === '–') {
     return {};
@@ -659,7 +659,9 @@ export class HomeComponent {
         label: this.tokenNetworkLabel(this.fromToken),
       },
       ...(this.toToken.blockchain
-        ? { destinationNetwork: { label: this.tokenNetworkLabel(this.toToken) } }
+        ? {
+            destinationNetwork: { label: this.tokenNetworkLabel(this.toToken) },
+          }
         : {}),
       slippageToleranceBps: this.slippageToleranceBps,
       confidential: this.confidentialSwap,

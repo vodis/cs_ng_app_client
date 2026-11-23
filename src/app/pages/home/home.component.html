@@ -718,23 +718,29 @@
       (closeRequested)="closeRecipientPanel()" />
   </app-side-modal>
 
-  <app-slippage-settings-panel
+  <app-side-modal
     [isOpen]="isSlippageSettingsOpen"
-    [slippageToleranceBps]="slippageToleranceBps"
-    [maxSlippageBps]="maxSlippageBps"
-    [route]="routeMode()"
-    [privacy]="confidentialSwap ? 'confidential' : 'public'"
-    [directRouteEnabled]="canSelectRoute('direct')"
-    [crossChainRouteEnabled]="canSelectRoute('cross-chain')"
-    [limitLabel]="
-      swapType === 'EXACT_OUTPUT' ? 'Maximum paid' : 'Receive at least'
-    "
-    [receiveAtLeastLabel]="
-      swapType === 'EXACT_OUTPUT'
-        ? 'Requoted after saving'
-        : slippageReceiveAtLeastLabel()
-    "
-    (draftBpsChanged)="onSlippageDraftChanged($event)"
-    (saveRequested)="saveSwapSettings($event)"
-    (closeRequested)="closeSlippageSettings()" />
+    [showCloseButton]="false"
+    [containScroll]="true"
+    (closeRequested)="closeSlippageSettings()">
+    <cs-swap-settings
+      [open]="isSlippageSettingsOpen"
+      [slippageToleranceBps]="slippageToleranceBps"
+      [maxSlippageBps]="maxSlippageBps"
+      [route]="routeMode()"
+      [privacy]="confidentialSwap ? 'confidential' : 'public'"
+      [directRouteEnabled]="canSelectRoute('direct')"
+      [crossChainRouteEnabled]="canSelectRoute('cross-chain')"
+      [limitLabel]="
+        swapType === 'EXACT_OUTPUT' ? 'Maximum paid' : 'Receive at least'
+      "
+      [receiveAtLeastLabel]="
+        swapType === 'EXACT_OUTPUT'
+          ? 'Requoted after saving'
+          : slippageReceiveAtLeastLabel()
+      "
+      (draftBpsChanged)="onSlippageDraftChanged($event)"
+      (saveRequested)="saveSwapSettings($event)"
+      (close)="closeSlippageSettings()" />
+  </app-side-modal>
 </div>
