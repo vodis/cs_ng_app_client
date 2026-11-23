@@ -90,6 +90,35 @@ describe('SideModalComponent', () => {
     ).toBeGreaterThan(110);
   });
 
+  it('attaches to document.body so the shell sidebar cannot sit above it', () => {
+    expect(fixture.nativeElement.parentElement).toBe(document.body);
+
+    const shell = document.createElement('div');
+    shell.style.position = 'relative';
+    shell.style.zIndex = '1';
+    const sidebar = document.createElement('button');
+    sidebar.type = 'button';
+    sidebar.textContent = 'Trade';
+    sidebar.style.position = 'fixed';
+    sidebar.style.top = '0';
+    sidebar.style.left = '0';
+    sidebar.style.zIndex = '3';
+    sidebar.style.width = '72px';
+    sidebar.style.height = '72px';
+    shell.appendChild(sidebar);
+    document.body.appendChild(shell);
+
+    try {
+      const hit = document.elementFromPoint(24, 24);
+      expect(hit).not.toBe(sidebar);
+      expect(
+        backdrop().contains(hit) || panel().contains(hit) || hit === backdrop()
+      ).toBeTrue();
+    } finally {
+      shell.remove();
+    }
+  });
+
   it('slides the panel with a transform transition', () => {
     component.isOpen = false;
     fixture.detectChanges();
