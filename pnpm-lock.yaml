@@ -106,8 +106,8 @@ importers:
         specifier: 0.1.0
         version: 0.1.0
       '@vodis/cs-ui':
-        specifier: file:../cs-sdk/packages/cs-ui
-        version: file:../cs-sdk/packages/cs-ui(@angular/core@20.3.31(@angular/compiler@20.3.31)(rxjs@7.8.2)(zone.js@0.15.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.4.0
+        version: 0.4.0(@angular/core@20.3.31(@angular/compiler@20.3.31)(rxjs@7.8.2)(zone.js@0.15.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       countup.js:
         specifier: ^2.10.1
         version: 2.10.1
@@ -2914,19 +2914,12 @@ packages:
   '@vodis/cs-intents@0.1.0':
     resolution: {integrity: sha512-jpTAOHBAphSq6Cg3fsOUs5GKRmNNEk79uLneLEbdQv52uUGizmwzQopNxSm0G84uv4c0lfiVsyvxIRBwIv0JeA==, tarball: https://npm.pkg.github.com/download/@vodis/cs-intents/0.1.0/2f6f2931225837d6665f546473a4f0759f0a51c0}
 
-  '@vodis/cs-ui@file:../cs-sdk/packages/cs-ui':
-    resolution: {directory: ../cs-sdk/packages/cs-ui, type: directory}
+  '@vodis/cs-ui@0.4.0':
+    resolution: {integrity: sha512-s6Shkk2HZNyPfnRm+Srpz7o97m4sCLiM+kXhjzdrFqQOGsfJ9SAMBLeiEzcXc6CtQgx40bpSiCSilTmpiIfvtA==, tarball: https://npm.pkg.github.com/download/@vodis/cs-ui/0.4.0/284ee8f07320d98b14d00cbf0e1db4e2a2f43172}
     peerDependencies:
       '@angular/core': '>=20 <21'
       react: '>=18'
       react-dom: '>=18'
-    peerDependenciesMeta:
-      '@angular/core':
-        optional: true
-      react:
-        optional: true
-      react-dom:
-        optional: true
 
   '@webassemblyjs/ast@1.14.1':
     resolution: {integrity: sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ==}
@@ -10215,8 +10208,8 @@ snapshots:
 
   '@vodis/cs-intents@0.1.0': {}
 
-  '@vodis/cs-ui@file:../cs-sdk/packages/cs-ui(@angular/core@20.3.31(@angular/compiler@20.3.31)(rxjs@7.8.2)(zone.js@0.15.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
-    optionalDependencies:
+  '@vodis/cs-ui@0.4.0(@angular/core@20.3.31(@angular/compiler@20.3.31)(rxjs@7.8.2)(zone.js@0.15.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+    dependencies:
       '@angular/core': 20.3.31(@angular/compiler@20.3.31)(rxjs@7.8.2)(zone.js@0.15.1)
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
