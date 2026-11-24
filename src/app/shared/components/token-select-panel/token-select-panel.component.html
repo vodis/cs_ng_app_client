@@ -80,14 +80,18 @@
                   <button
                     type="button"
                     class="token-select-panel__item"
-                    [disabled]="selectionBusy"
+                    [disabled]="
+                      selectionBusy || !canSelectFundingHolding(holding)
+                    "
                     (click)="chooseHolding(holding)">
                     <span class="token-select-panel__meta"
                       ><strong>{{ holding.wallet.address }}</strong
                       ><span>{{
-                        holding.wallet.isPrimary
-                          ? 'Active wallet'
-                          : 'Use as active wallet'
+                        !canSelectFundingHolding(holding)
+                          ? 'Balance only — swapping unavailable'
+                          : holding.wallet.isPrimary
+                            ? 'Active wallet'
+                            : 'Use as active wallet'
                       }}</span></span
                     >
                     @let summary = holdingSummary(holding);

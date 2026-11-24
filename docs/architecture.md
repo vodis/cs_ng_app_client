@@ -537,5 +537,7 @@ field, falling back to `sourceNetwork` for older API versions. The separate
 field permits reads on networks without a funding adapter. In particular, an
 EVM address can read HyperCore spot balances; this does not enable HyperCore
 signing, wallet linking, or swap funding. Other new families require an existing
-linked address of the corresponding chain type. Provider errors and unsupported
-reads remain incomplete holdings rather than zero.
+linked address of the corresponding chain type. The source-token picker keeps balance-only holdings visible but disables their
+funding action and labels them as unavailable for swapping. Destination-token
+selection remains independent. Provider errors and unsupported reads remain
+incomplete holdings rather than zero.
