@@ -2,6 +2,8 @@ export interface AssetDto {
   assetId: string;
   balanceAssetId?: string;
   sourceNetwork?: string;
+  /** Backend-provided read-only network; never a signing capability. */
+  balanceNetwork?: string;
   defuseAssetId?: string;
   symbol: string;
   name?: string;

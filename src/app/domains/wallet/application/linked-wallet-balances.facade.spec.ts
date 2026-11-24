@@ -11,6 +11,7 @@ import {
   LinkedWalletBalancesFacade,
   type LinkedBalancesState,
   walletSupportsNetwork,
+  walletSupportsBalanceNetwork,
 } from './linked-wallet-balances.facade';
 
 describe('linked wallet balances', () => {
@@ -73,6 +74,64 @@ describe('linked wallet balances', () => {
     });
     facade = TestBed.inject(LinkedWalletBalancesFacade);
     facade.state$.subscribe(value => (state = value));
+  });
+  it('uses balanceNetwork without inventing funding support', () => {
+    const account = {
+      ...wallet,
+      id: 'evm',
+      address: '0x' + 'a'.repeat(40),
+      chainType: 'ethereum',
+    };
+    sessions.next({ ...session, wallets: [account] });
+    balances.loadBalancesWithMeta.and.returnValue(
+      of({
+        balances: [
+          {
+            walletId: account.id,
+            walletAddress: account.address,
+            network: 'oneclick:hypercore',
+            chainType: account.chainType,
+            assetId: 'hip1',
+            symbol: 'USDC',
+            decimals: 8,
+            balanceRaw: '100000000',
+            source: 'public_chain_api',
+            fetchedAt: '2030-01-01',
+            expiresAt: '2030-01-02',
+            stale: false,
+          },
+        ],
+        partial: false,
+      })
+    );
+    const hip = {
+      ...token,
+      assetId: 'hip1',
+      sourceNetwork: undefined,
+      balanceNetwork: 'oneclick:hypercore',
+    };
+    facade.refresh([hip]);
+    expect(balances.loadBalancesWithMeta).toHaveBeenCalledWith({
+      walletAddress: account.address,
+      network: 'oneclick:hypercore',
+      assetIds: ['hip1'],
+    });
+    expect(hip.sourceNetwork).toBeUndefined();
+    expect(state.holdings[0].balance?.balanceRaw).toBe('100000000');
+    expect(state.incomplete).toBeFalse();
+    expect(walletSupportsNetwork(account, 'oneclick:hypercore')).toBeFalse();
+    expect(
+      walletSupportsBalanceNetwork(wallet, 'oneclick:hypercore')
+    ).toBeFalse();
+    expect(
+      walletSupportsBalanceNetwork(account, 'oneclick:stellar')
+    ).toBeFalse();
+    expect(
+      walletSupportsBalanceNetwork(
+        { ...wallet, chainType: 'stellar' },
+        'oneclick:stellar'
+      )
+    ).toBeTrue();
   });
   it('loads only on demand and batches at 20 assets', () => {
     expect(balances.loadBalancesWithMeta).not.toHaveBeenCalled();

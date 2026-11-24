@@ -31,9 +31,10 @@ export function tokenBalance(
     : network.startsWith('ton:')
       ? 'ton'
       : walletBlockchain('', Number(network.split(':')[1]));
+  const balanceNetwork = token.balanceNetwork ?? token.sourceNetwork;
   if (
-    token.sourceNetwork
-      ? token.sourceNetwork !== network
+    balanceNetwork
+      ? balanceNetwork !== network
       : token.blockchain !== blockchain
   )
     return undefined;

@@ -87,6 +87,7 @@ describe('ExchangeAssetsService', () => {
         {
           assetId: 'nep141:eth.omft.near',
           balanceAssetId: 'eip155:1/native',
+          balanceNetwork: 'eip155:1',
           symbol: 'ETH',
           blockchain: 'eth',
           decimals: 18,
@@ -95,6 +96,7 @@ describe('ExchangeAssetsService', () => {
       ],
     });
     expect(tokens[0].balanceAssetId).toBe('eip155:1/native');
+    expect(tokens[0].balanceNetwork).toBe('eip155:1');
     expect(tokens[0].priceUsd).toBe('2568.88');
   });
 
