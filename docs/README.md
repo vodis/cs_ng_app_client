@@ -12,6 +12,7 @@ detailed and task-specific guidance belongs here.
 | [Development](development.md)                              | Local setup, branch workflow, implementation standards, testing, and change management          |
 | [Branding](branding.md)                                    | Visual tokens, typography, spacing, responsive layout, and shell UI constraints                 |
 | [Exchange page](exchange-page.md)                          | Token Exchange structure, data sources, styling boundaries, responsive behavior, and E2E checks |
+| [Dialog inventory](dialog-inventory.md)                    | Host overlay/dialog audit: side-slide usage, ticket targets, and remaining follow-ups           |
 | [Wallet MFE contracts](../src/app/mfe-contracts/README.md) | Host-side runtime interfaces and compatibility expectations for `cs_mfe-wallets`                |
 
 Agent and contributor rules remain at [`AGENTS.md`](../AGENTS.md) so automated
