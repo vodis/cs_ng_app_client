@@ -57,8 +57,7 @@ export class SideModalComponent implements OnInit, OnChanges, OnDestroy {
     this.previouslyFocused = null;
   }
 
-  public handleHostClose(event: Event): void {
-    event.stopPropagation();
+  public handleHostClose(): void {
     if (!this.isOpen) {
       return;
     }

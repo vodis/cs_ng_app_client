@@ -43,7 +43,7 @@
     "@module-federation/runtime-core": "0.6.21",
     "@vodis/cs-foundation": "0.2.3",
     "@vodis/cs-intents": "0.1.0",
-    "@vodis/cs-ui": "0.4.0",
+    "@vodis/cs-ui": "^0.5.0",
     "countup.js": "^2.10.1",
     "liveline": "^0.0.7",
     "qr-code-styling": "^1.9.2",

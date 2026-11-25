@@ -20,13 +20,11 @@
   [cdkTrapFocusAutoCapture]="isOpen"
   (click)="handleDialogClick($event)">
   @if (showCloseButton && isOpen) {
-    <button
-      type="button"
+    <cs-close-button
       class="side-modal__close"
-      aria-label="Close dialog"
-      (click)="handleHostClose($event)">
-      <mat-icon aria-hidden="true">close</mat-icon>
-    </button>
+      size="sm"
+      ariaLabel="Close dialog"
+      (pressed)="handleHostClose()" />
   }
   <ng-content></ng-content>
 </div>
