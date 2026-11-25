@@ -189,21 +189,12 @@ test.describe('Mobile slide-in navigation', () => {
     ).toBeVisible();
     await expect(
       panel.getByRole('button', { name: 'Logout', exact: true })
-    ).toBeVisible();
-  });
-
-  test('keeps header actions visible while the menu is open', async ({
-    page,
-  }) => {
-    await page.locator('app-header .header__menu-button').click();
-    await expect(page.locator('#floatingNav')).toBeVisible();
-
+    ).toHaveCount(0);
+    await expect(panel.getByRole('heading', { name: 'Menu' })).toBeVisible();
     await expect(
-      page.locator('app-header').getByRole('button', { name: 'Notifications' })
+      panel.locator('.slide-nav__close button.cs-close-button')
     ).toBeVisible();
-    await expect(
-      page.locator('app-header').getByRole('button', { name: 'Wallets' })
-    ).toBeVisible();
+    await expect(page.locator('.nav-overlay')).toHaveCount(0);
   });
 
   test('restores focus to the header menu trigger on Escape', async ({
@@ -212,30 +203,26 @@ test.describe('Mobile slide-in navigation', () => {
     const menuButton = page.locator('app-header .header__menu-button');
     await menuButton.click();
     await expect(page.locator('#floatingNav')).toBeVisible();
+    await expect(page.locator('.side-modal.open')).toBeVisible();
 
     await page.keyboard.press('Escape');
 
-    await expect(page.locator('#floatingNav')).toHaveAttribute(
-      'aria-hidden',
-      'true'
-    );
+    await expect(page.locator('.side-modal.open')).toHaveCount(0);
     await expect(menuButton).toBeFocused();
   });
 
-  test('restores focus to the header menu trigger on backdrop click', async ({
+  test('closes from the shared cs-ui close button and restores focus', async ({
     page,
   }) => {
     const menuButton = page.locator('app-header .header__menu-button');
     await menuButton.click();
-    await expect(page.locator('#floatingNav')).toBeVisible();
+    await expect(page.locator('.side-modal.open')).toBeVisible();
 
-    // Click the dimmed scrim below the sticky header (panel is ~85% from right).
-    await page.mouse.click(24, SHELL_HEADER_HEIGHT_PX + 24);
+    await page
+      .locator('#floatingNav .slide-nav__close button.cs-close-button')
+      .click();
 
-    await expect(page.locator('#floatingNav')).toHaveAttribute(
-      'aria-hidden',
-      'true'
-    );
+    await expect(page.locator('.side-modal.open')).toHaveCount(0);
     await expect(menuButton).toBeFocused();
   });
 });

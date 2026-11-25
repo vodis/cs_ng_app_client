@@ -76,6 +76,7 @@ const AngularMaterial = [
     SideModalComponent,
     TokenSelectPanelComponent,
     RecipientAddressPanelComponent,
+    CsCloseButtonComponent,
     CsSwapSettingsComponent,
     AddFundsPanelComponent,
     LiveChartComponent,
