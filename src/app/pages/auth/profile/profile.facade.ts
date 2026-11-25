@@ -7,6 +7,10 @@ import { Router } from '@angular/router';
 import type { AuthPresence } from '@core/auth/auth-presence';
 import { AuthSessionService } from '@core/auth/auth-session.service';
 import type { AuthSession, BackendWallet } from '@core/auth/auth-session.types';
+import {
+  TelemetryGateway,
+  telemetryErrorCategory,
+} from '@core/telemetry/telemetry-gateway.service';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
 import type { LastConnectedWallet } from '@domains/wallet/models/wallet.models';
 import type { ExchangeToken } from '@shared/models/exchange-token.model';
@@ -17,10 +21,7 @@ import { PortfolioApiService } from '../../portfolio/portfolio-api.service';
 import type { PortfolioSnapshot } from '../../portfolio/portfolio.models';
 
 export type ProfileOnboardingAction =
-  | 'complete'
-  | 'passkey-enabled'
-  | 'passkey-unavailable'
-  | 'wallet-opened';
+  'complete' | 'passkey-enabled' | 'passkey-unavailable' | 'wallet-opened';
 
 export type ProfileOnboardingStepId = 'wallet' | 'security' | 'swaps';
 
@@ -101,7 +102,8 @@ export class ProfileFacade implements OnDestroy {
     private readonly portfolioApi: PortfolioApiService,
     private readonly activeWallet: ActiveWalletFacade,
     private readonly exchangeAssets: ExchangeAssetsService,
-    private readonly deposits: DepositApiService
+    private readonly deposits: DepositApiService,
+    private readonly telemetry?: TelemetryGateway
   ) {
     this.subscriptions.add(
       this.activeWallet.state$.subscribe(state => {
@@ -310,7 +312,14 @@ export class ProfileFacade implements OnDestroy {
       );
       if (generation === this.depositGeneration)
         this.depositInstructions = instructions;
-    } catch {
+      this.telemetry?.track('deposit.started', 'success', {
+        network: token.sourceNetwork,
+      });
+    } catch (error) {
+      this.telemetry?.track('deposit.started', 'failure', {
+        network: token.sourceNetwork,
+        error_category: telemetryErrorCategory(error),
+      });
       if (generation === this.depositGeneration)
         this.depositError =
           'Deposit instructions are unavailable for this wallet and network. Try again or select another network.';

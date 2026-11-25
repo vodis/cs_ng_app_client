@@ -357,3 +357,25 @@ silent restoration, missing provider sessions and the standard connection UI.
 For local installed Chrome, set `PLAYWRIGHT_CHANNEL=chrome`; CI installs Playwright
 Chromium. Tests against a separately running real MFE remain available through
 `WALLET_MFE_TEST_URL`.
+
+## Product Telemetry Gateway
+
+`TelemetryGateway` (`src/app/core/telemetry`) sends first-party product events
+to `POST /api/v1/product-events/batch`. It is behind the `telemetryGateway`
+environment flag, which is **off by default**; with the flag off nothing is
+queued or sent. Google Analytics is unaffected and runs in parallel.
+
+- Events are queued in memory and flushed every 5 seconds, once 20 are queued,
+  or when the page is hidden (`navigator.sendBeacon`, with
+  `fetch(..., { keepalive: true })` as fallback). A request never carries more
+  than 50 events.
+- Each event has a client-generated UUIDv4 `event_id` and an anonymous browser
+  id kept in local storage and rotated every 30 days (not derived from the
+  wallet or account).
+- Page views send the route template (`/swap/[id]`), never the real URL or
+  query string. Properties are limited to `route`, `network`, `wallet_type` and
+  `error_category`; never add emails, addresses, account names, tokens or
+  amounts. `swap.confirmed` is recorded by the backend, not the client.
+- Global Privacy Control and Do-Not-Track disable the gateway entirely.
+- Delivery is best effort: failures are silent, retried at most once, then the
+  batch is dropped.

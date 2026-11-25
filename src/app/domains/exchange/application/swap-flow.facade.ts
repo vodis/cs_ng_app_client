@@ -11,6 +11,10 @@ import {
   tap,
   timer,
 } from 'rxjs';
+import {
+  TelemetryGateway,
+  telemetryErrorCategory,
+} from '@core/telemetry/telemetry-gateway.service';
 import { createTraceId } from '@core/trace/create-trace-id';
 import type {
   SwapFlowError,
@@ -54,7 +58,8 @@ export class SwapFlowFacade {
 
   constructor(
     @Inject(SwapQuoteGateway)
-    private readonly workflow: SwapQuoteGatewayPort
+    private readonly workflow: SwapQuoteGatewayPort,
+    private readonly telemetry?: TelemetryGateway
   ) {
     this.quoteInputSubject
       .pipe(
@@ -96,10 +101,12 @@ export class SwapFlowFacade {
       }
       this.quotePreviewSubject.next(preview);
       this.setState('idle');
+      this.trackQuote(input, 'success');
     } catch (error) {
       if (requestVersion !== this.quoteRequestVersion) {
         return;
       }
+      this.trackQuote(input, 'failure', error);
       this.errorSubject.next(this.toFlowError('requestingQuote', error));
       this.setState('idle');
     }
@@ -161,9 +168,11 @@ export class SwapFlowFacade {
             this.errorSubject.next(undefined);
             this.quotePreviewSubject.next(preview);
             this.setState('idle');
+            this.trackQuote(input, 'success');
           }),
           catchError(error => {
             if (requestVersion === this.quoteRequestVersion) {
+              this.trackQuote(input, 'failure', error);
               this.errorSubject.next(
                 this.toFlowError('requestingQuote', error)
               );
@@ -196,6 +205,18 @@ export class SwapFlowFacade {
       input.confidential,
       input.network.id,
     ].join('|');
+  }
+
+  private trackQuote(
+    input: SwapFormInput,
+    status: 'success' | 'failure',
+    error?: unknown
+  ): void {
+    this.telemetry?.track('swap.quote', status, {
+      network: input.network?.id,
+      error_category:
+        status === 'failure' ? telemetryErrorCategory(error) : undefined,
+    });
   }
 
   private setState(state: SwapFlowState): void {
