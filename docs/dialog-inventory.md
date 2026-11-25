@@ -25,8 +25,8 @@ No further host migration is required for those two flows.
 | Swap settings | Exchange | `@vodis/cs-ui` `cs-swap-settings` (#255) |
 | Swap review / connect / wallet board | Shell `app-wallet-bar` | MFE mount + connected board |
 | Add Funds | Profile | `app-add-funds-panel` |
-| Investment preferences | Portfolio | Inline portfolio form |
-| Connect AI agent | Portfolio | Inline portfolio form |
+| Investment preferences | Portfolio | Already `app-side-modal` in `portfolio.component.html` (`profileOpen`) |
+| Connect AI agent | Portfolio | Already `app-side-modal` in `portfolio.component.html` (`agentOpen`) |
 | Email OTP verify | Login / Register | Code form |
 
 Host has **no** `MatDialog` / CDK `Overlay` centered dialogs.
@@ -39,6 +39,17 @@ Host has **no** `MatDialog` / CDK `Overlay` centered dialogs.
 | Profile Activity month/year | Anchored dropdown | Not a modal |
 | Auth pages `register-shell--centered` | Page layout | Not a dialog |
 
+## Native `window.confirm` prompts (migration decision pending)
+
+These are browser confirm dialogs, not centered app modals. Recorded so product
+can decide whether to keep them, replace with `app-side-modal`, or use another
+shared confirm pattern.
+
+| Surface | Opener | Code |
+| --- | --- | --- |
+| Revoke login session | Portfolio account sessions | `account-sessions.component.ts` → `confirmRevoke` |
+| Revoke agent access | Portfolio agent connections | `portfolio-context.component.ts` → `confirmRevoke` |
+
 ## Follow-ups (not in this host PR)
 
 Post these for product / MFE decisions:
@@ -47,6 +58,7 @@ Post these for product / MFE decisions:
 2. **Third-party wallet UIs** — TonConnect `openModal`, WalletConnect / Privy provider sheets. Owned by SDKs; cannot fully restyle to CraftScript side slide.
 3. **Send Funds** — still **Soon** on Profile; when built, open it with `app-side-modal` (same as Add Funds).
 4. **Confirm swap** — already hosted in the wallet side drawer (`drawerMode === 'swap-review'`); keep that contract, do not reintroduce a centered overlay.
+5. **Portfolio `window.confirm` prompts** (session revoke + agent-access revoke) — decide whether to migrate off the native browser dialog.
 
 ## Rule of thumb for new UI
 
