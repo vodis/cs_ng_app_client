@@ -8,7 +8,7 @@ import {
   fakeAsync,
   flushMicrotasks,
 } from '@angular/core/testing';
-import { MatIconModule } from '@angular/material/icon';
+import { CsCloseButtonComponent } from '@vodis/cs-ui/angular';
 import { SideModalComponent } from './side-modal.component';
 
 @Component({
@@ -63,7 +63,7 @@ describe('SideModalComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [SideModalComponent],
-      imports: [A11yModule, MatIconModule],
+      imports: [A11yModule, CsCloseButtonComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SideModalComponent);
@@ -233,10 +233,11 @@ describe('SideModalComponent', () => {
   it('emits closeRequested from the host close button', () => {
     const emitSpy = spyOn(component.closeRequested, 'emit');
     const closeButton = fixture.nativeElement.querySelector(
-      '.side-modal__close'
+      '.side-modal__close button.cs-close-button'
     ) as HTMLButtonElement;
 
     expect(closeButton).toBeTruthy();
+    expect(closeButton.classList.contains('cs-close-button--sm')).toBeTrue();
     closeButton.click();
 
     expect(emitSpy).toHaveBeenCalledTimes(1);
@@ -267,7 +268,7 @@ describe('Swap settings drawer host focus', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [SideModalComponent, SwapSettingsDrawerHostComponent],
-      imports: [A11yModule, MatIconModule],
+      imports: [A11yModule, CsCloseButtonComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SwapSettingsDrawerHostComponent);

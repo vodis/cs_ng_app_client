@@ -23,7 +23,10 @@ import { HttpClientModule } from '@angular/common/http';
 import { CsTranslationsModule } from '@vodis/cs-foundation/angular';
 import { RecipientAddressPanelComponent } from '@shared/components/recipient-address-panel/recipient-address-panel.component';
 import { AddFundsPanelComponent } from './components/add-funds-panel/add-funds-panel.component';
-import { CsSwapSettingsComponent } from '@vodis/cs-ui/angular';
+import {
+  CsCloseButtonComponent,
+  CsSwapSettingsComponent,
+} from '@vodis/cs-ui/angular';
 
 const AngularMaterial = [
   MatExpansionModule,
@@ -43,6 +46,7 @@ const AngularMaterial = [
     WalletMenuComponent,
     WalletAccountComponent,
     AvatarComponent,
+    CsCloseButtonComponent,
     CsSwapSettingsComponent,
   ],
   declarations: [
