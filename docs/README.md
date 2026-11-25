@@ -13,6 +13,7 @@ detailed and task-specific guidance belongs here.
 | [Branding](branding.md)                                    | Visual tokens, typography, spacing, responsive layout, and shell UI constraints                 |
 | [Exchange page](exchange-page.md)                          | Token Exchange structure, data sources, styling boundaries, responsive behavior, and E2E checks |
 | [Dialog inventory](dialog-inventory.md)                    | Host overlay/dialog audit: side-slide usage, ticket targets, and remaining follow-ups           |
+| [Client RPC settings](client-rpc-settings.md)              | Browser-only RPC prefs, health probes, fallback rules, and BFF boundary                         |
 | [Wallet MFE contracts](../src/app/mfe-contracts/README.md) | Host-side runtime interfaces and compatibility expectations for `cs_mfe-wallets`                |
 
 Agent and contributor rules remain at [`AGENTS.md`](../AGENTS.md) so automated

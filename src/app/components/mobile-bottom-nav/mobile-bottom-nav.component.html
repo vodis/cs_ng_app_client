@@ -50,6 +50,8 @@
     </div>
 
     <div class="slide-nav__footer">
+      <app-rpc-status-dot class="slide-nav__rpc" (openSettings)="closeMenu()" />
+
       <div class="slide-nav__languages" role="group" aria-label="Language">
         <button
           *ngFor="let locale of locales; let i = index; trackBy: trackById"
@@ -64,3 +66,12 @@
     </div>
   </nav>
 </app-side-modal>
+
+@if ((rpcSettingsOpen$ | async) === true) {
+  <app-side-modal
+    [isOpen]="true"
+    [showCloseButton]="false"
+    (closeRequested)="closeRpcSettings()">
+    <app-rpc-settings-panel />
+  </app-side-modal>
+}

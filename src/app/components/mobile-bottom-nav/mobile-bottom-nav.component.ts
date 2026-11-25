@@ -13,6 +13,7 @@ import {
   localizedPath,
   stripLocalePrefix,
 } from '@core/routing/localized-routing.service';
+import { ClientRpcFacade } from '@domains/rpc/client-rpc.facade';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { environment } from '../../../environments/environment';
 import { MobileNavMenuService } from './mobile-nav-menu.service';
@@ -92,7 +93,10 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
   private menuSubscription?: Subscription;
   private walletsOpenSubscription?: Subscription;
 
+  public readonly rpcSettingsOpen$ = this.clientRpc.settingsOpen$;
+
   constructor(
+    private readonly clientRpc: ClientRpcFacade,
     private readonly localizedRouting: LocalizedRoutingService,
     private readonly mobileNavMenu: MobileNavMenuService,
     private readonly router: Router,
@@ -165,6 +169,10 @@ export class MobileBottomNavComponent implements OnInit, OnDestroy {
 
   public closeMenu(restoreTriggerFocus = false): void {
     this.mobileNavMenu.close(restoreTriggerFocus);
+  }
+
+  public closeRpcSettings(): void {
+    this.clientRpc.closeSettings();
   }
 
   public async selectLocale(locale: LocaleSlug): Promise<void> {

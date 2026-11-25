@@ -1,0 +1,115 @@
+@if (view$ | async; as view) {
+  <section class="rpc-settings" aria-label="RPC settings">
+    <header class="rpc-settings__header">
+      <h2 class="rpc-settings__title">RPC settings</h2>
+      <cs-close-button
+        class="rpc-settings__close"
+        size="sm"
+        ariaLabel="Close RPC settings"
+        (pressed)="close()" />
+    </header>
+
+    <div class="rpc-settings__body">
+      <label class="rpc-settings__label" for="rpc-network">Network</label>
+      <select
+        id="rpc-network"
+        class="rpc-settings__select"
+        [ngModel]="view.networkId"
+        (ngModelChange)="selectNetwork($event)">
+        @for (network of networks; track network.id) {
+          <option [value]="network.id">{{ network.label }}</option>
+        }
+      </select>
+
+      <p class="rpc-settings__meta">
+        Active:
+        <strong>{{ view.endpoint.label }}</strong>
+        @if (view.endpoint.usingFallback) {
+          <span class="rpc-settings__fallback"> (fallback)</span>
+        }
+      </p>
+      <p class="rpc-settings__meta rpc-settings__meta--muted">
+        {{ view.endpoint.url }}
+      </p>
+      <p class="rpc-settings__meta">
+        Status:
+        <strong [class]="'rpc-settings__level--' + view.status.level">
+          {{ healthLabel(view.status.level) }}
+          @if (view.status.latencyMs !== null) {
+            · {{ view.status.latencyMs }} ms
+          }
+        </strong>
+      </p>
+
+      <p class="rpc-settings__label">Presets</p>
+      <div class="rpc-settings__presets">
+        <button
+          type="button"
+          class="rpc-settings__chip"
+          [class.rpc-settings__chip--active]="view.choice.mode === 'default'"
+          (click)="useDefault(view.networkId)">
+          Default
+        </button>
+        @for (preset of view.definition?.presets ?? []; track preset.id) {
+          <button
+            type="button"
+            class="rpc-settings__chip"
+            [class.rpc-settings__chip--active]="
+              view.choice.mode === 'preset' &&
+              view.choice.presetId === preset.id
+            "
+            (click)="usePreset(view.networkId, preset.id)">
+            {{ preset.label }}
+          </button>
+        }
+      </div>
+
+      <label class="rpc-settings__label" for="rpc-custom-url"
+        >Custom RPC URL</label
+      >
+      <input
+        id="rpc-custom-url"
+        class="rpc-settings__input"
+        type="url"
+        name="customRpcUrl"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="https://…"
+        [(ngModel)]="customUrl" />
+
+      <div class="rpc-settings__actions">
+        <button
+          type="button"
+          class="rpc-settings__action"
+          (click)="saveCustom(view.networkId)">
+          Use custom
+        </button>
+        <button
+          type="button"
+          class="rpc-settings__action rpc-settings__action--primary"
+          [disabled]="view.testing"
+          (click)="test()">
+          {{ view.testing ? 'Testing…' : 'Test RPC' }}
+        </button>
+        <button
+          type="button"
+          class="rpc-settings__action"
+          (click)="useDefault(view.networkId)">
+          Reset to default
+        </button>
+      </div>
+
+      @if (view.testMessage) {
+        <p class="rpc-settings__message" role="status">
+          {{ view.testMessage }}
+        </p>
+      }
+
+      <p class="rpc-settings__hint">
+        Stored only in this browser (localStorage). Never sent to CraftScript
+        servers. If your custom RPC fails, the app falls back to the default and
+        keeps your URL so you can fix it.
+      </p>
+    </div>
+  </section>
+}

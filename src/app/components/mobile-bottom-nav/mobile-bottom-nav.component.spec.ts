@@ -16,7 +16,10 @@ import { CsCloseButtonComponent } from '@vodis/cs-ui/angular';
 import { of } from 'rxjs';
 
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import { ClientRpcFacade } from '@domains/rpc/client-rpc.facade';
 import { SideModalComponent } from '@shared/components/side-modal/side-modal.component';
+import { RpcSettingsPanelComponent } from '@shared/components/rpc-settings-panel/rpc-settings-panel.component';
+import { RpcStatusDotComponent } from '@shared/components/rpc-status-dot/rpc-status-dot.component';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { BehaviorSubject } from 'rxjs';
 import { MobileBottomNavComponent } from './mobile-bottom-nav.component';
@@ -26,9 +29,11 @@ describe('MobileBottomNavComponent', () => {
   let fixture: ComponentFixture<MobileBottomNavComponent>;
   let router: Router;
   let walletsOpenRequested: BehaviorSubject<boolean>;
+  let rpcSettingsOpen: BehaviorSubject<boolean>;
 
   beforeEach(() => {
     walletsOpenRequested = new BehaviorSubject(false);
+    rpcSettingsOpen = new BehaviorSubject(false);
 
     TestBed.configureTestingModule({
       imports: [
@@ -41,6 +46,8 @@ describe('MobileBottomNavComponent', () => {
         CsTranslationsModule,
         A11yModule,
         CsCloseButtonComponent,
+        RpcStatusDotComponent,
+        RpcSettingsPanelComponent,
       ],
       declarations: [MobileBottomNavComponent, SideModalComponent],
       providers: [
@@ -65,6 +72,45 @@ describe('MobileBottomNavComponent', () => {
           provide: WalletsService,
           useValue: {
             openRequested: walletsOpenRequested,
+          },
+        },
+        {
+          provide: ClientRpcFacade,
+          useValue: {
+            settingsOpen$: rpcSettingsOpen.asObservable(),
+            status$: of({
+              networkId: 'eip155:1',
+              networkLabel: 'Ethereum',
+              endpoint: {
+                networkId: 'eip155:1',
+                url: 'https://example.test',
+                label: 'Default',
+                source: 'default',
+                usingFallback: false,
+              },
+              probe: null,
+              level: 'healthy',
+              latencyMs: 42,
+            }),
+            selectedNetwork$: of('eip155:1'),
+            testing$: of(false),
+            testMessage$: of(''),
+            networks: [],
+            openSettings: jasmine.createSpy('openSettings'),
+            closeSettings: jasmine.createSpy('closeSettings'),
+            choiceFor: () => ({ mode: 'default' }),
+            endpointFor: () => ({
+              networkId: 'eip155:1',
+              url: 'https://example.test',
+              label: 'Default',
+              source: 'default',
+              usingFallback: false,
+            }),
+            selectNetwork: jasmine.createSpy('selectNetwork'),
+            useDefault: jasmine.createSpy('useDefault'),
+            usePreset: jasmine.createSpy('usePreset'),
+            useCustom: jasmine.createSpy('useCustom'),
+            testSelected: jasmine.createSpy('testSelected'),
           },
         },
       ],
@@ -170,6 +216,13 @@ describe('MobileBottomNavComponent', () => {
       '.slide-nav__languages'
     ) as HTMLElement;
     expect(getComputedStyle(languages).flexDirection).toBe('row');
+  });
+
+  it('shows the RPC status control in the menu footer', () => {
+    expect(document.querySelector('app-rpc-status-dot')).toBeTruthy();
+    expect(
+      document.querySelector('.slide-nav__footer app-rpc-status-dot')
+    ).toBeTruthy();
   });
 
   it('marks the side-modal inert when closed and interactive when open', () => {

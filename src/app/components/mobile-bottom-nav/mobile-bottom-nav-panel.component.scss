@@ -133,6 +133,11 @@
   flex-shrink: 0;
   padding: 0.85rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgb(255 255 255 / 12%);
+  gap: 1.25rem;
+}
+
+.slide-nav__rpc {
+  display: block;
 }
 
 .slide-nav__languages {

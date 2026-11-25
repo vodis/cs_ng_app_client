@@ -11,6 +11,8 @@ import { LayoutComponent } from '@components/layout/layout.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
 import { MobileBottomNavComponent } from '@components/mobile-bottom-nav/mobile-bottom-nav.component';
 import { SharedModule } from '@shared/shared.module';
+import { RpcSettingsPanelComponent } from '@shared/components/rpc-settings-panel/rpc-settings-panel.component';
+import { RpcStatusDotComponent } from '@shared/components/rpc-status-dot/rpc-status-dot.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { AuthProviderService } from '@core/auth/auth-provider.service';
@@ -44,6 +46,8 @@ function initializeTranslations(translations: CsTranslationsService) {
     BrowserAnimationsModule,
     AppRoutingModule,
     SharedModule,
+    RpcStatusDotComponent,
+    RpcSettingsPanelComponent,
     NgxGoogleAnalyticsModule,
     CsMenuButtonDirective,
     CsTranslationsModule.forRoot({

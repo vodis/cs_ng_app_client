@@ -1,0 +1,47 @@
+@if (status$ | async; as status) {
+  <div class="rpc-status-dot">
+    <button
+      type="button"
+      class="rpc-status-dot__button"
+      [attr.aria-label]="
+        'RPC status: ' +
+        healthLabel(status.level) +
+        '. Open RPC settings for ' +
+        status.networkLabel
+      "
+      (click)="onActivate()">
+      <span
+        class="rpc-status-dot__signal"
+        [ngClass]="'rpc-status-dot__signal--' + status.level"
+        aria-hidden="true"></span>
+      <span class="rpc-status-dot__caption">RPC</span>
+    </button>
+
+    <div class="rpc-status-dot__popup" role="tooltip">
+      <p class="rpc-status-dot__popup-title">{{ status.networkLabel }} RPC</p>
+      <p class="rpc-status-dot__popup-row">
+        <span>Endpoint</span>
+        <strong>{{ status.endpoint.label }}</strong>
+      </p>
+      <p class="rpc-status-dot__popup-row">
+        <span>Status</span>
+        <strong [ngClass]="'rpc-status-dot__level--' + status.level">
+          {{ healthLabel(status.level) }}
+          @if (status.latencyMs !== null) {
+            · {{ status.latencyMs }} ms
+          }
+        </strong>
+      </p>
+      @if (status.endpoint.usingFallback) {
+        <p class="rpc-status-dot__popup-note">
+          Custom RPC is failing — using the default for now. Your URL is still
+          saved.
+        </p>
+      } @else {
+        <p class="rpc-status-dot__popup-note">
+          You can use your own RPC. Click to open settings.
+        </p>
+      }
+    </div>
+  </div>
+}
