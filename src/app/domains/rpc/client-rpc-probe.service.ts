@@ -19,7 +19,7 @@ export class ClientRpcProbeService {
     const family = network?.family ?? 'evm';
     const started = performance.now();
     try {
-      await this.request(family, url);
+      await this.request(family, networkId, url);
       const latencyMs = Math.round(performance.now() - started);
       const level = classifyRpcLatency(latencyMs, true);
       return {
@@ -44,7 +44,11 @@ export class ClientRpcProbeService {
     }
   }
 
-  private async request(family: RpcNetworkFamily, url: string): Promise<void> {
+  private async request(
+    family: RpcNetworkFamily,
+    networkId: RpcNetworkId,
+    url: string
+  ): Promise<void> {
     const controller = new AbortController();
     const timer = window.setTimeout(
       () => controller.abort(),
@@ -63,10 +67,31 @@ export class ClientRpcProbeService {
         await this.jsonRpc(url, 'status', [], controller.signal);
         return;
       }
-      await this.jsonRpc(url, 'eth_blockNumber', [], controller.signal);
+      await this.evmProbe(networkId, url, controller.signal);
     } finally {
       window.clearTimeout(timer);
     }
+  }
+
+  private async evmProbe(
+    networkId: RpcNetworkId,
+    url: string,
+    signal: AbortSignal
+  ): Promise<void> {
+    const expected = expectedEvmChainId(networkId);
+    if (expected === null) {
+      throw new Error(`Unsupported EVM network ${networkId}`);
+    }
+
+    const chainIdResult = await this.jsonRpc(url, 'eth_chainId', [], signal);
+    const actual = parseHexChainId(chainIdResult);
+    if (actual !== expected) {
+      throw new Error(
+        `RPC chain mismatch: expected ${expected}, got ${actual}`
+      );
+    }
+
+    await this.jsonRpc(url, 'eth_blockNumber', [], signal);
   }
 
   private async jsonRpc(
@@ -74,7 +99,7 @@ export class ClientRpcProbeService {
     method: string,
     params: unknown[],
     signal: AbortSignal
-  ): Promise<void> {
+  ): Promise<unknown> {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -99,6 +124,7 @@ export class ClientRpcProbeService {
     if (payload.result === undefined) {
       throw new Error('Empty RPC result');
     }
+    return payload.result;
   }
 
   private async tonProbe(url: string, signal: AbortSignal): Promise<void> {
@@ -122,6 +148,28 @@ export class ClientRpcProbeService {
       }
     }
   }
+}
+
+export function expectedEvmChainId(networkId: RpcNetworkId): number | null {
+  const match = /^eip155:(\d+)$/.exec(networkId);
+  if (!match) {
+    return null;
+  }
+  return Number(match[1]);
+}
+
+export function parseHexChainId(result: unknown): number {
+  if (typeof result === 'number' && Number.isFinite(result)) {
+    return result;
+  }
+  if (typeof result === 'string' && result.trim()) {
+    const parsed = Number.parseInt(result, 16);
+    if (!Number.isFinite(parsed)) {
+      throw new Error(`Invalid eth_chainId result: ${result}`);
+    }
+    return parsed;
+  }
+  throw new Error('Invalid eth_chainId result');
 }
 
 export function rpcHealthLabel(level: RpcHealthLevel): string {

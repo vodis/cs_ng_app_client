@@ -29,7 +29,7 @@ today).
 | --- | --- |
 | Healthy | probe OK and latency `< 800ms` |
 | Slow | probe OK and latency `< 2500ms` |
-| Failing | probe error, timeout (`5s`), or latency `≥ 2500ms` |
+| Failing | probe error, timeout (`5s`), latency `≥ 2500ms`, or EVM `eth_chainId` mismatch |
 
 Status polling runs about every 30s for the active-wallet network (mapped via
 `resolveRpcNetworkId`). The menu status dot uses that active network (`status$`);
