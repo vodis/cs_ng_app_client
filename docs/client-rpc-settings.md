@@ -43,6 +43,10 @@ the settings drawer status row uses the network selected in the panel
    `usingFallback: true`.
 3. Keep the saved custom/preset URL so the user can fix it in settings.
 4. Status dot shows **Failing** while fallback is active.
+5. In-flight probe results apply only if the preferred URL is still the same
+   choice that started the check (generation + URL). Saving a new custom URL
+   bumps the generation so a stale failure cannot force fallback, and the new
+   URL is probed immediately.
 
 ## UI entry points
 

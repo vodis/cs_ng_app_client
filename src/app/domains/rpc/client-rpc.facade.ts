@@ -58,8 +58,8 @@ export class ClientRpcFacade {
   private readonly testMessageSubject = new BehaviorSubject<string>('');
 
   private probeTimer: ReturnType<typeof setInterval> | null = null;
-  private probing = false;
-  private pendingRefresh: RpcNetworkId | null = null;
+  /** Bumped per network when a new probe starts; older in-flight results are ignored. */
+  private readonly probeGeneration: Partial<Record<RpcNetworkId, number>> = {};
 
   public readonly settingsOpen$ = this.settingsOpenSubject.asObservable();
   public readonly selectedNetwork$ = this.selectedNetworkSubject.asObservable();
@@ -202,10 +202,15 @@ export class ClientRpcFacade {
   public async testSelected(): Promise<void> {
     const networkId = this.selectedNetworkSubject.value;
     const preferred = this.preferences.resolvePreferredUrl(networkId);
+    const generation = this.beginProbe(networkId);
+    const probedUrl = preferred.url;
     this.testingSubject.next(true);
     this.testMessageSubject.next('Testing RPC…');
     try {
-      const result = await this.probeService.probe(networkId, preferred.url);
+      const result = await this.probeService.probe(networkId, probedUrl);
+      if (!this.isCurrentProbe(networkId, generation, probedUrl)) {
+        return;
+      }
       this.patchProbe(result);
       if (result.ok && result.level !== 'failing') {
         this.patchFallback(networkId, false);
@@ -228,6 +233,9 @@ export class ClientRpcFacade {
               networkId,
               network.defaultUrl
             );
+            if (!this.isCurrentProbe(networkId, generation, probedUrl)) {
+              return;
+            }
             this.patchProbe({
               ...fallback,
               // Keep failing level when preferred endpoint is down.
@@ -293,52 +301,65 @@ export class ClientRpcFacade {
   }
 
   private async refreshNetwork(networkId: RpcNetworkId): Promise<void> {
-    if (this.probing) {
-      this.pendingRefresh = networkId;
+    const preferred = this.preferences.resolvePreferredUrl(networkId);
+    const generation = this.beginProbe(networkId);
+    const probedUrl = preferred.url;
+    const probedSource = preferred.source;
+
+    const preferredProbe = await this.probeService.probe(networkId, probedUrl);
+    if (!this.isCurrentProbe(networkId, generation, probedUrl)) {
       return;
     }
-    this.probing = true;
-    try {
-      const preferred = this.preferences.resolvePreferredUrl(networkId);
-      const preferredProbe = await this.probeService.probe(
-        networkId,
-        preferred.url
-      );
-      if (preferredProbe.ok && preferredProbe.level !== 'failing') {
-        this.patchFallback(networkId, false);
-        this.patchProbe(preferredProbe);
-        return;
-      }
 
-      if (preferred.source !== 'default') {
-        const network = findRpcNetwork(networkId);
-        if (network) {
-          const fallbackProbe = await this.probeService.probe(
-            networkId,
-            network.defaultUrl
-          );
-          this.patchFallback(networkId, true);
-          this.patchProbe({
-            ...fallbackProbe,
-            level: 'failing',
-            error:
-              preferredProbe.error ||
-              'Preferred RPC failed; using default fallback.',
-          });
-          return;
-        }
-      }
-
+    if (preferredProbe.ok && preferredProbe.level !== 'failing') {
       this.patchFallback(networkId, false);
       this.patchProbe(preferredProbe);
-    } finally {
-      this.probing = false;
-      const pending = this.pendingRefresh;
-      this.pendingRefresh = null;
-      if (pending) {
-        void this.refreshNetwork(pending);
+      return;
+    }
+
+    if (probedSource !== 'default') {
+      const network = findRpcNetwork(networkId);
+      if (network) {
+        const fallbackProbe = await this.probeService.probe(
+          networkId,
+          network.defaultUrl
+        );
+        if (!this.isCurrentProbe(networkId, generation, probedUrl)) {
+          return;
+        }
+        this.patchFallback(networkId, true);
+        this.patchProbe({
+          ...fallbackProbe,
+          level: 'failing',
+          error:
+            preferredProbe.error ||
+            'Preferred RPC failed; using default fallback.',
+        });
+        return;
       }
     }
+
+    this.patchFallback(networkId, false);
+    this.patchProbe(preferredProbe);
+  }
+
+  private beginProbe(networkId: RpcNetworkId): number {
+    const next = (this.probeGeneration[networkId] ?? 0) + 1;
+    this.probeGeneration[networkId] = next;
+    return next;
+  }
+
+  private isCurrentProbe(
+    networkId: RpcNetworkId,
+    generation: number,
+    probedUrl: string
+  ): boolean {
+    if (this.probeGeneration[networkId] !== generation) {
+      return false;
+    }
+    return (
+      this.preferences.resolvePreferredUrl(networkId).url === probedUrl
+    );
   }
 
   private patchProbe(result: RpcProbeResult): void {
