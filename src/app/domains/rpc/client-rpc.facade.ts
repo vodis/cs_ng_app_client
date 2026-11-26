@@ -40,7 +40,12 @@ export class ClientRpcFacade {
   private readonly activeWallet = inject(ActiveWalletFacade);
 
   private readonly settingsOpenSubject = new BehaviorSubject(false);
+  /** Network shown in the settings drawer (may differ from the active wallet). */
   private readonly selectedNetworkSubject = new BehaviorSubject<RpcNetworkId>(
+    'eip155:1'
+  );
+  /** Network that drives the menu status dot and background health polling. */
+  private readonly activeNetworkSubject = new BehaviorSubject<RpcNetworkId>(
     'eip155:1'
   );
   private readonly probesSubject = new BehaviorSubject<
@@ -54,6 +59,7 @@ export class ClientRpcFacade {
 
   private probeTimer: ReturnType<typeof setInterval> | null = null;
   private probing = false;
+  private pendingRefresh: RpcNetworkId | null = null;
 
   public readonly settingsOpen$ = this.settingsOpenSubject.asObservable();
   public readonly selectedNetwork$ = this.selectedNetworkSubject.asObservable();
@@ -62,12 +68,12 @@ export class ClientRpcFacade {
   public readonly networks = CLIENT_RPC_NETWORKS;
 
   public readonly status$: Observable<RpcStatusSummary> = combineLatest([
-    this.activeWallet.state$,
+    this.activeNetworkSubject,
     this.preferences.preferences$,
     this.probesSubject,
     this.fallbackSubject,
   ]).pipe(
-    map(([wallet]) => this.buildStatus(resolveRpcNetworkId(wallet.network))),
+    map(([networkId]) => this.buildStatus(networkId)),
     distinctUntilChanged(
       (left, right) =>
         left.networkId === right.networkId &&
@@ -86,7 +92,11 @@ export class ClientRpcFacade {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(networkId => {
-        this.selectedNetworkSubject.next(networkId);
+        this.activeNetworkSubject.next(networkId);
+        // Do not clobber an in-progress settings browse of another network.
+        if (!this.settingsOpenSubject.value) {
+          this.selectedNetworkSubject.next(networkId);
+        }
         void this.refreshNetwork(networkId);
       });
 
@@ -97,6 +107,8 @@ export class ClientRpcFacade {
   public openSettings(networkId?: RpcNetworkId): void {
     if (networkId) {
       this.selectedNetworkSubject.next(networkId);
+    } else {
+      this.selectedNetworkSubject.next(this.activeNetworkSubject.value);
     }
     this.testMessageSubject.next('');
     this.settingsOpenSubject.next(true);
@@ -106,6 +118,9 @@ export class ClientRpcFacade {
   public closeSettings(): void {
     this.settingsOpenSubject.next(false);
     this.testMessageSubject.next('');
+    // Restore selection + refresh so the menu dot keeps the active wallet current.
+    this.selectedNetworkSubject.next(this.activeNetworkSubject.value);
+    void this.refreshNetwork(this.activeNetworkSubject.value);
   }
 
   public selectNetwork(networkId: RpcNetworkId): void {
@@ -139,7 +154,7 @@ export class ClientRpcFacade {
   }
 
   public statusSnapshot(): RpcStatusSummary {
-    return this.buildStatus(this.selectedNetworkSubject.value);
+    return this.buildStatus(this.activeNetworkSubject.value);
   }
 
   public async useDefault(networkId: RpcNetworkId): Promise<void> {
@@ -257,9 +272,9 @@ export class ClientRpcFacade {
   }
 
   private startPolling(): void {
-    void this.refreshNetwork(this.selectedNetworkSubject.value);
+    void this.refreshNetwork(this.activeNetworkSubject.value);
     this.probeTimer = setInterval(() => {
-      void this.refreshNetwork(this.selectedNetworkSubject.value);
+      void this.refreshNetwork(this.activeNetworkSubject.value);
     }, 30_000);
   }
 
@@ -272,6 +287,7 @@ export class ClientRpcFacade {
 
   private async refreshNetwork(networkId: RpcNetworkId): Promise<void> {
     if (this.probing) {
+      this.pendingRefresh = networkId;
       return;
     }
     this.probing = true;
@@ -310,6 +326,11 @@ export class ClientRpcFacade {
       this.patchProbe(preferredProbe);
     } finally {
       this.probing = false;
+      const pending = this.pendingRefresh;
+      this.pendingRefresh = null;
+      if (pending) {
+        void this.refreshNetwork(pending);
+      }
     }
   }
 
