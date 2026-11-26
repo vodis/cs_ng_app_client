@@ -121,4 +121,31 @@
   .side-modal--with-close.open {
     padding-top: 3rem;
   }
+
+  /* Instant open/close when the OS asks to minimize motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .side-modal-backdrop {
+      transition:
+        opacity 1ms linear,
+        visibility 0s linear 0s;
+
+      &.open {
+        transition:
+          opacity 1ms linear,
+          visibility 0s linear 0s;
+      }
+    }
+
+    .side-modal {
+      transition:
+        transform 1ms linear,
+        visibility 0s linear 0s;
+
+      &.open {
+        transition:
+          transform 1ms linear,
+          visibility 0s linear 0s;
+      }
+    }
+  }
 }
