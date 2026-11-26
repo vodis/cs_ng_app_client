@@ -243,7 +243,8 @@ Never store:
 
 Version all storage keys and support migration:
 
-- Example: `app:v1:preferences`, `app:v1:market-cache`
+- Example: `app:v1:preferences`, `app:v1:market-cache`,
+  `app:v1:client-rpc-preferences` (see [Client RPC settings](client-rpc-settings.md))
 
 ## 9. Logging, Telemetry, and Audit
 

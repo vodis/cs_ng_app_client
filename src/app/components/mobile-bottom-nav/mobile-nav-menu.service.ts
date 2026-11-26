@@ -2,8 +2,9 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 
 /**
- * Coordinates the mobile main-nav drawer with its header trigger.
- * The panel stays in `app-mobile-bottom-nav`; the open control lives in the header.
+ * Coordinates the mobile main-nav side slide with its header trigger.
+ * Content lives in `app-mobile-bottom-nav` → `app-side-modal`; the open control
+ * lives in the header.
  */
 @Injectable({ providedIn: 'root' })
 export class MobileNavMenuService {
