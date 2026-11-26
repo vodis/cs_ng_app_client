@@ -63,6 +63,7 @@ export class ExchangeAssetsService {
   ): ExchangeToken[] {
     const token: ExchangeToken = {
       assetId: asset.assetId,
+      ...(asset.balanceNetwork ? { balanceNetwork: asset.balanceNetwork } : {}),
       ...(asset.sourceNetwork ? { sourceNetwork: asset.sourceNetwork } : {}),
       ...(asset.balanceAssetId ? { balanceAssetId: asset.balanceAssetId } : {}),
       executionAssetId: asset.defuseAssetId ?? asset.assetId,

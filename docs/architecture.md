@@ -529,3 +529,15 @@ external-deposit fallback. Bitcoin forks and Solana Token-2022/non-associated
 source accounts need further adapter support. Deploy BFF, MFE, then host;
 RPC/Esplora configuration must be enabled separately by the operator. No
 real-value transfer is part of tests.
+
+### Balance-only networks
+
+The linked-wallet holdings board uses the additive backend `balanceNetwork`
+field, falling back to `sourceNetwork` for older API versions. The separate
+field permits reads on networks without a funding adapter. In particular, an
+EVM address can read HyperCore spot balances; this does not enable HyperCore
+signing, wallet linking, or swap funding. Other new families require an existing
+linked address of the corresponding chain type. The source-token picker keeps balance-only holdings visible but disables their
+funding action and labels them as unavailable for swapping. Destination-token
+selection remains independent. Provider errors and unsupported reads remain
+incomplete holdings rather than zero.

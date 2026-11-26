@@ -5,6 +5,8 @@ export interface ExchangeToken {
   assetId: string;
   balanceAssetId?: string;
   sourceNetwork?: string;
+  /** Backend-provided read-only network; never a signing capability. */
+  balanceNetwork?: string;
   /** Provider/BFF identifier used for quote and execution requests. */
   executionAssetId?: string;
   color: string;

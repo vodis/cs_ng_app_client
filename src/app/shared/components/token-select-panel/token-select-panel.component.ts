@@ -24,7 +24,10 @@ import {
   summarizeHoldings,
   type TokenGroup,
 } from './token-groups.utils';
-import type { LinkedTokenHolding } from '@domains/wallet/application/linked-wallet-balances.facade';
+import {
+  type LinkedTokenHolding,
+  walletSupportsNetwork,
+} from '@domains/wallet/application/linked-wallet-balances.facade';
 import { networkLabel } from '@shared/utils/network.utils';
 
 @Component({
@@ -116,8 +119,13 @@ export class TokenSelectPanelComponent implements OnChanges {
     setTimeout(() => this.stepTitle?.nativeElement.focus());
   }
 
+  public canSelectFundingHolding(holding: LinkedTokenHolding): boolean {
+    return walletSupportsNetwork(holding.wallet, holding.network);
+  }
+
   public chooseHolding(holding: LinkedTokenHolding): void {
-    if (!this.selectionBusy) this.fundingSelected.emit(holding);
+    if (!this.selectionBusy && this.canSelectFundingHolding(holding))
+      this.fundingSelected.emit(holding);
   }
 
   public ngOnChanges(changes: SimpleChanges): void {

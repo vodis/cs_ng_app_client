@@ -129,6 +129,60 @@ describe('TokenSelectPanelComponent', () => {
     fixture.detectChanges();
     expect(buttons()[0].disabled).toBeTrue();
   });
+  it('keeps balance-only holdings visible but blocks funding clicks and direct events', () => {
+    const token = {
+      ...eth,
+      sourceNetwork: undefined,
+      balanceNetwork: 'oneclick:hypercore',
+      blockchain: 'hypercore',
+    };
+    const wallet = {
+      id: 'evm',
+      providerWalletId: 'evm',
+      address: '0x' + '1'.repeat(40),
+      chainType: 'ethereum',
+      walletType: 'external',
+      isPrimary: true,
+    };
+    const holding = {
+      token,
+      wallet,
+      network: 'oneclick:hypercore',
+      balance: {
+        walletId: wallet.id,
+        walletAddress: wallet.address,
+        chainType: wallet.chainType,
+        network: 'oneclick:hypercore',
+        assetId: token.assetId,
+        symbol: 'ETH',
+        decimals: 18,
+        balanceRaw: '1000000000000000000',
+        source: 'public_chain_api',
+        fetchedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+        stale: false,
+      },
+    };
+    component.tokens = [token];
+    component.holdings = [holding];
+    component.showWalletTokens = true;
+    component.fundingSelection = true;
+    component.groupSymbol = token.symbol;
+    fixture.detectChanges();
+    const emit = spyOn(component.fundingSelected, 'emit');
+    expect(buttons()[0].disabled).toBeTrue();
+    expect(buttons()[0].textContent).toContain('Balance only');
+    expect(buttons()[0].textContent).toContain('1');
+    buttons()[0].click();
+    component.chooseHolding(holding);
+    expect(emit).not.toHaveBeenCalled();
+    component.fundingSelection = false;
+    fixture.detectChanges();
+    const select = spyOn(component.tokenSelected, 'emit');
+    expect(buttons()[0].disabled).toBeFalse();
+    buttons()[0].click();
+    expect(select).toHaveBeenCalledOnceWith(token);
+  });
   it('displays retryable balance and selection errors', () => {
     component.showWalletTokens = true;
     component.balancesIncomplete = true;

@@ -68,10 +68,27 @@ export function walletSupportsNetwork(
   }
 }
 
+/** Additional display-only address compatibility, never used for funding selection. */
+export function walletSupportsBalanceNetwork(
+  wallet: BackendWallet,
+  network: string
+): boolean {
+  if (wallet.deletedAt || (wallet.status && wallet.status !== 'active'))
+    return false;
+  return (
+    walletSupportsNetwork(wallet, network) ||
+    (network === 'oneclick:hypercore' &&
+      ['ethereum', 'evm'].includes(wallet.chainType)) ||
+    (network.startsWith('oneclick:') && network.slice(9) === wallet.chainType)
+  );
+}
+
 export function holdingKey(holding: LinkedTokenHolding): string {
-  const address = holding.network.startsWith('eip155:')
-    ? holding.wallet.address.toLowerCase()
-    : holding.wallet.address;
+  const address =
+    holding.network.startsWith('eip155:') ||
+    holding.network === 'oneclick:hypercore'
+      ? holding.wallet.address.toLowerCase()
+      : holding.wallet.address;
   const assetId =
     holding.balance?.assetId ??
     holding.token.balanceAssetId ??
@@ -107,18 +124,20 @@ export class LinkedWalletBalancesFacade {
       const targets = session.wallets.flatMap(wallet => {
         const networks = [
           ...new Set(
-            tokens.flatMap(token =>
-              token.sourceNetwork &&
-              walletSupportsNetwork(wallet, token.sourceNetwork)
-                ? [token.sourceNetwork]
-                : []
-            )
+            tokens.flatMap(token => {
+              const network = token.balanceNetwork ?? token.sourceNetwork;
+              return network && walletSupportsBalanceNetwork(wallet, network)
+                ? [network]
+                : [];
+            })
           ),
         ];
         return networks.map(network => ({
           wallet,
           network,
-          tokens: tokens.filter(token => token.sourceNetwork === network),
+          tokens: tokens.filter(
+            token => (token.balanceNetwork ?? token.sourceNetwork) === network
+          ),
         }));
       });
       const pending: LinkedTokenHolding[] = targets.flatMap(target =>
@@ -146,7 +165,8 @@ export class LinkedWalletBalancesFacade {
                 .pipe(
                   map(result => {
                     const address = (value: string) =>
-                      target.network.startsWith('eip155:')
+                      target.network.startsWith('eip155:') ||
+                      target.network === 'oneclick:hypercore'
                         ? value.toLowerCase()
                         : value;
                     if (
