@@ -14,6 +14,7 @@
   }"
   role="dialog"
   [attr.aria-modal]="isOpen"
+  [attr.aria-labelledby]="ariaLabelledBy"
   [attr.aria-hidden]="!isOpen"
   [attr.inert]="isOpen ? null : ''"
   cdkTrapFocus

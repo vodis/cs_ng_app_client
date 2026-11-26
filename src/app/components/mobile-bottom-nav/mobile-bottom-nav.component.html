@@ -1,6 +1,7 @@
 <app-side-modal
   [isOpen]="menuOpen"
   [showCloseButton]="false"
+  ariaLabelledBy="mobile-nav-menu-title"
   (closeRequested)="closeMenu(true)">
   <nav
     class="slide-nav"
@@ -8,7 +9,7 @@
     aria-label="Main navigation"
     [class.slide-nav--open]="menuOpen">
     <header class="slide-nav__header">
-      <h2 class="slide-nav__title">Menu</h2>
+      <h2 class="slide-nav__title" id="mobile-nav-menu-title">Menu</h2>
       <cs-close-button
         class="slide-nav__close"
         size="sm"

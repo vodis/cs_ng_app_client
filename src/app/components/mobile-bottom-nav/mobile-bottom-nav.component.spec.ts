@@ -152,6 +152,12 @@ describe('MobileBottomNavComponent', () => {
     expect(
       document.querySelector('.slide-nav__title')?.textContent?.trim()
     ).toBe('Menu');
+    expect(dialog()?.getAttribute('aria-labelledby')).toBe(
+      'mobile-nav-menu-title'
+    );
+    expect(document.getElementById('mobile-nav-menu-title')?.tagName).toBe(
+      'H2'
+    );
     expect(
       document.querySelector('.slide-nav__close button.cs-close-button')
     ).toBeTruthy();
