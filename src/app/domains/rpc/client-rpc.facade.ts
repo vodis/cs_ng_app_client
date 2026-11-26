@@ -67,6 +67,7 @@ export class ClientRpcFacade {
   public readonly testMessage$ = this.testMessageSubject.asObservable();
   public readonly networks = CLIENT_RPC_NETWORKS;
 
+  /** Menu status dot — always the active-wallet network. */
   public readonly status$: Observable<RpcStatusSummary> = combineLatest([
     this.activeNetworkSubject,
     this.preferences.preferences$,
@@ -74,14 +75,20 @@ export class ClientRpcFacade {
     this.fallbackSubject,
   ]).pipe(
     map(([networkId]) => this.buildStatus(networkId)),
-    distinctUntilChanged(
-      (left, right) =>
-        left.networkId === right.networkId &&
-        left.level === right.level &&
-        left.latencyMs === right.latencyMs &&
-        left.endpoint.url === right.endpoint.url &&
-        left.endpoint.usingFallback === right.endpoint.usingFallback
-    )
+    distinctUntilChanged(sameRpcStatus)
+  );
+
+  /** Settings drawer status row — follows the network selected in the panel. */
+  public readonly selectedStatus$: Observable<RpcStatusSummary> = combineLatest(
+    [
+      this.selectedNetworkSubject,
+      this.preferences.preferences$,
+      this.probesSubject,
+      this.fallbackSubject,
+    ]
+  ).pipe(
+    map(([networkId]) => this.buildStatus(networkId)),
+    distinctUntilChanged(sameRpcStatus)
   );
 
   constructor() {
@@ -356,4 +363,17 @@ export class ClientRpcFacade {
       return false;
     }
   }
+}
+
+function sameRpcStatus(
+  left: RpcStatusSummary,
+  right: RpcStatusSummary
+): boolean {
+  return (
+    left.networkId === right.networkId &&
+    left.level === right.level &&
+    left.latencyMs === right.latencyMs &&
+    left.endpoint.url === right.endpoint.url &&
+    left.endpoint.usingFallback === right.endpoint.usingFallback
+  );
 }

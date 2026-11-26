@@ -87,11 +87,38 @@ describe('ClientRpcFacade polling', () => {
     const selected = await firstValueFrom(facade.selectedNetwork$);
     expect(selected).toBe('eip155:8453');
     expect((await firstValueFrom(facade.status$)).networkId).toBe('eip155:1');
+    expect((await firstValueFrom(facade.selectedStatus$)).networkId).toBe(
+      'eip155:8453'
+    );
 
     facade.closeSettings();
     await settle();
     expect(probedNetworks().at(-1)).toBe('eip155:1');
     expect(await firstValueFrom(facade.selectedNetwork$)).toBe('eip155:1');
     expect(facade.statusSnapshot().networkId).toBe('eip155:1');
+  });
+
+  it('updates selectedStatus when testing the settings network', async () => {
+    await settle();
+    facade.openSettings();
+    facade.selectNetwork('eip155:8453');
+    await settle();
+
+    probe.and.callFake(async (networkId: string, url: string) => ({
+      networkId: networkId as RpcProbeResult['networkId'],
+      url,
+      ok: true,
+      latencyMs: 120,
+      level: 'healthy' as const,
+      checkedAt: Date.now(),
+    }));
+
+    await facade.testSelected();
+    await settle();
+
+    const selected = await firstValueFrom(facade.selectedStatus$);
+    expect(selected.networkId).toBe('eip155:8453');
+    expect(selected.latencyMs).toBe(120);
+    expect((await firstValueFrom(facade.status$)).networkId).toBe('eip155:1');
   });
 });

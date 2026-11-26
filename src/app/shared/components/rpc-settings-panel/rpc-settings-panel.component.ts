@@ -26,7 +26,7 @@ export class RpcSettingsPanelComponent {
 
   public readonly view$ = combineLatest([
     this.rpc.selectedNetwork$,
-    this.rpc.status$,
+    this.rpc.selectedStatus$,
     this.rpc.testing$,
     this.rpc.testMessage$,
     this.rpc.settingsOpen$,

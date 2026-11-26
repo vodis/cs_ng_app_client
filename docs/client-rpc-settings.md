@@ -32,7 +32,9 @@ today).
 | Failing | probe error, timeout (`5s`), or latency `≥ 2500ms` |
 
 Status polling runs about every 30s for the active-wallet network (mapped via
-`resolveRpcNetworkId`).
+`resolveRpcNetworkId`). The menu status dot uses that active network (`status$`);
+the settings drawer status row uses the network selected in the panel
+(`selectedStatus$`).
 
 ## Fallback behaviour
 
