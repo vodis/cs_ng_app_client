@@ -8,6 +8,10 @@ import { WalletGatewayBridgeService } from '@shared/mfe/wallets/wallet-gateway.b
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { ProductEventsService } from '@core/product-events/product-events.service';
 import {
+  TelemetryGateway,
+  telemetryErrorCategory,
+} from '@core/telemetry/telemetry-gateway.service';
+import {
   AuthSession,
   BackendBalance,
   BackendUser,
@@ -73,7 +77,8 @@ export class AuthSessionService {
     private readonly walletGatewayBridge: WalletGatewayBridgeService,
     private readonly walletsService: WalletsService,
     private readonly productEvents: ProductEventsService,
-    private readonly localizedRouting: LocalizedRoutingService
+    private readonly localizedRouting: LocalizedRoutingService,
+    private readonly telemetry?: TelemetryGateway
   ) {
     // Public routes never hit AuthGuard, so restore host session once the
     // provider is ready whenever a valid access token already exists.
@@ -185,14 +190,31 @@ export class AuthSessionService {
         userId: session.user.id,
         metadata: { authMethod },
       });
+      this.trackLogin(authMethod, 'success');
       return session;
     } catch (error) {
       this.productEvents.recordFailure('auth.login', error, {
         metadata: { authMethod },
       });
+      this.trackLogin(authMethod, 'failure', error);
       throw error;
     } finally {
       this.loadingSubject.next(false);
+    }
+  }
+
+  private trackLogin(
+    method: LoginMethod,
+    status: 'success' | 'failure',
+    error?: unknown
+  ): void {
+    const properties =
+      status === 'failure'
+        ? { error_category: telemetryErrorCategory(error) }
+        : {};
+    this.telemetry?.track('auth.login', status, properties);
+    if (method === 'passkey') {
+      this.telemetry?.track('account.login.passkey', status, properties);
     }
   }
 
@@ -231,7 +253,13 @@ export class AuthSessionService {
       }
       this.sessionRevision++;
       this.publishSession(session);
+      this.telemetry?.track('account.passkey.link', 'success');
       return session;
+    } catch (error) {
+      this.telemetry?.track('account.passkey.link', 'failure', {
+        error_category: telemetryErrorCategory(error),
+      });
+      throw error;
     } finally {
       this.loadingSubject.next(false);
     }

@@ -9,4 +9,6 @@ export const environment = {
   // Enable only after the deployed BFF accepts recipient fields and guarantees
   // intent_sign prepares for foreign-recipient routes.
   crossNetworkRecipientIntentSignEnabled: true,
+  // First-party product analytics (TelemetryGateway). Off by default; GA is unaffected.
+  telemetryGateway: false,
 };

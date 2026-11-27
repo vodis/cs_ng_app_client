@@ -18,4 +18,6 @@ export const environment = {
   // mfeWalletsRemoteUrl: 'https://staging-wallets.craftscript.com',
   mfeWalletsRemoteUrl: 'http://localhost:5002',
   crossNetworkRecipientIntentSignEnabled: true,
+  // First-party product analytics (TelemetryGateway). Off by default; GA is unaffected.
+  telemetryGateway: false,
 };

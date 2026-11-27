@@ -1,4 +1,5 @@
 import { DestroyRef, inject, Injectable } from '@angular/core';
+import { TelemetryGateway } from '@core/telemetry/telemetry-gateway.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import {
@@ -89,7 +90,8 @@ export class ActiveWalletFacade {
     private readonly wallets: WalletsService,
     private readonly balances: ConnectedWalletBalancesFacade,
     private readonly router: Router,
-    private readonly localizedRouting: LocalizedRoutingService
+    private readonly localizedRouting: LocalizedRoutingService,
+    private readonly telemetry?: TelemetryGateway
   ) {
     combineLatest([
       this.auth.session$,
@@ -100,7 +102,10 @@ export class ActiveWalletFacade {
       .subscribe(([session, , snapshot]) => {
         const wasConnected = this.state.connected;
         this.resolve(session, snapshot);
-        if (!wasConnected && this.state.connected) this.revalidateBalances();
+        if (!wasConnected && this.state.connected) {
+          this.revalidateBalances();
+          this.trackWalletConnect();
+        }
       });
     combineLatest([
       this.state$.pipe(
@@ -248,6 +253,18 @@ export class ActiveWalletFacade {
 
   private safeReturnUrl(url: string): string {
     return url.startsWith('/') && !url.startsWith('//') ? url : '/';
+  }
+
+  private trackWalletConnect(): void {
+    const { network, wallet, snapshot } = this.state;
+    const walletType = snapshot?.identity?.walletType ?? wallet?.walletType;
+    this.telemetry?.track('wallet.connect', 'success', {
+      network,
+      wallet_type:
+        walletType === 'embedded' || walletType === 'external'
+          ? walletType
+          : undefined,
+    });
   }
 
   revalidateBalances(): void {

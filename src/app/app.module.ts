@@ -19,12 +19,17 @@ import {
   provideGoogleAnalytics,
 } from '@hakimio/ngx-google-analytics';
 import { CsMenuButtonDirective } from '@vodis/cs-ui/angular';
+import { TelemetryGateway } from '@core/telemetry/telemetry-gateway.service';
 import { environment } from '../environments/environment';
 
 function initializeAuthProvider(authProvider: AuthProviderService) {
   return () => {
     void authProvider.initialize();
   };
+}
+
+function initializeTelemetry(telemetry: TelemetryGateway) {
+  return () => telemetry.init();
 }
 
 function initializeTranslations(translations: CsTranslationsService) {
@@ -59,6 +64,12 @@ function initializeTranslations(translations: CsTranslationsService) {
       provide: APP_INITIALIZER,
       useFactory: initializeAuthProvider,
       deps: [AuthProviderService],
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeTelemetry,
+      deps: [TelemetryGateway],
       multi: true,
     },
     {
