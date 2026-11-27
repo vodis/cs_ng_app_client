@@ -31,6 +31,8 @@ export class SideModalComponent implements OnInit, OnChanges, OnDestroy {
   @Input() containScroll = false;
   /** Narrow right drawer (~480–520px) for flows like Add Funds. */
   @Input() size: 'drawer' | 'compact' = 'drawer';
+  /** Optional id of a heading inside the drawer for the dialog accessible name. */
+  @Input() ariaLabelledBy: string | null = null;
   @Output() closeRequested = new EventEmitter<void>();
 
   public ngOnInit(): void {

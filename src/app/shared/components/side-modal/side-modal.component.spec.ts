@@ -182,6 +182,17 @@ describe('SideModalComponent', () => {
     expect(getComputedStyle(panel()).transition).toContain('transform');
   });
 
+  it('names the dialog from ariaLabelledBy when provided', () => {
+    expect(panel().hasAttribute('aria-labelledby')).toBeFalse();
+
+    component.ariaLabelledBy = 'mobile-nav-menu-title';
+    fixture.detectChanges();
+
+    expect(panel().getAttribute('aria-labelledby')).toBe(
+      'mobile-nav-menu-title'
+    );
+  });
+
   it('releases pointer events and is inert when closed', () => {
     component.isOpen = false;
     fixture.detectChanges();

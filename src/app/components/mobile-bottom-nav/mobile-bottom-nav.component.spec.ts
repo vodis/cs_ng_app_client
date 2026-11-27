@@ -1,8 +1,9 @@
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 import {
   ComponentFixture,
   TestBed,
   fakeAsync,
+  flushMicrotasks,
   tick,
 } from '@angular/core/testing';
 import { Router } from '@angular/router';
@@ -11,10 +12,11 @@ import {
   CsTranslationsModule,
   CsTranslationsService,
 } from '@vodis/cs-foundation/angular';
+import { CsCloseButtonComponent } from '@vodis/cs-ui/angular';
 import { of } from 'rxjs';
 
-import { AuthSessionService } from '@core/auth/auth-session.service';
 import { LocalizedRoutingService } from '@core/routing/localized-routing.service';
+import { SideModalComponent } from '@shared/components/side-modal/side-modal.component';
 import { WalletsService } from '@shared/mfe/wallets/wallets.service';
 import { BehaviorSubject } from 'rxjs';
 import { MobileBottomNavComponent } from './mobile-bottom-nav.component';
@@ -23,15 +25,9 @@ describe('MobileBottomNavComponent', () => {
   let component: MobileBottomNavComponent;
   let fixture: ComponentFixture<MobileBottomNavComponent>;
   let router: Router;
-  let authSession: jasmine.SpyObj<AuthSessionService>;
   let walletsOpenRequested: BehaviorSubject<boolean>;
 
   beforeEach(() => {
-    authSession = jasmine.createSpyObj<AuthSessionService>(
-      'AuthSessionService',
-      ['logout']
-    );
-    authSession.logout.and.resolveTo();
     walletsOpenRequested = new BehaviorSubject(false);
 
     TestBed.configureTestingModule({
@@ -43,8 +39,10 @@ describe('MobileBottomNavComponent', () => {
           { path: 'farm', redirectTo: '' },
         ]),
         CsTranslationsModule,
+        A11yModule,
+        CsCloseButtonComponent,
       ],
-      declarations: [MobileBottomNavComponent],
+      declarations: [MobileBottomNavComponent, SideModalComponent],
       providers: [
         {
           provide: LocalizedRoutingService,
@@ -63,7 +61,6 @@ describe('MobileBottomNavComponent', () => {
             translate: (path: string, fallback?: string) => fallback ?? path,
           },
         },
-        { provide: AuthSessionService, useValue: authSession },
         {
           provide: WalletsService,
           useValue: {
@@ -71,13 +68,26 @@ describe('MobileBottomNavComponent', () => {
           },
         },
       ],
-      schemas: [CUSTOM_ELEMENTS_SCHEMA],
     });
     fixture = TestBed.createComponent(MobileBottomNavComponent);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
     fixture.detectChanges();
   });
+
+  afterEach(() => {
+    document
+      .querySelectorAll('app-side-modal')
+      .forEach(node => node.remove());
+  });
+
+  function dialog(): HTMLElement | null {
+    return document.querySelector('.side-modal');
+  }
+
+  function panel(): HTMLElement | null {
+    return document.querySelector('#floatingNav');
+  }
 
   it('should create', () => {
     expect(component).toBeTruthy();
@@ -97,8 +107,8 @@ describe('MobileBottomNavComponent', () => {
     expect(
       fixture.nativeElement.querySelector('.floating-nav__level--more')
     ).toBeNull();
-    expect(fixture.nativeElement.querySelector('.slide-nav')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#floatingNav')).toBeTruthy();
+    expect(panel()).toBeTruthy();
+    expect(document.querySelector('app-side-modal')).toBeTruthy();
   });
 
   it('keeps visible internal destinations unique', () => {
@@ -115,11 +125,9 @@ describe('MobileBottomNavComponent', () => {
     expect(new Set(destinations).size).toBe(destinations.length);
   });
 
-  it('renders uppercase nav links and language controls', () => {
+  it('renders uppercase nav links and language controls without Logout', () => {
     const labels = Array.from(
-      fixture.nativeElement.querySelectorAll(
-        '.slide-nav__label'
-      ) as NodeListOf<HTMLElement>
+      document.querySelectorAll('.slide-nav__label') as NodeListOf<HTMLElement>
     ).map(el => el.textContent?.trim());
 
     expect(labels).toContain('Exchange');
@@ -127,31 +135,62 @@ describe('MobileBottomNavComponent', () => {
     expect(labels).toContain('Docs');
 
     const locales = Array.from(
-      fixture.nativeElement.querySelectorAll(
-        '.slide-nav__locale'
-      ) as NodeListOf<HTMLElement>
+      document.querySelectorAll('.slide-nav__locale') as NodeListOf<HTMLElement>
     ).map(el => el.textContent?.trim());
     expect(locales).toEqual(['EN', 'UA', 'PT']);
-    expect(
-      fixture.nativeElement.querySelector('.slide-nav__logout')?.textContent
-    ).toContain('Logout');
+    expect(document.querySelector('.slide-nav__logout')).toBeNull();
   });
 
-  it('marks the panel inert when closed and focusable when open', () => {
-    const panel = fixture.nativeElement.querySelector(
-      '#floatingNav'
-    ) as HTMLElement;
-
-    expect(panel.hasAttribute('inert')).toBeTrue();
+  it('opens the shared side slide dialog with Menu title and cs-ui close', () => {
+    expect(dialog()?.classList.contains('open')).toBeFalse();
 
     component.toggleMenu();
     fixture.detectChanges();
 
-    expect(panel.hasAttribute('inert')).toBeFalse();
+    expect(component.menuOpen).toBeTrue();
+    expect(dialog()?.classList.contains('open')).toBeTrue();
+    expect(
+      document.querySelector('.slide-nav__title')?.textContent?.trim()
+    ).toBe('Menu');
+    expect(dialog()?.getAttribute('aria-labelledby')).toBe(
+      'mobile-nav-menu-title'
+    );
+    expect(document.getElementById('mobile-nav-menu-title')?.tagName).toBe(
+      'H2'
+    );
+    expect(
+      document.querySelector('.slide-nav__close button.cs-close-button')
+    ).toBeTruthy();
+  });
+
+  it('draws a divider after Bots before external links', () => {
+    const bots = component.links.find(link => link.fallback === 'Bots');
+    expect(bots?.dividerAfter).toBeTrue();
+    expect(
+      document.querySelector('.slide-nav__item--divider')
+    ).toBeTruthy();
+  });
+
+  it('keeps languages in one footer row', () => {
+    const languages = document.querySelector(
+      '.slide-nav__languages'
+    ) as HTMLElement;
+    expect(getComputedStyle(languages).flexDirection).toBe('row');
+  });
+
+  it('marks the side-modal inert when closed and interactive when open', () => {
+    const modal = dialog();
+    expect(modal).toBeTruthy();
+    expect(modal!.hasAttribute('inert')).toBeTrue();
+
+    component.toggleMenu();
+    fixture.detectChanges();
+
+    expect(modal!.hasAttribute('inert')).toBeFalse();
   });
 
   it('keeps the panel scrollable for short viewports', () => {
-    const viewport = fixture.nativeElement.querySelector(
+    const viewport = document.querySelector(
       '.slide-nav__viewport'
     ) as HTMLElement;
     const styles = getComputedStyle(viewport);
@@ -166,22 +205,25 @@ describe('MobileBottomNavComponent', () => {
     fixture.detectChanges();
 
     expect(component.menuOpen).toBeTrue();
-    expect(fixture.nativeElement.classList).toContain('menu-open');
-    expect(document.body.style.overflow).toBe('hidden');
+    expect(dialog()?.classList.contains('open')).toBeTrue();
 
     component.closeMenu();
     fixture.detectChanges();
 
     expect(component.menuOpen).toBeFalse();
-    expect(document.body.style.overflow).not.toBe('hidden');
+    expect(dialog()?.classList.contains('open')).toBeFalse();
   });
 
-  it('closes on Escape and restores trigger focus request path', () => {
+  it('closes from the cs-ui close control and can restore trigger focus', () => {
     component.toggleMenu();
     fixture.detectChanges();
-    expect(component.menuOpen).toBeTrue();
 
-    component.onEscape();
+    const closeButton = document.querySelector(
+      '.slide-nav__close button.cs-close-button'
+    ) as HTMLButtonElement;
+    closeButton.click();
+    fixture.detectChanges();
+
     expect(component.menuOpen).toBeFalse();
   });
 
@@ -199,37 +241,21 @@ describe('MobileBottomNavComponent', () => {
     remounted.destroy();
   });
 
-  it('moves focus into the panel when the menu opens', fakeAsync(() => {
+  it('moves focus into the dialog when the menu opens', fakeAsync(() => {
     component.toggleMenu();
     fixture.detectChanges();
+    flushMicrotasks();
     tick();
 
     const active = document.activeElement as HTMLElement | null;
-    expect(active?.closest('.slide-nav')).toBeTruthy();
+    expect(
+      active?.closest('.side-modal') || active?.closest('.slide-nav')
+    ).toBeTruthy();
   }));
 
   it('closes the menu after navigation', async () => {
     component.toggleMenu();
     await router.navigateByUrl('/home');
-
-    expect(component.menuOpen).toBeFalse();
-  });
-
-  it('logs out through the auth session', async () => {
-    await component.logout();
-    expect(authSession.logout).toHaveBeenCalledTimes(1);
-  });
-
-  it('closes on a right swipe gesture', () => {
-    component.toggleMenu();
-    fixture.detectChanges();
-
-    component.onTouchStart({
-      touches: [{ clientX: 40, clientY: 200 }],
-    } as unknown as TouchEvent);
-    component.onTouchEnd({
-      changedTouches: [{ clientX: 160, clientY: 205 }],
-    } as unknown as TouchEvent);
 
     expect(component.menuOpen).toBeFalse();
   });
@@ -245,79 +271,7 @@ describe('MobileBottomNavComponent', () => {
     expect(component.menuOpen).toBeFalse();
   });
 
-  it('suspends Tab trapping while focus is inside a foreground dialog', () => {
-    component.toggleMenu();
-    fixture.detectChanges();
-
-    const dialog = document.createElement('div');
-    dialog.setAttribute('role', 'dialog');
-    const dialogButton = document.createElement('button');
-    dialogButton.type = 'button';
-    dialogButton.textContent = 'Dialog action';
-    dialog.appendChild(dialogButton);
-    document.body.appendChild(dialog);
-    dialogButton.focus();
-
-    const event = new KeyboardEvent('keydown', {
-      key: 'Tab',
-      bubbles: true,
-      cancelable: true,
-    });
-    const preventDefault = spyOn(event, 'preventDefault');
-    component.onDocumentKeydown(event);
-
-    expect(preventDefault).not.toHaveBeenCalled();
-    expect(document.activeElement).toBe(dialogButton);
-
-    dialog.remove();
+  it('does not keep a legacy overlay panel', () => {
+    expect(document.querySelector('.nav-overlay')).toBeNull();
   });
-
-  it('keeps visible header controls in the Tab focus cycle', fakeAsync(() => {
-    const header = document.createElement('app-header');
-    header.innerHTML = `
-      <div class="header__content_connect">
-        <button type="button" aria-label="Wallets">Wallets</button>
-        <a href="/en/portfolio" aria-label="Portfolio">Portfolio</a>
-        <button type="button" class="header__menu-button" aria-label="Close navigation">Menu</button>
-      </div>
-    `;
-    // Match app layout order: header before the drawer host.
-    document.body.insertBefore(header, fixture.nativeElement);
-
-    component.toggleMenu();
-    fixture.detectChanges();
-    tick();
-
-    const wallets = header.querySelector(
-      '[aria-label="Wallets"]'
-    ) as HTMLElement;
-    const logout = fixture.nativeElement.querySelector(
-      '.slide-nav__logout'
-    ) as HTMLElement;
-
-    // Scope is header actions + panel: wrap from first header control to Logout
-    // and from Logout back to Wallets (not Exchange ↔ Logout only).
-    wallets.focus();
-    component.onDocumentKeydown(
-      new KeyboardEvent('keydown', {
-        key: 'Tab',
-        shiftKey: true,
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    expect(document.activeElement).toBe(logout);
-
-    logout.focus();
-    component.onDocumentKeydown(
-      new KeyboardEvent('keydown', {
-        key: 'Tab',
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    expect(document.activeElement).toBe(wallets);
-
-    header.remove();
-  }));
 });

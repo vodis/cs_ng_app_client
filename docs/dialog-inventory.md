@@ -35,7 +35,7 @@ Host has **no** `MatDialog` / CDK `Overlay` centered dialogs.
 
 | Surface | Pattern | Notes |
 | --- | --- | --- |
-| Mobile main nav | Custom slide-in (`mobile-bottom-nav`) | Full-height left/edge panel, not `app-side-modal` |
+| Mobile main nav | `app-side-modal` + `slide-nav` content | Same shared drawer as token select; no Logout in the dialog |
 | Profile Activity month/year | Anchored dropdown | Not a modal |
 | Auth pages `register-shell--centered` | Page layout | Not a dialog |
 

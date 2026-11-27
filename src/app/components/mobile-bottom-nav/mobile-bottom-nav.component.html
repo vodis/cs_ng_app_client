@@ -1,67 +1,67 @@
-<div
-  class="nav-overlay"
-  (click)="closeMenu(true)"
-  [attr.aria-hidden]="menuOpen ? null : 'true'"></div>
+<app-side-modal
+  [isOpen]="menuOpen"
+  [showCloseButton]="false"
+  ariaLabelledBy="mobile-nav-menu-title"
+  (closeRequested)="closeMenu(true)">
+  <nav
+    class="slide-nav"
+    id="floatingNav"
+    aria-label="Main navigation"
+    [class.slide-nav--open]="menuOpen">
+    <header class="slide-nav__header">
+      <h2 class="slide-nav__title" id="mobile-nav-menu-title">Menu</h2>
+      <cs-close-button
+        class="slide-nav__close"
+        size="sm"
+        ariaLabel="Close navigation"
+        (pressed)="closeMenu(true)" />
+    </header>
 
-<nav
-  #slideNav
-  class="slide-nav"
-  id="floatingNav"
-  aria-label="Main navigation"
-  [attr.aria-hidden]="menuOpen ? null : 'true'"
-  [attr.inert]="menuOpen ? null : ''"
-  (touchstart)="onTouchStart($event)"
-  (touchend)="onTouchEnd($event)">
-  <div class="slide-nav__viewport">
-    <ul class="slide-nav__links">
-      <li *ngFor="let item of links; let i = index; trackBy: trackById">
-        <a
-          *ngIf="item.url"
-          class="slide-nav__link"
-          [class.active]="isActiveLink(item)"
-          [routerLink]="path(item.url)"
-          [style.transition-delay]="stagger(i)"
-          (click)="closeMenu()">
-          <span class="slide-nav__label">{{
-            item.name | csTranslate: item.fallback
-          }}</span>
-        </a>
+    <div class="slide-nav__viewport">
+      <ul class="slide-nav__links">
+        <li
+          *ngFor="let item of links; let i = index; trackBy: trackById"
+          [class.slide-nav__item--divider]="item.dividerAfter">
+          <a
+            *ngIf="item.url"
+            class="slide-nav__link"
+            [class.active]="isActiveLink(item)"
+            [routerLink]="path(item.url)"
+            [style.transition-delay]="stagger(i)"
+            (click)="closeMenu()">
+            <span class="slide-nav__label">{{
+              item.name | csTranslate: item.fallback
+            }}</span>
+          </a>
 
-        <a
-          *ngIf="item.href"
-          class="slide-nav__link slide-nav__link--external"
-          [href]="item.href"
-          target="_blank"
-          rel="noopener noreferrer"
-          [style.transition-delay]="stagger(i)"
-          (click)="closeMenu()">
-          <span class="slide-nav__label">{{
-            item.name | csTranslate: item.fallback
-          }}</span>
-        </a>
-      </li>
-    </ul>
-  </div>
-
-  <div class="slide-nav__footer">
-    <div class="slide-nav__languages" role="group" aria-label="Language">
-      <button
-        *ngFor="let locale of locales; let i = index; trackBy: trackById"
-        type="button"
-        class="slide-nav__locale"
-        [class.active]="currentLocale() === locale"
-        [style.transition-delay]="stagger(links.length + i)"
-        (click)="selectLocale(locale)">
-        {{ localeLabel(locale) }}
-      </button>
+          <a
+            *ngIf="item.href"
+            class="slide-nav__link slide-nav__link--external"
+            [href]="item.href"
+            target="_blank"
+            rel="noopener noreferrer"
+            [style.transition-delay]="stagger(i)"
+            (click)="closeMenu()">
+            <span class="slide-nav__label">{{
+              item.name | csTranslate: item.fallback
+            }}</span>
+          </a>
+        </li>
+      </ul>
     </div>
 
-    <button
-      type="button"
-      class="slide-nav__logout"
-      [style.transition-delay]="stagger(links.length + locales.length)"
-      (click)="logout()">
-      {{ 'Texts.sidebar-logout' | csTranslate: 'Logout' }}
-    </button>
-  </div>
-</nav>
+    <div class="slide-nav__footer">
+      <div class="slide-nav__languages" role="group" aria-label="Language">
+        <button
+          *ngFor="let locale of locales; let i = index; trackBy: trackById"
+          type="button"
+          class="slide-nav__locale"
+          [class.active]="currentLocale() === locale"
+          [style.transition-delay]="stagger(links.length + i)"
+          (click)="selectLocale(locale)">
+          {{ localeLabel(locale) }}
+        </button>
+      </div>
+    </div>
+  </nav>
+</app-side-modal>
